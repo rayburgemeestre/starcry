@@ -1,0 +1,3 @@
+[submodule "caf"]
+	path = caf
+	url = git@github.com:actor-framework/actor-framework.git
