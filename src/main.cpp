@@ -33,9 +33,9 @@ int main() {
 	});
 
 	while (run) {
-		s->send(renderer_, start_rendering::value);
-		s->send(generator, create_jobs_atom::value);
-		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+		s->send(renderer_, start_rendering::value); // tries to get frames from job_storage for rendering
+		s->send(generator, create_jobs_atom::value); // generates frames and stores them into job_storage
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
 	}
 	aout(s) << "running.. END " << endl;
 	s->await_all_other_actors_done();
