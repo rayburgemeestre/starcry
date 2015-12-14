@@ -1,3 +1,6 @@
-[submodule "caf"]
-	path = caf
+[submodule "libs/caf"]
+	path = libs/caf
 	url = git@github.com:actor-framework/actor-framework.git
+[submodule "libs/benchmarklib"]
+	path = libs/benchmarklib
+	url = git@bitbucket.org:rayburgemeestre/benchmarklib.git

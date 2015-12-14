@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 2.6.2)
 project(starcry)
  
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-set(GTEST_ROOT "/projects/sfmlframerate/starcry/gtest-1.7.0" CACHE PATH "Google Test root directory")
-set(GMOCK_ROOT "/projects/sfmlframerate/starcry/gmock-1.7.0" CACHE PATH "Google Mock root directory")
+#set(GTEST_ROOT "${PROJECT_SOURCE_DIR}/gtest-1.7.0" CACHE PATH "Google Test root directory")
+#set(GMOCK_ROOT "${PROJECT_SOURCE_DIR}/gmock-1.7.0" CACHE PATH "Google Mock root directory")
 
 find_package(Allegro5 REQUIRED)
 find_package(Boost 1.47.0 REQUIRED program_options system)
@@ -14,10 +14,9 @@ find_package(CAF REQUIRED core)
 #find_package(FFMPEG)
 find_library(benchmarklib_LIBRARIES benchmarklib REQUIRED)
 
-
-enable_testing()
-find_package(GTest REQUIRED)
-find_package(GMock REQUIRED)
+#find_package(GTest REQUIRED)
+#find_package(GMock REQUIRED)
+#enable_testing()
 
 message(STATUS ${benchmarklib_LIBRARIES})
 
