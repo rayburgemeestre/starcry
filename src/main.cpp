@@ -1,4 +1,3 @@
-#include <cassert>
 #include <iostream>
 #include <atomic>
 
@@ -6,7 +5,6 @@
 #include "job_storage.h"
 #include "job_generator.h"
 #include "renderer.h"
-
 
 void print_on_exit(const actor& hdl, const std::string& name) {
 	hdl->attach_functor([=](abstract_actor *ptr, uint32_t reason) {

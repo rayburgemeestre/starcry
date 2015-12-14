@@ -1,11 +1,13 @@
 #include "job_generator.h"
 
+size_t desired_num_jobs_queued = 10;
+
 behavior job_generator_idle(event_based_actor* self, const caf::actor &job_storage) {
 	return {
 		[=](create_jobs_atom) {
 			self->sync_send(job_storage, num_jobs_atom::value).then(
 				[=](num_jobs_atom, size_t numjobs) {
-					if (numjobs < 10) {
+					if (numjobs < desired_num_jobs_queued) {
 						self->unbecome();
 					}
 				}
@@ -27,7 +29,7 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
 				},
 				[=](num_jobs_atom, unsigned long numjobs) {
 					aout(self) << "job_generator: generated " << numjobs << " jobs now." << endl;
-					if (numjobs >= 10) {
+					if (numjobs >= desired_num_jobs_queued) {
 						self->become(keep_behavior, job_generator_idle(self, job_storage));
 					}
 				}
