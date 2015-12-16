@@ -1,7 +1,7 @@
 #pragma once
 #include "common.h"
 
-using start_rendering = atom_constant<atom("startrend")>;
+using render_frame = atom_constant<atom("renderfram")>;
 using get_job_atom = atom_constant<atom("getjob")>;
 using remove_job_atom = atom_constant<atom("removejob")>;
 using job_not_available_atom = atom_constant<atom("job_na")>;
