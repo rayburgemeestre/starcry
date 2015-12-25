@@ -7,6 +7,8 @@
 
 #include "util/actor_info.hpp"
 
+using start_rendering = atom_constant<atom("startrende")>;
+
 int main() {
     scoped_actor s;
     auto jobstorage = spawn(job_storage);
@@ -18,9 +20,11 @@ int main() {
     jobstorage->link_to(generator);
 
     actor_info renderer_info{renderer_};
+    s->send(generator, prepare_frame::value);
+    s->send(renderer_, start_rendering::value);
+
     while (renderer_info.running()) {
-        s->send(generator, prepare_frame::value);
-        s->send(renderer_, render_frame::value);
+        std::cout << " rendering still ongoing.. \n";
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
     s->await_all_other_actors_done();

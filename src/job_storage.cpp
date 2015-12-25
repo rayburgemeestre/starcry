@@ -23,11 +23,10 @@ behavior job_storage(event_based_actor* self) {
             new_job.frame = frame;
             new_job.rendered = rendered;
             jobs.push_back(new_job);
-            aout(self) << "prepared job for frame: " << new_job.frame << endl;
+            aout(self) << "job_storage: prepared frame: " << new_job.frame << endl;
             return make_message(num_jobs_atom::value, jobs.size());
         },
         [=](remove_job_atom, size_t jobdone) -> message {
-            aout(self) << "removing job for frame: " << jobdone<< endl;
             jobs.erase( std::remove_if(jobs.begin(), jobs.end(), [&jobdone](struct data::job j) {
                 return j.frame == jobdone;
             }), jobs.end() );
