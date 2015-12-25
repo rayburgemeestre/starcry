@@ -10,21 +10,19 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
                 [=](num_jobs_atom, unsigned long numjobs) {
                     // Renderer has some catching up to do
                     if (numjobs >= desired_num_jobs_queued) {
-                        // retry in 200 milliseconds
-                        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                        std::this_thread::sleep_for(std::chrono::milliseconds(8));
                         self->send(self, prepare_frame::value);
                         return;
                     }
 
                     // Create a frame
-                    aout(self) << "job_generator: generated frame #" << current_frame << endl;
-                    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                    //aout(self) << "job_generator: generated frame #" << current_frame << endl;
 
                     // Store it
-                    self->send(job_storage, add_job_atom::value, current_frame++, false);
+                    bool last_frame = (current_frame >= 1000000);
+                    self->send(job_storage, add_job_atom::value, current_frame++, false, last_frame);
 
-                    // Our imaginary video is only 25 frames... so we are done
-                    if (current_frame >= 25) {
+                    if (last_frame) {
                         aout(self) << "job_generator: there are no more jobs to be generated." << endl;
                         self->become(nothing);
                         return;

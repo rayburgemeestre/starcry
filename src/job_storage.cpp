@@ -15,10 +15,11 @@ behavior job_storage(event_based_actor* self) {
             }
             return make_message(get_job_atom::value, *it);
         },
-        [=](add_job_atom, size_t frame, bool rendered) {
+        [=](add_job_atom, size_t frame, bool rendered, bool last_frame) {
             data::job new_job;
             new_job.frame = frame;
             new_job.rendered = rendered;
+            new_job.last_frame = last_frame;
             jobs.push_back(new_job);
         },
         [=](remove_job_atom, size_t jobdone) {
