@@ -3,13 +3,13 @@
 
 #include "benchmark.h"
 
-using start_rendering = atom_constant<atom("startrende")>;
-using render_frame = atom_constant<atom("renderfram")>;
-using get_job_atom = atom_constant<atom("getjob")>;
-using remove_job_atom = atom_constant<atom("removejob")>;
-using job_not_available_atom = atom_constant<atom("job_na")>;
-using job_ready_atom = atom_constant<atom("job_rdy")>;
-using stats_atom = atom_constant<atom("stats")>;
+using start_rendering         = atom_constant<atom("startrende")>;
+using render_frame            = atom_constant<atom("renderfram")>;
+using get_job_atom            = atom_constant<atom("getjob")>;
+using remove_job_atom         = atom_constant<atom("removejob")>;
+using job_not_available_atom  = atom_constant<atom("job_na")>;
+using job_ready_atom          = atom_constant<atom("job_rdy")>;
+using stats_atom              = atom_constant<atom("stats")>;
 
 size_t rendered_frame = 0;
 
@@ -25,11 +25,7 @@ behavior worker(event_based_actor* self, const caf::actor &job_storage, const ca
 // move to class data
 std::vector<data::job> frames_done;
 size_t frame_sequence = 0;
-
-// boost::optional ?
-bool last_frame_known = false;
-size_t last_frame = 0;
-
+std::optional<size_t> last_frame;
 std::unique_ptr<actor> pool;
 
 auto benchmark_class = std::make_unique<MeasureInterval>(TimerFactory::Type::BoostChronoTimerImpl);
@@ -65,8 +61,7 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage) {
         [=](job_ready_atom, struct data::job j) {
             //aout(self) << "renderer: rendered frame: " << j.frame << endl;
             if (j.last_frame) {
-                last_frame_known = true;
-                last_frame = j.frame;
+                last_frame = std::make_optional(j.frame);
             }
 
             auto ready = [&](auto &frameNumber) {
@@ -92,7 +87,7 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage) {
                 frames_done.push_back(j);
             }
 
-            if (last_frame_known && (frame_sequence - 1) == last_frame) {
+            if (last_frame && (frame_sequence - 1) == *last_frame) {
                 self->quit(exit_reason::user_shutdown);
             }
 

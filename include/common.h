@@ -12,3 +12,10 @@ inline void print_on_exit(const actor& hdl, const std::string& name) {
         aout(ptr) << name << " exited with reason " << reason << endl;
     });
 }
+
+#include <experimental/optional>
+
+namespace std {
+    using std::experimental::optional;
+    using std::experimental::make_optional;
+}

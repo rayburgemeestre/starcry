@@ -19,7 +19,7 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
                     //aout(self) << "job_generator: generated frame #" << current_frame << endl;
 
                     // Store it
-                    bool last_frame = (current_frame >= 1000000);
+                    bool last_frame = (current_frame >= 1000);
                     self->send(job_storage, add_job_atom::value, current_frame++, false, last_frame);
 
                     if (last_frame) {
