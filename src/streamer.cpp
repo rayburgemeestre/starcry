@@ -29,6 +29,8 @@ bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chu
                                          [&](auto &tpl) { return std::get<0>(tpl) == frame_number; }),
                           fake_buffer.end());
         if (last_frame_streamed && *last_frame_streamed == frame_number) {
+            aout(self) << "streamer completed frames: " << current_frame2 << ", with FPS: " << (1000.0 / counter2.mean())
+                       << " +/- " << counter2.stderr() << endl;
             self->quit(exit_reason::user_shutdown);
         }
         return true;
