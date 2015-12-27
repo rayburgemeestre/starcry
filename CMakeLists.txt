@@ -1,10 +1,44 @@
 cmake_minimum_required(VERSION 2.6.2)
  
 project(starcry)
- 
+
+## begin gtest/gmock magic from http://www.kaizou.org/2014/11/gtest-cmake/ ##
+find_package(Threads REQUIRED)
+include(ExternalProject)
+ExternalProject_Add(
+        gtest
+        URL https://googletest.googlecode.com/files/gtest-1.7.0.zip
+        PREFIX ${CMAKE_CURRENT_BINARY_DIR}/gtest
+        # Disable install step
+        INSTALL_COMMAND ""
+)
+add_library(libgtest IMPORTED STATIC GLOBAL)
+add_dependencies(libgtest gtest)
+ExternalProject_Get_Property(gtest source_dir binary_dir)
+set_target_properties(libgtest PROPERTIES
+        "IMPORTED_LOCATION" "${binary_dir}/libgtest.a"
+        "IMPORTED_LINK_INTERFACE_LIBRARIES" "${CMAKE_THREAD_LIBS_INIT}"
+        #    "INTERFACE_INCLUDE_DIRECTORIES" "${source_dir}/include"
+        )
+include_directories("${source_dir}/include")
+ExternalProject_Add(
+        gmock
+        URL https://googlemock.googlecode.com/files/gmock-1.7.0.zip
+        PREFIX ${CMAKE_CURRENT_BINARY_DIR}/gmock
+        # Disable install step
+        INSTALL_COMMAND ""
+)
+add_library(libgmock IMPORTED STATIC GLOBAL)
+add_dependencies(libgmock gmock)
+ExternalProject_Get_Property(gmock source_dir binary_dir)
+set_target_properties(libgmock PROPERTIES
+        "IMPORTED_LOCATION" "${binary_dir}/libgmock.a"
+        "IMPORTED_LINK_INTERFACE_LIBRARIES" "${CMAKE_THREAD_LIBS_INIT}"
+        )
+include_directories("${source_dir}/include")
+## end gtest/gmock magic ##
+
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-#set(GTEST_ROOT "${PROJECT_SOURCE_DIR}/gtest-1.7.0" CACHE PATH "Google Test root directory")
-#set(GMOCK_ROOT "${PROJECT_SOURCE_DIR}/gmock-1.7.0" CACHE PATH "Google Mock root directory")
 
 find_package(Allegro5 REQUIRED)
 find_package(Boost 1.47.0 REQUIRED program_options system)
@@ -13,10 +47,6 @@ find_package(CAF REQUIRED core)
 #find_package(ZMQ)
 #find_package(FFMPEG)
 find_library(benchmarklib_LIBRARIES benchmarklib REQUIRED)
-
-#find_package(GTest REQUIRED)
-#find_package(GMock REQUIRED)
-#enable_testing()
 
 message(STATUS ${benchmarklib_LIBRARIES})
 
@@ -53,24 +83,22 @@ target_link_libraries(starcry ${CAF_LIBRARIES})
 
 install (TARGETS starcry DESTINATION bin)
 
-## Test files
-#file(GLOB TEST_FILES "test/*.cpp")
-#include_directories(${GTEST_INCLUDE_DIRS})
-#include_directories(${GMOCK_INCLUDE_DIRS})
-## Don't include Main.cpp from src
-#file(GLOB MAIN_SRC "src/main.cpp")
-#list(REMOVE_ITEM starcry_SOURCES ${MAIN_SRC})
-#add_executable(starcry_tests ${TEST_FILES} ${SRC_FILES})
-## Set link libraries (order matters)
-#target_link_libraries(starcry_tests ${GTEST_LIBRARIES})
-#target_link_libraries(starcry_tests ${GMOCK_LIBRARIES})
-#target_link_libraries(starcry_tests ${Boost_LIBRARIES})
-#target_link_libraries(starcry_tests ${SFML_LIBRARIES})
-#target_link_libraries(starcry_tests ${ALLEGRO_LIBRARIES})
-##target_link_libraries(starcry ${ZMQ_LIBRARIES})
-##target_link_libraries(starcry ${FFMPEG_LIBRARIES})
-#target_link_libraries(starcry_tests ${benchmarklib_LIBRARIES})
-#target_link_libraries(starcry_tests)
-#target_link_libraries(starcry_tests ${CMAKE_THREAD_LIBS_INIT})
-#
-#add_test(NAME starcry COMMAND starcry_tests --unittests)
+# Test files
+file(GLOB TEST_FILES "test/*.cpp")
+# Don't include Main.cpp from src
+file(GLOB MAIN_SRC "src/main.cpp")
+list(REMOVE_ITEM starcry_SOURCES ${MAIN_SRC})
+add_executable(starcry_tests ${TEST_FILES} ${SRC_FILES})
+# Set link libraries (order matters)
+target_link_libraries(starcry_tests libgtest)
+target_link_libraries(starcry_tests libgmock)
+target_link_libraries(starcry_tests ${Boost_LIBRARIES})
+target_link_libraries(starcry_tests ${SFML_LIBRARIES})
+target_link_libraries(starcry_tests ${ALLEGRO_LIBRARIES})
+#target_link_libraries(starcry ${ZMQ_LIBRARIES})
+#target_link_libraries(starcry ${FFMPEG_LIBRARIES})
+target_link_libraries(starcry_tests ${benchmarklib_LIBRARIES})
+target_link_libraries(starcry_tests)
+target_link_libraries(starcry_tests ${CMAKE_THREAD_LIBS_INIT})
+
+add_test(NAME starcry COMMAND starcry_tests --unittests)

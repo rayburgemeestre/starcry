@@ -24,10 +24,10 @@ int main() {
     streamer_->link_to(renderer_);
 
     actor_info renderer_info{renderer_};
-    s->send(generator, start::value);
-
-    size_t num_cores = 8;
-    s->send(renderer_, start::value, num_cores);
+    size_t num_chunks  = 8; // number of chunks to split image into
+    size_t num_workers = 8; // number of workers for rendering
+    s->send(generator, start::value, num_chunks);
+    s->send(renderer_, start::value, num_workers);
 
     while (renderer_info.running()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));

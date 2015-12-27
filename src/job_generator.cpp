@@ -1,4 +1,5 @@
 #include "job_generator.h"
+#include "util/image_splitter.hpp"
 
 // public
 using start            = atom_constant<atom("start     ")>;
@@ -12,10 +13,13 @@ using prepare_frame    = atom_constant<atom("prepare_fr")>;
 
 size_t desired_num_jobs_queued = 10;
 
+size_t current_job = 0;
 size_t current_frame = 0;
+size_t max_split_chunks = 0;
 behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
     return {
-        [=](start) {
+        [=](start, size_t num_chunks) {
+            max_split_chunks = num_chunks;
             self->send(self, prepare_frame::value);
         },
         [=](prepare_frame) {
@@ -31,8 +35,16 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
                     //aout(self) << "job_generator: generated frame #" << current_frame << endl;
 
                     // Store it
-                    bool last_frame = (current_frame >= 100000);
-                    self->send(job_storage, add_job::value, current_frame++, false, last_frame);
+                    bool last_frame = (current_frame >= 10000);
+
+                    ImageSplitter<uint32_t> imagesplitter{800, 600}; // fake values
+                    const auto rectangles = imagesplitter.split(max_split_chunks);
+                    size_t counter = 1;
+                    for (const auto &rect : rectangles) {
+                        self->send(job_storage, add_job::value, current_job++, current_frame, false, last_frame, counter, max_split_chunks);
+                        counter++;
+                    }
+                    current_frame++;
 
                     if (last_frame) {
                         aout(self) << "job_generator: there are no more jobs to be generated." << endl;

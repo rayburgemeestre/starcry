@@ -27,8 +27,8 @@ behavior worker(event_based_actor* self, const caf::actor &renderer, size_t work
 }
 
 // move to class data
-std::vector<data::job> frames_done;
-size_t frame_sequence = 0;
+std::vector<data::job> jobs_done;
+size_t job_sequence = 0;
 std::optional<size_t> last_frame;
 std::unique_ptr<actor> pool;
 
@@ -39,15 +39,15 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
     counter.setDescription("fps");
     counter.startHistogramAtZero(true);
     return {
-        [=](start, size_t cores) {
+        [=](start, size_t num_workers) {
             auto worker_factory = [&]() -> actor {
                 static size_t worker_num = 0;
                 return spawn(worker, self, worker_num++);
             };
-            pool = std::move(std::make_unique<actor>(actor_pool::make(cores, worker_factory, actor_pool::round_robin())));
+            pool = std::move(std::make_unique<actor>(actor_pool::make(num_workers, worker_factory, actor_pool::round_robin())));
 
             self->link_to(*pool);
-            for (size_t i=0; i<cores; i++) self->send(self, render_frame::value);
+            for (size_t i=0; i<num_workers; i++) self->send(self, render_frame::value);
         },
         [=](render_frame) {
             self->sync_send(job_storage, get_job::value, rendered_frame).then(
@@ -61,45 +61,44 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
             );
         },
         [=](ready, struct data::job j) {
-            self->send(job_storage, del_job::value, j.frame);
+            self->send(job_storage, del_job::value, j.job_number);
 
-            //aout(self) << "renderer: rendered frame: " << j.frame << endl;
             if (j.last_frame) {
-                last_frame = std::make_optional(j.frame);
+                last_frame = std::make_optional(j.job_number);
             }
 
-            auto ready = [&](auto &frameNumber) {
+            auto ready = [&](auto frame_number, auto chunk, auto num_chunks, bool last_frame) {
                 counter.measure();
-                self->send(streamer, render_frame::value, frameNumber);
-                //aout(self) << "renderer: synchronized sending frame: " << frameNumber << endl;
+                self->send(streamer, render_frame::value, frame_number, chunk, num_chunks, last_frame);
             };
 
-            if (j.frame == frame_sequence) {
-                ready(j.frame);
-                frame_sequence++;
+            if (j.job_number == job_sequence) {
+                ready(j.frame_number, j.chunk, j.num_chunks, j.last_frame);
+                job_sequence++;
                 while (true) {
-                    auto pos = find_if(frames_done.begin(), frames_done.end(), [&](auto &job) {
-                        return job.frame == frame_sequence;
+                    auto pos = find_if(jobs_done.begin(), jobs_done.end(), [&](auto &job) {
+                        return job.job_number == job_sequence;
                     });
-                    if (pos == frames_done.end()) {
+                    if (pos == jobs_done.end()) {
                         break;
                     }
-                    frames_done.erase(pos);
-                    ready(pos->frame);
-                    frame_sequence++;
+                    ready(pos->frame_number, pos->chunk, pos->num_chunks, pos->last_frame);
+                    jobs_done.erase(pos);
+                    job_sequence++;
                 }
             } else {
-                frames_done.push_back(j);
+                jobs_done.push_back(j);
             }
 
-            if (last_frame && (frame_sequence - 1) == *last_frame) {
-                self->quit(exit_reason::user_shutdown);
-            }
+            // todo, make a LAST_JOB as well... would be nicer!
+//            if (last_frame && (job_sequence - 1) == *last_frame) {
+//                self->quit(exit_reason::user_shutdown);
+//            }
 
             self->send(self, render_frame::value);
         },
         [=](show_stats) {
-            aout(self) << "renderer at frame: " << frame_sequence << ", with FPS: " << (1000.0 / counter.mean())
+            aout(self) << "renderer at job: " << job_sequence << ", with jobs/sec: " << (1000.0 / counter.mean())
                        << " +/- " << counter.stderr() << endl;
         }
     };
