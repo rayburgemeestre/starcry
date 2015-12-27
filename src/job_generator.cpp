@@ -1,5 +1,6 @@
 #include "job_generator.h"
 #include "util/image_splitter.hpp"
+#include "data/job.hpp"
 
 // public
 using start            = atom_constant<atom("start     ")>;
@@ -40,9 +41,26 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
                     ImageSplitter<uint32_t> imagesplitter{800, 600}; // fake values
                     const auto rectangles = imagesplitter.split(max_split_chunks);
                     size_t counter = 1;
-                    //for (const auto &rect : rectangles) {
+
+                    data::job new_job;
+                    new_job.frame_number = current_frame;
+                    new_job.rendered = false;
+                    new_job.last_frame = last_frame;
+                    new_job.num_chunks = max_split_chunks;
+
+                    data::shape<double> new_shape;
+                    new_shape.x = 100;
+                    new_shape.y = 100;
+                    new_shape.z = 0;
+                    new_shape.type = data::shape_type::circle;
+                    new_shape.radius = 200.0 / 10000 * current_frame;
+                    new_shape.radius_size = 1;
+                    new_job.shapes.push_back(new_shape);
+
                     for (size_t i=0; i<rectangles.size(); i++) {
-                        self->send(job_storage, add_job::value, current_job++, current_frame, false, last_frame, counter, max_split_chunks);
+                        new_job.job_number = current_job++;
+                        new_job.chunk = counter++;
+                        self->send(job_storage, add_job::value, new_job);
                         counter++;
                     }
                     current_frame++;

@@ -22,14 +22,7 @@ behavior job_storage(event_based_actor* self) {
             }
             return make_message(get_job::value, *it);
         },
-        [=](add_job, size_t job, size_t frame, bool rendered, bool last_frame, size_t chunk, size_t num_chunks) {
-            data::job new_job;
-            new_job.job_number = job;
-            new_job.frame_number = frame;
-            new_job.rendered = rendered;
-            new_job.last_frame = last_frame;
-            new_job.chunk = chunk;
-            new_job.num_chunks = num_chunks;
+        [=](add_job, data::job new_job) {
             jobs.push_back(new_job);
         },
         [=](del_job, size_t jobdone) {

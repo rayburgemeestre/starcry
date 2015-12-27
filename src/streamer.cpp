@@ -38,13 +38,33 @@ bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chu
     return false;
 }
 
+#include "allegro5/allegro.h"
+#include <allegro5/allegro_image.h>
+
 behavior streamer(event_based_actor* self) {
     counter2.setDescription("fps");
     counter2.startHistogramAtZero(true);
     return {
-        [=](render_frame, size_t frame_num, size_t chunk, size_t num_chunks, bool last_frame) {
+        [=](render_frame, size_t frame_num, size_t chunk, size_t num_chunks, bool last_frame, vector<ALLEGRO_COLOR> pixels) {
             if (last_frame)
                 last_frame_streamed = std::make_optional(frame_num);
+            // test begin
+                ALLEGRO_BITMAP *bitmap = al_create_bitmap(800, 600);
+                // set some stupid lock here.., use the same renderer object perhaps..
+                al_set_target_bitmap(bitmap);
+                size_t index = 0;
+                for (int y=0; y<600; y++) {
+                    for (int x=0; x<800; x++) {
+                        al_put_pixel(x, y, pixels[index++]);
+                    }
+                }
+            // write image here
+//                bool ret = al_save_bitmap("/tmp/test_2.bmp", bitmap);
+//                if (ret) cout << " ret is ok" <<endl;
+//                else cout << "ret is nok" << endl;
+//                exit(0);
+                //al_unlock_bitmap(bmp);
+            // test end
             fake_buffer.push_back(make_tuple(frame_num, chunk, num_chunks, last_frame)); // needs to become an object later
             while (process_buffer(self, current_frame2, num_chunks))
                 current_frame2++;
