@@ -40,7 +40,8 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
                     ImageSplitter<uint32_t> imagesplitter{800, 600}; // fake values
                     const auto rectangles = imagesplitter.split(max_split_chunks);
                     size_t counter = 1;
-                    for (const auto &rect : rectangles) {
+                    //for (const auto &rect : rectangles) {
+                    for (size_t i=0; i<rectangles.size(); i++) {
                         self->send(job_storage, add_job::value, current_job++, current_frame, false, last_frame, counter, max_split_chunks);
                         counter++;
                     }

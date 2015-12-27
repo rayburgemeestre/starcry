@@ -21,7 +21,7 @@ std::optional<size_t> last_frame_streamed;
 bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chunks) {
     if (count_if(fake_buffer.begin(),
                  fake_buffer.end(),
-                 [&](auto &tpl) { return std::get<0>(tpl) == frame_number; }) == num_chunks
+                 [&](auto &tpl) { return std::get<0>(tpl) == frame_number; }) == static_cast<int>(num_chunks)
     ){
         counter2.measure();
         fake_buffer.erase(std::remove_if(fake_buffer.begin(),

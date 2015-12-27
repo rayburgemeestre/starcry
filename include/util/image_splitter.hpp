@@ -6,8 +6,8 @@ template <typename T>
 class rectangle {
 private:
     T x_;
-    T x2_;
     T y_;
+    T x2_;
     T y2_;
 public:
     rectangle(T x, T y, T x2, T y2) : x_(x), y_(y), x2_(x2), y2_(y2) {}
@@ -36,7 +36,7 @@ public:
             mode = width > height ? Mode::SplitVertical : Mode::SplitHorizontal;
         uint32_t length = (mode == Mode::SplitVertical ? width : height) / pairs;
         uint32_t current_length = 0;
-        for (int i=0; i<pairs - 1; i++) {
+        for (size_t i=0; i<pairs - 1; i++) {
             if (mode == Mode::SplitVertical)
                 ret.push_back(rectangle<T>{current_length, 0, current_length + length, height});
             else
