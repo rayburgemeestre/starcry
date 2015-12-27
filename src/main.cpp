@@ -4,31 +4,35 @@
 #include "job_storage.h"
 #include "job_generator.h"
 #include "renderer.h"
+#include "streamer.h"
 
 #include "util/actor_info.hpp"
 
-using start_rendering = atom_constant<atom("startrende")>;
-using stats_atom = atom_constant<atom("stats")>;
+using start         = atom_constant<atom("start     ")>;
+using show_stats    = atom_constant<atom("show_stats")>;
 
 int main() {
     scoped_actor s;
     auto jobstorage = spawn(job_storage);
     auto generator  = spawn(job_generator, jobstorage);
-    auto renderer_  = spawn(renderer, jobstorage);
+    auto streamer_  = spawn(streamer);
+    auto renderer_  = spawn(renderer, jobstorage, streamer_);
 
-    // cascade exit from renderer -> job renderer -> job storage
+    // cascade exit from renderer -> job generator -> job storage
     generator->link_to(renderer_);
     jobstorage->link_to(generator);
+    streamer_->link_to(renderer_);
 
     actor_info renderer_info{renderer_};
-    s->send(generator, prepare_frame::value);
+    s->send(generator, start::value);
 
-    size_t num_cores = 100;
-    s->send(renderer_, start_rendering::value, num_cores);
+    size_t num_cores = 8;
+    s->send(renderer_, start::value, num_cores);
 
     while (renderer_info.running()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        s->send(renderer_, stats_atom::value);
+        s->send(renderer_, show_stats::value);
+        s->send(streamer_, show_stats::value);
     }
     s->await_all_other_actors_done();
 }
