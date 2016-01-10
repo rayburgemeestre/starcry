@@ -9,7 +9,7 @@ auto nothing = [](){};
 
 inline void print_on_exit(const actor& hdl, const std::string& name) {
     hdl->attach_functor([=](abstract_actor *ptr, uint32_t reason) {
-        aout(ptr) << name << " exited with reason " << reason << endl;
+        aout(ptr) << name << " exited with reason " << reason << " (" << caf::exit_reason::as_string(reason) << ")" << endl;
     });
 }
 

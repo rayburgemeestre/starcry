@@ -5,6 +5,8 @@
 namespace data {
 
 struct job {
+    uint32_t width;
+    uint32_t height;
     size_t job_number;
     size_t frame_number;
     bool rendered;

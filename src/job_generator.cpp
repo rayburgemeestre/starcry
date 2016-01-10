@@ -38,11 +38,17 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
                     // Store it
                     bool last_frame = (current_frame >= 10000);
 
-                    ImageSplitter<uint32_t> imagesplitter{800, 600}; // fake values
+                    // temporarily hardcoded dimensions
+                    uint32_t width = 1280;
+                    uint32_t height = 720;
+
+                    ImageSplitter<uint32_t> imagesplitter{width, height}; // fake values
                     const auto rectangles = imagesplitter.split(max_split_chunks);
                     size_t counter = 1;
 
                     data::job new_job;
+                    new_job.width = width;
+                    new_job.height = height;
                     new_job.frame_number = current_frame;
                     new_job.rendered = false;
                     new_job.last_frame = last_frame;

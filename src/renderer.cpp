@@ -18,72 +18,40 @@ using render_frame         = atom_constant<atom("render_fra")>;
 
 size_t rendered_frame = 0;
 
-#include "allegro5/allegro.h"
-#include <allegro5/allegro_image.h>
+#include "rendering_engine.hpp"
 
-#include <mutex>
-
-using namespace std;
-class rendering_engine
-{
-public:
-    void initialize() {
-        if (!al_init()) {
-            fprintf(stderr, "Failed to initialize allegro!\n");
-            return;
-        }
-        if (!al_init_image_addon()) {
-            fprintf(stderr, "Failed to initialize allegro!\n");
-            return;
-        }
-    }
-    template <typename image, typename shapes_t>
-    void render(image bmp, shapes_t & shapes) {
-        std::unique_lock<std::mutex> lock(m);
-        al_set_target_bitmap(bmp);
-        for (auto &shape : shapes) {
-            al_clear_to_color(al_map_rgba(shape.radius, 255, 0, 0));
-        }
-    }
-    void write_image() {
-        std::unique_lock<std::mutex> lock(m);
-        //al_lock_bitmap(bmp, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
-        /*bool ret = al_save_bitmap("/tmp/test.bmp", bmp);
-        if (ret) cout << " ret is ok" <<endl;
-        else cout << "ret is nok" << endl;
-         */
-        //al_unlock_bitmap(bmp);
-
-        //
-    }
-    ALLEGRO_DISPLAY *display = NULL;
-    std::mutex m;
-};
-
-struct worker_data // still necessary?
+struct worker_data
 {
     size_t worker_num = 0;
-    ALLEGRO_BITMAP * bitmap = NULL;
+    ALLEGRO_BITMAP * bitmap = nullptr;
     rendering_engine engine;
+    uint32_t width = 0;
+    uint32_t height = 0;
 };
 
 behavior worker(caf::stateful_actor<worker_data> * self, const caf::actor &renderer, size_t worker_num) {
     self->state.worker_num = worker_num;
-    self->state.bitmap = al_create_bitmap(800, 600);
     return [=](get_job, struct data::job j) {
+        // make sure our bitmap is of the correct size.
+        if ((self->state.width == 0 && self->state.height == 0) || // not initialized
+            (self->state.width != j.width || self->state.height != j.height) || // changed since previous
+            self->state.bitmap == nullptr
+        ){
+            self->state.width = j.width;
+            self->state.height = j.height;
+            if (self->state.bitmap != nullptr) {
+                al_destroy_bitmap(self->state.bitmap);
+            }
+            self->state.bitmap = al_create_bitmap(j.width, j.height);
+        }
         // simulate work for rendering
         //std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        //aout(self) << "worker sees job with radius: " << j.shapes[0].radius << " - " << self->state.worker_num << endl;
+
+        // render
         self->state.engine.render(self->state.bitmap, j.shapes);
-        vector<ALLEGRO_COLOR> pixels;
-        pixels.reserve(800 * 600);
-        al_lock_bitmap(self->state.bitmap, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_READONLY);
-        for (int y=0; y<600; y++) {
-            for (int x=0; x<800; x++) {
-                pixels.emplace_back(al_get_pixel(self->state.bitmap, x, y)); // interesting this one has a bitmap arg??
-            }
-        }
-        al_unlock_bitmap(self->state.bitmap);
+
+        vector<ALLEGRO_COLOR> pixels = self->state.engine.serialize_bitmap(self->state.bitmap, j.width, j.height);
+
         self->send(renderer, ready::value, j, pixels);
     };
 }
@@ -131,15 +99,13 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
             );
         },
         [=](ready, struct data::job j, vector<ALLEGRO_COLOR> pixels) {
-            self->send(job_storage, del_job::value, j.job_number);
-
-            auto ready = [&](auto frame_number, auto chunk, auto num_chunks, bool last_frame) {
+            auto send_to_streamer = [&](struct data::job &job) {
                 counter.measure();
-                self->send(streamer, render_frame::value, frame_number, chunk, num_chunks, last_frame, pixels);
+                self->send(streamer, render_frame::value, job, pixels);
             };
 
             if (j.job_number == job_sequence) {
-                ready(j.frame_number, j.chunk, j.num_chunks, j.last_frame);
+                send_to_streamer(j);
                 job_sequence++;
                 while (true) {
                     auto pos = find_if(jobs_done.begin(), jobs_done.end(), [&](auto &job) {
@@ -148,7 +114,7 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                     if (pos == jobs_done.end()) {
                         break;
                     }
-                    ready(pos->frame_number, pos->chunk, pos->num_chunks, pos->last_frame);
+                    send_to_streamer(*pos);
                     jobs_done.erase(pos);
                     job_sequence++;
                 }

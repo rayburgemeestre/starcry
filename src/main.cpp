@@ -15,7 +15,7 @@ int main() {
     scoped_actor s;
     auto jobstorage = spawn(job_storage);
     auto generator  = spawn(job_generator, jobstorage);
-    auto streamer_  = spawn(streamer);
+    auto streamer_  = spawn(streamer, jobstorage);
     auto renderer_  = spawn(renderer, jobstorage, streamer_);
 
     // cascade exit from renderer -> job generator -> job storage
@@ -31,7 +31,7 @@ int main() {
 
     while (renderer_info.running()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        s->send(renderer_, show_stats::value);
+        //s->send(renderer_, show_stats::value);
         s->send(streamer_, show_stats::value);
     }
     s->await_all_other_actors_done();
