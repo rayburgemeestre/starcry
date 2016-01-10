@@ -52,6 +52,10 @@ behavior worker(caf::stateful_actor<worker_data> * self, const caf::actor &rende
 
         vector<ALLEGRO_COLOR> pixels = self->state.engine.serialize_bitmap(self->state.bitmap, j.width, j.height);
 
+        // just to visualize the different chunks..
+        for (auto &pixel : pixels)
+            pixel.r -= j.chunk * 0.1;
+
         self->send(renderer, ready::value, j, pixels);
     };
 }

@@ -36,7 +36,7 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
                     //aout(self) << "job_generator: generated frame #" << current_frame << endl;
 
                     // Store it
-                    bool last_frame = (current_frame >= 10000);
+                    bool last_frame = (current_frame >= 1000);
 
                     // temporarily hardcoded dimensions
                     uint32_t width = 1280;
@@ -64,8 +64,10 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
                     new_job.shapes.push_back(new_shape);
 
                     for (size_t i=0; i<rectangles.size(); i++) {
+                        new_job.width = rectangles[i].width();
+                        new_job.height = rectangles[i].height();
                         new_job.job_number = current_job++;
-                        new_job.chunk = counter++;
+                        new_job.chunk = counter;
                         self->send(job_storage, add_job::value, new_job);
                         counter++;
                     }

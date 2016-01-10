@@ -15,6 +15,8 @@ public:
     inline const T & y() const { return y_; }
     inline const T & x2() const { return x2_; }
     inline const T & y2() const { return y2_; }
+    inline const T width() const { return x2() - x(); };
+    inline const T height() const { return y2() - y(); };
 };
 
 template <typename T = uint32_t>
