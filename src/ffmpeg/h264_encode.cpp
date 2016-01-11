@@ -55,7 +55,7 @@ ffmpeg_h264_encode::ffmpeg_h264_encode() {}
 void ffmpeg_h264_encode::initialize() {
     avcodec_register_all();
 
-    printf("Encode video file %s\n", filename);
+    printf("Encode video file %s\n", filename.c_str());
     /* find the mpeg1 video encoder */
     codec = avcodec_find_encoder(codec_id);
     if (!codec) {
