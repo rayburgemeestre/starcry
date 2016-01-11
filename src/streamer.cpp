@@ -22,7 +22,7 @@ MeasureInterval &counter2 = static_cast<MeasureInterval &>(*benchmark_class2.get
 size_t current_frame2 = 0; // initialize with a start ?
 
 using namespace std;
-vector<tuple<size_t,size_t,size_t,bool, vector<ALLEGRO_COLOR>>> fake_buffer;
+vector<tuple<size_t,size_t,size_t,bool, vector<ALLEGRO_COLOR>>> fake_buffer, matches;
 std::optional<size_t> last_frame_streamed;
 
 
@@ -34,29 +34,27 @@ ffmpeg_h264_encode encoder;
 #include "rendering_engine.hpp"
 
 bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chunks) {
-    if (count_if(fake_buffer.begin(),
-                 fake_buffer.end(),
-                 [&](auto &tpl) { return std::get<0>(tpl) == frame_number; }) == static_cast<int>(num_chunks)
-    ){
+    auto frame_number_matches = [&](auto &tpl) { return std::get<0>(tpl) == frame_number; };
+    auto sort_by_chunk        = [&](auto &tpl, auto &tpl2) { return std::get<1>(tpl) > std::get<1>(tpl2); };
+
+    matches.clear();
+    copy_if(fake_buffer.begin(), fake_buffer.end(), back_inserter(matches), frame_number_matches);
+
+    if (matches.size() == num_chunks) {
         counter2.measure();
 
-        //rendering_engine e;
-        //ALLEGRO_BITMAP *bitmap = e.unserialize_bitmap(pixels, job.width, job.height);
+        sort(matches.begin(), matches.end(), sort_by_chunk);
+
+        // we split the image horizontally so we can just concat all pixels here
         vector<ALLEGRO_COLOR> pixels_all;
-        for_each(fake_buffer.begin(), fake_buffer.end(), [&](auto &tpl) {
-            if (std::get<0>(tpl) == frame_number) {
-                auto &vec = std::get<4>(tpl);
-                for (auto &pixel : vec) {
-                    pixels_all.push_back(pixel);
-                }
-            }
-        });
+        for (auto &tpl : matches) {
+            pixels_all.insert(pixels_all.end(), std::get<4>(tpl).begin(), std::get<4>(tpl).end() );
+        }
         encoder.add_frame(pixels_all); // encoder has it's own frameNumber variable.
-        //al_destroy_bitmap(bitmap);
 
         fake_buffer.erase(std::remove_if(fake_buffer.begin(),
                                          fake_buffer.end(),
-                                         [&](auto &tpl) { return std::get<0>(tpl) == frame_number; }),
+                                         frame_number_matches),
                           fake_buffer.end());
         if (last_frame_streamed && *last_frame_streamed == frame_number) {
             encoder.finalize();

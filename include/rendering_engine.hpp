@@ -30,6 +30,20 @@ inline void print_bitmap(ALLEGRO_BITMAP *bmp) {
     std::cout << ";" << endl;
 }
 
+template <typename T>
+constexpr T squared(T num) {
+    return (num * num);
+}
+template <typename T>
+constexpr T squared_dist(T num, T num2) {
+    return (num - num2) * (num - num2);
+}
+
+template <typename T>
+constexpr T distance(T x1, T x2, T y1, T y2) {
+    return sqrt(squared_dist<T>(x1, x2) + squared_dist<T>(y1, y2));
+}
+
 class rendering_engine
 {
 public:
@@ -45,12 +59,25 @@ public:
     }
 
     template <typename image, typename shapes_t>
-    void render(image bmp, shapes_t & shapes) {
+    void render(image bmp, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y) {
         std::unique_lock<std::mutex> lock(m);
         al_set_target_bitmap(bmp);
         al_clear_to_color(al_map_rgba(0, 0, 0, 0));
-        for (auto &shape : shapes) {
-            al_clear_to_color(al_map_rgba((int)(shape.radius * 50), (int)(shape.radius * 50), 0, 255));
+        uint32_t width = al_get_bitmap_width(bmp);
+        uint32_t height = al_get_bitmap_height(bmp);
+        size_t index = 0;
+        auto shape = shapes[0]; // just for some test effect
+        for (uint32_t y = 0; y < height; y++) {
+            for (uint32_t x = 0; x < width; x++) {
+                if (y <= 1)
+                    al_put_pixel(x, y, al_map_rgba(0, 255, 0, 255));
+                else if (x <= 1)
+                    al_put_pixel(x, y, al_map_rgba(255, 0, 0, 255));
+                else {
+                    double diffFromCenter = distance<double>(offset_x, x, offset_y, y) * shape.radius;
+                    al_put_pixel(x, y, al_map_rgba(diffFromCenter, diffFromCenter, diffFromCenter, 255));
+                }
+            }
         }
     }
 

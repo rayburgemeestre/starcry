@@ -43,7 +43,7 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
                     uint32_t height = 720;
 
                     ImageSplitter<uint32_t> imagesplitter{width, height}; // fake values
-                    const auto rectangles = imagesplitter.split(max_split_chunks);
+                    const auto rectangles = imagesplitter.split(max_split_chunks, ImageSplitter<uint32_t>::Mode::SplitHorizontal);
                     size_t counter = 1;
 
                     data::job new_job;
@@ -66,6 +66,8 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
                     for (size_t i=0; i<rectangles.size(); i++) {
                         new_job.width = rectangles[i].width();
                         new_job.height = rectangles[i].height();
+                        new_job.offset_x = rectangles[i].x();
+                        new_job.offset_y = rectangles[i].y();
                         new_job.job_number = current_job++;
                         new_job.chunk = counter;
                         self->send(job_storage, add_job::value, new_job);

@@ -48,13 +48,9 @@ behavior worker(caf::stateful_actor<worker_data> * self, const caf::actor &rende
         //std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         // render
-        self->state.engine.render(self->state.bitmap, j.shapes);
+        self->state.engine.render(self->state.bitmap, j.shapes, j.offset_x, j.offset_y);
 
         vector<ALLEGRO_COLOR> pixels = self->state.engine.serialize_bitmap(self->state.bitmap, j.width, j.height);
-
-        // just to visualize the different chunks..
-        for (auto &pixel : pixels)
-            pixel.r -= j.chunk * 0.1;
 
         self->send(renderer, ready::value, j, pixels);
     };
@@ -72,6 +68,8 @@ MeasureInterval &counter = static_cast<MeasureInterval &>(*benchmark_class.get()
 //{
 //    rendering_engine engine;
 //};
+
+map<size_t, vector<ALLEGRO_COLOR>> pixel_store;
 
 behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer) {
 //behavior renderer(caf::stateful_actor<renderer_data>* self, const caf::actor &job_storage, const caf::actor &streamer) {
@@ -103,11 +101,13 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
             );
         },
         [=](ready, struct data::job j, vector<ALLEGRO_COLOR> pixels) {
+            pixel_store[j.job_number] = pixels;
             auto send_to_streamer = [&](struct data::job &job) {
                 counter.measure();
-                self->send(streamer, render_frame::value, job, pixels);
+                self->send(streamer, render_frame::value, job, pixel_store[job.job_number]);
+                auto it = pixel_store.find(job.job_number);
+                pixel_store.erase(it);
             };
-
             if (j.job_number == job_sequence) {
                 send_to_streamer(j);
                 job_sequence++;
