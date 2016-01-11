@@ -4,3 +4,6 @@
 [submodule "libs/benchmarklib"]
 	path = libs/benchmarklib
 	url = git@bitbucket.org:rayburgemeestre/benchmarklib.git
+[submodule "libs/allegro5"]
+	path = libs/allegro5
+	url = git@github.com:liballeg/allegro5.git
