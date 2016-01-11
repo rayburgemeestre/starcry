@@ -135,8 +135,9 @@ void ffmpeg_h264_encode::add_frame(std::vector<ALLEGRO_COLOR> &pixels) {
 
     fflush(stdout);
 
-    //frame->pts = frameNumber;
-    frame->pts += av_rescale_q(1, c->time_base, c->time_base);
+    frame->pts = frameNumber;
+    // Will replace the pts calculation with something better
+    //frame->pts += av_rescale_q(1, c->time_base, c->time_base);
 
     /* encode the image */
     ret = avcodec_encode_video2(c, &pkt, frame, &got_output);
