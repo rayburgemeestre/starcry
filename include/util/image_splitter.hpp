@@ -42,7 +42,7 @@ public:
             if (mode == Mode::SplitVertical)
                 ret.push_back(rectangle<T>{current_length, 0, current_length + length, height});
             else
-                ret.push_back(rectangle<T>{0, current_length, height, current_length + length});
+                ret.push_back(rectangle<T>{0, current_length, width, current_length + length});
             current_length += length;
         }
         if (mode == Mode::SplitVertical)
