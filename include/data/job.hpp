@@ -15,7 +15,11 @@ struct job {
     bool last_frame;
     size_t chunk;
     size_t num_chunks;
-    std::vector<shape<double>> shapes;
+    std::vector<shape> shapes;
 };
+
+inline bool operator==(const job& lhs, const job& rhs) {
+    return lhs.job_number == rhs.job_number;
+}
 
 }

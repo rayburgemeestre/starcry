@@ -6,15 +6,21 @@ enum class shape_type {
     circle
 };
 
-template <typename T>
+//template <typename T>
 struct shape
 {
-    T x;
-    T y;
-    T z;
+    double x;
+    double y;
+    double z;
     shape_type type;
-    T radius;
-    T radius_size;
+    double radius;
+    double radius_size;
 };
+
+// announce requires foo to have the equal operator implemented
+inline bool operator==(const shape& lhs, const shape& rhs) {
+    return lhs.x == rhs.x && lhs.y == rhs.y; // TEMP incomplete!
+}
+
 
 }

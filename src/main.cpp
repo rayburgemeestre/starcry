@@ -8,15 +8,115 @@
 
 #include "util/actor_info.hpp"
 
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/option.hpp>
+#include <boost/program_options/variables_map.hpp>
+#include <boost/program_options/parsers.hpp>
+
+
 using start         = atom_constant<atom("start     ")>;
 using show_stats    = atom_constant<atom("show_stats")>;
 
-int main() {
+#include <regex>
+#include "data/job.hpp"
+#include "data/shape.hpp"
+using namespace data;
+
+struct pixel_data {
+    vector<ALLEGRO_COLOR> pixels;
+};
+inline bool operator==(const pixel_data& lhs, const pixel_data& rhs) {
+    return lhs.pixels == rhs.pixels ; // TEMP incomplete!
+}
+inline bool operator==(const ALLEGRO_COLOR& lhs, const ALLEGRO_COLOR& rhs) {
+    return lhs.r == rhs.r && lhs.g == rhs.g; // TEMP incomplete!
+}
+
+int main(int argc, char *argv[]) {
+
+    caf::announce<job>("job",
+                       &job::width,
+                       &job::height,
+                       &job::offset_x,
+                       &job::offset_y,
+                       &job::job_number,
+                       &job::frame_number,
+                       &job::rendered,
+                       &job::last_frame,
+                       &job::chunk,
+                       &job::num_chunks,
+                       &job::shapes);
+    caf::announce<shape>("shape",
+                         &shape::x,
+                         &shape::y,
+                         &shape::z,
+                         &shape::type,
+                         &shape::radius,
+                         &shape::radius_size);
+    caf::announce<ALLEGRO_COLOR>("ALLEGRO_COLOR",
+                                 &ALLEGRO_COLOR::r,
+                                 &ALLEGRO_COLOR::g,
+                                 &ALLEGRO_COLOR::b,
+                                 &ALLEGRO_COLOR::a);
+    caf::announce<pixel_data>("pixel_data",
+                              &pixel_data::pixels);
+
+    namespace po = ::boost::program_options;
+    int worker_port            = 0;
+    size_t num_chunks          = 8; // number of chunks to split image size_to
+    size_t num_workers         = 8; // number of workers for rendering
+    string worker_ports;
+    po::options_description desc("Allowed options");
+    desc.add_options()("help", "produce help message")
+                      ("remote,r", po::value<string>(&worker_ports), "use remote workers for rendering")
+                      ("worker,w", po::value<int>(&worker_port), "start worker on specified port")
+                      ("num-chunks,c", po::value<size_t>(&num_chunks), "number of jobs to split frame in")
+                      ("num-workers,n", po::value<size_t>(&num_workers), "number of workers to use in render pool")
+        ;
+    po::variables_map vm;
+    po::store(po::command_line_parser(argc, argv).options(desc).run(), vm);
+    try {
+        po::notify(vm);
+    }
+    catch (po::error &ex) {
+        std::cout << "Error: " << ex.what() << std::endl;
+        std::cout << desc << std::endl;
+        return false;
+    }
+    if (vm.count("help")) {
+        cout << desc << "\n";
+        return 1;
+    }
+    bool use_remote_workers    = vm.count("remote") || vm.count("worker");
+    int range_begin = 0, range_end = 0;
+    if (use_remote_workers) {
+        regex range("([0-9]+)-([0-9]+)");
+        smatch m;
+        if (std::regex_match(worker_ports, m, range) && m.size() == 3) {
+            { stringstream os(m[1]); os >> range_begin; }
+            { stringstream os(m[2]); os >> range_end; }
+            if (range_end < range_begin) swap(range_begin, range_end);
+            num_workers = range_end - (range_begin - 1); // overruling
+        }
+    }
+
+    if (use_remote_workers) cout << "use_remote_workers=true" << endl;
+    if (worker_port) cout << "worker_port=" << worker_port << endl;
+    if (num_chunks) cout << "num_chunks=" << num_chunks << endl;
+    if (num_workers) cout << "num_workers=" << num_workers << endl;
+
+    if (use_remote_workers && worker_port) {
+        scoped_actor s;
+        auto w = spawn(worker, worker_port, use_remote_workers);
+        s->await_all_other_actors_done();
+        return 0;
+    }
+
     scoped_actor s;
     auto jobstorage = spawn(job_storage);
     auto generator  = spawn(job_generator, jobstorage);
     auto streamer_  = spawn(streamer, jobstorage);
-    auto renderer_  = spawn(renderer, jobstorage, streamer_);
+    auto renderer_  = spawn(renderer, jobstorage, streamer_, range_begin, range_end);
 
     // cascade exit from renderer -> job generator -> job storage
     generator->link_to(renderer_);
@@ -24,8 +124,6 @@ int main() {
     streamer_->link_to(renderer_);
 
     actor_info renderer_info{renderer_};
-    size_t num_chunks  = 8; // number of chunks to split image into
-    size_t num_workers = 8; // number of workers for rendering
     s->send(generator, start::value, num_chunks);
     s->send(renderer_, start::value, num_workers);
 
@@ -36,3 +134,4 @@ int main() {
     }
     s->await_all_other_actors_done();
 }
+

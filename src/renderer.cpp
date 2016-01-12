@@ -18,41 +18,49 @@ using render_frame         = atom_constant<atom("render_fra")>;
 
 size_t rendered_frame = 0;
 
-#include "rendering_engine.hpp"
-
-struct worker_data
-{
-    size_t worker_num = 0;
-    ALLEGRO_BITMAP * bitmap = nullptr;
-    rendering_engine engine;
-    uint32_t width = 0;
-    uint32_t height = 0;
+struct pixel_data {
+    vector<ALLEGRO_COLOR> pixels;
 };
 
-behavior worker(caf::stateful_actor<worker_data> * self, const caf::actor &renderer, size_t worker_num) {
+#include "caf/io/all.hpp"
+behavior worker(caf::stateful_actor<worker_data> * self, /*const caf::actor &renderer,*/ size_t worker_num, bool remote) {
     self->state.worker_num = worker_num;
-    return [=](get_job, struct data::job j) {
-        // make sure our bitmap is of the correct size.
-        if ((self->state.width == 0 && self->state.height == 0) || // not initialized
-            (self->state.width != j.width || self->state.height != j.height) || // changed since previous
-            self->state.bitmap == nullptr
-        ){
-            self->state.width = j.width;
-            self->state.height = j.height;
-            if (self->state.bitmap != nullptr) {
-                al_destroy_bitmap(self->state.bitmap);
+    if (remote) {
+        rendering_engine engine;
+        engine.initialize();
+        aout(self) << "worker publishing myself on port: " << worker_num << endl;
+        auto p = io::publish(self, worker_num);
+        if (p != worker_num) aout(self) << "worker publishing FAILED.." << endl;
+    }
+    return {
+        [=](get_job, struct data::job j) -> message {
+            // make sure our bitmap is of the correct size.
+            if ((self->state.width == 0 && self->state.height == 0) || // not initialized
+                (self->state.width != j.width || self->state.height != j.height) || // changed since previous
+                self->state.bitmap == nullptr
+                ){
+                self->state.width = j.width;
+                self->state.height = j.height;
+                if (self->state.bitmap != nullptr) {
+                    al_destroy_bitmap(self->state.bitmap);
+                }
+                self->state.bitmap = al_create_bitmap(j.width, j.height);
             }
-            self->state.bitmap = al_create_bitmap(j.width, j.height);
+            // simulate work for rendering
+            //std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+            // render
+            self->state.engine.render(self->state.bitmap, j.shapes, j.offset_x, j.offset_y);
+
+            pixel_data dat;
+            dat.pixels = self->state.engine.serialize_bitmap(self->state.bitmap, j.width, j.height);
+
+            //self->send(renderer, ready::value, j, pixels);
+            return make_message(ready::value, j, dat);
+        },
+        others >> [=]() {
+            aout(self) << "DEBUG: worker others\n";
         }
-        // simulate work for rendering
-        //std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-        // render
-        self->state.engine.render(self->state.bitmap, j.shapes, j.offset_x, j.offset_y);
-
-        vector<ALLEGRO_COLOR> pixels = self->state.engine.serialize_bitmap(self->state.bitmap, j.width, j.height);
-
-        self->send(renderer, ready::value, j, pixels);
     };
 }
 
@@ -71,8 +79,7 @@ MeasureInterval &counter = static_cast<MeasureInterval &>(*benchmark_class.get()
 
 map<size_t, vector<ALLEGRO_COLOR>> pixel_store;
 
-behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer) {
-//behavior renderer(caf::stateful_actor<renderer_data>* self, const caf::actor &job_storage, const caf::actor &streamer) {
+behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer, int range_begin, int range_end) {
     rendering_engine engine;
     engine.initialize();
 
@@ -80,9 +87,17 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
     counter.startHistogramAtZero(true);
     return {
         [=](start, size_t num_workers) {
+            aout(self) << "renderer started, num_workers = " << num_workers << endl;
             auto worker_factory = [&]() -> actor {
-                static size_t worker_num = 0;
-                return spawn(worker, self, worker_num++);
+                static size_t worker_num = range_begin;
+                if (range_begin != 0) {
+                    aout(self) << "renderer connecting to worker on port: " << worker_num << endl;
+                    return io::remote_actor("127.0.0.1", worker_num++);
+                }
+                else {
+                    aout(self) << "renderer spawning own worker" << endl;
+                    return spawn(worker, worker_num++, false);
+                }
             };
             pool = std::move(std::make_unique<actor>(actor_pool::make(num_workers, worker_factory, actor_pool::round_robin())));
 
@@ -100,8 +115,8 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                 }
             );
         },
-        [=](ready, struct data::job j, vector<ALLEGRO_COLOR> pixels) {
-            pixel_store[j.job_number] = pixels;
+        [=](ready, struct data::job j, pixel_data pixeldat) {
+            pixel_store[j.job_number] = pixeldat.pixels;
             auto send_to_streamer = [&](struct data::job &job) {
                 counter.measure();
                 self->send(streamer, render_frame::value, job, pixel_store[job.job_number]);
