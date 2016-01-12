@@ -60,6 +60,14 @@ allegro-5, also append static to all lib names)
 - ./starcry
 - ffplay test.h264
 
+or,
+- ./starcry -w 10000 &
+- ./starcry -w 10001 &
+- ./starcry -w 10002 &
+- ./starcry -w 10003 &
+- ./starcry -r 10000-10003
+- ffplay test.h264
+
 ## Problems
 
 Need to check this out, something different accross different Linux distrubutions it seems..
