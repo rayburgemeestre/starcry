@@ -65,7 +65,7 @@ public:
         al_clear_to_color(al_map_rgba(0, 0, 0, 0));
         uint32_t width = al_get_bitmap_width(bmp);
         uint32_t height = al_get_bitmap_height(bmp);
-        size_t index = 0;
+        // size_t index = 0;
         auto shape = shapes[0]; // just for some test effect
         for (uint32_t y = 0; y < height; y++) {
             for (uint32_t x = 0; x < width; x++) {

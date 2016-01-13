@@ -1,7 +1,10 @@
 #include "renderer.h"
 #include "data/job.hpp"
+#include "data/pixels.hpp"
 
 #include "benchmark.h"
+
+#include "caf/io/all.hpp"
 
 // public
 using start                = atom_constant<atom("start     ")>;
@@ -18,11 +21,7 @@ using render_frame         = atom_constant<atom("render_fra")>;
 
 size_t rendered_frame = 0;
 
-struct pixel_data {
-    vector<ALLEGRO_COLOR> pixels;
-};
 
-#include "caf/io/all.hpp"
 behavior worker(caf::stateful_actor<worker_data> * self, /*const caf::actor &renderer,*/ size_t worker_num, bool remote) {
     self->state.worker_num = worker_num;
     if (remote) {
@@ -52,7 +51,7 @@ behavior worker(caf::stateful_actor<worker_data> * self, /*const caf::actor &ren
             // render
             self->state.engine.render(self->state.bitmap, j.shapes, j.offset_x, j.offset_y);
 
-            pixel_data dat;
+            data::pixel_data dat;
             dat.pixels = self->state.engine.serialize_bitmap(self->state.bitmap, j.width, j.height);
 
             //self->send(renderer, ready::value, j, pixels);
@@ -115,7 +114,7 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                 }
             );
         },
-        [=](ready, struct data::job j, pixel_data pixeldat) {
+        [=](ready, struct data::job j, data::pixel_data pixeldat) {
             pixel_store[j.job_number] = pixeldat.pixels;
             auto send_to_streamer = [&](struct data::job &job) {
                 counter.measure();

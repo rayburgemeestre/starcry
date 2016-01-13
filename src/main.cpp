@@ -18,48 +18,11 @@ using start         = atom_constant<atom("start     ")>;
 using show_stats    = atom_constant<atom("show_stats")>;
 
 #include <regex>
-#include "data/job.hpp"
-#include "data/shape.hpp"
-using namespace data;
-
-struct pixel_data {
-    vector<ALLEGRO_COLOR> pixels;
-};
-inline bool operator==(const pixel_data& lhs, const pixel_data& rhs) {
-    return lhs.pixels == rhs.pixels ; // TEMP incomplete!
-}
-inline bool operator==(const ALLEGRO_COLOR& lhs, const ALLEGRO_COLOR& rhs) {
-    return lhs.r == rhs.r && lhs.g == rhs.g; // TEMP incomplete!
-}
+#include "announce.h"
 
 int main(int argc, char *argv[]) {
 
-    caf::announce<job>("job",
-                       &job::width,
-                       &job::height,
-                       &job::offset_x,
-                       &job::offset_y,
-                       &job::job_number,
-                       &job::frame_number,
-                       &job::rendered,
-                       &job::last_frame,
-                       &job::chunk,
-                       &job::num_chunks,
-                       &job::shapes);
-    caf::announce<shape>("shape",
-                         &shape::x,
-                         &shape::y,
-                         &shape::z,
-                         &shape::type,
-                         &shape::radius,
-                         &shape::radius_size);
-    caf::announce<ALLEGRO_COLOR>("ALLEGRO_COLOR",
-                                 &ALLEGRO_COLOR::r,
-                                 &ALLEGRO_COLOR::g,
-                                 &ALLEGRO_COLOR::b,
-                                 &ALLEGRO_COLOR::a);
-    caf::announce<pixel_data>("pixel_data",
-                              &pixel_data::pixels);
+    data::announce();
 
     namespace po = ::boost::program_options;
     int worker_port            = 0;
