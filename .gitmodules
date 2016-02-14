@@ -7,3 +7,6 @@
 [submodule "libs/allegro5"]
 	path = libs/allegro5
 	url = git@github.com:liballeg/allegro5.git
+[submodule "libs/hana"]
+	path = libs/hana
+	url = https://github.com/boostorg/hana.git
