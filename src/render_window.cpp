@@ -41,7 +41,7 @@ behavior render_loop(event_based_actor* self) {
                                       0);
             }
             ALLEGRO_EVENT event;
-            al_wait_for_event(queue, &event);
+            al_wait_for_event_timed(queue, &event, 0.001);
             if (event.type == ALLEGRO_EVENT_DISPLAY_RESIZE) {
                al_acknowledge_resize(event.display.source);
             }

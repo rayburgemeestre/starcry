@@ -100,7 +100,7 @@ public:
         if (!label.empty()) {
             if (!font) {
                 font = al_load_ttf_font("Monaco_Linux-Powerline.ttf", 24, 0);
-                if (font){
+                if (!font){
                     fprintf(stderr, "Could not load monaco ttf font.\n");
                     // TODO: do this with RAII
                     al_set_target_bitmap(old_bmp);
