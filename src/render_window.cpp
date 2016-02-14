@@ -19,8 +19,11 @@ behavior render_loop(event_based_actor* self) {
         fprintf(stderr, "Failed to initialize allegro!\n");
         return {};
     }
+    auto queue = al_create_event_queue();
+    al_set_new_display_flags(ALLEGRO_WINDOWED | ALLEGRO_RESIZABLE | ALLEGRO_GENERATE_EXPOSE_EVENTS);
     display = al_create_display(1280, 720);
     al_clear_to_color(al_map_rgb_f(1, 0, 0));
+    al_register_event_source(queue, al_get_display_event_source(display));
     al_flip_display();
     if (!display) {
         fprintf(stderr, "failed to create display!\n");
@@ -30,10 +33,18 @@ behavior render_loop(event_based_actor* self) {
         [=](render) {
             al_clear_to_color(al_map_rgb_f(1, 1, 0));
             rendering_engine re;
-            al_lock_bitmap(al_get_target_bitmap(), ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_READWRITE);
-            if (data_.pixels.size())
-                re.unserialize_bitmap_(data_.pixels, width_, height_);
-            al_unlock_bitmap(al_get_target_bitmap());
+            if (data_.pixels.size()) {
+                auto bmp = re.unserialize_bitmap(data_.pixels, width_, height_);
+                al_draw_scaled_bitmap(bmp,
+                                      0, 0, al_get_bitmap_width(bmp), al_get_bitmap_height(bmp),
+                                      0, 0, al_get_display_width(display), al_get_display_height(display),
+                                      0);
+            }
+            ALLEGRO_EVENT event;
+            al_wait_for_event(queue, &event);
+            if (event.type == ALLEGRO_EVENT_DISPLAY_RESIZE) {
+               al_acknowledge_resize(event.display.source);
+            }
             al_flip_display();
             //using namespace std::literals;
             //std::this_thread::sleep_for(0.1s);

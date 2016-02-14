@@ -28,8 +28,8 @@ public:
 };
 
 // TODO: eventually this should move outside..
-#include "ffmpeg/h264_encode.h"
-#include "util/allegro5_window.h"
+#include "streamer_output/ffmpeg_encode.h"
+#include "streamer_output/allegro5_window.h"
 
 class output_aggregate {
 private:

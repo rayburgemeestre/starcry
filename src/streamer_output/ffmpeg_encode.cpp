@@ -14,7 +14,7 @@
 
 #include <math.h>
 
-#include "ffmpeg/h264_encode.h"
+#include "streamer_output/ffmpeg_encode.h"
 //#include "benchmark.h"
 
 //extern void sfml_init(unsigned char **pixels, size_t *pixelSize);

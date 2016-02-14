@@ -1,7 +1,7 @@
 #include "common.h"
 #include "data/job.hpp"
 #include "data/pixels.hpp"
-#include "util/allegro5_window.h"
+#include "streamer_output/allegro5_window.h"
 #include <allegro5/allegro.h>
 #include <cstdio>
 #include "rendering_engine.hpp"
