@@ -7,13 +7,18 @@ extern "C" {
 }
 
 #include <vector>
+#include <mutex>
 #include "allegro5/color.h"
 
 class AbstractTimer;
+namespace caf {
+    class event_based_actor;
+}
 
 class ffmpeg_h264_encode
 {
 private:
+    std::mutex mut;
     std::string filename = "test.h264";
     AVCodecID codec_id = AV_CODEC_ID_H264;
     AVCodec *codec;
@@ -27,7 +32,7 @@ private:
 
 public:
     ffmpeg_h264_encode();
-    void initialize();
+    void initialize(caf::event_based_actor *, int port);
     void add_frame(std::vector<ALLEGRO_COLOR> &pixels);
     void finalize();
 };

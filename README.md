@@ -36,6 +36,9 @@ allegro-5, also append static to all lib names)
 - git submodule add git@github.com:actor-framework/actor-framework.git libs/caf
 - git submodule add git@bitbucket.org:rayburgemeestre/benchmarklib.git libs/benchmarklib
 - git submodule add git@github.com:liballeg/allegro5.git libs/allegro5
+- git submodule add https://github.com/boostorg/hana.git libs/hana
+
+    libs/hana[master]> cmake -DCMAKE_CXX_COMPILER=/usr/bin/clang++
 
 ## Websequencediagram for job flow
 
@@ -67,6 +70,10 @@ or,
 - ./starcry -w 10003 &
 - ./starcry -r 10000-10003
 - ffplay test.h264
+
+or,
+- ./starcry --render-window 10001 &
+- ./starcry --render-window-at 10001
 
 ## Problems
 

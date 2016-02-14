@@ -5,6 +5,7 @@
 #include "job_generator.h"
 #include "renderer.h"
 #include "streamer.h"
+#include "render_window.h"
 
 #include "util/actor_info.hpp"
 
@@ -18,7 +19,11 @@ using start         = atom_constant<atom("start     ")>;
 using show_stats    = atom_constant<atom("show_stats")>;
 
 #include <regex>
+#include <bitset>
 #include "announce.h"
+
+//#include "caf/io/max_msg_size.hpp"
+//caf::io::max_msg_size(std::numeric_limits<uint32_t>::max());
 
 int main(int argc, char *argv[]) {
 
@@ -26,15 +31,22 @@ int main(int argc, char *argv[]) {
 
     namespace po = ::boost::program_options;
     int worker_port            = 0;
+    int render_win_port        = 0;
+    int render_win_port_at     = 0;
     size_t num_chunks          = 8; // number of chunks to split image size_to
     size_t num_workers         = 8; // number of workers for rendering
     string worker_ports;
+    uint32_t settings_{0};
+    bitset<32> streamer_settings(settings_);
     po::options_description desc("Allowed options");
     desc.add_options()("help", "produce help message")
                       ("remote,r", po::value<string>(&worker_ports), "use remote workers for rendering")
                       ("worker,w", po::value<int>(&worker_port), "start worker on specified port")
                       ("num-chunks,c", po::value<size_t>(&num_chunks), "number of jobs to split frame in")
                       ("num-workers,n", po::value<size_t>(&num_workers), "number of workers to use in render pool")
+                      ("render-window", po::value<int>(&render_win_port), "launch a render window on specified port")
+                      ("render-window-at", po::value<int>(&render_win_port_at), "use render window on specified port")
+                      ("no-video-output", "disable video output using ffmpeg")
         ;
     po::variables_map vm;
     po::store(po::command_line_parser(argc, argv).options(desc).run(), vm);
@@ -50,6 +62,16 @@ int main(int argc, char *argv[]) {
         cout << desc << "\n";
         return 1;
     }
+    // determine outputs
+    if (!vm.count("no-video-output")) {
+        cout << "Enabling video output using ffmpeg.." << endl;
+        streamer_settings.set(streamer_ffmpeg, true);
+    }
+    if (render_win_port_at) {
+        cout << "Enabling video output to window on port " << render_win_port_at << ".." << endl;
+        streamer_settings.set(streamer_allegro5, true);
+    }
+
     bool use_remote_workers    = vm.count("remote") || vm.count("worker");
     int range_begin = 0, range_end = 0;
     if (use_remote_workers) {
@@ -61,6 +83,14 @@ int main(int argc, char *argv[]) {
             if (range_end < range_begin) swap(range_begin, range_end);
             num_workers = range_end - (range_begin - 1); // overruling
         }
+    }
+
+    if (render_win_port) {
+        cout << "launching render output window on port " << render_win_port << endl;
+        scoped_actor s;
+        auto w = spawn(render_window, render_win_port);
+        s->await_all_other_actors_done();
+        return 0;
     }
 
     if (use_remote_workers) cout << "use_remote_workers=true" << endl;
@@ -78,7 +108,7 @@ int main(int argc, char *argv[]) {
     scoped_actor s;
     auto jobstorage = spawn(job_storage);
     auto generator  = spawn(job_generator, jobstorage);
-    auto streamer_  = spawn(streamer, jobstorage);
+    auto streamer_  = spawn(streamer, jobstorage, render_win_port_at, streamer_settings.to_ulong());
     auto renderer_  = spawn(renderer, jobstorage, streamer_, range_begin, range_end);
 
     // cascade exit from renderer -> job generator -> job storage
@@ -97,4 +127,3 @@ int main(int argc, char *argv[]) {
     }
     s->await_all_other_actors_done();
 }
-

@@ -1,4 +1,5 @@
 #include <iostream>
+
 /**
 	* @file
 	* libavcodec API use example.
@@ -20,7 +21,7 @@
 //extern void sfml_generate_frame();
 
 /**
-	* Copy SFML pixels to H264 frame pixels.
+	* Copy pixels to H264 frame pixels.
 	*
 	* @param pixels	raw pointer to all RGBA values from SFML image
 	* @param c			struct that contains width and height for video
@@ -52,7 +53,8 @@ void transfer_pixels(std::vector<ALLEGRO_COLOR> &pixels, AVCodecContext * c, AVF
 
 ffmpeg_h264_encode::ffmpeg_h264_encode() {}
 
-void ffmpeg_h264_encode::initialize() {
+void ffmpeg_h264_encode::initialize(caf::event_based_actor *, int) {
+    std::lock_guard<std::mutex> guard(mut);
     avcodec_register_all();
 
     printf("Encode video file %s\n", filename.c_str());
@@ -126,6 +128,7 @@ void ffmpeg_h264_encode::initialize() {
 }
 
 void ffmpeg_h264_encode::add_frame(std::vector<ALLEGRO_COLOR> &pixels) {
+    std::lock_guard<std::mutex> guard(mut);
 
     transfer_pixels(pixels, c, frame);
 
@@ -156,6 +159,7 @@ void ffmpeg_h264_encode::add_frame(std::vector<ALLEGRO_COLOR> &pixels) {
 
 void ffmpeg_h264_encode::finalize()
 {
+    std::lock_guard<std::mutex> guard(mut);
     /* get the delayed frames */
     for (got_output = 1; got_output; frameNumber++) {
         fflush(stdout);

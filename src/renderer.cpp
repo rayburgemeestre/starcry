@@ -37,7 +37,7 @@ behavior worker(caf::stateful_actor<worker_data> * self, /*const caf::actor &ren
             if ((self->state.width == 0 && self->state.height == 0) || // not initialized
                 (self->state.width != j.width || self->state.height != j.height) || // changed since previous
                 self->state.bitmap == nullptr
-                ){
+            ){
                 self->state.width = j.width;
                 self->state.height = j.height;
                 if (self->state.bitmap != nullptr) {
@@ -49,7 +49,9 @@ behavior worker(caf::stateful_actor<worker_data> * self, /*const caf::actor &ren
             //std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             // render
-            self->state.engine.render(self->state.bitmap, j.shapes, j.offset_x, j.offset_y);
+            stringstream ss;
+            ss << "chunk " << j.chunk << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num;
+            self->state.engine.render(self->state.bitmap, j.shapes, j.offset_x, j.offset_y, ss.str());
 
             data::pixel_data dat;
             dat.pixels = self->state.engine.serialize_bitmap(self->state.bitmap, j.width, j.height);

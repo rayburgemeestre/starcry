@@ -55,8 +55,8 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
                     new_job.num_chunks = max_split_chunks;
 
                     data::shape new_shape;
-                    new_shape.x = 100;
-                    new_shape.y = 100;
+                    new_shape.x = 0;
+                    new_shape.y = 0;
                     new_shape.z = 0;
                     new_shape.type = data::shape_type::circle;
                     new_shape.radius = 200.0 / 10000 * current_frame;

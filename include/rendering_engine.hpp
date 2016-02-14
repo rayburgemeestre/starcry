@@ -5,7 +5,11 @@
 #include "allegro5/allegro.h"
 //#include "allegro5/debug.h"
 #include <allegro5/allegro_image.h>
+#include <allegro5/allegro_font.h>
+#include <allegro5/allegro_ttf.h>
 
+#include <iostream>
+#include <sstream>
 #include <mutex>
 using namespace std;
 
@@ -53,20 +57,34 @@ public:
             return;
         }
         if (!al_init_image_addon()) {
-            fprintf(stderr, "Failed to initialize allegro!\n");
+            fprintf(stderr, "Failed to initialize allegro image addon!\n");
+            return;
+        }
+        if (!al_init_font_addon()) {
+            fprintf(stderr, "Failed to initialize allegro font addon!\n");
+            return;
+        }
+        if (!al_init_ttf_addon()) {
+            fprintf(stderr, "Failed to initialize allegro ttf addon!\n");
             return;
         }
     }
 
     template <typename image, typename shapes_t>
-    void render(image bmp, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y) {
+    void render(image bmp, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, std::string label = "") {
         std::unique_lock<std::mutex> lock(m);
+        auto old_bmp = al_get_target_bitmap();
         al_set_target_bitmap(bmp);
         al_clear_to_color(al_map_rgba(0, 0, 0, 0));
         uint32_t width = al_get_bitmap_width(bmp);
         uint32_t height = al_get_bitmap_height(bmp);
-        // size_t index = 0;
         auto shape = shapes[0]; // just for some test effect
+        // offset
+        shape.x -= offset_x;
+        shape.y -= offset_y;
+        // canvas (where to store this..)
+        shape.x += 1280 / 2;
+        shape.y += 720 / 2;
         for (uint32_t y = 0; y < height; y++) {
             for (uint32_t x = 0; x < width; x++) {
                 if (y <= 1)
@@ -74,11 +92,26 @@ public:
                 else if (x <= 1)
                     al_put_pixel(x, y, al_map_rgba(255, 0, 0, 255));
                 else {
-                    double diffFromCenter = distance<double>(offset_x, x, offset_y, y) * shape.radius;
-                    al_put_pixel(x, y, al_map_rgba(diffFromCenter, diffFromCenter, diffFromCenter, 255));
+                    double diffFromCenter = distance<double>(x, shape.x, y, shape.y) * shape.radius;
+                    al_put_pixel(x, y, al_map_rgba(diffFromCenter, diffFromCenter, diffFromCenter, 255) );
                 }
             }
         }
+        if (!label.empty()) {
+            if (!font) {
+                font = al_load_ttf_font("Monaco_Linux-Powerline.ttf", 24, 0);
+                if (font){
+                    fprintf(stderr, "Could not load monaco ttf font.\n");
+                    // TODO: do this with RAII
+                    al_set_target_bitmap(old_bmp);
+                    return;
+                }
+            }
+            al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, ALLEGRO_ALIGN_LEFT, label.c_str());
+        }
+
+        // TODO: do this with RAII
+        al_set_target_bitmap(old_bmp);
     }
 
     template <typename image>
@@ -107,15 +140,33 @@ public:
 
     ALLEGRO_BITMAP * unserialize_bitmap(vector<ALLEGRO_COLOR> &pixels, uint32_t width, uint32_t height) {
         ALLEGRO_BITMAP *bitmap = al_create_bitmap(width, height);
+        auto old_bmp = al_get_target_bitmap();
         al_set_target_bitmap(bitmap);
+        al_lock_bitmap(bitmap, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_READWRITE);
+        unserialize_bitmap_(pixels, width, height);
+        al_unlock_bitmap(bitmap);
+        // TODO: do this with RAII
+        al_set_target_bitmap(old_bmp);
+        return bitmap;
+    }
+
+    inline void unserialize_bitmap_(vector<ALLEGRO_COLOR> &pixels, uint32_t width, uint32_t height) {
         size_t index = 0;
         for (uint32_t y = 0; y < height; y++) {
             for (uint32_t x = 0; x < width; x++) {
                 al_put_pixel(x, y, pixels[index++]);
             }
         }
-        return bitmap;
+        return;
+    }
+
+    void run_display_function(std::function<void(ALLEGRO_DISPLAY *)> func) {
+        std::unique_lock<std::mutex> lock(m);
+        func(display);
     }
 
     ALLEGRO_DISPLAY *display = NULL;
+    ALLEGRO_FONT *font = NULL;
+    int thread_;
+
 };
