@@ -35,7 +35,7 @@ add_definitions(-O3 -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pe
 
 include_directories("./include/")
 #include_directories(${CAF_INCLUDE_DIRS})
-file(GLOB_RECURSE starcry_SOURCES "src/**.cpp")
+file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*")
 add_executable(starcry ${starcry_SOURCES})
 target_link_libraries(starcry ${Boost_LIBRARIES})
 target_link_libraries(starcry ${SFML_LIBRARIES})

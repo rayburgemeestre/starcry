@@ -62,7 +62,7 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage, u
                         new_shape.y = 0;
                         new_shape.z = 0;
                         new_shape.type = data::shape_type::circle;
-                        new_shape.radius = current_frame + i*20;
+                        new_shape.radius = (current_frame + i*20) % 200;
                         new_shape.radius_size = 3.0;
                         new_job.shapes.push_back(new_shape);
                     }

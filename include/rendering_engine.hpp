@@ -58,6 +58,8 @@ inline int round_to_int(double_type in)
     return static_cast<int>(0.5 + in);
 }
 
+#include "draw_logic.hpp"
+
 class rendering_engine
 {
 public:
@@ -89,31 +91,17 @@ public:
         uint32_t width = al_get_bitmap_width(bmp);
         uint32_t height = al_get_bitmap_height(bmp);
         al_lock_bitmap(bmp, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
-
-        /*
-        for (uint32_t y = 0; y < height; y++) {
-            for (uint32_t x = 0; x < width; x++) {
-                if (y <= 1)
-                    al_put_pixel(x, y, al_map_rgba(0, 255, 0, 255));
-                else if (x <= 1)
-                    al_put_pixel(x, y, al_map_rgba(255, 0, 0, 255));
-                else {
-                    double diffFromCenter = distance<double>(x, shape.x, y, shape.y) * shape.radius;
-                    al_put_pixel(x, y, al_map_rgba(diffFromCenter, diffFromCenter, diffFromCenter, 255) );
-                }
-            }
-        }
-         */
-        scale_ = 1.0;
-        width_ = canvas_w;
-        height_ = canvas_h;
+        double scale = 3.0;
+        draw_logic_.scale(scale);
+        draw_logic_.width(canvas_w);
+        draw_logic_.height(canvas_h);
+        draw_logic_.center(canvas_w / 2, canvas_h / 2);
+        draw_logic_.offset(offset_x, offset_y);
         for (auto shape : shapes) {
-            shape.x -= offset_x;
-            shape.y -= offset_y;
-            shape.x += canvas_w / 2;
-            shape.y += canvas_h / 2;
-            render_circle<double>(shape.x, shape.y, shape.radius, shape.radius_size);
+            draw_logic_.render_circle<double>(shape.x, shape.y, shape.radius, shape.radius_size);
         }
+        for (uint32_t y = 0; y < height; y++) al_put_pixel(0, y, al_map_rgba(0, 255, 0, 255));
+        for (uint32_t x = 0; x < width; x++)  al_put_pixel(x, 0, al_map_rgba(255, 0, 0, 255));
         if (!label.empty()) {
             if (!font) {
                 font = al_load_ttf_font("Monaco_Linux-Powerline.ttf", 14, 0);
@@ -125,101 +113,13 @@ public:
                     return;
                 }
             }
-            al_draw_text(font, al_map_rgb(255, 0, 0), 10, 10, ALLEGRO_ALIGN_LEFT, label.c_str());
+            al_draw_text(font, al_map_rgb(255, 255, 255), 10, 10, ALLEGRO_ALIGN_LEFT, label.c_str());
         }
         // TODO: do this with RAII
         al_unlock_bitmap(bmp);
         al_set_target_bitmap(old_bmp);
     }
 
-    /**
-     * Circle drawing function
-     *
-     * Optimizations used:
-     *
-     * - Each pixel for the circle eventually will get a color depending on the distance that pixel has from the
-     *   circle center.
-     *
-     *   - Calculating which pixels to do the calculation for requires computing and to avoid some calculations we
-     *     process only a quarter of the circle and derive the other three quarters from it.
-     *
-     *   - As Circles can be positioned on non-integer coordinates we cannot always re-use the distance calculation
-     *     for the three other quarters, as there can be subtle differences.
-     *     In case the floating point values contain integers the optimization will be used (reuseSqrt=true).
-     *
-     * - We will also focus on processing only the pixels visible around it's edges. If the radius is 100 and the
-     *   radius size is only 5 pixels, we we only check the pixels between circle radii 97 (inner-) and 103 (outer
-     *   circle). For this we calculate the half of the "x chord length" for both the outer- and inner circle, and
-     *   substract them.
-     */
-    template <typename double_type>
-    inline void render_circle(double_type circleX, double_type circleY, double_type radius, double_type radiusSize)
-    {
-        circleX             = (circleX * scale_);// + centerX_;
-        circleY             = (circleY * scale_);// + centerY_;
-        radius             *= scale_;
-        radiusSize         *= scale_;
-
-        bool reuseSqrt      = floor(circleX) == circleX && floor(circleY) == circleY;
-
-        // There is a {-1, +1} for compensating rounding that occurs with floating point.
-        int radiusOuterCircle = round_to_int<double_type>(radius + radiusSize + 1);
-        int radiusInnerCircle = round_to_int<double_type>(radius - radiusSize - 1);
-
-        for (int relY=0; relY<radiusOuterCircle; relY++) {
-            int absYTop    = static_cast<int>(circleY - relY);
-            int absYBottom = static_cast<int>(circleY + relY);
-
-            if ((absYTop < 0) && (absYBottom > static_cast<int>(height_)))
-                break;
-
-            int hxcl_outer = half_chord_length<decltype(radiusOuterCircle), double_type>(radiusOuterCircle, relY);
-            int hxcl_inner = 0;
-
-            if (radiusInnerCircle >= relY)
-                hxcl_inner = half_chord_length<decltype(radiusInnerCircle), double_type>(radiusInnerCircle, relY);
-
-            for (int relX = hxcl_inner; relX < hxcl_outer; relX++) {
-                int absXLeft  = static_cast<int>(circleX - relX);
-                int absXRight = static_cast<int>(circleX + relX);
-
-                if (absXLeft < 0 && absXRight > static_cast<int>(width_))
-                    continue;
-
-                double_type diffFromCenter = reuseSqrt ? distance<double_type>(absXLeft, circleX, absYTop, circleY) : -1;
-
-                render_circle_pixel(radius, radiusSize, circleX, circleY, absXLeft, absYTop, diffFromCenter);
-
-                if (relY != 0)
-                    render_circle_pixel(radius, radiusSize, circleX, circleY, absXLeft, absYBottom, diffFromCenter);
-                if (relX != 0)
-                    render_circle_pixel(radius, radiusSize, circleX, circleY, absXRight, absYTop, diffFromCenter);
-                if (relX != 0 && relY != 0)
-                    render_circle_pixel(radius, radiusSize, circleX, circleY, absXRight, absYBottom, diffFromCenter);
-            }
-        }
-    }
-
-    template <typename double_type>
-    void render_circle_pixel(double_type radius, double_type radiussize, double_type posX, double_type posY, int absX, int absY, double_type diffFromCenter)
-    {
-        if (absX < 0 || absY < 0 || absX >= static_cast<int>(width_) || absY >= static_cast<int>(height_))
-            return;
-
-        if (diffFromCenter == -1)
-            diffFromCenter = distance<double_type>(absX, posX, absY, posY);
-
-        double_type bottom = radius - radiussize;
-        double_type colorIdxNormalized = (diffFromCenter - bottom) / (radiussize * 2);
-        if (colorIdxNormalized > 1.0 || colorIdxNormalized < 0.0)
-            return;
-
-        double_type test = fabs(colorIdxNormalized - 0.5);
-        double_type Opacity = test * 2.0;
-
-        //engine_.put_pixel_alpha(absX, absY, 255.0 - (test * 255.0), 0, 0, Opacity);
-        al_put_pixel(absX, absY, al_map_rgba(0, 255.0 - (test * 255.0), 0, Opacity));
-    }
 
     template <typename image>
     void write_image(image bmp, std::string prefix) {
@@ -274,9 +174,5 @@ public:
 
     ALLEGRO_DISPLAY *display = NULL;
     ALLEGRO_FONT *font = NULL;
-    int thread_;
-    // temporary engine stuff, will be separate class
-    double scale_;
-    uint32_t width_;
-    uint32_t height_;
+    draw_logic draw_logic_;
 };

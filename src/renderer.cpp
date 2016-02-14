@@ -50,7 +50,7 @@ behavior worker(caf::stateful_actor<worker_data> * self, /*const caf::actor &ren
 
             // render
             stringstream ss;
-            ss << "chunk " << j.chunk << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num << " xx " << j.canvas_w << "," << j.canvas_h;
+            ss << "frame " << j.frame_number << " chunk " << j.chunk << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num;
             self->state.engine.render(self->state.bitmap, j.shapes, j.offset_x, j.offset_y, j.canvas_w, j.canvas_h, ss.str());
 
             data::pixel_data dat;
