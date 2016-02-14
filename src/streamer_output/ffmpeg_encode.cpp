@@ -53,7 +53,7 @@ void transfer_pixels(std::vector<ALLEGRO_COLOR> &pixels, AVCodecContext * c, AVF
 
 ffmpeg_h264_encode::ffmpeg_h264_encode() {}
 
-void ffmpeg_h264_encode::initialize(caf::event_based_actor *, int) {
+void ffmpeg_h264_encode::initialize(uint32_t canvas_w, uint32_t canvas_h, caf::event_based_actor *, int) {
     avcodec_register_all();
 
     printf("Encode video file %s\n", filename.c_str());
@@ -73,8 +73,8 @@ void ffmpeg_h264_encode::initialize(caf::event_based_actor *, int) {
     /* put sample parameters */
     c->bit_rate = 400000 * 10;
     /* resolution must be a multiple of two */
-    c->width = 1280;
-    c->height = 720;
+    c->width = canvas_w;
+    c->height = canvas_h;
 
     /* frames per second (we'll recode later anyway)*/
     c->time_base.num = 1;
@@ -126,7 +126,7 @@ void ffmpeg_h264_encode::initialize(caf::event_based_actor *, int) {
 //    timer->start();
 }
 
-void ffmpeg_h264_encode::add_frame(std::vector<ALLEGRO_COLOR> &pixels) {
+void ffmpeg_h264_encode::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ALLEGRO_COLOR> &pixels) {
 
     transfer_pixels(pixels, c, frame);
 

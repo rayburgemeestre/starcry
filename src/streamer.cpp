@@ -38,7 +38,7 @@ output_aggregate outputs(ffmpeg, allegro5);
 #include "rendering_engine.hpp"
 #endif
 
-bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chunks) {
+bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chunks, uint32_t canvas_w, uint32_t canvas_h) {
     auto frame_number_matches = [&](auto &tpl) { return std::get<0>(tpl) == frame_number; };
     auto sort_by_chunk        = [&](auto &tpl, auto &tpl2) { return std::get<1>(tpl) < std::get<1>(tpl2); };
 
@@ -64,7 +64,7 @@ bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chu
         rendering_engine eng;
         eng.write_image(eng.unserialize_bitmap(pixels_all, 1280, 720), ss.str());
 #endif
-        outputs.add_frame(pixels_all); // encoder has it's own frameNumber variable.
+        outputs.add_frame(canvas_w, canvas_h, pixels_all); // encoder has it's own frameNumber variable.
 
         fake_buffer.erase(std::remove_if(fake_buffer.begin(),
                                          fake_buffer.end(),
@@ -91,14 +91,15 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
 
     counter2.setDescription("fps");
     counter2.startHistogramAtZero(true);
-    outputs.initialize(self, render_window_at);
     return {
         [=](render_frame, struct data::job &job, vector<ALLEGRO_COLOR> &pixels) {
             if (job.last_frame)
                 last_frame_streamed = std::make_optional(job.frame_number);
 
+            outputs.initialize(job.canvas_w, job.canvas_h, self, render_window_at);
+
             fake_buffer.push_back(make_tuple(job.frame_number, job.chunk, job.num_chunks, job.last_frame, pixels)); // needs to become an object later
-            while (process_buffer(self, current_frame2, job.num_chunks))
+            while (process_buffer(self, current_frame2, job.num_chunks, job.canvas_w, job.canvas_h))
                 current_frame2++;
 
             // return make_message(ready::value);

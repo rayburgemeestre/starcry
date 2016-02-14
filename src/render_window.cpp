@@ -21,7 +21,7 @@ behavior render_loop(event_based_actor* self) {
     }
     auto queue = al_create_event_queue();
     al_set_new_display_flags(ALLEGRO_WINDOWED | ALLEGRO_RESIZABLE | ALLEGRO_GENERATE_EXPOSE_EVENTS);
-    display = al_create_display(1280, 720);
+    display = al_create_display(480, 320);
     al_clear_to_color(al_map_rgb_f(1, 0, 0));
     al_register_event_source(queue, al_get_display_event_source(display));
     al_flip_display();
@@ -39,6 +39,7 @@ behavior render_loop(event_based_actor* self) {
                                       0, 0, al_get_bitmap_width(bmp), al_get_bitmap_height(bmp),
                                       0, 0, al_get_display_width(display), al_get_display_height(display),
                                       0);
+                al_destroy_bitmap(bmp);
             }
             ALLEGRO_EVENT event;
             al_wait_for_event_timed(queue, &event, 0.001);

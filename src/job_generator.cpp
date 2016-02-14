@@ -17,7 +17,7 @@ size_t desired_num_jobs_queued = 10;
 size_t current_job = 0;
 size_t current_frame = 0;
 size_t max_split_chunks = 0;
-behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
+behavior job_generator(event_based_actor* self, const caf::actor &job_storage, uint32_t canvas_w, uint32_t canvas_h) {
     return {
         [=](start, size_t num_chunks) {
             max_split_chunks = num_chunks;
@@ -38,9 +38,8 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
                     // Store it
                     bool last_frame = (current_frame >= 100);
 
-                    // temporarily hardcoded dimensions
-                    uint32_t width = 1280;
-                    uint32_t height = 720;
+                    uint32_t width = canvas_w;
+                    uint32_t height = canvas_h;
 
                     ImageSplitter<uint32_t> imagesplitter{width, height}; // fake values
                     const auto rectangles = imagesplitter.split(max_split_chunks, ImageSplitter<uint32_t>::Mode::SplitHorizontal);
@@ -53,6 +52,8 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage) {
                     new_job.rendered = false;
                     new_job.last_frame = last_frame;
                     new_job.num_chunks = max_split_chunks;
+                    new_job.canvas_w = width;
+                    new_job.canvas_h = height;
 
                     data::shape new_shape;
                     new_shape.x = 0;

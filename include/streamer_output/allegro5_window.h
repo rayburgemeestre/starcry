@@ -14,7 +14,7 @@ public:
     caf::event_based_actor *self_;
     caf::actor client_;
 
-    void initialize(caf::event_based_actor* self, int port);
-    void add_frame(std::vector<ALLEGRO_COLOR> &pixels);
+    void initialize(uint32_t canvas_w, uint32_t canvas_h, caf::event_based_actor* self, int port);
+    void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ALLEGRO_COLOR> &pixels);
     void finalize();
 };

@@ -71,7 +71,7 @@ public:
     }
 
     template <typename image, typename shapes_t>
-    void render(image bmp, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, std::string label = "") {
+    void render(image bmp, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, std::string label = "") {
         std::unique_lock<std::mutex> lock(m);
         auto old_bmp = al_get_target_bitmap();
         al_set_target_bitmap(bmp);
@@ -79,12 +79,10 @@ public:
         uint32_t width = al_get_bitmap_width(bmp);
         uint32_t height = al_get_bitmap_height(bmp);
         auto shape = shapes[0]; // just for some test effect
-        // offset
         shape.x -= offset_x;
         shape.y -= offset_y;
-        // canvas (where to store this..)
-        shape.x += 1280 / 2;
-        shape.y += 720 / 2;
+        shape.x += canvas_w / 2;
+        shape.y += canvas_h / 2;
         for (uint32_t y = 0; y < height; y++) {
             for (uint32_t x = 0; x < width; x++) {
                 if (y <= 1)

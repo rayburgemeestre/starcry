@@ -36,6 +36,7 @@ int main(int argc, char *argv[]) {
     size_t num_chunks          = 8; // number of chunks to split image size_to
     size_t num_workers         = 8; // number of workers for rendering
     string worker_ports;
+    string dimensions;
     uint32_t settings_{0};
     bitset<32> streamer_settings(settings_);
     po::options_description desc("Allowed options");
@@ -47,6 +48,7 @@ int main(int argc, char *argv[]) {
                       ("render-window", po::value<int>(&render_win_port), "launch a render window on specified port")
                       ("render-window-at", po::value<int>(&render_win_port_at), "use render window on specified port")
                       ("no-video-output", "disable video output using ffmpeg")
+                      ("dimensions,dim", po::value<string>(&dimensions), "specify canvas dimensions i.e. 1920x1080")
         ;
     po::variables_map vm;
     po::store(po::command_line_parser(argc, argv).options(desc).run(), vm);
@@ -104,10 +106,20 @@ int main(int argc, char *argv[]) {
         s->await_all_other_actors_done();
         return 0;
     }
+    uint32_t canvas_w = 480;
+    uint32_t canvas_h = 320;
+    if (!dimensions.empty()) {
+        regex range("([0-9]+)x([0-9]+)");
+        smatch m;
+        if (std::regex_match(dimensions, m, range) && m.size() == 3) {
+            { stringstream os(m[1]); os >> canvas_w; }
+            { stringstream os(m[2]); os >> canvas_h; }
+        }
+    }
 
     scoped_actor s;
     auto jobstorage = spawn(job_storage);
-    auto generator  = spawn(job_generator, jobstorage);
+    auto generator  = spawn(job_generator, jobstorage, canvas_w, canvas_h);
     auto streamer_  = spawn(streamer, jobstorage, render_win_port_at, streamer_settings.to_ulong());
     auto renderer_  = spawn(renderer, jobstorage, streamer_, range_begin, range_end);
 

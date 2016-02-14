@@ -30,7 +30,7 @@ private:
 
 public:
     ffmpeg_h264_encode();
-    void initialize(caf::event_based_actor *, int port);
-    void add_frame(std::vector<ALLEGRO_COLOR> &pixels);
+    void initialize(uint32_t canvas_w, uint32_t canvas_h, caf::event_based_actor *, int port);
+    void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ALLEGRO_COLOR> &pixels);
     void finalize();
 };
