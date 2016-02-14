@@ -31,7 +31,7 @@ behavior render_loop(event_based_actor* self) {
     }
     return {
         [=](render) {
-            al_clear_to_color(al_map_rgb_f(1, 1, 0));
+            al_clear_to_color(al_map_rgb_f(0, 0, 0));
             rendering_engine re;
             if (data_.pixels.size()) {
                 auto bmp = re.unserialize_bitmap(data_.pixels, width_, height_);

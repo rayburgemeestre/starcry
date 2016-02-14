@@ -36,12 +36,13 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage, u
                     //aout(self) << "job_generator: generated frame #" << current_frame << endl;
 
                     // Store it
-                    bool last_frame = (current_frame >= 100);
+                    bool last_frame = (current_frame >= 25 * 10);
 
                     uint32_t width = canvas_w;
                     uint32_t height = canvas_h;
 
                     ImageSplitter<uint32_t> imagesplitter{width, height}; // fake values
+                    // We split horizontal always, because we simply concat the pixels later, so vertical would require a change in the code
                     const auto rectangles = imagesplitter.split(max_split_chunks, ImageSplitter<uint32_t>::Mode::SplitHorizontal);
                     size_t counter = 1;
 
@@ -55,14 +56,16 @@ behavior job_generator(event_based_actor* self, const caf::actor &job_storage, u
                     new_job.canvas_w = width;
                     new_job.canvas_h = height;
 
-                    data::shape new_shape;
-                    new_shape.x = 0;
-                    new_shape.y = 0;
-                    new_shape.z = 0;
-                    new_shape.type = data::shape_type::circle;
-                    new_shape.radius = 200.0 / 10000 * current_frame;
-                    new_shape.radius_size = 1;
-                    new_job.shapes.push_back(new_shape);
+                    for (int i=0; i<10; i++) {
+                        data::shape new_shape;
+                        new_shape.x = 0;
+                        new_shape.y = 0;
+                        new_shape.z = 0;
+                        new_shape.type = data::shape_type::circle;
+                        new_shape.radius = current_frame + i*20;
+                        new_shape.radius_size = 3.0;
+                        new_job.shapes.push_back(new_shape);
+                    }
 
                     for (size_t i=0; i<rectangles.size(); i++) {
                         new_job.width = rectangles[i].width();
