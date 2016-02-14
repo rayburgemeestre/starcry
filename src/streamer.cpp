@@ -53,8 +53,8 @@ bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chu
         for (auto &tpl : matches) {
             pixels_all.insert(pixels_all.end(), std::get<4>(tpl).begin(), std::get<4>(tpl).end() );
         }
-        cout << "streamer completed frame: " << current_frame2 << " number of pixels equal to: " << pixels_all.size() << endl; // debug
 #if DEBUG_FRAMES
+        cout << "streamer completed frame: " << current_frame2 << " number of pixels equal to: " << pixels_all.size() << endl; // debug
         stringstream ss;
         static int i = 1000;
         ss << "frame" << i++;
