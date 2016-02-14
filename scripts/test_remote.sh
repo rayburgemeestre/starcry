@@ -1,5 +1,14 @@
+trap ctrl_c INT
 
-killall -9 starcry
+pids=""
+
+function ctrl_c {
+    echo "** Trapped CTRL-C"
+    echo kill -9 $pids
+    kill -9 $pids
+}
+
+#killall -9 starcry
 
 rm -rf test.h264
 
@@ -20,16 +29,21 @@ fi
 #./starcry --render-window 10002 &
 sleep 1
 
-./starcry -w ${1}0 -c 1 -n 1  &
-./starcry -w ${1}1 -c 1 -n 1  &
-./starcry -w ${1}2 -c 1 -n 1  &
-./starcry -w ${1}3 -c 1 -n 1  &
-./starcry -w ${1}4 -c 1 -n 1  &
-./starcry -w ${1}5 -c 1 -n 1  &
-./starcry -w ${1}6 -c 1 -n 1  &
+export j=4 # num workers
+
+for i in `seq 1 $j`
+do
+    echo ./starcry -w ${1}$i -c 1 -n 1  &
+    ./starcry -w ${1}$i -c 1 -n 1  &
+    pids="$pids $!"
+done
 
 sleep 0.2
 
-./starcry -r ${1}0-${1}6 -c 1 -n 1 #--render-window-at 10000
+./starcry -r ${1}1-${1}$j -c 1 -n 1 --dim 2560x1440 --render-window-at 10000 --no-video
+pids="$pids $!"
+
+echo kill -9 $pids
+kill -9 $pids
 
 ffplay test.h264

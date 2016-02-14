@@ -5,6 +5,7 @@
 namespace data {
 
     struct job {
+        // if you modify these fields, you need to update announce or the added fields won't be transferred..
         uint32_t width;
         uint32_t height;
         uint32_t offset_x;

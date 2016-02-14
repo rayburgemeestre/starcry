@@ -14,6 +14,8 @@ namespace data {
             "job",
             &job::width,
             &job::height,
+            &job::canvas_w,
+            &job::canvas_h,
             &job::offset_x,
             &job::offset_y,
             &job::job_number,
