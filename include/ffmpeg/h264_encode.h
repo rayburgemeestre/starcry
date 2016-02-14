@@ -18,7 +18,6 @@ namespace caf {
 class ffmpeg_h264_encode
 {
 private:
-    std::mutex mut;
     std::string filename = "test.h264";
     AVCodecID codec_id = AV_CODEC_ID_H264;
     AVCodec *codec;
@@ -28,7 +27,6 @@ private:
     FILE *f;
     AVFrame *frame;
     AVPacket pkt;
-//    std::unique_ptr<AbstractTimer> timer;
 
 public:
     ffmpeg_h264_encode();
