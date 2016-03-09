@@ -37,6 +37,7 @@ allegro-5, also append static to all lib names)
 - git submodule add git@bitbucket.org:rayburgemeestre/benchmarklib.git libs/benchmarklib
 - git submodule add git@github.com:liballeg/allegro5.git libs/allegro5
 - git submodule add https://github.com/boostorg/hana.git libs/hana
+- git submodule add https://github.com/pmed/v8pp libs/v8pp
 
     libs/hana[master]> cmake -DCMAKE_CXX_COMPILER=/usr/bin/clang++
 

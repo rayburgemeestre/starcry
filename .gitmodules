@@ -10,3 +10,6 @@
 [submodule "libs/hana"]
 	path = libs/hana
 	url = https://github.com/boostorg/hana.git
+[submodule "libs/v8pp"]
+	path = libs/v8pp
+	url = https://github.com/pmed/v8pp
