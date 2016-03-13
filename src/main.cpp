@@ -25,7 +25,12 @@ using show_stats    = atom_constant<atom("show_stats")>;
 //#include "caf/io/max_msg_size.hpp"
 //caf::io::max_msg_size(std::numeric_limits<uint32_t>::max());
 
+extern void initialize_v8_wrapper();
+extern void deinitialize_v8_wrapper();
+
 int main(int argc, char *argv[]) {
+
+    initialize_v8_wrapper();
 
     data::announce();
 
@@ -138,4 +143,6 @@ int main(int argc, char *argv[]) {
         s->send(streamer_, show_stats::value);
     }
     s->await_all_other_actors_done();
+
+    deinitialize_v8_wrapper();
 }

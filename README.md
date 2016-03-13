@@ -16,7 +16,10 @@ yet supported. But you may try if you prefer:
 
 Building yourself (it's already in the submodules at the correct branch):
 
-- cmake -DCMAKE_BUILD_TYPE=release -DSHARED=on -DWANT_FFMPEG=off .
+- sudo apt-get install freeglut3-dev libgl1-mesa-dev libglu1-mesa-dev mesa-common-dev libxcursor-dev
+- maybe needed: sudo apt-get install libavfilter-dev
+
+- cmake -DCMAKE_BUILD_TYPE=release -DSHARED=on -DWANT_FFMPEG=off -DWANT_TTF=on .
 - make -j 8
 - sudo make install
 
@@ -24,12 +27,38 @@ Tried static compiling too, you need to modify the find script, almost got it
 to work (use --static for pkg-config, and allegro-static-5 instead of
 allegro-5, also append static to all lib names)
 
+notes:
+trigen@FIREFLY2:/projects/starcry/libs/allegro5[(HEAD detached at dab3113)]> sudo cp -prv lib/pkgconfig/allegro* /usr/share/pkgconfig/
+‘lib/pkgconfig/allegro-5.pc’ -> ‘/usr/share/pkgconfig/allegro-5.pc’
+‘lib/pkgconfig/allegro_acodec-5.pc’ -> ‘/usr/share/pkgconfig/allegro_acodec-5.pc’
+‘lib/pkgconfig/allegro_audio-5.pc’ -> ‘/usr/share/pkgconfig/allegro_audio-5.pc’
+‘lib/pkgconfig/allegro_color-5.pc’ -> ‘/usr/share/pkgconfig/allegro_color-5.pc’
+‘lib/pkgconfig/allegro_font-5.pc’ -> ‘/usr/share/pkgconfig/allegro_font-5.pc’
+‘lib/pkgconfig/allegro_image-5.pc’ -> ‘/usr/share/pkgconfig/allegro_image-5.pc’
+‘lib/pkgconfig/allegro_main-5.pc’ -> ‘/usr/share/pkgconfig/allegro_main-5.pc’
+‘lib/pkgconfig/allegro_memfile-5.pc’ -> ‘/usr/share/pkgconfig/allegro_memfile-5.pc’
+‘lib/pkgconfig/allegro_primitives-5.pc’ -> ‘/usr/share/pkgconfig/allegro_primitives-5.pc’
+
+pkg-config --list-all | grep allegro-5 if needed
+also check the FindAllegro5 cmake file, I disabled some stuff
+for allegro_ttf to work: sudo apt-get install libfreetype6-dev
+
 ### C++ Actor Framework
 
 - cd libs/caf
 - ./configure
 - make
 - sudo make install
+
+### Boost
+
+sudo apt-get install libboost1.58-all-dev
+
+### cd libs/benchmarklib
+
+cmake .
+make -j 8
+sudo make install
 
 ## How submodules were added
 

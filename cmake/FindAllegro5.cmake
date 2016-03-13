@@ -20,10 +20,10 @@ find_path(Allegro5_INCLUDE_DIR
 # Names of all libraries in Allegro, without versions
 set(ALLEGRO5_ALL_LIBRARIES
   allegro allegro_image allegro_font
-  allegro_primitives allegro_ttf allegro_audio
-  allegro_dialog allegro_memfile allegro_acodec
-  allegro_color allegro_main allegro_physfs
-)
+  allegro_primitives allegro_audio
+   allegro_memfile allegro_acodec
+  allegro_color allegro_main allegro_ttf)
+# trigen, disabled  ,  allegro_physfs,  allegro_dialog
 
 # set(ALLEGRO5_LIBRARIES "")
 
@@ -52,8 +52,8 @@ set(ALLEGRO_INCLUDE_DIR "${Allegro5_INCLUDE_DIR}")
 set(ALLEGRO_LIBRARIES "${Allegro5_LIBRARIES}")
 # libfind_process(Allegro5)
 
-# MESSAGE("all libs: ${ALLEGRO_LIBRARIES}")
-# MESSAGE("all include: ${ALLEGRO_INCLUDE_DIR}")
+MESSAGE("all libs: ${ALLEGRO_LIBRARIES}")
+MESSAGE("all include: ${ALLEGRO_INCLUDE_DIR}")
 
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(Allegro5 DEFAULT_MSG ALLEGRO_LIBRARIES ALLEGRO_INCLUDE_DIR)
 

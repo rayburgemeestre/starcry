@@ -1,3 +1,6 @@
 libs
 gmock
 gtest
+CMakeFiles
+gtest-1.7.0
+gmock-1.7.0

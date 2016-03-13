@@ -1,0 +1,16 @@
+
+var shapes = [];
+
+function init()
+{
+    set_canvas(320, 240);
+    for (var i=0; i<10; i++) {
+        shapes.add(new circle(0, 0, 0, 100, 2.0));
+    }
+}
+
+// test
+function radius()
+{
+    return ((current_frame() * 0.1) + (Math.random() / 10.0)) % 120;
+}
