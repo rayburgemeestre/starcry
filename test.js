@@ -12,5 +12,6 @@ function init()
 // test
 function radius()
 {
-    return ((current_frame() * 0.1) + (Math.random() / 10.0)) % 120;
+    //return ((current_frame() * 0.1) + (Math.random() / 10.0)) % 120;
+    return Math.abs(120 - current_frame()) % 120;
 }

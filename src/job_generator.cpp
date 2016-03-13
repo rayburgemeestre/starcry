@@ -29,9 +29,13 @@ double get_version() { return 0.1; };
 std::shared_ptr<v8_wrapper> wrapper     = nullptr;
 std::shared_ptr<v8_wrapper_context> ctx = nullptr;
 
+
 void initialize_v8_wrapper() {
     wrapper = std::make_shared<v8_wrapper>();
     ctx = wrapper->context();
+//    v8::HandleScope scope(ctx->context()->isolate());
+//    auto global = v8::ObjectTemplate::New(ctx->context()->isolate());
+//    v8::Handle<v8::Context> impl = v8::Context::New(ctx->context()->isolate(), nullptr, global);
     try {
         std::string filename = "test.js";
         std::ifstream stream(filename.c_str());
@@ -53,10 +57,10 @@ void initialize_v8_wrapper() {
     }
 }
 void deinitialize_v8_wrapper() {
-    ctx.reset();
-    wrapper.reset();
-    v8::V8::Dispose();
-    v8::V8::ShutdownPlatform();
+    //ctx.reset();
+    //v8::V8::ShutdownPlatform();
+    //wrapper.reset();
+    //v8::V8::Dispose();
 }
 
 
