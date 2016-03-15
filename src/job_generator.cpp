@@ -24,18 +24,15 @@ size_t max_split_chunks = 0;
 #include <memory>
 #include <fstream>
 
-double get_version() { return 0.1; };
+double get_version() { return 0.1; }
 
-std::shared_ptr<v8_wrapper> wrapper     = nullptr;
-std::shared_ptr<v8_wrapper_context> ctx = nullptr;
+std::shared_ptr<v8_wrapper> wrapper     = std::make_shared<v8_wrapper>();
+std::shared_ptr<v8_wrapper_context> ctx = wrapper->context();
 
-
-void initialize_v8_wrapper() {
-    wrapper = std::make_shared<v8_wrapper>();
-    ctx = wrapper->context();
-//    v8::HandleScope scope(ctx->context()->isolate());
-//    auto global = v8::ObjectTemplate::New(ctx->context()->isolate());
-//    v8::Handle<v8::Context> impl = v8::Context::New(ctx->context()->isolate(), nullptr, global);
+behavior job_generator(event_based_actor *self, const caf::actor &job_storage, uint32_t canvas_w, uint32_t canvas_h) {
+    //v8::HandleScope scope(ctx->context()->isolate());
+    //auto global = v8::ObjectTemplate::New(ctx->context()->isolate());
+    //v8::Handle<v8::Context> impl = v8::Context::New(ctx->context()->isolate(), nullptr, global);
     try {
         std::string filename = "test.js";
         std::ifstream stream(filename.c_str());
@@ -55,16 +52,7 @@ void initialize_v8_wrapper() {
     catch (std::exception & ex) {
         std::cout << ex.what() << std::endl;
     }
-}
-void deinitialize_v8_wrapper() {
-    //ctx.reset();
-    //v8::V8::ShutdownPlatform();
-    //wrapper.reset();
-    //v8::V8::Dispose();
-}
 
-
-behavior job_generator(event_based_actor *self, const caf::actor &job_storage, uint32_t canvas_w, uint32_t canvas_h) {
     return {
         [=](start, size_t num_chunks) {
             max_split_chunks = num_chunks;
@@ -147,6 +135,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, u
                     if (last_frame) {
                         aout(self) << "job_generator: there are no more jobs to be generated." << endl;
                         self->become(nothing);
+                        //ctx.reset();
                         return;
                     }
                     self->send(self, prepare_frame::value);
