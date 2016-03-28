@@ -17,6 +17,7 @@
 
 using start         = atom_constant<atom("start     ")>;
 using input_line    = atom_constant<atom("input_line")>;
+using no_more_input    = atom_constant<atom("no_more_in")>;
 using show_stats    = atom_constant<atom("show_stats")>;
 
 #include <regex>
@@ -49,6 +50,7 @@ int main(int argc, char *argv[]) {
                       ("render-window", po::value<int>(&render_win_port), "launch a render window on specified port")
                       ("render-window-at", po::value<int>(&render_win_port_at), "use render window on specified port")
                       ("no-video-output", "disable video output using ffmpeg")
+                      ("stdin", "read from stdin and send this to job generator actor")
                       ("dimensions,dim", po::value<string>(&dimensions), "specify canvas dimensions i.e. 1920x1080")
         ;
     po::variables_map vm;
@@ -117,9 +119,9 @@ int main(int argc, char *argv[]) {
             { stringstream os(m[2]); os >> canvas_h; }
         }
     }
+    bool use_stdin  = vm.count("stdin");
 
     scoped_actor s;
-    bool use_stdin = false;
     auto jobstorage = spawn(job_storage);
     auto generator  = spawn<detached>(job_generator, jobstorage, canvas_w, canvas_h, use_stdin);
     auto streamer_  = spawn(streamer, jobstorage, render_win_port_at, streamer_settings.to_ulong());
@@ -138,7 +140,9 @@ int main(int argc, char *argv[]) {
         for (string line; getline(cin, line);) {
             s->send(generator, input_line::value, line);
         }
+        s->send(generator, no_more_input::value);
     }
+
     while (renderer_info.running()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         //s->send(renderer_, show_stats::value);

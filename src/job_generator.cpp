@@ -5,6 +5,7 @@
 // public
 using start            = atom_constant<atom("start     ")>;
 using input_line       = atom_constant<atom("input_line")>;
+using no_more_input    = atom_constant<atom("no_more_in")>;
 
 // external
 using add_job          = atom_constant<atom("add_job   ")>;
@@ -59,6 +60,26 @@ public:
         }
         return v8pp::from_v8<T>(isolate, result);
     }
+    template<typename T>
+    void call(std::string const& function_name, T param)
+    {
+        v8::Isolate* isolate = context->isolate();
+        v8::HandleScope scope(isolate);
+        v8::TryCatch try_catch;
+
+        v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
+        v8::Local<v8::Function> func = global->Get(v8::String::NewFromUtf8(isolate, function_name.c_str())).As<v8::Function>();
+
+        v8::Handle<v8::Value> args[1];
+        args[0] = v8pp::to_v8(isolate, param);
+        v8::Local<v8::Value> result = func->Call(global, 1, args);
+
+        if (try_catch.HasCaught()) {
+            std::string const msg = v8pp::from_v8<std::string>(isolate, try_catch.Exception()->ToString());
+            throw std::runtime_error(msg);
+        }
+        return; // v8pp::from_v8<T>(isolate, result);
+    }
     template <typename T>
     inline void add_fun(const std::string &name, T func) {
         v8::HandleScope scope(context->isolate());
@@ -107,6 +128,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, u
         istreambuf_iterator<char> begin(stream), end;
 
         context->add_fun("version", &get_version);
+        context->add_fun("output", &output);
         context->run("var current_frame_ = 0;");
         context->run("var x = 0;");
         context->run("function current_frame() { return current_frame_; }");
@@ -124,7 +146,10 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, u
             }
         },
         [=](input_line, string line) {
-            aout(self) << "input_line = " << context->run<string>("var x = x || 0; x++ ; 'test ' + x") << endl;
+            context->call("input", line);
+        },
+        [=](no_more_input) {
+            context->call("close", "");
         },
         [=](prepare_frame) {
             self->sync_send(job_storage, num_jobs::value).then(

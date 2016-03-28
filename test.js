@@ -1,26 +1,31 @@
 
-var shapes = [];
+// try this for example with  (while true; do date; sleep 0.33333; done & k=$!; sleep 5; kill -9 $k) | ./starcry
 
-function init()
+var previous_second = null;
+var lines = [];
+
+function input(s)
 {
-    set_canvas(320, 240);
-    for (var i=0; i<10; i++) {
-        shapes.add(new circle(0, 0, 0, 100, 2.0));
+    var timestamp = s.split(' ')[3]; // s= 'ma mrt 28 17:39:09 CEST 2016'
+    var hms = timestamp.split(':'); // timestamp = '17:39:09'
+
+    if (previous_second !== hms[2] && previous_second !== null) {
+        output('rcvd input: ' + lines.join(', '));
+        lines = [];
     }
+    previous_second = hms[2];
+
+    lines.push(s);
 }
 
-var line = '';
-function input(s) {
-    line = s;
-    return 1123;
-}
-
-function test()
+function close()
 {
-    return 'line';
+    output('Last input! Flush!');
+    output('remaining lines in buffer were: ' + lines.join(', '));
 }
 
-// test
+// another rendering test..
+
 function radius()
 {
     //return ((current_frame() * 0.1) + (Math.random() / 10.0)) % 120;
