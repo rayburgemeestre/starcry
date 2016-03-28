@@ -99,7 +99,7 @@ void ffmpeg_h264_encode::initialize(uint32_t canvas_w, uint32_t canvas_h, caf::e
         exit(1);
     }
 
-    frame = avcodec_alloc_frame();
+    frame = av_frame_alloc();
     if (!frame) {
         fprintf(stderr, "Could not allocate video frame\n");
         exit(1);
@@ -183,7 +183,7 @@ void ffmpeg_h264_encode::finalize()
     avcodec_close(c);
     av_free(c);
     av_freep(&frame->data[0]);
-    avcodec_free_frame(&frame);
+    av_frame_free(&frame);
     printf("\n");
 }
 
