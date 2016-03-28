@@ -5,13 +5,15 @@ include("cmake/gtestmockscript.cmake")
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
+# IF CentOS7u2 THEN
+#set(BOOST_ROOT "/projects/boost_1_60_0/")
+# ENDIF
+
 find_package(Allegro5 REQUIRED)
 find_package(Boost 1.47.0 REQUIRED program_options system)
-#find_package(SFML 1 COMPONENTS system window graphics network audio REQUIRED)
 find_package(CAF REQUIRED core io)
 set (V8_DIR "libs/v8pp/v8/")
 find_package(V8 REQUIRED)
-#find_package(ZMQ)
 find_package(FFMPEG)
 find_library(benchmarklib_LIBRARIES benchmarklib REQUIRED)
 
@@ -34,19 +36,27 @@ find_package( Threads )
 add_definitions(-O3 -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic)
 #add_definitions(-O0 -g -Wall -funsigned-char -std=c++14)
 
-include_directories("./include/" "./libs/v8pp/v8/include" "./libs/v8pp/" "${V8_INCLUDE_DIR}" "./libs/v8pp/v8/lib/")
+include_directories("./include/" "./libs/v8pp/v8/include" "./libs/v8pp/" "${V8_INCLUDE_DIR}")
+# IF CentOS7u2 THEN
+#include_directories("/projects/boost_1_60_0/")
+# ENDIF
+link_directories("${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/")
+# IF CentOS7u2 THEN
+#link_directories("/projects/boost_1_60_0/stage/lib")
+# ENDIF
+
 
 #include_directories(${CAF_INCLUDE_DIRS})
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "./libs/v8pp/v8pp/context.cpp")
 add_executable(starcry ${starcry_SOURCES})
 target_link_libraries(starcry ${Boost_LIBRARIES})
-target_link_libraries(starcry ${SFML_LIBRARIES})
 target_link_libraries(starcry ${ALLEGRO_LIBRARIES})
-#target_link_libraries(starcry ${ZMQ_LIBRARIES})
-#target_link_libraries(starcry ${FFMPEG_LIBRARIES})
 target_link_libraries(starcry ${benchmarklib_LIBRARIES})
 target_link_libraries(starcry ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(starcry ${CAF_LIBRARIES})
+target_link_libraries(starcry ${FFMPEG_LIBRARIES})
+target_link_libraries(starcry -lz) # NEEDED FOR CENTOS7u2
+target_link_libraries(starcry -llzma) # NEEDED FOR CENTOS7u2
 
 # This order works on my Ubuntu 15.10 box at home *and* box at work.
 target_link_libraries(starcry -lv8)
@@ -81,8 +91,6 @@ target_link_libraries(starcry_tests libgmock)
 target_link_libraries(starcry_tests ${Boost_LIBRARIES})
 target_link_libraries(starcry_tests ${SFML_LIBRARIES})
 target_link_libraries(starcry_tests ${ALLEGRO_LIBRARIES})
-#target_link_libraries(starcry ${ZMQ_LIBRARIES})
-target_link_libraries(starcry ${FFMPEG_LIBRARIES})
 target_link_libraries(starcry_tests ${benchmarklib_LIBRARIES})
 target_link_libraries(starcry_tests ${CMAKE_THREAD_LIBS_INIT})
 # V8 dependencies (the one provided by Ubuntu is not new enough for v8pp)
