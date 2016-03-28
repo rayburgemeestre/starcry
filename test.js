@@ -1,5 +1,5 @@
 
-// try this for example with  (while true; do date; sleep 0.33333; done & k=$!; sleep 5; kill -9 $k) | ./starcry
+// try this for example with  (while true; do date; sleep 0.33333; done & k=$!; sleep 5; kill -9 $k) | ./starcry --stdin
 
 var previous_second = null;
 var lines = [];

@@ -6,7 +6,7 @@ include("cmake/gtestmockscript.cmake")
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 if (EXISTS "/etc/centos-release")
-#set(BOOST_ROOT "/projects/boost_1_60_0/")
+    set(BOOST_ROOT "/projects/boost_1_60_0/")
 endif (EXISTS "/etc/centos-release")
 
 find_package(Allegro5 REQUIRED)
