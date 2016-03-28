@@ -4,6 +4,7 @@
 
 // public
 using start            = atom_constant<atom("start     ")>;
+using input_line       = atom_constant<atom("input_line")>;
 
 // external
 using add_job          = atom_constant<atom("add_job   ")>;
@@ -18,45 +19,109 @@ size_t current_job = 0;
 size_t current_frame = 0;
 size_t max_split_chunks = 0;
 
-#include "v8_wrapper.h"
-#include "v8_wrapper_functions.hpp"
+#include "v8.h"
+#include "libplatform/libplatform.h"
+#include "v8pp/context.hpp"
+#include "v8pp/function.hpp"
 
 #include <memory>
 #include <fstream>
 
+using namespace std;
+
 double get_version() { return 0.1; }
+void output(string s) { cout << "received output: " << s << endl; }
 
-std::shared_ptr<v8_wrapper> wrapper     = std::make_shared<v8_wrapper>();
-std::shared_ptr<v8_wrapper_context> ctx = wrapper->context();
 
-behavior job_generator(event_based_actor *self, const caf::actor &job_storage, uint32_t canvas_w, uint32_t canvas_h) {
+class v8_wrapper {
+public:
+    v8_wrapper() : platform(nullptr), context(nullptr) {
+        v8::V8::InitializeICU();
+        platform = std::unique_ptr<v8::Platform>(v8::platform::CreateDefaultPlatform());
+        v8::V8::InitializePlatform(platform.get());
+        v8::V8::Initialize();
+        context = new v8pp::context(); // Making it unique_ptr breaks it!
+    }
+    template<typename T = void>
+    T run(std::string const& source)
+    {
+        v8::Isolate* isolate = context->isolate();
+        v8::HandleScope scope(isolate);
+        v8::TryCatch try_catch;
+        v8::Handle<v8::Value> result = context->run_script(source);
+        if (try_catch.HasCaught())
+        {
+            std::string const msg = v8pp::from_v8<std::string>(isolate, try_catch.Exception()->ToString());
+            throw std::runtime_error(msg);
+        }
+        return v8pp::from_v8<T>(isolate, result);
+    }
+    template <typename T>
+    inline void add_fun(const std::string &name, T func) {
+        v8::HandleScope scope(context->isolate());
+        context->set(name.c_str(), v8pp::wrap_function(context->isolate(), name.c_str(), func));
+    }
+    ~v8_wrapper() {
+        delete(context);
+        v8::V8::Dispose();
+        v8::V8::ShutdownPlatform();
+    }
+    v8pp::context * context;
+    std::unique_ptr<v8::Platform> platform;
+    std::mutex mut;
+};
+
+shared_ptr<v8_wrapper> context;
+
+template<>
+void v8_wrapper::run<void>(std::string const& source)
+{
+    v8::Isolate* isolate = context->isolate();
+    v8::HandleScope scope(isolate);
+    v8::TryCatch try_catch;
+    v8::Handle<v8::Value> result = context->run_script(source);
+    if (try_catch.HasCaught())
+    {
+        std::string const msg = v8pp::from_v8<std::string>(isolate, try_catch.Exception()->ToString());
+        throw std::runtime_error(msg);
+    }
+}
+
+behavior job_generator(event_based_actor *self, const caf::actor &job_storage, uint32_t canvas_w, uint32_t canvas_h, bool use_stdin) {
+
+    context = make_shared<v8_wrapper>();
+
     //v8::HandleScope scope(ctx->context()->isolate());
     //auto global = v8::ObjectTemplate::New(ctx->context()->isolate());
     //v8::Handle<v8::Context> impl = v8::Context::New(ctx->context()->isolate(), nullptr, global);
     try {
-        std::string filename = "test.js";
-        std::ifstream stream(filename.c_str());
+
+        string filename = "test.js";
+        ifstream stream(filename.c_str());
         if (!stream) {
-            throw std::runtime_error("could not locate file " + filename);
+            throw runtime_error("could not locate file " + filename);
         }
-        std::istreambuf_iterator<char> begin(stream), end;
+        istreambuf_iterator<char> begin(stream), end;
 
-        v8::Locker locker(ctx->context()->isolate());
-        v8::HandleScope scope(ctx->context()->isolate());
-
-        add_fun(ctx, "version", &get_version);
-        ctx->run("var current_frame_ = 0;");
-        ctx->run("function current_frame() { return current_frame_; }");
-        ctx->run(std::string(begin, end));
+        context->add_fun("version", &get_version);
+        context->run("var current_frame_ = 0;");
+        context->run("var x = 0;");
+        context->run("function current_frame() { return current_frame_; }");
+        context->run(std::string(begin, end));
     }
-    catch (std::exception & ex) {
-        std::cout << ex.what() << std::endl;
+    catch (exception & ex) {
+        cout << ex.what() << endl;
     }
 
     return {
         [=](start, size_t num_chunks) {
             max_split_chunks = num_chunks;
-            self->send(self, prepare_frame::value);
+            if (!use_stdin) {
+                self->send(self, prepare_frame::value);
+            }
+        },
+        [=](input_line, string line) {
+            aout(self) << "input_line = " << context->run<string>("var x = x || 0; x++ ; 'test ' + x") << endl;
         },
         [=](prepare_frame) {
             self->sync_send(job_storage, num_jobs::value).then(
@@ -68,7 +133,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, u
                     }
 
                     // Create a frame
-                    //aout(self) << "job_generator: generated frame #" << current_frame << endl;
+                    aout(self) << "job_generator: generated frame #" << current_frame << endl;
 
                     // Store it
                     bool last_frame = (current_frame >= 25 * 10);
@@ -81,12 +146,9 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, u
                     const auto rectangles = imagesplitter.split(max_split_chunks, ImageSplitter<uint32_t>::Mode::SplitHorizontal);
                     size_t counter = 1;
 
-                    v8::Locker locker(ctx->context()->isolate());
-                    v8::HandleScope scope(ctx->context()->isolate());
-                    //std::cout << "V8 reports version = " << ctx->run<double>("version()") << std::endl;
-                    //std::cout << "V8 reports current_frame = " << ctx->run<double>("current_frame()") << std::endl;
-                    double radius_test = ctx->run<double>("radius()");
-
+                    //std::cout << "V8 reports version = " << context->run<double>("version()") << std::endl;
+                    //std::cout << "V8 reports current_frame = " << context->run<double>("current_frame()") << std::endl;
+                    double radius_test = context->run<double>("radius()");
 
                     data::job new_job;
                     new_job.width = width;
@@ -108,16 +170,16 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, u
                     new_job.shapes.push_back(new_shape);
 
                     if (false)
-                    for (int i=0; i<10; i++) {
-                        data::shape new_shape;
-                        new_shape.x = 0;
-                        new_shape.y = 0;
-                        new_shape.z = 0;
-                        new_shape.type = data::shape_type::circle;
-                        new_shape.radius = (current_frame + i*20) % 200;
-                        new_shape.radius_size = 3.0;
-                        new_job.shapes.push_back(new_shape);
-                    }
+                        for (int i=0; i<10; i++) {
+                            data::shape new_shape;
+                            new_shape.x = 0;
+                            new_shape.y = 0;
+                            new_shape.z = 0;
+                            new_shape.type = data::shape_type::circle;
+                            new_shape.radius = (current_frame + i*20) % 200;
+                            new_shape.radius_size = 3.0;
+                            new_job.shapes.push_back(new_shape);
+                        }
 
                     for (size_t i=0; i<rectangles.size(); i++) {
                         new_job.width = rectangles[i].width();
@@ -130,7 +192,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, u
                         counter++;
                     }
                     current_frame++;
-                    ctx->run("current_frame_++;");
+                    context->run("current_frame_++;");
 
                     if (last_frame) {
                         aout(self) << "job_generator: there are no more jobs to be generated." << endl;
@@ -144,3 +206,4 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, u
         }
     };
 }
+

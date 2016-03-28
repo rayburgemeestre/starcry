@@ -30,13 +30,15 @@ public:
         std::swap(platform, p);
         v8::V8::InitializePlatform(platform.get());
         v8::V8::Initialize();
-        context_ = std::make_shared<v8pp::context>();
+        //context_ = std::make_shared<v8pp::context>();
+        context_ = new v8pp::context();
         num_instances++;
     }
 
     ~v8_wrapper_impl() {
         num_instances--;
-        context_.reset();
+        //context_.reset();
+        delete(context_);
         platform.reset();
 
         v8::V8::Dispose();
@@ -54,7 +56,8 @@ public:
 
 private:
 
-    std::shared_ptr<v8pp::context> context_;
+    //std::shared_ptr<v8pp::context> context_;
+    v8pp::context * context_;
     std::unique_ptr<v8::Platform> platform;
     static size_t num_instances;
 };
