@@ -9,6 +9,17 @@ function init()
     }
 }
 
+var line = '';
+function input(s) {
+    line = s;
+    return 1123;
+}
+
+function test()
+{
+    return 'line';
+}
+
 // test
 function radius()
 {
