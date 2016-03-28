@@ -1,4 +1,4 @@
-#include "streamer.h"
+#include "actors/streamer.h"
 
 #include "benchmark.h"
 #include <bitset>

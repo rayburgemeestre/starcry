@@ -1,11 +1,11 @@
 #include <iostream>
 
 #include "common.h"
-#include "job_storage.h"
-#include "job_generator.h"
-#include "renderer.h"
-#include "streamer.h"
-#include "render_window.h"
+#include "actors/job_storage.h"
+#include "actors/job_generator.h"
+#include "actors/renderer.h"
+#include "actors/streamer.h"
+#include "actors/render_window.h"
 
 #include "util/actor_info.hpp"
 

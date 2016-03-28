@@ -108,7 +108,7 @@ TEST(v8_wrapper_test, test_cpp_function_in_thread) {
 
     ctx->run("function foo() { return 1111; }");
     //ASSERT_EQ(1111, ctx->run<int>("foo()"));
-    auto l = [&ctx]() {
+    auto l = []() {
         for (int i=0; i< 1024; i++) {
             v8::Locker locker(ctx->context()->isolate());
             v8::HandleScope scope(ctx->context()->isolate());

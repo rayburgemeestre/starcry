@@ -1,4 +1,4 @@
-#include "render_window.h"
+#include "actors/render_window.h"
 #include "data/job.hpp"
 #include "data/pixels.hpp"
 #include "caf/io/all.hpp"

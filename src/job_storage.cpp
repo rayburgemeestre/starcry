@@ -1,5 +1,5 @@
 #include "common.h"
-#include "job_storage.h"
+#include "actors/job_storage.h"
 #include "data/job.hpp"
 
 // public

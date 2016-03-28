@@ -1,4 +1,4 @@
-#include "job_generator.h"
+#include "actors/job_generator.h"
 #include "util/image_splitter.hpp"
 #include "data/job.hpp"
 
@@ -24,7 +24,9 @@ size_t max_split_chunks = 0;
 #include <memory>
 #include <fstream>
 
-double get_version() { return 0.1; };
+double get_version() {
+    return 0.1;
+}
 
 std::shared_ptr<v8_wrapper> wrapper     = nullptr;
 std::shared_ptr<v8_wrapper_context> ctx = nullptr;
