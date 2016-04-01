@@ -89,6 +89,11 @@ sudo make install
 cd libs/v8pp
 ./build-v8.sh
 
+ ubuntu anyway..
+
+sudo cp -prv ./libs/v8pp/v8/lib/lib* /usr/local/lib
+sudo ldconfig
+
 ### ffmpeg (centos7)
 
 1) first you need x264, 
