@@ -16,9 +16,15 @@ void allegro5_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vecto
     dat.pixels = pixels;
     rendering_engine re;
     // TODO: make non-blocking w/frame skipping so streamer won't slow things down
-    self_->sync_send(client_, canvas_w, canvas_h, dat).then([](){
-        // no-op
-    });
+    //self_->sync_send(client_, canvas_w, canvas_h, dat).then([](){
+    //    // no-op
+    //});
+
+    // for now send only every 10th frame to avoid slowness
+    static int i = 0; i++;
+    if (i %10 == 0) {
+        self_->send(client_, canvas_w, canvas_h, dat);
+    }
 }
 
 void allegro5_window::finalize()

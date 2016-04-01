@@ -9,11 +9,14 @@
 // public
 using start                = atom_constant<atom("start     ")>;
 using show_stats           = atom_constant<atom("show_stats")>;
+using start_rendering      = atom_constant<atom("start_rend")>;
+using stop_rendering       = atom_constant<atom("stop_rende")>;
 
 // external
 using get_job              = atom_constant<atom("get_job   ")>;
 using del_job              = atom_constant<atom("del_job   ")>;
 using no_jobs_available    = atom_constant<atom("no_jobs_av")>;
+using need_frames          = atom_constant<atom("need_frame")>;
 
 // internal
 using ready                = atom_constant<atom("ready     ")>;
@@ -45,12 +48,12 @@ behavior worker(caf::stateful_actor<worker_data> * self, /*const caf::actor &ren
                 }
                 self->state.bitmap = al_create_bitmap(j.width, j.height);
             }
-            // simulate work for rendering
-            //std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             // render
             stringstream ss;
+#ifdef DEBUG
             ss << "frame " << j.frame_number << " chunk " << j.chunk << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num;
+#endif
             self->state.engine.render(self->state.bitmap, j.shapes, j.offset_x, j.offset_y, j.canvas_w, j.canvas_h, ss.str());
 
             data::pixel_data dat;
@@ -79,6 +82,9 @@ MeasureInterval &counter = static_cast<MeasureInterval &>(*benchmark_class.get()
 //};
 
 map<size_t, vector<ALLEGRO_COLOR>> pixel_store;
+// TODO: need class data...
+bool rendering_active_ = true;
+size_t num_workers_ = 0;
 
 behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer, int range_begin, int range_end) {
     rendering_engine engine;
@@ -88,6 +94,7 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
     counter.startHistogramAtZero(true);
     return {
         [=](start, size_t num_workers) {
+            num_workers_ = num_workers;
             aout(self) << "renderer started, num_workers = " << num_workers << endl;
             auto worker_factory = [&]() -> actor {
                 static size_t worker_num = range_begin;
@@ -103,9 +110,30 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
             pool = std::move(std::make_unique<actor>(actor_pool::make(num_workers, worker_factory, actor_pool::round_robin())));
 
             self->link_to(*pool);
-            for (size_t i=0; i<num_workers; i++) self->send(self, render_frame::value);
+            for (size_t i=0; i<num_workers_; i++) self->send(self, render_frame::value);
+        },
+        [=](start_rendering) {
+            rendering_active_ = true;
+        },
+        [=](stop_rendering) {
+            rendering_active_ = false;
         },
         [=](render_frame) {
+            if (!rendering_active_) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                self->sync_send(streamer, need_frames::value).then(
+                    [=](need_frames, bool answer) {
+                        if (answer) {
+                            rendering_active_ = true;
+                        }
+                    }
+                );
+                self->send(self, render_frame::value);
+                return;
+            }
+
+            // TODO: want to convert this to asynchronous, but this gave me segfaults..
+            //  Need to figure out why that is..
             self->sync_send(job_storage, get_job::value, rendered_frame).then(
                 [=](no_jobs_available) {
                     self->send(self, render_frame::value);
@@ -120,7 +148,7 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
             pixel_store[j.job_number] = pixeldat.pixels;
             auto send_to_streamer = [&](struct data::job &job) {
                 counter.measure();
-                self->send(streamer, render_frame::value, job, pixel_store[job.job_number]);
+                self->send(streamer, render_frame::value, job, pixel_store[job.job_number], self);
                 auto it = pixel_store.find(job.job_number);
                 pixel_store.erase(it);
             };
@@ -141,7 +169,6 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
             } else {
                 jobs_done.push_back(j);
             }
-
             self->send(self, render_frame::value);
         },
         [=](show_stats) {

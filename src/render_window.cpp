@@ -21,7 +21,7 @@ behavior render_loop(event_based_actor* self) {
     }
     auto queue = al_create_event_queue();
     al_set_new_display_flags(ALLEGRO_WINDOWED | ALLEGRO_RESIZABLE | ALLEGRO_GENERATE_EXPOSE_EVENTS);
-    display = al_create_display(480, 320);
+    display = al_create_display(1920, 1080); // TODO: read this from -d CLI parameter
     al_clear_to_color(al_map_rgb_f(1, 0, 0));
     al_register_event_source(queue, al_get_display_event_source(display));
     al_flip_display();

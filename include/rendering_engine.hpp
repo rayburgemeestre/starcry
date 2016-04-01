@@ -59,6 +59,7 @@ inline int round_to_int(double_type in)
 }
 
 #include "draw_logic.hpp"
+#include "data/shape.hpp"
 
 class rendering_engine
 {
@@ -80,6 +81,10 @@ public:
             fprintf(stderr, "Failed to initialize allegro ttf addon!\n");
             return;
         }
+        if (!al_init_primitives_addon()) {
+            fprintf(stderr, "Failed to initialize allegro primitives addon!\n");
+            return;
+        }
     }
 
     template <typename image, typename shapes_t>
@@ -91,28 +96,36 @@ public:
         uint32_t width = al_get_bitmap_width(bmp);
         uint32_t height = al_get_bitmap_height(bmp);
         al_lock_bitmap(bmp, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
+
+        if (!font) {
+            font = al_load_ttf_font("Monaco_Linux-Powerline.ttf", 14, 0);
+            if (!font){
+                fprintf(stderr, "Could not load monaco ttf font.\n");
+                // TODO: do this with RAII
+                al_unlock_bitmap(bmp);
+                al_set_target_bitmap(old_bmp);
+                return;
+            }
+        }
+
         double scale = 3.0;
         draw_logic_.scale(scale);
         draw_logic_.width(canvas_w);
         draw_logic_.height(canvas_h);
         draw_logic_.center(canvas_w / 2, canvas_h / 2);
         draw_logic_.offset(offset_x, offset_y);
+        draw_logic_.font(font);
         for (auto shape : shapes) {
-            draw_logic_.render_circle<double>(shape.x, shape.y, shape.radius, shape.radius_size);
+            if (shape.type == data::shape_type::circle)
+                draw_logic_.render_circle<double>(shape.x, shape.y, shape.radius, shape.radius_size);
+            else if (shape.type == data::shape_type::line)
+                draw_logic_.render_line<double>(shape.x, shape.y, shape.x2, shape.y2, shape.radius_size, shape.r, shape.g, shape.b);
+            else if (shape.type == data::shape_type::text)
+                draw_logic_.render_text<double>(shape.x, shape.y, shape.text);
         }
-        for (uint32_t y = 0; y < height; y++) al_put_pixel(0, y, al_map_rgba(0, 255, 0, 255));
-        for (uint32_t x = 0; x < width; x++)  al_put_pixel(x, 0, al_map_rgba(255, 0, 0, 255));
         if (!label.empty()) {
-            if (!font) {
-                font = al_load_ttf_font("Monaco_Linux-Powerline.ttf", 14, 0);
-                if (!font){
-                    fprintf(stderr, "Could not load monaco ttf font.\n");
-                    // TODO: do this with RAII
-                    al_unlock_bitmap(bmp);
-                    al_set_target_bitmap(old_bmp);
-                    return;
-                }
-            }
+            for (uint32_t y = 0; y < height; y++) al_put_pixel(0, y, al_map_rgba(0, 255, 0, 255));
+            for (uint32_t x = 0; x < width; x++)  al_put_pixel(x, 0, al_map_rgba(255, 0, 0, 255));
             al_draw_text(font, al_map_rgb(255, 255, 255), 10, 10, ALLEGRO_ALIGN_LEFT, label.c_str());
         }
         // TODO: do this with RAII

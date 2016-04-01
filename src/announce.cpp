@@ -31,9 +31,16 @@ namespace data {
             &shape::x,
             &shape::y,
             &shape::z,
+            &shape::x2,
+            &shape::y2,
+            &shape::z2,
             &shape::type,
+            &shape::r,
+            &shape::g,
+            &shape::b,
             &shape::radius,
-            &shape::radius_size
+            &shape::radius_size,
+            &shape::text
         );
         caf::announce<ALLEGRO_COLOR>(
             "ALLEGRO_COLOR",

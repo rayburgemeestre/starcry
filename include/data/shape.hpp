@@ -5,7 +5,9 @@
 namespace data{
 
     enum class shape_type {
-        circle
+        text,
+        circle,
+        line,
     };
 
     //template <typename T>
@@ -14,9 +16,16 @@ namespace data{
         double x;
         double y;
         double z;
+        double x2;
+        double y2;
+        double z2;
         shape_type type;
+        double r;
+        double g;
+        double b;
         double radius;
         double radius_size;
+        std::string text;
     };
 
     inline bool operator==(const shape &lhs, const shape &rhs) {

@@ -6,11 +6,15 @@
 #include "output_action.hpp"
 
 // public
+using start            = atom_constant<atom("start     ")>;
 using render_frame     = atom_constant<atom("render_fra")>;
 using show_stats       = atom_constant<atom("show_stats")>;
+using need_frames      = atom_constant<atom("need_frame")>;
 
 // external
 using del_job          = atom_constant<atom("del_job   ")>;
+using start_rendering  = atom_constant<atom("start_rend")>;
+using stop_rendering   = atom_constant<atom("stop_rende")>;
 
 // internal
 using process_queue    = atom_constant<atom("process_qu")>;
@@ -62,7 +66,9 @@ bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chu
         static int i = 1000;
         ss << "frame" << i++;
         rendering_engine eng;
-        eng.write_image(eng.unserialize_bitmap(pixels_all, 1280, 720), ss.str());
+        auto bmp = eng.unserialize_bitmap(pixels_all, 1280, 720);
+        eng.write_image(bmp, ss.str());
+        al_destroy_bitmap(bmp);
 #endif
         outputs.add_frame(canvas_w, canvas_h, pixels_all); // encoder has it's own frameNumber variable.
 
@@ -81,6 +87,9 @@ bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chu
     return false;
 }
 
+static size_t min_items_in_streamer_queue = 10;
+static size_t max_items_in_streamer_queue = 20;
+
 behavior streamer(event_based_actor* self, const caf::actor &job_storage, int render_window_at, uint32_t settings) {
     if (bitset<32>(settings).test(0)) {
         ffmpeg.enable(true);
@@ -92,7 +101,7 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
     counter2.setDescription("fps");
     counter2.startHistogramAtZero(true);
     return {
-        [=](render_frame, struct data::job &job, vector<ALLEGRO_COLOR> &pixels) {
+        [=](render_frame, struct data::job &job, vector<ALLEGRO_COLOR> &pixels, const caf::actor &renderer) {
             if (job.last_frame)
                 last_frame_streamed = std::make_optional(job.frame_number);
 
@@ -102,8 +111,16 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
             while (process_buffer(self, current_frame2, job.num_chunks, job.canvas_w, job.canvas_h))
                 current_frame2++;
 
-            // return make_message(ready::value);
+            if (self->mailbox().count() > max_items_in_streamer_queue) {
+                // instruct renderer to stop until we have processed our queue a bit further.
+                // renderer itself will periodically check with us to see if it's okay to resume again (via need_frames)
+                self->send(renderer, stop_rendering::value);
+            }
+
             self->send(job_storage, del_job::value, job.job_number);
+        },
+        [=](need_frames) {
+            return make_message(need_frames::value, self->mailbox().count() < min_items_in_streamer_queue);
         },
         [=](show_stats) {
             aout(self) << "streamer at frame: " << current_frame2 << ", with FPS: " << (1000.0 / counter2.mean())

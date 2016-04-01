@@ -6,6 +6,7 @@
 #include "actors/renderer.h"
 #include "actors/streamer.h"
 #include "actors/render_window.h"
+#include "actors/stdin_reader.h"
 
 #include "util/actor_info.hpp"
 
@@ -30,6 +31,9 @@ using show_stats    = atom_constant<atom("show_stats")>;
 int main(int argc, char *argv[]) {
 
     data::announce();
+
+    //auto max_thoughput_per_run = 1000;
+    //set_scheduler(std::thread::hardware_concurrency(), max_thoughput_per_run);
 
     namespace po = ::boost::program_options;
     int worker_port            = 0;
@@ -124,7 +128,7 @@ int main(int argc, char *argv[]) {
     scoped_actor s;
     auto jobstorage = spawn(job_storage);
     auto generator  = spawn<detached>(job_generator, jobstorage, canvas_w, canvas_h, use_stdin);
-    auto streamer_  = spawn(streamer, jobstorage, render_win_port_at, streamer_settings.to_ulong());
+    auto streamer_  = spawn<priority_aware>(streamer, jobstorage, render_win_port_at, streamer_settings.to_ulong());
     auto renderer_  = spawn(renderer, jobstorage, streamer_, range_begin, range_end);
 
     // cascade exit from renderer -> job generator -> job storage
@@ -135,18 +139,18 @@ int main(int argc, char *argv[]) {
     actor_info renderer_info{renderer_};
     s->send(generator, start::value, num_chunks);
     s->send(renderer_, start::value, num_workers);
+    s->send(streamer_, start::value, renderer_);
 
     if (use_stdin) {
-        for (string line; getline(cin, line);) {
-            s->send(generator, input_line::value, line);
-        }
-        s->send(generator, no_more_input::value);
+        auto stdin_reader_ = spawn(stdin_reader, generator, jobstorage);
+        stdin_reader_->link_to(renderer_);
+        s->send(stdin_reader_, start::value);
     }
 
     while (renderer_info.running()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         //s->send(renderer_, show_stats::value);
-        s->send(streamer_, show_stats::value);
+        s->send(message_priority::high, streamer_, show_stats::value);
     }
     s->await_all_other_actors_done();
 }
