@@ -121,7 +121,7 @@ public:
             else if (shape.type == data::shape_type::line)
                 draw_logic_.render_line<double>(shape.x, shape.y, shape.x2, shape.y2, shape.radius_size, shape.r, shape.g, shape.b);
             else if (shape.type == data::shape_type::text)
-                draw_logic_.render_text<double>(shape.x, shape.y, shape.text);
+                draw_logic_.render_text<double>(shape.x, shape.y, shape.text, shape.align);
         }
         if (!label.empty()) {
             for (uint32_t y = 0; y < height; y++) al_put_pixel(0, y, al_map_rgba(0, 255, 0, 255));

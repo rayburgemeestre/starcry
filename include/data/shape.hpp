@@ -26,6 +26,7 @@ namespace data{
         double radius;
         double radius_size;
         std::string text;
+        std::string align;
     };
 
     inline bool operator==(const shape &lhs, const shape &rhs) {

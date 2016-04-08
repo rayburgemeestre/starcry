@@ -120,13 +120,14 @@ public:
 };
 unique_ptr<assistent_> assistant = nullptr;
 
-void add_text(double x, double y, double z, string text) {
+void add_text(double x, double y, double z, string text, string align) {
     data::shape new_shape;
     new_shape.x = x;
     new_shape.y = y;
     new_shape.z = z;
     new_shape.type = data::shape_type::text;
     new_shape.text = text;
+    new_shape.align = align;
     assistant->the_job.shapes.push_back(new_shape);
 }
 void add_circle(double x, double y, double z, double radius, double radius_size) {

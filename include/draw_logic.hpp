@@ -76,10 +76,11 @@ public:
         }
     }
     template <typename double_type>
-    inline void render_text(double_type textX, double_type textY, string text) {
+    inline void render_text(double_type textX, double_type textY, string text, string align) {
         textX    = ((textX * scale_) + centerX_) - offsetX_;
         textY    = ((textY * scale_) + centerY_) - offsetY_;
-        al_draw_text(font_, al_map_rgb(255, 255, 255), textX, textY - (14 /*font height*/ / 2), ALLEGRO_ALIGN_CENTER, text.c_str());
+        auto alignment = align == "center" ? ALLEGRO_ALIGN_CENTER : ALLEGRO_ALIGN_LEFT;
+        al_draw_text(font_, al_map_rgb(255, 255, 255), textX, textY - (14 /*font height*/ / 2), alignment, text.c_str());
     }
 
     template <typename double_type>

@@ -40,7 +40,8 @@ namespace data {
             &shape::b,
             &shape::radius,
             &shape::radius_size,
-            &shape::text
+            &shape::text,
+            &shape::align
         );
         caf::announce<ALLEGRO_COLOR>(
             "ALLEGRO_COLOR",
