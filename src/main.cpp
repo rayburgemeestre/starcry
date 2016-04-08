@@ -9,6 +9,7 @@
 #include "actors/stdin_reader.h"
 
 #include "util/actor_info.hpp"
+#include "util/settings.hpp"
 
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/option.hpp>
@@ -28,6 +29,8 @@ using show_stats    = atom_constant<atom("show_stats")>;
 //#include "caf/io/max_msg_size.hpp"
 //caf::io::max_msg_size(std::numeric_limits<uint32_t>::max());
 
+#include "caf/io/remote_actor.hpp"
+
 int main(int argc, char *argv[]) {
 
     data::announce();
@@ -35,24 +38,27 @@ int main(int argc, char *argv[]) {
     //auto max_thoughput_per_run = 1000;
     //set_scheduler(std::thread::hardware_concurrency(), max_thoughput_per_run);
 
+    settings conf;
+    conf.load();
+
     namespace po = ::boost::program_options;
     int worker_port            = 0;
-    int render_win_port        = 0;
-    int render_win_port_at     = 0;
-    size_t num_chunks          = 8; // number of chunks to split image size_to
+    size_t num_chunks          = 1; // number of chunks to split image size_to
     size_t num_workers         = 8; // number of workers for rendering
     string worker_ports;
     string dimensions;
+    string output_file = "output.h264";
     uint32_t settings_{0};
     bitset<32> streamer_settings(settings_);
     po::options_description desc("Allowed options");
     desc.add_options()("help", "produce help message")
+                      ("output,o", po::value<string>(&output_file), "filename for video output (default output.h264)")
                       ("remote,r", po::value<string>(&worker_ports), "use remote workers for rendering")
                       ("worker,w", po::value<int>(&worker_port), "start worker on specified port")
-                      ("num-chunks,c", po::value<size_t>(&num_chunks), "number of jobs to split frame in")
-                      ("num-workers,n", po::value<size_t>(&num_workers), "number of workers to use in render pool")
-                      ("render-window", po::value<int>(&render_win_port), "launch a render window on specified port")
-                      ("render-window-at", po::value<int>(&render_win_port_at), "use render window on specified port")
+                      ("num-chunks,c", po::value<size_t>(&num_chunks), "number of jobs to split frame in (default 1)")
+                      ("num-workers,n", po::value<size_t>(&num_workers), "number of workers to use in render pool (default 8)")
+                      ("gui", "open GUI window (writes state to $HOME/.starcry.conf)")
+                      ("spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")
                       ("no-video-output", "disable video output using ffmpeg")
                       ("stdin", "read from stdin and send this to job generator actor")
                       ("dimensions,dim", po::value<string>(&dimensions), "specify canvas dimensions i.e. 1920x1080")
@@ -76,9 +82,26 @@ int main(int argc, char *argv[]) {
         cout << "Enabling video output using ffmpeg.." << endl;
         streamer_settings.set(streamer_ffmpeg, true);
     }
-    if (render_win_port_at) {
-        cout << "Enabling video output to window on port " << render_win_port_at << ".." << endl;
+    if (vm.count("gui")) {
+        bool gui_available = false;
+        try {
+            auto client = io::remote_actor("127.0.0.1", conf.user.gui_port);
+            gui_available = true;
+        }
+        catch (network_error &err) {
+            system((std::string(argv[0]) + " --spawn-gui &").c_str());
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            conf.load();
+        }
+        cout << "Enabling video output to window on port " << conf.user.gui_port << ".." << endl;
         streamer_settings.set(streamer_allegro5, true);
+    }
+    if (vm.count("spawn-gui")) {
+        cout << "launching render output window" << endl;
+        scoped_actor s;
+        auto w = spawn(render_window);
+        s->await_all_other_actors_done();
+        return 0;
     }
 
     bool use_remote_workers    = vm.count("remote") || vm.count("worker");
@@ -92,14 +115,6 @@ int main(int argc, char *argv[]) {
             if (range_end < range_begin) swap(range_begin, range_end);
             num_workers = range_end - (range_begin - 1); // overruling
         }
-    }
-
-    if (render_win_port) {
-        cout << "launching render output window on port " << render_win_port << endl;
-        scoped_actor s;
-        auto w = spawn(render_window, render_win_port);
-        s->await_all_other_actors_done();
-        return 0;
     }
 
     if (use_remote_workers) cout << "use_remote_workers=true" << endl;
@@ -128,7 +143,7 @@ int main(int argc, char *argv[]) {
     scoped_actor s;
     auto jobstorage = spawn(job_storage);
     auto generator  = spawn<detached>(job_generator, jobstorage, canvas_w, canvas_h, use_stdin);
-    auto streamer_  = spawn<priority_aware>(streamer, jobstorage, render_win_port_at, streamer_settings.to_ulong());
+    auto streamer_  = spawn<priority_aware>(streamer, jobstorage, conf.user.gui_port, output_file, streamer_settings.to_ulong());
     auto renderer_  = spawn(renderer, jobstorage, streamer_, range_begin, range_end);
 
     // cascade exit from renderer -> job generator -> job storage

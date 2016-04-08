@@ -25,6 +25,11 @@ public:
         if (!enabled_) return;
         output_.finalize();
     }
+    // TODO: this is no longer really an abstract output, consider refactoring
+    void set_filename(std::string filename) {
+        if (!enabled_) return;
+        output_.set_filename(filename);
+    }
 };
 
 // TODO: eventually this should move outside..
@@ -55,5 +60,8 @@ public:
     void finalize() {
         ffmpeg_.finalize();
         allegro5_.finalize();
+    }
+    void set_filename(std::string filename) {
+        ffmpeg_.set_filename(filename);
     }
 };

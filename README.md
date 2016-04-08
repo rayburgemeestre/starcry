@@ -144,6 +144,7 @@ make install
 ## Quick start
 
 - ./starcry
+- ./starcry --gui
 - ffplay test.h264
 
 or,
@@ -154,9 +155,6 @@ or,
 - ./starcry -r 10000-10003
 - ffplay test.h264
 
-or,
-- ./starcry --render-window 10001 &
-- ./starcry --render-window-at 10001
 
 ## Problems
 

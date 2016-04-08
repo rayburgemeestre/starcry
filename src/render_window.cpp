@@ -3,6 +3,7 @@
 #include "data/pixels.hpp"
 #include "caf/io/all.hpp"
 #include "rendering_engine.hpp"
+#include "util/settings.hpp"
 
 using render                = atom_constant<atom("render    ")>;
 ALLEGRO_DISPLAY *display    = NULL;
@@ -46,6 +47,13 @@ behavior render_loop(event_based_actor* self) {
             if (event.type == ALLEGRO_EVENT_DISPLAY_RESIZE) {
                al_acknowledge_resize(event.display.source);
             }
+            if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
+                al_unregister_event_source(queue, al_get_display_event_source(display));
+                al_destroy_event_queue(queue);
+                al_destroy_display(display);
+                self->quit(exit_reason::user_shutdown);
+                return;
+            }
             al_flip_display();
             //using namespace std::literals;
             //std::this_thread::sleep_for(0.1s);
@@ -59,10 +67,17 @@ behavior render_loop(event_based_actor* self) {
     };
 }
 
-behavior render_window(event_based_actor* self, int port) {
-    io::publish(self, port);
+behavior render_window(event_based_actor* self) {
+    uint16_t bound_port = io::publish(self, 0);
+
+    aout(self) << "publishing GUI on port: " << bound_port << endl;
+
+    settings conf;
+    conf.user.gui_port = bound_port;
+    conf.save();
 
     auto renderloop = spawn(render_loop);
+    self->link_to(renderloop);
     data::pixel_data data;
     self->send(renderloop, render::value);
 
@@ -70,6 +85,9 @@ behavior render_window(event_based_actor* self, int port) {
         [=](uint32_t width, uint32_t height, struct data::pixel_data data) -> message {
             self->send(renderloop, width, height, data);
             return make_message();
+        },
+        on("ping") >> [](string) -> message {
+            return make_message("pong");
         }
     };
 }

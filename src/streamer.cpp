@@ -90,9 +90,10 @@ bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chu
 static size_t min_items_in_streamer_queue = 10;
 static size_t max_items_in_streamer_queue = 20;
 
-behavior streamer(event_based_actor* self, const caf::actor &job_storage, int render_window_at, uint32_t settings) {
+behavior streamer(event_based_actor* self, const caf::actor &job_storage, int render_window_at, string output_file, uint32_t settings) {
     if (bitset<32>(settings).test(0)) {
         ffmpeg.enable(true);
+        ffmpeg.set_filename(output_file);
     }
     if (bitset<32>(settings).test(1)) {
         allegro5.enable(true);

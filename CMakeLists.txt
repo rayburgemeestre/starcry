@@ -33,8 +33,8 @@ find_package( Threads )
 
 # whole program optimizations screws things over
 #add_definitions(-O3 -fwhole-program -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic)
-add_definitions(-O3 -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic)
 #add_definitions(-O0 -g -Wall -funsigned-char -std=c++14)
+add_definitions(-O3 -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic)
 
 include_directories("./include/" "./libs/v8pp/v8/include" "./libs/v8pp/" "${V8_INCLUDE_DIR}")
 if (EXISTS "/etc/centos-release")
@@ -45,6 +45,7 @@ if (EXISTS "/etc/centos-release")
     link_directories("/projects/boost_1_60_0/stage/lib")
 endif (EXISTS "/etc/centos-release")
 
+include_directories("./libs/cereal/include/")
 
 #include_directories(${CAF_INCLUDE_DIRS})
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "./libs/v8pp/v8pp/context.cpp")

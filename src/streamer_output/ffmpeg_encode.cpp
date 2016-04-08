@@ -187,3 +187,7 @@ void ffmpeg_h264_encode::finalize()
     printf("\n");
 }
 
+void ffmpeg_h264_encode::set_filename(std::string filename)
+{
+    this->filename = filename;
+}
