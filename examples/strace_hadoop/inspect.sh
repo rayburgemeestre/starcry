@@ -105,7 +105,10 @@ function check_strace {
 
     echo "ssh root@$1 \"rm -rf /tmp/strace-output-parser 2>/dev/null\"" | tee -a strace.sh
     echo "ssh root@$1 \"mkdir -p /tmp/strace-output-parser\"" | tee -a strace.sh
-    cat /tmp/test.txt |postfix " $1" | awk '{print "nohup ssh root@"$4" \"strace -p "$1" -f -F -ttt -e trace=network -s 80 -o /tmp/strace-output-parser/"$4"_"$1".strace\" &"}' | sort -u | tee -a strace.sh
+    #cat /tmp/test.txt |postfix " $1" | awk '{print "nohup ssh root@"$4" \"strace -p "$1" -f -F -ttt -e trace=network -s 80 -o /tmp/strace-output-parser/"$4"_"$1".strace\" &"}' | sort -u | tee -a strace.sh
+    #cat /tmp/test.txt |postfix " $1" | awk '{print "nohup ssh root@"$4" \"strace -p "$1" -f -F -ttt -s 80 -o /tmp/strace-output-parser/"$4"_"$1".strace\" &"}' | sort -u | tee -a strace.sh
+
+    cat /tmp/test.txt |postfix " $1" | awk '{print "nohup ssh root@"$4" \"strace -p "$1" -f -F -ttt -s 80 -o /tmp/strace-output-parser/"$2".strace\" &"}' | sort -u | tee -a strace.sh
 
 }
 

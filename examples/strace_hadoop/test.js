@@ -1,37 +1,41 @@
 var data = [
-    ["node1", 10903, "datanode", 50010],
-    ["node1", 10903, "datanode", 50020],
-    ["node1", 10903, "datanode", 56663],
-    ["node1", 11199, "KMS", 16000],
-    ["node1", 11199, "KMS", 16001],
-    ["node1", 11441, "historyserver", 10020],
-    ["node1", 11441, "historyserver", 19888],
-    ["node1", 11519, "namenode", 8020],
-    ["node1", 11680, "nodemanager", 13562],
-    ["node1", 11680, "nodemanager", 44210],
-    ["node1", 11680, "nodemanager", 8040],
-    ["node1", 11984, "resourcemanager", 8030],
-    ["node1", 11984, "resourcemanager", 8033],
-    ["node1", 11984, "resourcemanager", 8088],
-    ["node1", 12590, "timelineserver", 10021],
-    ["node1", 12590, "timelineserver", 8188],
-    ["node2", 15274, "datanode", 50010],
-    ["node2", 15274, "datanode", 50020],
-    ["node2", 15274, "datanode", 50034],
-    ["node2", 15412, "nodemanager", 13562],
-    ["node2", 15412, "nodemanager", 8040],
-    ["node2", 15614, "secondarynamenode", 50090],
-    ["node3", 13183, "datanode", 33677],
-    ["node3", 13183, "datanode", 50010],
-    ["node3", 13183, "datanode", 50020],
-    ["node3", 13331, "nodemanager", 13562],
-    ["node3", 13331, "nodemanager", 8040],
+    ["node1", 11358, "resourcemanager", 8030],
+    ["node1", 11358, "resourcemanager", 8031],
+    ["node1", 11358, "resourcemanager", 8033],
+    ["node1", 11358, "resourcemanager", 8090],
+    ["node1", 11205, "nodemanager", 13562],
+    ["node1", 11205, "nodemanager", 47938],
+    ["node1", 11205, "nodemanager", 8040],
+    ["node1", 10479, "datanode", 50020],
+    ["node1", 10479, "datanode", 50475],
+    ["node1", 10479, "datanode", 56953],
+    ["node1", 11169, "namenode", 50470],
+    ["node1", 11169, "namenode", 8020],
+    ["node1", 11136, "historyserver", 10020],
+    ["node1", 11136, "historyserver", 10033],
+    ["node1", 11362, "timelineserver", 10021],
+    ["node1", 11362, "timelineserver", 8190],
+    ["node1", 11112, "KMS", 16000],
+    ["node1", 11112, "KMS", 16001],
+    ["node2", 2858, "nodemanager", 13562],
+    ["node2", 2858, "nodemanager", 8040],
+    ["node2", 2664, "datanode", 50020],
+    ["node2", 2664, "datanode", 50475],
+    ["node2", 2920, "secondarynamenode", 50091],
+    ["node3", 9524, "nodemanager", 13562],
+    ["node3", 9524, "nodemanager", 53702],
+    ["node3", 9524, "nodemanager", 8040],
+    ["node3", 9340, "datanode", 47914],
+    ["node3", 9340, "datanode", 50020],
+    ["headnode", '',  "kerberos", 88],
     ["headnode", '',  "job", '']
 ];
 
+/*
 data.sort(function(a, b) {
     return a[3] > b[3];
 });
+*/
 
 var ips = {
     '10.141.0.1'     : 'node1',
@@ -67,7 +71,32 @@ function draw_box(x, y, width, height) {
 }
 
 var coords = {};
+function calculate_coords(node, x, y) {
+    var offset = 0;
+    for (service in nodes[node]) {
+        // service
+        var service_x = x;
+        var service_y = y + offset;
 
+        // ports
+        offset += 10;
+        var ports = nodes[node][service].ports;
+        var len = 0;
+        for (port in ports) { len++; }
+        var port_offset = -1 * (((len - 1) / 2.0) * 20);
+        for (port in ports) {
+            var port_x = x + port_offset;
+            var port_y = y + offset;
+            coords[node + port] = { x: port_x, y: port_y };
+            port_offset += 20;
+        }
+
+        // extra spacing
+        offset += 20;
+
+        coords[node + service] = { x: service_x + 40 + 2.5, y: service_y - 2.5 };
+    }
+}
 function draw_node(node, x, y) {
     var offset = 0;
     for (service in nodes[node]) {
@@ -125,14 +154,14 @@ function process() {
         while (current_frame < frame) {
             for (var a in activity) {
                 if (activity[a].bytes > 20) {
-                    activity[a].bytes /= 2;
+                    activity[a].bytes /= 1.2;
                 }
                 else {
                     activity[a].bytes -= 1;
                 }
                 if (activity[a].bytes <= 0) {
                     activity[a].bytes = 0;
-                    activity[a].shadow -= (0.2 / (25 * 2));
+                    activity[a].shadow -= (0.2 / (25 * 4));
                 }
                 if (activity[a].shadow < 0) {
                     activity[a].shadow = 0;
@@ -154,8 +183,8 @@ function process() {
                 var c = line.split(' ');
                 c[4] = c[4] == '127.0.0.1' ? c[0] : ips[c[4]];
                 if (!c[4]) continue;
-                var from = c[4] + c[5]; // node + port
-                var to   = c[0] + c[1]; // node + service
+                var from = c[0] + c[1]; // node + service
+                var to   = c[4] + c[5]; // node + port
                 if (!(from in activity))
                     activity[from + to] = { 
                         from: from, to: to, bytes: 0, shadow: 0.2 
@@ -166,10 +195,10 @@ function process() {
             buffer = [];
             current_frame++;
 
-            draw_node('node1',    -250, -125);
-            draw_node('node2',    -150, -125);
-            draw_node('node3',    -50,  -125);
-            draw_node('headnode', -150,  125);
+            calculate_coords('node1',    -250, -125);
+            calculate_coords('node2',    -150, -125);
+            calculate_coords('node3',    -50,  -125);
+            calculate_coords('headnode', -150,   80);
             draw_console(10, -125);
             draw_header(-250, -150);
 
@@ -177,16 +206,37 @@ function process() {
                 var act = activity[a];
                 var from = coords[act.from];
                 var to = coords[act.to];
-                if (from && to) {
-                    var size = act.bytes / 100.0;
-                    if (size > 0) {
-                        add_line(from.x, from.y, 0, to.x, to.y, 0, size + 5, 0, 1, 0);
+                output(act.from + " + " + act.to);
+                if (act.to.endsWith('53') && from) {
+                    if (act.bytes > 0) {
+                        add_text(from.x - 90, from.y, 0, 'DNS', 'left');
                     }
-                    else if (act.shadow) {
+                }
+                /*
+                if (act.to.endsWith('88') && from) {
+                    to = coords['kerberos'];
+                    if (act.bytes > 0) {
+                        add_text(from.x - 90, from.y + 10, 0, 'KRB', 'left');
+                    }
+                }
+                */
+                if (from && to) {
+                    var size = act.bytes / 10.0;
+                    if (size > 100) size = 100.0;
+                    if (act.bytes > 0) {
+                        add_line(from.x, from.y, 0, to.x, to.y, 0, size + 1, 0, 1, 0);
+                    }
+                    else if (act.shadow > 0.1) {
                         add_line(from.x, from.y, 0, to.x, to.y, 0, 5.0, act.shadow, act.shadow, act.shadow);
                     }
                 }
             }
+
+            // TODO: refactor these functions so they use coords[] instead!
+            draw_node('node1',    -250, -125);
+            draw_node('node2',    -150, -125);
+            draw_node('node3',    -50,  -125);
+            draw_node('headnode', -150,   80);
 
             write_frame();
         }
