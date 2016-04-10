@@ -1,3 +1,97 @@
+
+![example1](https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/ex1.gif)
+![example2](https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/ex2.gif)
+![example3](https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/ex3.gif)
+
+Source code for producing these videos / images, from left to right.
+
+```
+/**
+ * Example 1: simple animation
+ */
+var fps           = 25;
+var max_frames    = 10 * fps; // seconds
+var realtime      = false;
+
+function initialize() {
+}
+
+function next() {
+    var radius      = current_frame > 100 ? current_frame - 100 : 0;
+    var radius_size = 5.0 + current_frame / 2;
+    add_circle(0, 0, 0, radius , radius_size);
+    write_frame();
+}
+```
+
+```
+/**
+ * Example 2: circle radius increases by time.
+ */
+var fps           = 25;
+var max_frames    = 10 * fps; // seconds
+var realtime      = true;
+var seconds       = 0;
+var begin         = +new Date();
+
+function initialize() {
+}
+
+function next() {
+    var diff = +new Date() - begin;
+    seconds = (diff / 1000.0) % 60;
+    add_circle(0, 0, 0, seconds, 5.0);
+    write_frame();
+}
+```
+
+```
+/**
+ * Example 3: read a file from stdin and visualize it.
+ * run like: `cat /etc/passwd | starcry --stdin`
+ */
+var fps           = 25;
+var max_frames    = 999999;
+var realtime      = false;
+var users         = [];
+
+function initialize() {
+}
+
+function next() {
+}
+
+function input(line) {
+    var s = line.split(':');
+    if (!s.length) return;
+    var x = Math.random() * 150 - 75;
+    var y = Math.random() * 150 - 75;
+    users.push([s[0], x, y]);
+
+    for (var i=0; i<fps / 5; i++) {
+        for (var j=0; j<users.length; j++) {
+            var [user, x, y] = users[j];
+            if (j > 0) {
+                var [_, x2, y2] = users[j - 1];
+                add_line(x, y, 0, x2, y2, 0, 3, 1, 0, 0);
+            }
+            add_text(x, y, 0, user, 'center');
+        }
+        write_frame();
+    }
+}
+function close() {
+    output('input stream closed');
+    write_frame();
+}
+```
+
+## Architecture overview
+
+The architecture is really simple, the following diagram shows best Starcry rendering a video.
+
+![sequencediagram](https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/seqdiag.png)
+
 ## Prerequisites
 
 - cmake
@@ -125,9 +219,9 @@ make install
 ## Websequencediagram for job flow
 
     main->job_generator: start
-    job_generator->job_generator: write_frame
-    job_generator->job_storage: num_jobs ?
-    job_storage->job_generator: N
+    job_generator->V8: next() javascript
+    V8->job_generator: add shape **
+    V8->job_generator: write_frame
     job_generator->job_storage: add_job *
     main->renderer: start
     main->streamer: start
@@ -140,6 +234,11 @@ make install
     streamer->streamer: combine
     streamer->output: video frame
     streamer->job_storage: del_job
+    job_generator->job_generator: next_frame
+    job_generator->job_storage: num_jobs ?
+    job_storage->job_generator: N
+    job_generator->V8: [N < threshold] next() javascript
+    job_generator->job_generator: [N >= threshold] sleep X;\nnext_frame
 
 ## Quick start
 
