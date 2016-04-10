@@ -1,3 +1,4 @@
+Here are some examples of videos that can be generated (or streamed) using simple javascript.
 
 ![example1](https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/ex1.gif)
 ![example2](https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/ex2.gif)
@@ -86,137 +87,202 @@ function close() {
 }
 ```
 
+This is a new version of Starcry which was originally a rendering engine. Aiming to be the Photoshop for Video (albeit vector-based).
+The first version was already quite advanced with Motion blur, Textures, Gradients, Polygons, Lines, Circles, Ellipses, Rectangles.
+Gravity effects, all kinds of Motions, Behaviors, Easing (Linear, Exponential, ..), etc., etc.
+The code got a little unmaintainable and I had more ideas that I wanted to support. So there was need for a "second" system. 
+
+A screenshot from the first system:
+
+![screenshot](https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/screenshot_v1.png)
+
+A video that could be rendered with it [here][https://vimeo.com/20206213].
+
 ## Architecture overview
 
-The architecture is really simple, the following diagram shows best Starcry rendering a video.
+The architecture is really simple, the following sequence diagram shows best the typical messaging flow when rendering a video.
 
 ![sequencediagram](https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/seqdiag.png)
 
-## Prerequisites
+## Starcry dependencies
+
+### Submodules
+
+Below are the list of commands I used to add submodules.
+
+- git submodule add https://github.com/actor-framework/actor-framework.git libs/caf
+- git submodule add https://bitbucket.org/rayburgemeestre/benchmarklib.git libs/benchmarklib
+- git submodule add https://github.com/liballeg/allegro5.git libs/allegro5
+- git submodule add https://github.com/pmed/v8pp libs/v8pp
+- git submodule add https://github.com/USCiLab/cereal libs/cereal
+
+You can have git check them all out with the `git submodule update --init --recursive`.
+
+Some of the above submodules can be ignored depending on the platform you are on (i.e., you can use your package manager for some of the dependencies).
+
+### Prerequisites
 
 - cmake
-- g++ compiler
-
-## Compile
-
+- g++ compiler >= C++11
 - git submodule update --init --recursive
 
-### Allegro 5.1
+### Building
+
+- cmake .
+- make -j 8
+
+Note that CMake will throw an error for each dependency you are missing. 
+One note: sometimes it may be necessary to `rm CMakeCache.txt` after you fixed a dependency, somehow the cache can get corrupted whenever your dependencies are not set up correctly.
+So in case you installed a depenceny and CMake or compiling still complains, you may need to delete that file.
+
+## Installing each dependency
+
+### Allegro 5.X
 
 At the time of writing, in Ubuntu the packages are 5.0, and allegro5.cfg is not
-yet supported. But you may try if you prefer:
+yet supported. This configuration file can be useful for debugging purposes. Other than that, you can probably just apt-get the following.
 
-- apt-get install liballegro5-dev liballegro-image5-dev libavfilter-dev
+- `apt-get install liballegro5-dev liballegro-image5-dev libavfilter-dev`
 
-Building yourself (it's already in the submodules at the correct branch):
+In case you experience problems still, or are not on Ubuntu, continue with the rest (building from source)..
 
-- sudo apt-get install freeglut3-dev libgl1-mesa-dev libglu1-mesa-dev mesa-common-dev libxcursor-dev
-- sudo yum install freeglut-devel   mesa-libGL-devel mesa-libGLU-devel                libXcursor-devel
-- maybe needed: sudo apt-get install libavfilter-dev
+Building yourself from the submodule in `libs/allegro5`:
 
-- cmake -DCMAKE_BUILD_TYPE=release -DSHARED=on -DWANT_FFMPEG=off -DWANT_TTF=on .
-- make -j 8
-- sudo make install
+On Ubuntu some dependencies needed before building:
 
-Tried static compiling too, you need to modify the find script, almost got it
-to work (use --static for pkg-config, and allegro-static-5 instead of
-allegro-5, also append static to all lib names)
+- `sudo apt-get install freeglut3-dev libgl1-mesa-dev libglu1-mesa-dev mesa-common-dev libxcursor-dev`
+- `sudo apt-get install libavfilter-dev`
+- In case allegro\_ttf doesn't compile: `sudo apt-get install libfreetype6-dev`.
 
-notes:
-trigen@FIREFLY2:/projects/starcry/libs/allegro5[(HEAD detached at dab3113)]> sudo cp -prv lib/pkgconfig/allegro* /usr/share/pkgconfig/
-‘lib/pkgconfig/allegro-5.pc’ -> ‘/usr/share/pkgconfig/allegro-5.pc’
-‘lib/pkgconfig/allegro_acodec-5.pc’ -> ‘/usr/share/pkgconfig/allegro_acodec-5.pc’
-‘lib/pkgconfig/allegro_audio-5.pc’ -> ‘/usr/share/pkgconfig/allegro_audio-5.pc’
-‘lib/pkgconfig/allegro_color-5.pc’ -> ‘/usr/share/pkgconfig/allegro_color-5.pc’
-‘lib/pkgconfig/allegro_font-5.pc’ -> ‘/usr/share/pkgconfig/allegro_font-5.pc’
-‘lib/pkgconfig/allegro_image-5.pc’ -> ‘/usr/share/pkgconfig/allegro_image-5.pc’
-‘lib/pkgconfig/allegro_main-5.pc’ -> ‘/usr/share/pkgconfig/allegro_main-5.pc’
-‘lib/pkgconfig/allegro_memfile-5.pc’ -> ‘/usr/share/pkgconfig/allegro_memfile-5.pc’
-‘lib/pkgconfig/allegro_primitives-5.pc’ -> ‘/usr/share/pkgconfig/allegro_primitives-5.pc’
+On CentOS 7 you need to build from source, some dependencies needed before building:
 
-(above was ALSO necessary on CentOS7u2)
+- `sudo yum install freeglut-devel mesa-libGL-devel mesa-libGLU-devel libXcursor-devel`
 
-testable with this command (will not yield without):
+Build Allegro now with CMake:
 
-pkg-config --list-all | grep allegro-5 if needed
+- `make -DCMAKE_BUILD_TYPE=release -DSHARED=on -DWANT_FFMPEG=off -DWANT_TTF=on .`
+- `make -j 8`
+- `sudo make install`
 
-also check the FindAllegro5 cmake file, I disabled some stuff
-for allegro_ttf to work: sudo apt-get install libfreetype6-dev
+(Side-note: Tried static compiling too, you need to modify the find script, almost got it
+to work (use --static for pkg-config, and allegro-static-5 instead of allegro-5, also append static to all lib names))
+
+Please check if allegro-5 is recognized by pkg-config after the make install with:
+
+    pkg-config --list-all | grep allegro-5
+
+If this command yields nothing, like my experience with Ubuntu 15.10 and CentOS7u2, copy the .pc files like this:
+
+    trigen@FIREFLY2:/projects/starcry/libs/allegro5[(HEAD detached at dab3113)]> sudo cp -prv lib/pkgconfig/allegro* /usr/share/pkgconfig/
+    ‘lib/pkgconfig/allegro-5.pc’ -> ‘/usr/share/pkgconfig/allegro-5.pc’
+    ‘lib/pkgconfig/allegro_acodec-5.pc’ -> ‘/usr/share/pkgconfig/allegro_acodec-5.pc’
+    ‘lib/pkgconfig/allegro_audio-5.pc’ -> ‘/usr/share/pkgconfig/allegro_audio-5.pc’
+    ‘lib/pkgconfig/allegro_color-5.pc’ -> ‘/usr/share/pkgconfig/allegro_color-5.pc’
+    ‘lib/pkgconfig/allegro_font-5.pc’ -> ‘/usr/share/pkgconfig/allegro_font-5.pc’
+    ‘lib/pkgconfig/allegro_image-5.pc’ -> ‘/usr/share/pkgconfig/allegro_image-5.pc’
+    ‘lib/pkgconfig/allegro_main-5.pc’ -> ‘/usr/share/pkgconfig/allegro_main-5.pc’
+    ‘lib/pkgconfig/allegro_memfile-5.pc’ -> ‘/usr/share/pkgconfig/allegro_memfile-5.pc’
+    ‘lib/pkgconfig/allegro_primitives-5.pc’ -> ‘/usr/share/pkgconfig/allegro_primitives-5.pc’
+
+This command should yield results now:
+
+    pkg-config --list-all | grep allegro-5 if needed
+
+(Side-note: Please note that I edited FindAllegro5.cmake, namely removed allegro\_physfs, allegro\_dialog, by default it will search for these packages, but I don't use them anyway.)
 
 ### C++ Actor Framework
 
-- cd libs/caf
-- ./configure
-- make
-- sudo make install
+- `cd libs/caf`
+- `./configure`
+- `make`
+- `sudo make install`
 
-on CentOS7u2 I used a few extra configure flags:
+Note for CentOS7u2 I used a few extra flags for the configure step because default `g++` in path was not new enough, and to disable unused stuff that caused errors:
 
-CXX=/usr/local/bin/c++ ./configure --no-examples --no-unit-tests --no-opencl --no-riac
-make -j 4 
-make install
+- `CXX=/usr/local/bin/c++ ./configure --no-examples --no-unit-tests --no-opencl --no-riac`
 
 ### Boost
 
-sudo apt-get install libboost1.58-all-dev
+On Ubuntu:
+
+- `sudo apt-get install libboost1.58-all-dev` should probably work.
 
 On CentOS7u2 I used:
 
-g++ -v
-mkdir target
-CXX=/usr/local/bin/c++ ./bootstrap.sh --prefix=/projects/boost_1_60_0/target/
-./b2 --prefix=/projects/boost_1_60_0/target/
+- `g++ -v`
+- `mkdir target`
+- `CXX=/usr/local/bin/c++ ./bootstrap.sh --prefix=/projects/boost_1_60_0/target/`
+- `./b2 --prefix=/projects/boost_1_60_0/target/`
 
-ignored the prefix somehow, using this:
-/projects/boost_1_60_0/
-/projects/boost_1_60_0/stage/lib
+AFAIK `--prefix` normally worked fine, but it was ignored in my case, so I had to use the following two paths, currently hardcoded in the `CMakeLists.txt` file.
 
-### cd libs/benchmarklib
+- `/projects/boost_1_60_0/`
+- `/projects/boost_1_60_0/stage/lib`
 
-cmake .
-make -j 8
-sudo make install
+### Benchmark lib
 
+My own [benchmarklib][http://blog.cppse.nl/benchmarklib] I wrote a few years ago.
+
+- `cd libs/benchmarklib`
+- `cmake .`
+- `make -j 8`
+- `sudo make install`
 
 ### V8
 
-cd libs/v8pp
-./build-v8.sh
+I use [v8pp][https://github.com/pmed/v8pp] instead of raw-V8 code mostly, which is really convenient, makes working with V8 less verbose.
 
- ubuntu anyway..
+- `cd libs/v8pp`
+- `./build-v8.sh`
 
-sudo cp -prv ./libs/v8pp/v8/lib/lib* /usr/local/lib
-sudo ldconfig
+For Ubuntu (and I think CentOS 7 too) I needed to move the libraries to folders where my system would find them with:
 
-### ffmpeg (centos7)
+- `sudo cp -prv ./libs/v8pp/v8/lib/lib* /usr/local/lib`
+- `sudo ldconfig`
 
-1) first you need x264, 
+### ffmpeg (centos7 only)
 
-- yum install yasm
-- git clone git://git.videolan.org/x264.git
-cd x264
-./configure --enable-static --enable-shared
-make -j 4
-make install
+A few extra steps required for Centos, which doesn't provide ffmpeg unfortunately. Also there used to be a separate repo for it but it's no longer up.
+Luckily it builds just fine.
 
-2) root@rb-kerberos2:/projects/starcry/libs[master]> git clone git://source.ffmpeg.org/ffmpeg.git
+#### 1) first you need x264
 
-./configure --cxx=/usr/local/bin/c++ --enable-shared --disable-swresample --enable-libx264 --enable-gpl
-make -j 4
-make install
+- `yum install yasm`
+- `git clone git://git.videolan.org/x264.git`
+- `cd x264`
+- `./configure --enable-static --enable-shared`
+- `make -j 4`
+- ``make install`
 
-[on Ubuntu I could just use the package(s)]
+#### 2) second you need ffmpeg
 
-## How submodules were added
+- `user@host:/projects/starcry/libs[master]> git clone git://source.ffmpeg.org/ffmpeg.git`
+- `./configure --cxx=/usr/local/bin/c++ --enable-shared --disable-swresample --enable-libx264 --enable-gpl`
+- `make -j 4`
+- `make install`
 
-- git submodule add git@github.com:actor-framework/actor-framework.git libs/caf
-- git submodule add git@bitbucket.org:rayburgemeestre/benchmarklib.git libs/benchmarklib
-- git submodule add git@github.com:liballeg/allegro5.git libs/allegro5
-- git submodule add https://github.com/pmed/v8pp libs/v8pp
+## Quick start
 
-    libs/hana[master]> cmake -DCMAKE_CXX_COMPILER=/usr/bin/clang++
+- Render from `test.js` in current folder: `./starcry`
+- Also open a GUI window: `./starcry --gui`
+- Play the generated video `output.h264` (i.e., with ffplay, mplayer, ..)
 
-## Websequencediagram for job flow
+## Quick start using remote workers
+
+Launch four workers on ports 10000 - 10003:
+
+- `./starcry -w 10000 &`
+- `./starcry -w 10001 &`
+- `./starcry -w 10002 &`
+- `./starcry -w 10003 &`
+
+Instruct starcry to use these remote workers:
+
+- `./starcry -r 10000-10003`
+
+## Misc
+
+### Websequencediagram for job flow
 
     main->job_generator: start
     job_generator->V8: next() javascript
@@ -239,31 +305,3 @@ make install
     job_storage->job_generator: N
     job_generator->V8: [N < threshold] next() javascript
     job_generator->job_generator: [N >= threshold] sleep X;\nnext_frame
-
-## Quick start
-
-- ./starcry
-- ./starcry --gui
-- ffplay test.h264
-
-or,
-- ./starcry -w 10000 &
-- ./starcry -w 10001 &
-- ./starcry -w 10002 &
-- ./starcry -w 10003 &
-- ./starcry -r 10000-10003
-- ffplay test.h264
-
-
-## Problems
-
-Need to check this out, something different accross different Linux distrubutions it seems..
-
-/projects/starcry/src/ffmpeg/h264_encode.cpp:139:61: error: ‘av_rescale_q’ was not declared in this scope
-
-## TODO
-
-Not required now:
-
-- apt-get install libsfml-dev
-
