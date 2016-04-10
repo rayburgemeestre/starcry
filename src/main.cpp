@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
     if (vm.count("spawn-gui")) {
         cout << "launching render output window" << endl;
         scoped_actor s;
-        auto w = spawn(render_window);
+        auto w = spawn(render_window, conf.user.gui_port);
         s->await_all_other_actors_done();
         return 0;
     }

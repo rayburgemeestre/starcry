@@ -161,11 +161,14 @@ void output(string s) {
     assistant->job_generator->send(assistant->job_generator, output_line::value, s);
 }
 
-void write_frame_fun(/*bool last_frame*/) { // TODO: make parameter optional for V8?
+void write_frame_fun1(bool last_frame) {
     if (!assistant->the_job.last_frame)
-        assistant->the_job.last_frame = /*last_frame ||*/ assistant->max_frames == current_frame;
+        assistant->the_job.last_frame = last_frame || assistant->max_frames == current_frame;
     assistant->job_generator->send(assistant->job_generator, write_frame::value, assistant->the_job);
     assistant->the_job.shapes.clear();
+}
+void write_frame_fun() {
+    write_frame_fun1(false);
 }
 
 behavior job_generator(event_based_actor *self, const caf::actor &job_storage, uint32_t canvas_w, uint32_t canvas_h, bool use_stdin) {
@@ -179,6 +182,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, u
         context->add_fun("version", &get_version);
         context->add_fun("output", &output);
         context->add_fun("write_frame", &write_frame_fun);
+        context->add_fun("write_frame1", &write_frame_fun1);
         context->add_fun("add_text", &add_text);
         context->add_fun("add_circle", &add_circle);
         context->add_fun("add_line", &add_line);

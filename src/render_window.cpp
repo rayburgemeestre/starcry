@@ -8,6 +8,7 @@
 using render                = atom_constant<atom("render    ")>;
 ALLEGRO_DISPLAY *display    = NULL;
 struct data::pixel_data data_;
+
 uint32_t width_             = 0;
 uint32_t height_            = 0;
 
@@ -67,10 +68,33 @@ behavior render_loop(event_based_actor* self) {
     };
 }
 
-behavior render_window(event_based_actor* self) {
-    uint16_t bound_port = io::publish(self, 0);
+uint16_t bind_render_window(event_based_actor* self, uint16_t port) {
+    uint16_t bound_port = 0;
+    try {
+        // first try to bind to specified port
+        bound_port = io::publish(self, port);
+        cout << "succesfully bound to previous port " << port << endl;
+    }
+    catch (bind_failure &err) {
+        cout << "could not publish ourselves on the previously known port." << endl;
+        // try to bind to an available (unprivileged) port
+        try {
+            bound_port = io::publish(self, 0);
+        }
+        catch (bind_failure &err) {
+            cout << "could not publish ourselves on a new port either." << endl;
+        }
+    }
+    return bound_port;
 
-    aout(self) << "publishing GUI on port: " << bound_port << endl;
+}
+
+behavior render_window(event_based_actor* self, uint16_t port) {
+    uint16_t bound_port = bind_render_window(self, port);
+    if (bound_port == 0) {
+        self->quit(exit_reason::user_shutdown);
+    }
+    cout << "publishing GUI on port: " << bound_port << endl;
 
     settings conf;
     conf.user.gui_port = bound_port;
@@ -91,5 +115,3 @@ behavior render_window(event_based_actor* self) {
         }
     };
 }
-
-

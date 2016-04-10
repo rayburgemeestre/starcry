@@ -2,4 +2,4 @@
 
 #include "common.h"
 
-behavior render_window(event_based_actor* self);
+behavior render_window(event_based_actor* self, uint16_t port);
