@@ -2,6 +2,101 @@
 
 #include <allegro5/allegro_primitives.h>
 
+static constexpr const auto pi = 3.14159265358979323846;
+
+class coord {
+public:
+    double x;
+    double y;
+
+    coord(double x, double y) : x(x), y(y) {}
+};
+
+class line {
+public:
+    double size;
+    double x;
+    double y;
+    double x2;
+    double y2;
+
+public:
+    line(double x, double y, double x2, double y2, double size = 1)
+        : x(x), y(y), x2(x2), y2(y2), size(size)
+    {}
+
+    line(coord a, coord b, double size = 1)
+        : x(a.x), y(a.y), x2(b.x), y2(b.y), size(size)
+    {}
+
+    double slope()
+    {
+        return (y - y2) / (x - x2);
+    }
+    double intersect()
+    {
+        // y = mx + b
+        double mx = slope() * this->x;
+        double y = this->y;
+        // see: http://www.purplemath.com/modules/strtlneq.htm
+        double b = y - mx;
+        return b;
+    }
+    double angle()
+    {
+        double dx = x - x2;
+        double dy = y - y2;
+
+        if (dx == 0 && dy == 0)
+            return 0;
+
+        if (dx == 0) {
+            if (dy < 0)
+                return 270;
+            else
+                return 90;
+        }
+
+        double slope = dy / dx;
+        double angle = atan(slope);
+        if (dx < 0)
+            angle += pi;
+
+        angle = 180.0 * angle / pi;
+
+        while (angle < 0.0)
+            angle += 360.0;
+
+        return angle;
+    }
+
+};
+
+//mark
+inline coord move_plus(double x, double y, double angle, double rotate, double move) {
+    double tmpAngle = angle + rotate; // go left...
+    if (tmpAngle > 360.0)
+        tmpAngle -= 360.0;
+    double rads = tmpAngle * pi / 180;
+    return coord(x + move * cos(rads), y + move * sin(rads));
+}
+inline coord move_minus(double x, double y, double angle, double rotate, double move) {
+    double tmpAngle = angle + rotate; // go left...
+    if (tmpAngle < 0.0)
+        tmpAngle += 360.0;
+    double rads = tmpAngle * pi / 180;
+    return coord(x + move * cos(rads), y + move * sin(rads));
+}
+inline coord move(double x, double y, double angle, double rotate, double move) {
+    if (rotate >= 0) {
+        return move_plus(x, y, angle, rotate, move);
+    }
+    else {
+        return move_minus(x, y, angle, rotate, move);
+    }
+}
+
+
 class draw_logic {
 public:
 
@@ -116,214 +211,81 @@ public:
         y1    = ((y1 * scale_) + centerY_) - offsetY_;
         x2    = ((x2 * scale_) + centerX_) - offsetX_;
         y2    = ((y2 * scale_) + centerY_) - offsetY_;
+        size  = size * scale_;
 
         //al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_ZERO);
         //al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
         al_draw_line(x1, y1, x2, y2, al_map_rgb_f(r, g, b), size);
 
 #ifdef NOTDEF
-        // need to port this (and perhaps optimize ?)
-            double canvasCenterX = m_canvasWidth / 2.0;
-            double canvasCenterY = m_canvasHeight / 2.0;
 
-            camera_util::modify_center_xy(canvasCenterX, canvasCenterY, m_scale);
+        line aline(x1, y1, x2, y2, size);
 
-            double posX = (m_scale * m_object->GetX()) + canvasCenterX;
-            double posY = (m_scale * m_object->GetY()) + canvasCenterY;
-            double posX2 = (m_scale * m_object->GetX2()) + canvasCenterX;
-            double posY2 = (m_scale * m_object->GetY2()) + canvasCenterY;
-            //double radius = m_scale * m_object->GetRadius();
-            double radiusSize = m_scale * m_object->GetRadiusSize();
+        /**
+         * Create rectangle for aline.
+         *
+         * With corners:
+         *   a                     b
+         * x  +-------------------+  x2
+         * y  +-------------------+  y2
+         *   d                     c
+         *
+         * As lines:
+         *              A
+         *  D +-------------------+ B
+         *    +-------------------+
+         *              C
+         */
+        double angle = aline.angle();
 
-            Line aline(posX, posY, posX2, posY2, radiusSize);
+        // three extra surrounding pixels so we make up for rounding errors and in a diagonal direction
+        double radiussizeplusextra = aline.size + 3;
 
-            /**
-             * Create rectangle for aline.
-             *
-             * With corners:
-             *   a                     b
-             * x  +-------------------+  x2
-             * y  +-------------------+  y2
-             *   d                     c
-             *
-             * As lines:
-             *              A
-             *  D +-------------------+ B
-             *    +-------------------+
-             *              C
-             */
-            double aX = 0;
-            double aY = 0;
-            double bX = 0;
-            double bY = 0;
-            double cX = 0;
-            double cY = 0;
-            double dX = 0;
-            double dY = 0;
+        //mark
+        coord a = move(aline.x, aline.y, aline.angle(), 90, radiussizeplusextra);
+        coord d = move(aline.x, aline.y, aline.angle(), -90, radiussizeplusextra);
+        coord b = move(aline.x2, aline.y2, aline.angle(), 90, radiussizeplusextra);
+        coord c = move(aline.x2, aline.y2, aline.angle(), -90, radiussizeplusextra);
 
-            double angle = get_angle(aline.x, aline.y, aline.x2, aline.y2);
+        a = move(a.x, a.y, line(a.x, a.y, aline.x, aline.y, 1).angle(), -90, radiussizeplusextra);
+        d = move(d.x, d.y, line(d.x, d.y, aline.x, aline.y, 1).angle(), 90, radiussizeplusextra);
+        b = move(b.x, b.y, line(b.x, b.y, aline.x2, aline.y2, 1).angle(), 90, radiussizeplusextra);
+        c = move(c.x, c.y, line(c.x, c.y, aline.x2, aline.y2, 1).angle(), 90, radiussizeplusextra);
 
-            double radiussizeplusextra = aline.radiussize + 3; /* three extra surrounding pixels so we make up for rounding errors and in a diagonal direction */
+        line A(a, b);
+        line B(b, c);
+        line C(c, d);
+        line D(d, a);
 
-            // Get corner a.
-            double tmpAngle = angle + 90.0; // go left...
-            if (tmpAngle > 360.0)
-                tmpAngle -= 360.0;
-            double rads = tmpAngle * M_PI / 180;
-            aX = aline.x + radiussizeplusextra * cos(rads);
-            aY = aline.y + radiussizeplusextra * sin(rads);
+        double topY = std::min(a.y, b.y, c.y, d.y);
+        double bottomY = std::max(a.y, b.y, c.y, d.y);
 
-            tmpAngle = get_angle(aX, aY, aline.x, aline.y) - 90.0; // go right..
-            if (tmpAngle < 0.0)
-                tmpAngle += 360.0;
-            rads = tmpAngle * M_PI / 180;
-            aX = aX + radiussizeplusextra * cos(rads);
-            aY = aY + radiussizeplusextra * sin(rads);
+        double centerX = ((aline.x - aline.x2) / 2) + aline.x2;
+        double centerY = ((aline.y - aline.y2) / 2) + aline.y2;
 
-            // Get corner d.
-            tmpAngle = angle - 90.0;
-            if (tmpAngle < 0.0)
-                tmpAngle += 360.0;
-            rads = tmpAngle * M_PI / 180;
-            dX = aline.x + radiussizeplusextra * cos(rads);
-            dY = aline.y + radiussizeplusextra * sin(rads);
+        // Make sure we do not iterate unnecessary pixels, the ones outside the canvas.
+        if (topY < 0)
+            topY = 0;
+        if (bottomY > height_)
+            bottomY = height_;
 
-            tmpAngle = get_angle(dX, dY, aline.x, aline.y) + 90.0;
-            if (tmpAngle > 360.0)
-                tmpAngle -= 360.0;
-            rads = tmpAngle * M_PI / 180;
-            dX = dX + radiussizeplusextra * cos(rads);
-            dY = dY + radiussizeplusextra * sin(rads);
+        for (int currentY=topY; currentY<=bottomY; currentY+=1) {
+            //circle(canvas, centerX, currentY, 5, makecol(0,255,0));
+            //http://www.mathopenref.com/coordintersection.html "When one line is vertical"
+            double currentX  = 0;
+            double intersectionX1 = 0;
+            double intersectionX2 = 0;
+            bool hasIntersectionX1 = false;
+            bool hasIntersectionX2 = false;
 
-            // Get corner b.
-            tmpAngle = angle + 90.0; // go left...
-            if (tmpAngle > 360.0)
-                tmpAngle -= 360.0;
-            rads = tmpAngle * M_PI / 180;
-            bX = aline.x2 + radiussizeplusextra * cos(rads);
-            bY = aline.y2 + radiussizeplusextra * sin(rads);
-
-            tmpAngle = get_angle(bX, bY, aline.x2, aline.y2) + 90.0;
-            if (tmpAngle > 360.0)
-                tmpAngle -= 360.0;
-            rads = tmpAngle * M_PI / 180;
-            bX = bX + radiussizeplusextra * cos(rads);
-            bY = bY + radiussizeplusextra * sin(rads);
-
-
-            // Get corner c.
-            tmpAngle = angle - 90.0;
-            if (tmpAngle < 0.0)
-                tmpAngle += 360.0;
-            rads = tmpAngle * M_PI / 180;
-            cX = aline.x2 + radiussizeplusextra * cos(rads);
-            cY = aline.y2 + radiussizeplusextra * sin(rads);
-
-            tmpAngle = get_angle(cX, cY, aline.x2, aline.y2) - 90.0;
-            if (tmpAngle < 0.0)
-                tmpAngle += 360.0;
-            rads = tmpAngle * M_PI / 180;
-            cX = cX + radiussizeplusextra * cos(rads);
-            cY = cY + radiussizeplusextra * sin(rads);
-
-            Line A(aX, aY, aline.x, aline.y, 1);
-            Line B(bX, bY, aline.x2, aline.y2, 1);
-            Line C(cX, cY, aline.x2, aline.y2, 1);
-            Line D(dX, dY, aline.x, aline.y, 1);
-
-#ifdef RENDERER_HIGHQUALITY_RENDER_DEBUG_OUTPUT
-            //    aline.Draw(canvas);
-    A.Draw(m_pDestCanvas, makecol(255,255,255));
-    B.Draw(m_pDestCanvas, makecol(255,255,255));
-    C.Draw(m_pDestCanvas, makecol(255,255,255));
-    D.Draw(m_pDestCanvas, makecol(255,255,255));
-#endif
-
-
-            Line A2(aX, aY, bX, bY, 1);
-            Line B2(bX, bY, cX, cY, 1);
-            Line C2(cX, cY, dX, dY, 1);
-            Line D2(dX, dY, aX, aY, 1);
-
-
-            double slopeA = A2.GetSlope();
-            double slopeB = B2.GetSlope();
-            double slopeC = C2.GetSlope();
-            double slopeD = D2.GetSlope();
-            double intersectA = A2.GetIntersect();
-            double intersectB = B2.GetIntersect();
-            double intersectC = C2.GetIntersect();
-            double intersectD = D2.GetIntersect();
-
-#ifdef RENDERER_HIGHQUALITY_RENDER_DEBUG_OUTPUT
-            A2.Draw(m_pDestCanvas, makecol(255, 0, 0));
-    B2.Draw(m_pDestCanvas, makecol(255, 255, 0));
-    C2.Draw(m_pDestCanvas, makecol(0, 255, 0));
-    D2.Draw(m_pDestCanvas, makecol(0, 255, 255));
-#endif RENDERER_HIGHQUALITY_RENDER_DEBUG_OUTPUT
-
-
-            double topY = aY;
-            topY = bY < topY ? bY : topY;
-            topY = cY < topY ? cY : topY;
-            topY = dY < topY ? dY : topY;
-
-            double bottomY = aY;
-            bottomY = bY > bottomY ? bY : bottomY;
-            bottomY = cY > bottomY ? cY : bottomY;
-            bottomY = dY > bottomY ? dY : bottomY;
-
-            double centerX = ((aline.x - aline.x2) / 2) + aline.x2;
-            double centerY = ((aline.y - aline.y2) / 2) + aline.y2;
-
-#ifdef RENDERER_HIGHQUALITY_RENDER_DEBUG_OUTPUT
-            circle(m_pDestCanvas, centerX, centerY, 2, makecol(255,255,255));
-#endif
-
-            /**
-             * Make sure we do not iterate unnecessary pixels,
-             *  the ones outside the canvas.
-             */
-            if (topY < 0) {
-                topY = 0;
-            }
-            if (bottomY > m_canvasHeight) {
-                bottomY = m_canvasHeight;
-            }
-
-            for (int currentY=topY; currentY<=bottomY; currentY+=1) {
-                //circle(canvas, centerX, currentY, 5, makecol(0,255,0));
-                //http://www.mathopenref.com/coordintersection.html "When one line is vertical"
-                double currentX  = 0;
-                double intersectionX1 = 0;
-                double intersectionX2 = 0;
-                bool hasIntersectionX1 = false;
-                bool hasIntersectionX2 = false;
+            auto lmb = [&](const auto &A2) {
                 if (A2.y != A2.y2 && (A2.y < A2.y2 ? A2.y : A2.y2) <= currentY && (A2.y < A2.y2 ? A2.y2 : A2.y) >= currentY) {
                     if (A2.x == A2.x2) { // Todo: change to IsVertical()?
                         // Horizontal line, intersection with an infinite line within
                         //  y-range, cannot have another X then A2.x or A2.x2
                         currentX = A2.x;
                     } else {
-                        currentX = (currentY - intersectA) / slopeA;
-                    }
-                    if (!hasIntersectionX1) {
-                        hasIntersectionX1 = true;
-                        intersectionX1 = currentX;
-                    } else {
-                        hasIntersectionX2 = true;
-                        intersectionX2 = currentX;
-                    }
-                    //circlefill(canvas, currentX, currentY, 1, makecol(255,2,2));
-                }
-
-                if (B2.y != B2.y2 && (B2.y < B2.y2 ? B2.y : B2.y2) <= currentY && (B2.y < B2.y2 ? B2.y2 : B2.y) >= currentY) {
-                    if (B2.x == B2.x2) {
-                        // Horizontal line, intersection with an infinite line within
-                        //  y-range, cannot have another X then B2.x or B2.x2
-                        currentX = B2.x;
-                    } else {
-                        currentX = (currentY - intersectB) / slopeB;
+                        currentX = (currentY - A2.intersect()) / A2.slope();
                     }
                     if (!hasIntersectionX1) {
                         hasIntersectionX1 = true;
@@ -333,132 +295,103 @@ public:
                         intersectionX2 = currentX;
                     }
                 }
+            };
+            lmb(A);
+            lmb(B);
+            lmb(C);
+            lmb(D);
 
-                if (/*IsFiniteNumber(slopeC) && */C2.y != C2.y2 && (C2.y < C2.y2 ? C2.y : C2.y2) <= currentY && (C2.y < C2.y2 ? C2.y2 : C2.y) >= currentY) {
-                    if (C2.x == C2.x2) {
-                        currentX = C2.x;
-                    } else {
-                        currentX = (currentY - intersectC) / slopeC;
-                    }
-                    if (!hasIntersectionX1) {
-                        hasIntersectionX1 = true;
-                        intersectionX1 = currentX;
-                    } else {
-                        hasIntersectionX2 = true;
-                        intersectionX2 = currentX;
-                    }
-                }
+            if (hasIntersectionX1 && hasIntersectionX2) {
+                int xLeft = (intersectionX1 > intersectionX2 ? intersectionX2 : intersectionX1);
+                int xRight = (intersectionX1 > intersectionX2 ? intersectionX1 : intersectionX2);
+                // Do not loop through unnecessary pixels
+                if (xLeft < 0)
+                    xLeft = 0;
+                if (xRight > width_)
+                    xRight = width_;
 
-                if (/*IsFiniteNumber(slopeD) && */D2.y != D2.y2 && (D2.y < D2.y2 ? D2.y : D2.y2) <= currentY && (D2.y < D2.y2 ? D2.y2 : D2.y) >= currentY) {
-                    if (D2.x == D2.x2) {
-                        currentX = D2.x;
-                    } else {
-                        currentX = (currentY - intersectD) / slopeD;
-                    }
-
-                    if (!hasIntersectionX1) {
-                        hasIntersectionX1 = true;
-                        intersectionX1 = currentX;
-                    } else {
-                        hasIntersectionX2 = true;
-                        intersectionX2 = currentX;
-                    }
-                }
-
-                if (hasIntersectionX1 && hasIntersectionX2) {
-                    int xLeft = (intersectionX1 > intersectionX2 ? intersectionX2 : intersectionX1);
-                    int xRight = (intersectionX1 > intersectionX2 ? intersectionX1 : intersectionX2);
-                    /**
-                     * Do not loop through unnecessary pixels
-                     */
-                    if (xLeft < 0) {
-                        xLeft = 0;
-                    }
-                    if (xRight > m_canvasWidth) {
-                        xRight = m_canvasWidth;
-                    }
-                    for (int x=xLeft; x<=xRight; x++) {
+                for (int x=xLeft; x<=xRight; x++) {
 #define SQUARED_DIST(num, num2) ((num - num2) * (num - num2))
-                        double distPixel = sqrt(SQUARED_DIST(x, centerX) + SQUARED_DIST(centerY, currentY));
-                        double distMax = sqrt(SQUARED_DIST(centerX, aline.x2) + SQUARED_DIST(centerY, aline.y2));
+                    double distPixel = sqrt(SQUARED_DIST(x, centerX) + SQUARED_DIST(centerY, currentY));
+                    double distMax = sqrt(SQUARED_DIST(centerX, aline.x2) + SQUARED_DIST(centerY, aline.y2));
 
-                        double intersectX = 0;
-                        double intersectY = 0;
-                        // These if-statements probably need some documentation
-                        // EDIT: not sure if this is correct, as in, doesn't it 'flip' the line (horizontally or vertically??)
-                        if (angle == 180|| angle == 0 || angle == 360) {
-                            intersectX = x;
-                            intersectY = aline.y;
-                        }
-                        else if (angle == 270 || angle==90) {
-                            intersectX = centerX;
-                            intersectY = currentY;
-                        }
-                        else {
-                            tmpAngle = angle + 90;
-                            if (tmpAngle > 360.0)
-                                tmpAngle -= 360.0;
-                            rads = tmpAngle * M_PI / 180;
-                            double tmpX = x;
-                            double tmpY = currentY;
-                            tmpX = tmpX + aline.radiussize * cos(rads);
-                            tmpY = tmpY + aline.radiussize * sin(rads);
+                    double intersectX = 0;
+                    double intersectY = 0;
+                    // These if-statements probably need some documentation
+                    // EDIT: not sure if this is correct, as in, doesn't it 'flip' the line (horizontally or vertically??)
+                    if (angle == 180|| angle == 0 || angle == 360) {
+                        intersectX = x;
+                        intersectY = aline.y;
+                    }
+                    else if (angle == 270 || angle==90) {
+                        intersectX = centerX;
+                        intersectY = currentY;
+                    }
+                    else {
+                        tmpAngle = angle + 90;
+                        if (tmpAngle > 360.0)
+                            tmpAngle -= 360.0;
+                        rads = tmpAngle * pi / 180;
+                        double tmpX = x;
+                        double tmpY = currentY;
+                        tmpX = tmpX + aline.size * cos(rads);
+                        tmpY = tmpY + aline.size * sin(rads);
 
-                            tmpAngle = angle + 90 + 180;
-                            if (tmpAngle > 360.0)
-                                tmpAngle -= 360.0;
-                            rads = tmpAngle * M_PI / 180;
-                            double tmpX2 = x;
-                            double tmpY2 = currentY;
-                            tmpX2 = tmpX2 + aline.radiussize * cos(rads);
-                            tmpY2 = tmpY2 + aline.radiussize * sin(rads);
+                        tmpAngle = angle + 90 + 180;
+                        if (tmpAngle > 360.0)
+                            tmpAngle -= 360.0;
+                        rads = tmpAngle * pi / 180;
+                        double tmpX2 = x;
+                        double tmpY2 = currentY;
+                        tmpX2 = tmpX2 + aline.size * cos(rads);
+                        tmpY2 = tmpY2 + aline.size * sin(rads);
 
 
-                            // It doesn't matter this if this line doesn't cross the center line from all places,
-                            //  because we handle it like an infinite line (no begin or ending). we just use slope + intersect.
-                            // Edit: nonetheless the line is now extended in such a way it always does..
-                            Line tmp(tmpX, tmpY, tmpX2, tmpY2, 1);
+                        // It doesn't matter this if this line doesn't cross the center line from all places,
+                        //  because we handle it like an infinite line (no begin or ending). we just use slope + intersect.
+                        // Edit: nonetheless the line is now extended in such a way it always does..
+                        Line tmp(tmpX, tmpY, tmpX2, tmpY2, 1);
 
-                            // I solved the equation by example from http://www.mathopenref.com/coordintersection.html
+                        // I solved the equation by example from http://www.mathopenref.com/coordintersection.html
 
-                            // Cannot calculate intersection if x == x2. No need for it either.
-                            // The angle probably was 0.0000001 or something, hence the if-statement
-                            // a few lines above wasn't triggered (if angle == 0.0)...
-                            // But now after rounding it appears so that x == x2. The small angle
-                            // didn't influence a difference between x and x2, that's why this 'extra' check
-                            // is required.
-                            double nom = (-1 * tmp.GetIntersect()) + aline.GetIntersect();
-                            double denom = tmp.GetSlope() - aline.GetSlope();
-                            if (aline.x == aline.x2 ||
-                                tmp.x == tmp.x2
-                                ) {
-                                intersectX = tmp.x;
-                            } else {
-                                intersectX = (nom) / (denom);
-                            }
-                            // idem..
-                            if (tmp.x == tmp.x2) {
-                                intersectY = aline.y;
-                            } else {
-                                intersectY = (intersectX * tmp.GetSlope()) + tmp.GetIntersect();
-                            }
-                        }
-
-                        if ( (intersectX >= (aline.x < aline.x2 ? aline.x : aline.x2) &&
-                              intersectX <= (aline.x < aline.x2 ? aline.x2 : aline.x)) ||
-
-                             (intersectY >= (aline.y < aline.y2 ? aline.y : aline.y2) &&
-                              intersectY <= (aline.y < aline.y2 ? aline.y2 : aline.y))/*
-                     true*/
+                        // Cannot calculate intersection if x == x2. No need for it either.
+                        // The angle probably was 0.0000001 or something, hence the if-statement
+                        // a few lines above wasn't triggered (if angle == 0.0)...
+                        // But now after rounding it appears so that x == x2. The small angle
+                        // didn't influence a difference between x and x2, that's why this 'extra' check
+                        // is required.
+                        double nom = (-1 * tmp.intersect()) + aline.intersect();
+                        double denom = tmp.slope() - aline.slope();
+                        if (aline.x == aline.x2 ||
+                            tmp.x == tmp.x2
                             ) {
-                            double distFromCenterline = sqrt(SQUARED_DIST(x, intersectX) + SQUARED_DIST(currentY, intersectY));
-                            double testa = (distPixel / distMax);
-                            double test = (distFromCenterline / aline.radiussize);
-                            RenderLinePixel(x, currentY, testa, test);
+                            intersectX = tmp.x;
+                        } else {
+                            intersectX = (nom) / (denom);
                         }
+                        // idem..
+                        if (tmp.x == tmp.x2) {
+                            intersectY = aline.y;
+                        } else {
+                            intersectY = (intersectX * tmp.slope()) + tmp.intersect();
+                        }
+                    }
+
+                    if ( (intersectX >= (aline.x < aline.x2 ? aline.x : aline.x2) &&
+                          intersectX <= (aline.x < aline.x2 ? aline.x2 : aline.x)) ||
+
+                         (intersectY >= (aline.y < aline.y2 ? aline.y : aline.y2) &&
+                          intersectY <= (aline.y < aline.y2 ? aline.y2 : aline.y))/*
+                 true*/
+                        ) {
+                        double distFromCenterline = sqrt(SQUARED_DIST(x, intersectX) + SQUARED_DIST(currentY, intersectY));
+                        double testa = (distPixel / distMax);
+                        double test = (distFromCenterline / aline.size);
+                        RenderLinePixel(x, currentY, testa, test);
                     }
                 }
             }
+        }
 #endif
     }
 
