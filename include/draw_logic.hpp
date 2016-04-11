@@ -29,6 +29,23 @@ public:
         : x(a.x), y(a.y), x2(b.x), y2(b.y), size(size)
     {}
 
+    coord from() {
+        return coord(x, y);
+    }
+    coord to() {
+        return coord(x2, y2);
+    }
+    bool vertical() const {
+        return x == x2;
+    }
+    bool horizontal() const {
+        return y == y2;
+    }
+    coord center() const {
+        return coord(((x - x2) / 2) + x2,
+                     ((y - y2) / 2) + y2);
+    }
+
     double slope() const
     {
         return (y - y2) / (x - x2);
@@ -74,26 +91,26 @@ public:
 
 inline auto constexpr squared_dist(auto num, auto num2) { return (num - num2) * (num - num2); }
 
-inline coord move_plus(double x, double y, double angle, double rotate, double move) {
+inline coord move_plus(coord c, double angle, double rotate, double move) {
     double tmpAngle = angle + rotate; // go left...
     if (tmpAngle > 360.0)
         tmpAngle -= 360.0;
     double rads = tmpAngle * pi / 180;
-    return coord(x + move * cos(rads), y + move * sin(rads));
+    return coord(c.x + move * cos(rads), c.y + move * sin(rads));
 }
-inline coord move_minus(double x, double y, double angle, double rotate, double move) {
+inline coord move_minus(coord c, double angle, double rotate, double move) {
     double tmpAngle = angle + rotate; // go left...
     if (tmpAngle < 0.0)
         tmpAngle += 360.0;
     double rads = tmpAngle * pi / 180;
-    return coord(x + move * cos(rads), y + move * sin(rads));
+    return coord(c.x + move * cos(rads), c.y + move * sin(rads));
 }
-inline coord move(double x, double y, double angle, double rotate, double move) {
+inline coord move(coord c, double angle, double rotate, double move) {
     if (rotate >= 0) {
-        return move_plus(x, y, angle, rotate, move);
+        return move_plus(c, angle, rotate, move);
     }
     else {
-        return move_minus(x, y, angle, rotate, move);
+        return move_minus(c, angle, rotate, move);
     }
 }
 
@@ -121,59 +138,56 @@ public:
      *   substract them.
      */
     template <typename double_type>
-    inline void render_circle(double_type circleX, double_type circleY, double_type radius, double_type radiusSize)
+    inline void render_circle(double_type circle_x, double_type circle_y, double_type radius, double_type radius_size)
     {
-        //al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_ZERO);
-        //al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
+        circle_x             = ((circle_x * scale_) + center_x_) - offset_x_;
+        circle_y             = ((circle_y * scale_) + center_y_) - offset_y_;
+        radius              *= scale_;
+        radius_size         *= scale_;
 
-        circleX             = ((circleX * scale_) + centerX_) - offsetX_;
-        circleY             = ((circleY * scale_) + centerY_) - offsetY_;
-        radius             *= scale_;
-        radiusSize         *= scale_;
-
-        bool reuseSqrt      = floor(circleX) == circleX && floor(circleY) == circleY;
+        bool reuse_sqrt      = floor(circle_x) == circle_x && floor(circle_y) == circle_y;
 
         // There is a {-1, +1} for compensating rounding that occurs with floating point.
-        int radiusOuterCircle = round_to_int<double_type>(radius + radiusSize + 1);
-        int radiusInnerCircle = round_to_int<double_type>(radius - radiusSize - 1);
+        int radius_outer_circle = round_to_int<double_type>(radius + radius_size + 1);
+        int radius_inner_circle = round_to_int<double_type>(radius - radius_size - 1);
 
-        for (int relY=0; relY<radiusOuterCircle; relY++) {
-            int absYTop    = static_cast<int>(circleY - relY);
-            int absYBottom = static_cast<int>(circleY + relY);
+        for (int rel_y=0; rel_y<radius_outer_circle; rel_y++) {
+            int abs_y_top    = static_cast<int>(circle_y - rel_y);
+            int abs_y_bottom = static_cast<int>(circle_y + rel_y);
 
-            if ((absYTop < 0) && (absYBottom > static_cast<int>(height_)))
+            if ((abs_y_top < 0) && (abs_y_bottom > static_cast<int>(height_)))
                 break;
 
-            int hxcl_outer = half_chord_length<decltype(radiusOuterCircle), double_type>(radiusOuterCircle, relY);
+            int hxcl_outer = half_chord_length<decltype(radius_outer_circle), double_type>(radius_outer_circle, rel_y);
             int hxcl_inner = 0;
 
-            if (radiusInnerCircle >= relY)
-                hxcl_inner = half_chord_length<decltype(radiusInnerCircle), double_type>(radiusInnerCircle, relY);
+            if (radius_inner_circle >= rel_y)
+                hxcl_inner = half_chord_length<decltype(radius_inner_circle), double_type>(radius_inner_circle, rel_y);
 
-            for (int relX = hxcl_inner; relX < hxcl_outer; relX++) {
-                int absXLeft  = static_cast<int>(circleX - relX);
-                int absXRight = static_cast<int>(circleX + relX);
+            for (int rel_x = hxcl_inner; rel_x < hxcl_outer; rel_x++) {
+                int abs_x_left  = static_cast<int>(circle_x - rel_x);
+                int abs_x_right = static_cast<int>(circle_x + rel_x);
 
-                if (absXLeft < 0 && absXRight > static_cast<int>(width_))
+                if (abs_x_left < 0 && abs_x_right > static_cast<int>(width_))
                     continue;
 
-                double_type diffFromCenter = reuseSqrt ? distance<double_type>(absXLeft, circleX, absYTop, circleY) : -1;
+                double_type diff_from_center = reuse_sqrt ? distance<double_type>(abs_x_left, circle_x, abs_y_top, circle_y) : -1;
 
-                render_circle_pixel(radius, radiusSize, circleX, circleY, absXLeft, absYTop, diffFromCenter);
+                render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_left, abs_y_top, diff_from_center);
 
-                if (relY != 0)
-                    render_circle_pixel(radius, radiusSize, circleX, circleY, absXLeft, absYBottom, diffFromCenter);
-                if (relX != 0)
-                    render_circle_pixel(radius, radiusSize, circleX, circleY, absXRight, absYTop, diffFromCenter);
-                if (relX != 0 && relY != 0)
-                    render_circle_pixel(radius, radiusSize, circleX, circleY, absXRight, absYBottom, diffFromCenter);
+                if (rel_y != 0)
+                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_left, abs_y_bottom, diff_from_center);
+                if (rel_x != 0)
+                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_right, abs_y_top, diff_from_center);
+                if (rel_x != 0 && rel_y != 0)
+                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_right, abs_y_bottom, diff_from_center);
             }
         }
     }
     template <typename double_type>
     inline void render_text(double_type textX, double_type textY, string text, string align) {
-        textX    = ((textX * scale_) + centerX_) - offsetX_;
-        textY    = ((textY * scale_) + centerY_) - offsetY_;
+        textX    = ((textX * scale_) + center_x_) - offset_x_;
+        textY    = ((textY * scale_) + center_y_) - offset_y_;
         auto alignment = align == "center" ? ALLEGRO_ALIGN_CENTER : ALLEGRO_ALIGN_LEFT;
         al_draw_text(font_, al_map_rgb(255, 255, 255), textX, textY - (14 /*font height*/ / 2), alignment, text.c_str());
     }
@@ -207,125 +221,110 @@ public:
 
     template <typename double_type>
     void render_line(double x1, double y1, double x2, double y2, double size, double red, double green, double blue) {
-        x1    = ((x1 * scale_) + centerX_) - offsetX_;
-        y1    = ((y1 * scale_) + centerY_) - offsetY_;
-        x2    = ((x2 * scale_) + centerX_) - offsetX_;
-        y2    = ((y2 * scale_) + centerY_) - offsetY_;
+        x1    = ((x1 * scale_) + center_x_) - offset_x_;
+        y1    = ((y1 * scale_) + center_y_) - offset_y_;
+        x2    = ((x2 * scale_) + center_x_) - offset_x_;
+        y2    = ((y2 * scale_) + center_y_) - offset_y_;
         size  = size * scale_;
 
-        //al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_ZERO);
-        //al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
-        //al_draw_line(x1, y1, x2, y2, al_map_rgb_f(red, green, blue), size);
-
-        line aline(x1, y1, x2, y2, size);
+        line line_(x1, y1, x2, y2, size);
 
         /**
-         * Create rectangle for aline.
-         *
-         * With corners:
-         *   a                     b
-         * x  +-------------------+  x2
-         * y  +-------------------+  y2
-         *   d                     c
-         *
-         * As lines:
-         *              A
-         *  D +-------------------+ B
+         * Calculate corners a, b, c, d for line.
+         * Then construct lines A, B, C, D to create a square.
+         *   a          A          b
          *    +-------------------+
-         *              C
+         * D  |                   |   B
+         *    +-------------------+
+         *   d          C          c
          */
-        double angle = aline.angle();
-
         // three extra surrounding pixels so we make up for rounding errors and in a diagonal direction
-        double radiussizeplusextra = aline.size + 3;
+        double radiussizeplusextra = line_.size + 3;
+        coord a = move(line_.from(), line_.angle(), 90, radiussizeplusextra);
+        coord d = move(line_.from(), line_.angle(), -90, radiussizeplusextra);
+        coord b = move(line_.to(), line_.angle(), 90, radiussizeplusextra);
+        coord c = move(line_.to(), line_.angle(), -90, radiussizeplusextra);
+        a = move(a, line(a, line_.from()).angle(), -90, radiussizeplusextra);
+        d = move(d, line(d, line_.from()).angle(), 90, radiussizeplusextra);
+        b = move(b, line(b, line_.to()).angle(), 90, radiussizeplusextra);
+        c = move(c, line(c, line_.to()).angle(), 90, radiussizeplusextra);
 
-        coord a = move(aline.x, aline.y, aline.angle(), 90, radiussizeplusextra);
-        coord d = move(aline.x, aline.y, aline.angle(), -90, radiussizeplusextra);
-        coord b = move(aline.x2, aline.y2, aline.angle(), 90, radiussizeplusextra);
-        coord c = move(aline.x2, aline.y2, aline.angle(), -90, radiussizeplusextra);
+        line A(a, b), B(b, c), C(c, d), D(d, a);
 
-        a = move(a.x, a.y, line(a.x, a.y, aline.x, aline.y, 1).angle(), -90, radiussizeplusextra);
-        d = move(d.x, d.y, line(d.x, d.y, aline.x, aline.y, 1).angle(), 90, radiussizeplusextra);
-        b = move(b.x, b.y, line(b.x, b.y, aline.x2, aline.y2, 1).angle(), 90, radiussizeplusextra);
-        c = move(c.x, c.y, line(c.x, c.y, aline.x2, aline.y2, 1).angle(), 90, radiussizeplusextra);
-
-        line A(a, b);
-        line B(b, c);
-        line C(c, d);
-        line D(d, a);
-
-        double topY = std::min({a.y, b.y, c.y, d.y});
-        double bottomY = std::max({a.y, b.y, c.y, d.y});
-
-        double centerX = ((aline.x - aline.x2) / 2) + aline.x2;
-        double centerY = ((aline.y - aline.y2) / 2) + aline.y2;
+        double top_y = std::min(std::min(std::min(a.y, b.y), c.y), d.y);
+        double bottom_y = std::min(std::min(std::max(a.y, b.y), c.y), d.y);
 
         // Make sure we do not iterate unnecessary pixels, the ones outside the canvas.
-        if (topY < 0)
-            topY = 0;
-        if (bottomY > height_)
-            bottomY = height_;
+        if (top_y < 0)
+            top_y = 0;
+        if (bottom_y > height_)
+            bottom_y = height_;
 
-        for (int currentY=topY; currentY<=bottomY; currentY+=1) {
-            //circle(canvas, centerX, currentY, 5, makecol(0,255,0));
+        for (int current_y=top_y; current_y<=bottom_y; current_y+=1) {
             //http://www.mathopenref.com/coordintersection.html "When one line is vertical"
-            double currentX  = 0;
-            double intersectionX1 = 0;
-            double intersectionX2 = 0;
-            bool hasIntersectionX1 = false;
-            bool hasIntersectionX2 = false;
-
-            auto lmb = [&](const auto &A2) {
-                if (A2.y != A2.y2 && (A2.y < A2.y2 ? A2.y : A2.y2) <= currentY && (A2.y < A2.y2 ? A2.y2 : A2.y) >= currentY) {
-                    if (A2.x == A2.x2) { // Todo: change to IsVertical()?
+            double current_x  = 0;
+            double intersection_x1 = 0;
+            double intersection_x2 = 0;
+            bool has_intersection_x1 = false;
+            bool has_intersection_x2 = false;
+            auto check_intersection = [&](const auto &line2) {
+                if (  line2.y != line2.y2 && (line2.y < line2.y2 ? line2.y : line2.y2) <= current_y && (line2.y < line2.y2 ? line2.y2 : line2.y) >= current_y) {
+                //if (!line2.horizontal() && min(line2.y, line2.y2) <= current_y && min(line2.y, line2.y2) >= current_y) {
+                    if (line2.vertical()) {
                         // Horizontal line, intersection with an infinite line within
                         //  y-range, cannot have another X then A2.x or A2.x2
-                        currentX = A2.x;
+                        current_x = line2.x;
                     } else {
-                        currentX = (currentY - A2.intersect()) / A2.slope();
+                        current_x = (current_y - line2.intersect()) / line2.slope();
                     }
-                    if (!hasIntersectionX1) {
-                        hasIntersectionX1 = true;
-                        intersectionX1 = currentX;
+                    if (!has_intersection_x1) {
+                        has_intersection_x1 = true;
+                        intersection_x1 = current_x;
                     } else {
-                        hasIntersectionX2 = true;
-                        intersectionX2 = currentX;
+                        has_intersection_x2 = true;
+                        intersection_x2 = current_x;
                     }
                 }
             };
-            lmb(A);
-            lmb(B);
-            lmb(C);
-            lmb(D);
+            check_intersection(A);
+            check_intersection(B);
+            check_intersection(C);
+            check_intersection(D);
 
-            if (hasIntersectionX1 && hasIntersectionX2) {
-                int xLeft = min(intersectionX1, intersectionX2);
-                int xRight = max(intersectionX1, intersectionX2);
+            if (has_intersection_x1 && has_intersection_x2) {
+                int x_left = min(intersection_x1, intersection_x2);
+                int x_right = max(intersection_x1, intersection_x2);
                 // Do not loop through unnecessary pixels
-                if (xLeft < 0)
-                    xLeft = 0;
-                if (xRight > width_)
-                    xRight = width_;
+                if (x_left < 0)
+                    x_left = 0;
+                if (x_right > width_)
+                    x_right = width_;
 
-                for (int x=xLeft; x<=xRight; x++) {
-                    double distPixel = sqrt(squared_dist(x, centerX) + squared_dist(centerY, currentY));
-                    double distMax = sqrt(squared_dist(centerX, aline.x2) + squared_dist(centerY, aline.y2));
-
-                    double intersectX = 0;
-                    double intersectY = 0;
+                for (int x=x_left; x<=x_right; x++) {
+                    double distPixel = sqrt(squared_dist(x, line_.center().x) + squared_dist(line_.center().y, current_y));
+                    double distMax = sqrt(squared_dist(line_.center().x, line_.x2) + squared_dist(line_.center().y, line_.y2));
+                    double intersect_x = 0;
+                    double intersect_y = 0;
                     // These if-statements probably need some documentation
-                    // EDIT: not sure if this is correct, as in, doesn't it 'flip' the line (horizontally or vertically??)
-                    if (angle == 180|| angle == 0 || angle == 360) {
-                        intersectX = x;
-                        intersectY = aline.y;
+                    // TODO: not 100% sure if this is correct, as in, doesn't it 'flip' the line (horizontally or vertically)
+                    //       also, does it matter?
+                    if (line_.angle() == 180|| line_.angle() == 0 || line_.angle() == 360) {
+                        al_draw_line(x1, y1, x2, y2, al_map_rgb_f(1, 0, 0), size);
+                        return;
+                        intersect_x = x;
+                        intersect_y = line_.y;
                     }
-                    else if (angle == 270 || angle==90) {
-                        intersectX = centerX;
-                        intersectY = currentY;
+                    else if (line_.angle() == 270 || line_.angle() ==90) {
+                        al_draw_line(x1, y1, x2, y2, al_map_rgb_f(0, 1, 0), size);
+                        return;
+                        intersect_x = line_.center().x;
+                        intersect_y = current_y;
                     }
                     else {
-                        coord tmp1 = move_plus(x, currentY, angle, 90, aline.size);
-                        coord tmp2 = move_plus(x, currentY, angle, 90 + 180, aline.size);
+                        al_draw_line(x1, y1, x2, y2, al_map_rgb_f(0, 0, 1), size);
+                        return;
+                        coord tmp1 = move_plus(coord(x, current_y), line_.angle(), 90, line_.size);
+                        coord tmp2 = move_plus(coord(x, current_y), line_.angle(), 90 + 180, line_.size);
 
                         // It doesn't matter this if this line doesn't cross the center line from all places,
                         //  because we handle it like an infinite line (no begin or ending). we just use slope + intersect.
@@ -340,28 +339,28 @@ public:
                         // But now after rounding it appears so that x == x2. The small angle
                         // didn't influence a difference between x and x2, that's why this 'extra' check
                         // is required.
-                        double nom = (-1 * tmp.intersect()) + aline.intersect();
-                        double denom = tmp.slope() - aline.slope();
-                        if (aline.x == aline.x2 || tmp.x == tmp.x2) {
-                            intersectX = tmp.x;
+                        double nom = (-1 * tmp.intersect()) + line_.intersect();
+                        double denom = tmp.slope() - line_.slope();
+                        if (line_.vertical() || tmp.vertical()) {
+                            intersect_x = tmp.x;
                         } else {
-                            intersectX = (nom) / (denom);
+                            intersect_x = (nom) / (denom);
                         }
-                        // idem..
-                        if (tmp.x == tmp.x2) {
-                            intersectY = aline.y;
+
+                        if (tmp.vertical()) {
+                            intersect_y = line_.y;
                         } else {
-                            intersectY = (intersectX * tmp.slope()) + tmp.intersect();
+                            intersect_y = (intersect_x * tmp.slope()) + tmp.intersect();
                         }
                     }
 
-                    if ( (intersectX >= min(aline.x, aline.x2) && intersectX <= max(aline.x, aline.x2)) ||
-                         (intersectY >= min(aline.y, aline.y2) && intersectY <= max(aline.y, aline.y2))
+                    if ( (intersect_x >= min(line_.x, line_.x2) && intersect_x <= max(line_.x, line_.x2)) ||
+                         (intersect_y >= min(line_.y, line_.y2) && intersect_y <= max(line_.y, line_.y2))
                     ) {
-                        double distFromCenterline = sqrt(squared_dist(x, intersectX) + squared_dist(currentY, intersectY));
-                        double testa = (distPixel / distMax);
-                        double test = (distFromCenterline / aline.size);
-                        render_line_pixel<double_type>(x, currentY, testa, test);
+                        double dist_from_center_line = sqrt(squared_dist(x, intersect_x) + squared_dist(current_y, intersect_y));
+                        double normalized_dist_from_center = (distPixel / distMax);
+                        double normalized_dist_from_line = (dist_from_center_line / line_.size);
+                        render_line_pixel<double_type>(x, current_y, normalized_dist_from_center, normalized_dist_from_line);
                     }
                 }
             }
@@ -392,23 +391,24 @@ public:
         //al_put_pixel(absX, absY, al_map_rgba_f(0, 0, (1.0 /*- test*/) * num, 0));
         auto bg = al_get_pixel(al_get_target_bitmap(), absX, absY);
         bg.b = (bg.b * num) + 1.0 * (1.0 - num); // we blend ourselves..
-        al_put_pixel(absX, absY, al_map_rgba_f(bg.r, bg.g, bg.b, 0));
+        //al_put_pixel(absX, absY, al_map_rgba_f(bg.r, bg.g, bg.b, 0));
+        al_put_pixel(absX, absY, al_map_rgba_f(1, 0, 0, 0));
     }
 
     void scale(double scale) { scale_ = scale; }
     void width(uint32_t width) { width_ = width; }
     void height(uint32_t height) { height_ = height; }
-    void center(double x, double y) { centerX_ = x; centerY_ = y; }
-    void offset(double x, double y) { offsetX_ = x; offsetY_ = y; }
+    void center(double x, double y) { center_x_ = x; center_y_ = y; }
+    void offset(double x, double y) { offset_x_ = x; offset_y_ = y; }
     void font(ALLEGRO_FONT *font) { font_ = font; }
 
 private:
 
     double scale_;
-    double centerX_;
-    double centerY_;
-    double offsetX_;
-    double offsetY_;
+    double center_x_;
+    double center_y_;
+    double offset_x_;
+    double offset_y_;
     uint32_t width_;
     uint32_t height_;
     ALLEGRO_FONT * font_;
