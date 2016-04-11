@@ -29,11 +29,11 @@ public:
         : x(a.x), y(a.y), x2(b.x), y2(b.y), size(size)
     {}
 
-    double slope()
+    double slope() const
     {
         return (y - y2) / (x - x2);
     }
-    double intersect()
+    double intersect() const
     {
         // y = mx + b
         double mx = slope() * this->x;
@@ -72,7 +72,8 @@ public:
 
 };
 
-//mark
+inline auto constexpr squared_dist(auto num, auto num2) { return (num - num2) * (num - num2); }
+
 inline coord move_plus(double x, double y, double angle, double rotate, double move) {
     double tmpAngle = angle + rotate; // go left...
     if (tmpAngle > 360.0)
@@ -95,7 +96,6 @@ inline coord move(double x, double y, double angle, double rotate, double move) 
         return move_minus(x, y, angle, rotate, move);
     }
 }
-
 
 class draw_logic {
 public:
@@ -206,7 +206,7 @@ public:
     }
 
     template <typename double_type>
-    void render_line(double x1, double y1, double x2, double y2, double size, double r, double g, double b) {
+    void render_line(double x1, double y1, double x2, double y2, double size, double red, double green, double blue) {
         x1    = ((x1 * scale_) + centerX_) - offsetX_;
         y1    = ((y1 * scale_) + centerY_) - offsetY_;
         x2    = ((x2 * scale_) + centerX_) - offsetX_;
@@ -215,9 +215,7 @@ public:
 
         //al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_ZERO);
         //al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
-        al_draw_line(x1, y1, x2, y2, al_map_rgb_f(r, g, b), size);
-
-#ifdef NOTDEF
+        //al_draw_line(x1, y1, x2, y2, al_map_rgb_f(red, green, blue), size);
 
         line aline(x1, y1, x2, y2, size);
 
@@ -241,7 +239,6 @@ public:
         // three extra surrounding pixels so we make up for rounding errors and in a diagonal direction
         double radiussizeplusextra = aline.size + 3;
 
-        //mark
         coord a = move(aline.x, aline.y, aline.angle(), 90, radiussizeplusextra);
         coord d = move(aline.x, aline.y, aline.angle(), -90, radiussizeplusextra);
         coord b = move(aline.x2, aline.y2, aline.angle(), 90, radiussizeplusextra);
@@ -257,8 +254,8 @@ public:
         line C(c, d);
         line D(d, a);
 
-        double topY = std::min(a.y, b.y, c.y, d.y);
-        double bottomY = std::max(a.y, b.y, c.y, d.y);
+        double topY = std::min({a.y, b.y, c.y, d.y});
+        double bottomY = std::max({a.y, b.y, c.y, d.y});
 
         double centerX = ((aline.x - aline.x2) / 2) + aline.x2;
         double centerY = ((aline.y - aline.y2) / 2) + aline.y2;
@@ -302,8 +299,8 @@ public:
             lmb(D);
 
             if (hasIntersectionX1 && hasIntersectionX2) {
-                int xLeft = (intersectionX1 > intersectionX2 ? intersectionX2 : intersectionX1);
-                int xRight = (intersectionX1 > intersectionX2 ? intersectionX1 : intersectionX2);
+                int xLeft = min(intersectionX1, intersectionX2);
+                int xRight = max(intersectionX1, intersectionX2);
                 // Do not loop through unnecessary pixels
                 if (xLeft < 0)
                     xLeft = 0;
@@ -311,9 +308,8 @@ public:
                     xRight = width_;
 
                 for (int x=xLeft; x<=xRight; x++) {
-#define SQUARED_DIST(num, num2) ((num - num2) * (num - num2))
-                    double distPixel = sqrt(SQUARED_DIST(x, centerX) + SQUARED_DIST(centerY, currentY));
-                    double distMax = sqrt(SQUARED_DIST(centerX, aline.x2) + SQUARED_DIST(centerY, aline.y2));
+                    double distPixel = sqrt(squared_dist(x, centerX) + squared_dist(centerY, currentY));
+                    double distMax = sqrt(squared_dist(centerX, aline.x2) + squared_dist(centerY, aline.y2));
 
                     double intersectX = 0;
                     double intersectY = 0;
@@ -328,29 +324,13 @@ public:
                         intersectY = currentY;
                     }
                     else {
-                        tmpAngle = angle + 90;
-                        if (tmpAngle > 360.0)
-                            tmpAngle -= 360.0;
-                        rads = tmpAngle * pi / 180;
-                        double tmpX = x;
-                        double tmpY = currentY;
-                        tmpX = tmpX + aline.size * cos(rads);
-                        tmpY = tmpY + aline.size * sin(rads);
-
-                        tmpAngle = angle + 90 + 180;
-                        if (tmpAngle > 360.0)
-                            tmpAngle -= 360.0;
-                        rads = tmpAngle * pi / 180;
-                        double tmpX2 = x;
-                        double tmpY2 = currentY;
-                        tmpX2 = tmpX2 + aline.size * cos(rads);
-                        tmpY2 = tmpY2 + aline.size * sin(rads);
-
+                        coord tmp1 = move_plus(x, currentY, angle, 90, aline.size);
+                        coord tmp2 = move_plus(x, currentY, angle, 90 + 180, aline.size);
 
                         // It doesn't matter this if this line doesn't cross the center line from all places,
                         //  because we handle it like an infinite line (no begin or ending). we just use slope + intersect.
                         // Edit: nonetheless the line is now extended in such a way it always does..
-                        Line tmp(tmpX, tmpY, tmpX2, tmpY2, 1);
+                        line tmp(tmp1, tmp2);
 
                         // I solved the equation by example from http://www.mathopenref.com/coordintersection.html
 
@@ -362,9 +342,7 @@ public:
                         // is required.
                         double nom = (-1 * tmp.intersect()) + aline.intersect();
                         double denom = tmp.slope() - aline.slope();
-                        if (aline.x == aline.x2 ||
-                            tmp.x == tmp.x2
-                            ) {
+                        if (aline.x == aline.x2 || tmp.x == tmp.x2) {
                             intersectX = tmp.x;
                         } else {
                             intersectX = (nom) / (denom);
@@ -377,22 +355,44 @@ public:
                         }
                     }
 
-                    if ( (intersectX >= (aline.x < aline.x2 ? aline.x : aline.x2) &&
-                          intersectX <= (aline.x < aline.x2 ? aline.x2 : aline.x)) ||
-
-                         (intersectY >= (aline.y < aline.y2 ? aline.y : aline.y2) &&
-                          intersectY <= (aline.y < aline.y2 ? aline.y2 : aline.y))/*
-                 true*/
-                        ) {
-                        double distFromCenterline = sqrt(SQUARED_DIST(x, intersectX) + SQUARED_DIST(currentY, intersectY));
+                    if ( (intersectX >= min(aline.x, aline.x2) && intersectX <= max(aline.x, aline.x2)) ||
+                         (intersectY >= min(aline.y, aline.y2) && intersectY <= max(aline.y, aline.y2))
+                    ) {
+                        double distFromCenterline = sqrt(squared_dist(x, intersectX) + squared_dist(currentY, intersectY));
                         double testa = (distPixel / distMax);
                         double test = (distFromCenterline / aline.size);
-                        RenderLinePixel(x, currentY, testa, test);
+                        render_line_pixel<double_type>(x, currentY, testa, test);
                     }
                 }
             }
         }
-#endif
+
+        //al_draw_line(x1, y1, x2, y2, al_map_rgb_f(red, green, blue), size);
+        //if (red > 0.2 || green > 0.2 || blue > 0.2)
+        //    al_draw_line(x1, y1, x2, y2, al_map_rgb_f(red, green, blue), 2.0);
+    }
+
+    template <typename double_type>
+    void render_line_pixel(int absX, int absY, double normalizedDistFromCenter, double normalizedDistFromLine) {
+        if (normalizedDistFromCenter > 1.0 ||
+            normalizedDistFromCenter < 0.0) {
+            return;
+        }
+        if (normalizedDistFromLine > 1.0 ||
+            normalizedDistFromLine < 0.0) {
+            return;
+        }
+
+        //CompiledGradient *ptrGradient = m_object->GetGradient();
+        //LColor color = ptrGradient->getColor( (1.0 - normalizedDistFromLine));
+        double num = 1.0 - (1.0 - normalizedDistFromCenter) * (1.0 - normalizedDistFromLine);
+        //num = 1.0 - num; // just to get it to look like it supposed to a bit right now
+        //LColor color = ptrGradient->getColor( num );
+
+        //al_put_pixel(absX, absY, al_map_rgba_f(0, 0, (1.0 /*- test*/) * num, 0));
+        auto bg = al_get_pixel(al_get_target_bitmap(), absX, absY);
+        bg.b = (bg.b * num) + 1.0 * (1.0 - num); // we blend ourselves..
+        al_put_pixel(absX, absY, al_map_rgba_f(bg.r, bg.g, bg.b, 0));
     }
 
     void scale(double scale) { scale_ = scale; }
