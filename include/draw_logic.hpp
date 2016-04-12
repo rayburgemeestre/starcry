@@ -91,6 +91,7 @@ public:
 
 inline auto constexpr squared_dist(auto num, auto num2) { return (num - num2) * (num - num2); }
 
+// new replacements
 inline coord move_plus(coord c, double angle, double rotate, double move) {
     double tmpAngle = angle + rotate; // go left...
     if (tmpAngle > 360.0)
@@ -130,7 +131,7 @@ public:
      *
      *   - As Circles can be positioned on non-integer coordinates we cannot always re-use the distance calculation
      *     for the three other quarters, as there can be subtle differences.
-     *     In case the floating point values contain integers the optimization will be used (reuseSqrt=true).
+     *     In case the floating point values contain integers the optimization will be used (reuse_sqrt=true).
      *
      * - We will also focus on processing only the pixels visible around it's edges. If the radius is 100 and the
      *   radius size is only 5 pixels, we we only check the pixels between circle radii 97 (inner-) and 103 (outer
@@ -227,32 +228,38 @@ public:
         y2    = ((y2 * scale_) + center_y_) - offset_y_;
         size  = size * scale_;
 
-        line line_(x1, y1, x2, y2, size);
+        line aline(x1, y1, x2, y2, size);
 
         /**
-         * Calculate corners a, b, c, d for line.
-         * Then construct lines A, B, C, D to create a square.
-         *   a          A          b
+         * Create rectangle for aline.
+         *
+         * With corners:
+         *   a                     b
+         * x  +-------------------+  x2
+         * y  +-------------------+  y2
+         *   d                     c
+         *
+         * As lines:
+         *              A
+         *  D +-------------------+ B
          *    +-------------------+
-         * D  |                   |   B
-         *    +-------------------+
-         *   d          C          c
+         *              C
          */
         // three extra surrounding pixels so we make up for rounding errors and in a diagonal direction
-        double radiussizeplusextra = line_.size + 3;
-        coord a = move(line_.from(), line_.angle(), 90, radiussizeplusextra);
-        coord d = move(line_.from(), line_.angle(), -90, radiussizeplusextra);
-        coord b = move(line_.to(), line_.angle(), 90, radiussizeplusextra);
-        coord c = move(line_.to(), line_.angle(), -90, radiussizeplusextra);
-        a = move(a, line(a, line_.from()).angle(), -90, radiussizeplusextra);
-        d = move(d, line(d, line_.from()).angle(), 90, radiussizeplusextra);
-        b = move(b, line(b, line_.to()).angle(), 90, radiussizeplusextra);
-        c = move(c, line(c, line_.to()).angle(), 90, radiussizeplusextra);
-
+        double radiussizeplusextra = aline.size + 3;
+        coord a = move(aline.from(), aline.angle(), 90, radiussizeplusextra);
+        coord d = move(aline.from(), aline.angle(), -90, radiussizeplusextra);
+        coord b = move(aline.to(), aline.angle(), 90, radiussizeplusextra);
+        coord c = move(aline.to(), aline.angle(), -90, radiussizeplusextra);
+        a = move(a, line(a, aline.from(), 1).angle(), -90, radiussizeplusextra);
+        d = move(d, line(d, aline.from(), 1).angle(), 90, radiussizeplusextra);
+        b = move(b, line(b, aline.to(), 1).angle(), 90, radiussizeplusextra);
+        c = move(c, line(c, aline.to(), 1).angle(), 90, radiussizeplusextra);
         line A(a, b), B(b, c), C(c, d), D(d, a);
 
-        double top_y = std::min(std::min(std::min(a.y, b.y), c.y), d.y);
-        double bottom_y = std::min(std::min(std::max(a.y, b.y), c.y), d.y);
+
+        double top_y = std::min({a.y, b.y, c.y, d.y});
+        double bottom_y = std::max({a.y, b.y, c.y, d.y});
 
         // Make sure we do not iterate unnecessary pixels, the ones outside the canvas.
         if (top_y < 0)
@@ -267,15 +274,15 @@ public:
             double intersection_x2 = 0;
             bool has_intersection_x1 = false;
             bool has_intersection_x2 = false;
-            auto check_intersection = [&](const auto &line2) {
-                if (  line2.y != line2.y2 && (line2.y < line2.y2 ? line2.y : line2.y2) <= current_y && (line2.y < line2.y2 ? line2.y2 : line2.y) >= current_y) {
-                //if (!line2.horizontal() && min(line2.y, line2.y2) <= current_y && min(line2.y, line2.y2) >= current_y) {
-                    if (line2.vertical()) {
+
+            auto process_intersection = [&](const auto &aline) {
+                if (!aline.horizontal() && min(aline.y, aline.y2) <= current_y && max(aline.y, aline.y2) >= current_y) {
+                    if (aline.vertical()) { // Todo: change to IsVertical()?
                         // Horizontal line, intersection with an infinite line within
-                        //  y-range, cannot have another X then A2.x or A2.x2
-                        current_x = line2.x;
+                        //  y-range, cannot have another X then aline.x or aline.x2
+                        current_x = aline.x;
                     } else {
-                        current_x = (current_y - line2.intersect()) / line2.slope();
+                        current_x = (current_y - aline.intersect()) / aline.slope();
                     }
                     if (!has_intersection_x1) {
                         has_intersection_x1 = true;
@@ -286,10 +293,10 @@ public:
                     }
                 }
             };
-            check_intersection(A);
-            check_intersection(B);
-            check_intersection(C);
-            check_intersection(D);
+            process_intersection(A);
+            process_intersection(B);
+            process_intersection(C);
+            process_intersection(D);
 
             if (has_intersection_x1 && has_intersection_x2) {
                 int x_left = min(intersection_x1, intersection_x2);
@@ -301,30 +308,24 @@ public:
                     x_right = width_;
 
                 for (int x=x_left; x<=x_right; x++) {
-                    double distPixel = sqrt(squared_dist(x, line_.center().x) + squared_dist(line_.center().y, current_y));
-                    double distMax = sqrt(squared_dist(line_.center().x, line_.x2) + squared_dist(line_.center().y, line_.y2));
+                    double dist_pixel = sqrt(squared_dist(x, aline.center().x) + squared_dist(aline.center().y, current_y));
+                    double dist_max = sqrt(squared_dist(aline.center().x, aline.x2) + squared_dist(aline.center().y, aline.y2));
+
                     double intersect_x = 0;
                     double intersect_y = 0;
                     // These if-statements probably need some documentation
-                    // TODO: not 100% sure if this is correct, as in, doesn't it 'flip' the line (horizontally or vertically)
-                    //       also, does it matter?
-                    if (line_.angle() == 180|| line_.angle() == 0 || line_.angle() == 360) {
-                        al_draw_line(x1, y1, x2, y2, al_map_rgb_f(1, 0, 0), size);
-                        return;
+                    // EDIT: not sure if this is correct, as in, doesn't it 'flip' the line (horizontally or vertically??)
+                    if (aline.angle() == 180|| aline.angle() == 0 || aline.angle() == 360) {
                         intersect_x = x;
-                        intersect_y = line_.y;
+                        intersect_y = aline.y;
                     }
-                    else if (line_.angle() == 270 || line_.angle() ==90) {
-                        al_draw_line(x1, y1, x2, y2, al_map_rgb_f(0, 1, 0), size);
-                        return;
-                        intersect_x = line_.center().x;
+                    else if (aline.angle() == 270 || aline.angle()==90) {
+                        intersect_x = aline.center().x;
                         intersect_y = current_y;
                     }
                     else {
-                        al_draw_line(x1, y1, x2, y2, al_map_rgb_f(0, 0, 1), size);
-                        return;
-                        coord tmp1 = move_plus(coord(x, current_y), line_.angle(), 90, line_.size);
-                        coord tmp2 = move_plus(coord(x, current_y), line_.angle(), 90 + 180, line_.size);
+                        coord tmp1 = move(coord(x, current_y), aline.angle(), 90, aline.size);
+                        coord tmp2 = move(coord(x, current_y), aline.angle(), 90 + 180, aline.size);
 
                         // It doesn't matter this if this line doesn't cross the center line from all places,
                         //  because we handle it like an infinite line (no begin or ending). we just use slope + intersect.
@@ -339,27 +340,27 @@ public:
                         // But now after rounding it appears so that x == x2. The small angle
                         // didn't influence a difference between x and x2, that's why this 'extra' check
                         // is required.
-                        double nom = (-1 * tmp.intersect()) + line_.intersect();
-                        double denom = tmp.slope() - line_.slope();
-                        if (line_.vertical() || tmp.vertical()) {
+                        double nom = (-1 * tmp.intersect()) + aline.intersect();
+                        double denom = tmp.slope() - aline.slope();
+                        if (aline.vertical() || tmp.vertical()) {
                             intersect_x = tmp.x;
                         } else {
                             intersect_x = (nom) / (denom);
                         }
-
+                        // idem..
                         if (tmp.vertical()) {
-                            intersect_y = line_.y;
+                            intersect_y = aline.y;
                         } else {
                             intersect_y = (intersect_x * tmp.slope()) + tmp.intersect();
                         }
                     }
 
-                    if ( (intersect_x >= min(line_.x, line_.x2) && intersect_x <= max(line_.x, line_.x2)) ||
-                         (intersect_y >= min(line_.y, line_.y2) && intersect_y <= max(line_.y, line_.y2))
+                    if ( (intersect_x >= min(aline.x, aline.x2) && intersect_x <= max(aline.x, aline.x2)) ||
+                         (intersect_y >= min(aline.y, aline.y2) && intersect_y <= max(aline.y, aline.y2))
                     ) {
                         double dist_from_center_line = sqrt(squared_dist(x, intersect_x) + squared_dist(current_y, intersect_y));
-                        double normalized_dist_from_center = (distPixel / distMax);
-                        double normalized_dist_from_line = (dist_from_center_line / line_.size);
+                        double normalized_dist_from_center = (dist_pixel / dist_max);
+                        double normalized_dist_from_line = (dist_from_center_line / aline.size);
                         render_line_pixel<double_type>(x, current_y, normalized_dist_from_center, normalized_dist_from_line);
                     }
                 }
@@ -372,27 +373,26 @@ public:
     }
 
     template <typename double_type>
-    void render_line_pixel(int absX, int absY, double normalizedDistFromCenter, double normalizedDistFromLine) {
-        if (normalizedDistFromCenter > 1.0 ||
-            normalizedDistFromCenter < 0.0) {
+    void render_line_pixel(int absX, int absY, double normalized_dist_from_center, double normalized_dist_from_line) {
+        if (normalized_dist_from_center > 1.0 ||
+            normalized_dist_from_center < 0.0) {
             return;
         }
-        if (normalizedDistFromLine > 1.0 ||
-            normalizedDistFromLine < 0.0) {
+        if (normalized_dist_from_line > 1.0 ||
+            normalized_dist_from_line < 0.0) {
             return;
         }
 
         //CompiledGradient *ptrGradient = m_object->GetGradient();
-        //LColor color = ptrGradient->getColor( (1.0 - normalizedDistFromLine));
-        double num = 1.0 - (1.0 - normalizedDistFromCenter) * (1.0 - normalizedDistFromLine);
+        //LColor color = ptrGradient->getColor( (1.0 - normalized_dist_from_line));
+        double num = 1.0 - (1.0 - normalized_dist_from_center) * (1.0 - normalized_dist_from_line);
         //num = 1.0 - num; // just to get it to look like it supposed to a bit right now
         //LColor color = ptrGradient->getColor( num );
 
         //al_put_pixel(absX, absY, al_map_rgba_f(0, 0, (1.0 /*- test*/) * num, 0));
         auto bg = al_get_pixel(al_get_target_bitmap(), absX, absY);
         bg.b = (bg.b * num) + 1.0 * (1.0 - num); // we blend ourselves..
-        //al_put_pixel(absX, absY, al_map_rgba_f(bg.r, bg.g, bg.b, 0));
-        al_put_pixel(absX, absY, al_map_rgba_f(1, 0, 0, 0));
+        al_put_pixel(absX, absY, al_map_rgba_f(bg.r, bg.g, bg.b, 0));
     }
 
     void scale(double scale) { scale_ = scale; }
