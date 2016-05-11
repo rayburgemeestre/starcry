@@ -47,10 +47,15 @@ int main(int argc, char *argv[]) {
     size_t num_workers         = 8; // number of workers for rendering
     string worker_ports;
     string dimensions;
-    string output_file = "output.h264";
+    string output_file{"output.h264"};
     uint32_t settings_{0};
     bitset<32> streamer_settings(settings_);
-    po::options_description desc("Allowed options");
+    po::options_description desc{"Allowed options"};
+    string script{"test.js"};
+
+    po::positional_options_description p;
+    p.add("script", -1);
+
     desc.add_options()("help", "produce help message")
                       ("output,o", po::value<string>(&output_file), "filename for video output (default output.h264)")
                       ("remote,r", po::value<string>(&worker_ports), "use remote workers for rendering")
@@ -62,9 +67,10 @@ int main(int argc, char *argv[]) {
                       ("no-video-output", "disable video output using ffmpeg")
                       ("stdin", "read from stdin and send this to job generator actor")
                       ("dimensions,dim", po::value<string>(&dimensions), "specify canvas dimensions i.e. 1920x1080")
+                      ("script,s", po::value<string>(&script), "javascript file to use for processing")
         ;
     po::variables_map vm;
-    po::store(po::command_line_parser(argc, argv).options(desc).run(), vm);
+    po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
     try {
         po::notify(vm);
     }
@@ -72,6 +78,9 @@ int main(int argc, char *argv[]) {
         std::cout << "Error: " << ex.what() << std::endl;
         std::cout << desc << std::endl;
         return false;
+    }
+    if (vm.count("script")) {
+        cout << "Script: " << vm["script"].as<string>() << "\n";
     }
     if (vm.count("help")) {
         cout << desc << "\n";
@@ -142,7 +151,7 @@ int main(int argc, char *argv[]) {
 
     scoped_actor s;
     auto jobstorage = spawn(job_storage);
-    auto generator  = spawn<detached>(job_generator, jobstorage, canvas_w, canvas_h, use_stdin);
+    auto generator  = spawn<detached>(job_generator, jobstorage, script, canvas_w, canvas_h, use_stdin);
     auto streamer_  = spawn<priority_aware>(streamer, jobstorage, conf.user.gui_port, output_file, streamer_settings.to_ulong());
     auto renderer_  = spawn(renderer, jobstorage, streamer_, range_begin, range_end);
 

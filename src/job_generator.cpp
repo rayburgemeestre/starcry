@@ -171,10 +171,9 @@ void write_frame_fun() {
     write_frame_fun1(false);
 }
 
-behavior job_generator(event_based_actor *self, const caf::actor &job_storage, uint32_t canvas_w, uint32_t canvas_h, bool use_stdin) {
+behavior job_generator(event_based_actor *self, const caf::actor &job_storage, const string &filename, uint32_t canvas_w, uint32_t canvas_h, bool use_stdin) {
     context = make_shared<v8_wrapper>();
     try {
-        string filename = "test.js";
         ifstream stream(filename.c_str());
         if (!stream) {
             throw runtime_error("could not locate file " + filename);
