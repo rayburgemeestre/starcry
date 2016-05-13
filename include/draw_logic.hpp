@@ -139,8 +139,9 @@ public:
      *   substract them.
      */
     template <typename double_type>
-    inline void render_circle(double_type circle_x, double_type circle_y, double_type radius, double_type radius_size)
-    {
+    inline void render_circle(double_type circle_x, double_type circle_y, double_type radius, double_type radius_size,
+                               double r, double g, double b
+    ){
         circle_x             = ((circle_x * scale_) + center_x_) - offset_x_;
         circle_y             = ((circle_y * scale_) + center_y_) - offset_y_;
         radius              *= scale_;
@@ -174,14 +175,14 @@ public:
 
                 double_type diff_from_center = reuse_sqrt ? distance<double_type>(abs_x_left, circle_x, abs_y_top, circle_y) : -1;
 
-                render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_left, abs_y_top, diff_from_center);
+                render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_left, abs_y_top, diff_from_center, r, g, b);
 
                 if (rel_y != 0)
-                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_left, abs_y_bottom, diff_from_center);
+                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_left, abs_y_bottom, diff_from_center, r, g, b);
                 if (rel_x != 0)
-                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_right, abs_y_top, diff_from_center);
+                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_right, abs_y_top, diff_from_center, r, g, b);
                 if (rel_x != 0 && rel_y != 0)
-                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_right, abs_y_bottom, diff_from_center);
+                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_right, abs_y_bottom, diff_from_center, r, g, b);
             }
         }
     }
@@ -194,7 +195,8 @@ public:
     }
 
     template <typename double_type>
-    void render_circle_pixel(double_type radius, double_type radiussize, double_type posX, double_type posY, int absX, int absY, double_type diffFromCenter)
+    void render_circle_pixel(double_type radius, double_type radiussize, double_type posX, double_type posY, int absX, int absY, double_type diffFromCenter,
+                             double r, double g, double b)
     {
         if (absX < 0 || absY < 0 || absX >= static_cast<int>(width_) || absY >= static_cast<int>(height_))
             return;
@@ -215,9 +217,15 @@ public:
         // TODO, check al_set_new_bitmap_format(ALLEGRO_PIXEL_FORMAT_ANY_32_WITH_ALPHA);
         // TODO, check ALLEGRO_NO_PREMULTIPLIED_ALPHA, because I prefer separate alpha channel
         //       unless it's not recommended for other reasons I don't understand..
-        Opacity = 1.0 - Opacity;
+        auto & bg_opacity = Opacity;
+        auto fg_opacity = 1.0 - Opacity;
 
-        al_put_pixel(absX, absY, al_map_rgba_f(0, 0, (1.0 /*- test*/) * Opacity, 0));
+        auto bg = al_get_pixel(al_get_target_bitmap(), absX, absY);
+
+        al_put_pixel(absX, absY, al_map_rgba_f(((bg.r * bg_opacity) + (r * fg_opacity)),
+                                               ((bg.g * bg_opacity) + (g * fg_opacity)),
+                                               ((bg.b * bg_opacity) + (b * fg_opacity)),
+                                               0));
     }
 
     template <typename double_type>
@@ -227,6 +235,12 @@ public:
         x2    = ((x2 * scale_) + center_x_) - offset_x_;
         y2    = ((y2 * scale_) + center_y_) - offset_y_;
         size  = size * scale_;
+
+        // test
+        //al_draw_line(x1, y1, x2, y2, al_map_rgb_f(red, green, blue), size);
+        //if (red > 0.2 || green > 0.2 || blue > 0.2)
+        //    al_draw_line(x1, y1, x2, y2, al_map_rgb_f(red, green, blue), 2.0);
+        //return; // end
 
         line aline(x1, y1, x2, y2, size);
 

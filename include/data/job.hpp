@@ -19,6 +19,7 @@ namespace data {
         size_t chunk;
         size_t num_chunks;
         std::vector<shape> shapes;
+        double scale;
     };
 
     inline bool operator==(const job& lhs, const job& rhs) {

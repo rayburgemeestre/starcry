@@ -88,7 +88,7 @@ public:
     }
 
     template <typename image, typename shapes_t>
-    void render(image bmp, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, std::string label = "") {
+    void render(image bmp, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, double scale, std::string label = "") {
         std::unique_lock<std::mutex> lock(m);
         auto old_bmp = al_get_target_bitmap();
         al_set_target_bitmap(bmp);
@@ -108,7 +108,6 @@ public:
             }
         }
 
-        double scale = 3.0;
         draw_logic_.scale(scale);
         draw_logic_.width(canvas_w);
         draw_logic_.height(canvas_h);
@@ -117,7 +116,7 @@ public:
         draw_logic_.font(font);
         for (auto shape : shapes) {
             if (shape.type == data::shape_type::circle)
-                draw_logic_.render_circle<double>(shape.x, shape.y, shape.radius, shape.radius_size);
+                draw_logic_.render_circle<double>(shape.x, shape.y, shape.radius, shape.radius_size, shape.r, shape.g, shape.b);
             else if (shape.type == data::shape_type::line)
                 draw_logic_.render_line<double>(shape.x, shape.y, shape.x2, shape.y2, shape.radius_size, shape.r, shape.g, shape.b);
             else if (shape.type == data::shape_type::text)

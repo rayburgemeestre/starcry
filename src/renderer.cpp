@@ -54,7 +54,7 @@ behavior worker(caf::stateful_actor<worker_data> * self, /*const caf::actor &ren
 #ifdef DEBUG
             ss << "frame " << j.frame_number << " chunk " << j.chunk << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num;
 #endif
-            self->state.engine.render(self->state.bitmap, j.shapes, j.offset_x, j.offset_y, j.canvas_w, j.canvas_h, ss.str());
+            self->state.engine.render(self->state.bitmap, j.shapes, j.offset_x, j.offset_y, j.canvas_w, j.canvas_h, j.scale, ss.str());
 
             data::pixel_data dat;
             dat.pixels = self->state.engine.serialize_bitmap(self->state.bitmap, j.width, j.height);

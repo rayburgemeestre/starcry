@@ -24,7 +24,8 @@ namespace data {
             &job::last_frame,
             &job::chunk,
             &job::num_chunks,
-            &job::shapes
+            &job::shapes,
+            &job::scale
         );
         caf::announce<shape>(
             "shape",
