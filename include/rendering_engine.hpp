@@ -62,6 +62,10 @@ inline int round_to_int(double_type in)
 #include "draw_logic.hpp"
 #include "data/shape.hpp"
 
+#include "allegro5/allegro.h"
+#include "allegro5/internal/aintern_bitmap.h"
+#include "allegro5/internal/aintern_pixels.h"
+
 class rendering_engine
 {
 public:
@@ -86,6 +90,9 @@ public:
             fprintf(stderr, "Failed to initialize allegro primitives addon!\n");
             return;
         }
+
+        //al_set_new_bitmap_format(ALLEGRO_PIXEL_FORMAT_RGBA_8888);
+        //al_set_new_bitmap_flags(ALLEGRO_MEMORY_BITMAP | ALLEGRO_NO_PREMULTIPLIED_ALPHA);
     }
 
     template <typename image, typename shapes_t>
@@ -146,12 +153,26 @@ public:
 
     template <typename image>
     vector<ALLEGRO_COLOR> serialize_bitmap(image bitmap, uint32_t width, uint32_t height) {
-        vector<ALLEGRO_COLOR> pixels;
-        pixels.reserve(width * height);
+        ALLEGRO_COLOR color;
+        vector<ALLEGRO_COLOR> pixels(width * height, color);
+
         al_lock_bitmap(bitmap, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_READONLY);
+        char *data = (char *)bitmap->locked_region.data;
+
+        size_t index = 0;
         for (uint32_t y=0; y<height; y++) {
             for (uint32_t x=0; x<width; x++) {
-                pixels.emplace_back(al_get_pixel(bitmap, x, y));
+                uint32_t _gp_pixel = *(uint32_t *)(data);
+                _AL_MAP_RGBA(color, (_gp_pixel & 0x00FF0000) >> 16,
+                                    (_gp_pixel & 0x0000FF00) >>  8,
+                                    (_gp_pixel & 0x000000FF) >>  0,
+                                    (_gp_pixel & 0xFF000000) >> 24);
+                data += 4;
+                pixels[index].r = color.r;
+                pixels[index].g = color.g;
+                pixels[index].b = color.b;
+                pixels[index].a = color.a;
+                index++;
             }
         }
         al_unlock_bitmap(bitmap);

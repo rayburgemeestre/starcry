@@ -36,7 +36,7 @@ find_package( Threads )
 #add_definitions(-O0 -g -Wall -funsigned-char -std=c++14)
 add_definitions(-O3 -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic)
 
-include_directories("./include/" "./libs/v8pp/v8/include" "./libs/v8pp/" "${V8_INCLUDE_DIR}")
+include_directories("./include/" "./libs/v8pp/v8/include" "./libs/v8pp/" "${V8_INCLUDE_DIR}", "./libs/allegro5/include/")
 if (EXISTS "/etc/centos-release")
     include_directories("/projects/boost_1_60_0/")
 endif (EXISTS "/etc/centos-release")
