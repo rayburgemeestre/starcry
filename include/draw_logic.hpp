@@ -1,6 +1,7 @@
 #pragma once
 
 #include <allegro5/allegro_primitives.h>
+#include <algorithm>
 
 static constexpr const auto pi = 3.14159265358979323846;
 

@@ -57,7 +57,7 @@ behavior render_loop(event_based_actor* self) {
             }
             al_flip_display();
             //using namespace std::literals;
-            //std::this_thread::sleep_for(0.1s);
+            std::this_thread::sleep_for(0.2s);
             self->send(self, render::value);
         },
         [=](uint32_t width, uint32_t height, struct data::pixel_data data) {
@@ -72,14 +72,14 @@ uint16_t bind_render_window(event_based_actor* self, uint16_t port) {
     uint16_t bound_port = 0;
     try {
         // first try to bind to specified port
-        bound_port = io::publish(self, port);
+        bound_port = io::publish(self, port, nullptr, true);
         cout << "succesfully bound to previous port " << port << endl;
     }
     catch (bind_failure &err) {
         cout << "could not publish ourselves on the previously known port." << endl;
         // try to bind to an available (unprivileged) port
         try {
-            bound_port = io::publish(self, 0);
+            bound_port = io::publish(self, 0, nullptr, true);
         }
         catch (bind_failure &err) {
             cout << "could not publish ourselves on a new port either." << endl;

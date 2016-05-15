@@ -344,7 +344,7 @@ void output(string s) {
 
 void write_frame_fun1(bool last_frame) {
     if (!assistant->the_job.last_frame)
-        assistant->the_job.last_frame = last_frame || assistant->max_frames == current_frame;
+        assistant->the_job.last_frame = last_frame || (assistant->max_frames && assistant->max_frames == current_frame);
     assistant->job_generator->send(assistant->job_generator, write_frame::value, assistant->the_job);
     assistant->the_job.shapes.clear();
 }
