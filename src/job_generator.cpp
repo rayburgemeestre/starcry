@@ -473,7 +473,9 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
         canvas_w = context->run<uint32_t>(string("typeof canvas_w != 'undefined' ? canvas_w : ") + to_string(canvas_w));
         canvas_h = context->run<uint32_t>(string("typeof canvas_h != 'undefined' ? canvas_h : ") + to_string(canvas_h));
 
-        call_print_exception(self, "initialize");
+        if (context->run<bool>("typeof initialize != 'undefined'")) {
+            call_print_exception(self, "initialize");
+        }
     }
     catch (exception & ex) {
         cout << ex.what() << endl;

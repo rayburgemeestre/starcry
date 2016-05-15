@@ -54,7 +54,8 @@ int main(int argc, char *argv[]) {
     string script{"test.js"};
 
     po::positional_options_description p;
-    p.add("script", -1);
+    p.add("script", 1);
+    p.add("output", 1);
 
     desc.add_options()("help", "produce help message")
                       ("output,o", po::value<string>(&output_file), "filename for video output (default output.h264)")
