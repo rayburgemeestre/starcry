@@ -37,7 +37,7 @@ double get_version() {
 }
 class v8_wrapper {
 public:
-    v8_wrapper() : platform(nullptr), context(nullptr) {
+    v8_wrapper(string filename) : context(nullptr), platform(nullptr), filename_(filename) {
         v8::V8::InitializeICU();
         platform = std::unique_ptr<v8::Platform>(v8::platform::CreateDefaultPlatform());
         v8::V8::InitializePlatform(platform.get());
@@ -50,34 +50,57 @@ public:
         v8::Isolate* isolate = context->isolate();
         v8::HandleScope scope(isolate);
         v8::TryCatch try_catch;
+        try_catch.SetVerbose(false);
+        try_catch.SetCaptureMessage(true);
         v8::Handle<v8::Value> result = context->run_script(source);
-        if (try_catch.HasCaught())
-        {
-            std::string const msg = v8pp::from_v8<std::string>(isolate, try_catch.Exception()->ToString());
-            throw std::runtime_error(msg);
+        if (try_catch.HasCaught()) {
+            rethrow_as_runtime_error(isolate, try_catch);
         }
         return v8pp::from_v8<T>(isolate, result);
     }
+
+    // TODO: replace call(fn) and call(fn, T) with a template function
+    void call(std::string const& function_name)
+    {
+        v8::Isolate* isolate = context->isolate();
+        v8::HandleScope scope(isolate);
+        v8::TryCatch try_catch;
+        try_catch.SetVerbose(false);
+        try_catch.SetCaptureMessage(true);
+
+        v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
+        v8::Local<v8::Function> func = global->Get(v8::String::NewFromUtf8(isolate, function_name.c_str())).As<v8::Function>();
+
+        func->Call(global, 0, {});
+
+        if (try_catch.HasCaught()) {
+            rethrow_as_runtime_error(isolate, try_catch);
+        }
+        return; // v8pp::from_v8<T>(isolate, result);
+    }
+
     template<typename T>
     void call(std::string const& function_name, T param)
     {
         v8::Isolate* isolate = context->isolate();
         v8::HandleScope scope(isolate);
         v8::TryCatch try_catch;
+        try_catch.SetVerbose(false);
+        try_catch.SetCaptureMessage(true);
 
         v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
         v8::Local<v8::Function> func = global->Get(v8::String::NewFromUtf8(isolate, function_name.c_str())).As<v8::Function>();
 
         v8::Handle<v8::Value> args[1];
         args[0] = v8pp::to_v8(isolate, param);
-        v8::Local<v8::Value> result = func->Call(global, 1, args);
+        func->Call(global, 1, args);
 
         if (try_catch.HasCaught()) {
-            std::string const msg = v8pp::from_v8<std::string>(isolate, try_catch.Exception()->ToString());
-            throw std::runtime_error(msg);
+            rethrow_as_runtime_error(isolate, try_catch);
         }
         return; // v8pp::from_v8<T>(isolate, result);
     }
+
     template <typename T>
     inline void add_fun(const std::string &name, T func) {
         v8::HandleScope scope(context->isolate());
@@ -93,8 +116,30 @@ public:
         v8::V8::Dispose();
         v8::V8::ShutdownPlatform();
     }
+
+    void rethrow_as_runtime_error(v8::Isolate *isolate, v8::TryCatch &try_catch) {
+        auto ex = try_catch.Exception();
+        std::string const msg = v8pp::from_v8<std::string>(isolate, ex->ToString());
+        stringstream ss;
+        v8::Handle<v8::Message> const & message( try_catch.Message() );
+        if (!message.IsEmpty()) {
+            int linenum = message->GetLineNumber();
+            //cout << *v8::String::Utf8Value(message->GetScriptResourceName()) << ':'
+            ss << "" << msg << '\n'
+            << "[file: " << filename_ << ", line: " << std::dec << linenum << ".]\n"
+            << *v8::String::Utf8Value(message->GetSourceLine()) << '\n';
+            int start = message->GetStartColumn();
+            int end   = message->GetEndColumn();
+            for (int i = 0; i < start; i++) { ss << '-'; }
+            for (int i = start; i < end; i++) { ss << '^'; }
+            ss << '\n';
+        }
+        throw std::runtime_error(ss.str());
+    }
+
     v8pp::context * context;
     std::unique_ptr<v8::Platform> platform;
+    string filename_; // for error messages
     std::mutex mut;
 };
 
@@ -106,11 +151,11 @@ void v8_wrapper::run<void>(std::string const& source)
     v8::Isolate* isolate = context->isolate();
     v8::HandleScope scope(isolate);
     v8::TryCatch try_catch;
-    v8::Handle<v8::Value> result = context->run_script(source);
-    if (try_catch.HasCaught())
-    {
-        std::string const msg = v8pp::from_v8<std::string>(isolate, try_catch.Exception()->ToString());
-        throw std::runtime_error(msg);
+    try_catch.SetVerbose(false);
+    try_catch.SetCaptureMessage(true);
+    context->run_script(source);
+    if (try_catch.HasCaught()) {
+        rethrow_as_runtime_error(isolate, try_catch);
     }
 }
 
@@ -133,16 +178,6 @@ void add_text(double x, double y, double z, string text, string align) {
     new_shape.type = data::shape_type::text;
     new_shape.text = text;
     new_shape.align = align;
-    assistant->the_job.shapes.push_back(new_shape);
-}
-void add_circle(double x, double y, double z, double radius, double radius_size) {
-    data::shape new_shape;
-    new_shape.x = x;
-    new_shape.y = y;
-    new_shape.z = z;
-    new_shape.type = data::shape_type::circle;
-    new_shape.radius = radius;
-    new_shape.radius_size = radius_size;
     assistant->the_job.shapes.push_back(new_shape);
 }
 void add_line(double x, double y, double z, double x2, double y2, double z2, double size,
@@ -288,9 +323,7 @@ struct circle : shape
 
 int Y::instance_count = 0;
 
-// test
-
-void add_circle2(circle circ) {
+void add_circle(circle circ) {
     data::shape new_shape;
     new_shape.x = circ.get_x();
     new_shape.y = circ.get_y();
@@ -321,8 +354,31 @@ void write_frame_fun() {
 
 #include "v8pp/class.hpp"
 
+void call_print_exception(event_based_actor *self, string fn)
+{
+    try {
+        context->call(fn);
+    }
+    catch (std::runtime_error &ex) {
+        aout(self) << "Runtime error caused during execution of "<< fn << "() in javascript:" << endl << string(ex.what()) << endl;
+        self->quit(exit_reason::user_shutdown);
+    }
+}
+
+template <typename T>
+void call_print_exception(event_based_actor *self, string fn, T arg)
+{
+    try {
+        context->call(fn, arg);
+    }
+    catch (std::runtime_error &ex) {
+        aout(self) << "Runtime error caused during execution of "<< fn << "(..) in javascript:" << endl << string(ex.what()) << endl;
+        self->quit(exit_reason::user_shutdown);
+    }
+}
+
 behavior job_generator(event_based_actor *self, const caf::actor &job_storage, const string &filename, uint32_t canvas_w, uint32_t canvas_h, bool use_stdin) {
-    context = make_shared<v8_wrapper>();
+    context = make_shared<v8_wrapper>(filename);
     try {
         ifstream stream(filename.c_str());
         if (!stream) {
@@ -408,17 +464,16 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
         context->add_fun("write_frame1", &write_frame_fun1);
         context->add_fun("add_text", &add_text);
         context->add_fun("add_circle", &add_circle);
-        context->add_fun("add_circle2", &add_circle2);
         context->add_fun("add_line", &add_line);
         context->run("var current_frame = 0;");
-        context->run("var x = 0;");
         istreambuf_iterator<char> begin(stream), end;
+
         context->run(std::string(begin, end));
 
         canvas_w = context->run<uint32_t>(string("typeof canvas_w != 'undefined' ? canvas_w : ") + to_string(canvas_w));
         canvas_h = context->run<uint32_t>(string("typeof canvas_h != 'undefined' ? canvas_h : ") + to_string(canvas_h));
 
-        context->call("initialize", "");
+        call_print_exception(self, "initialize");
     }
     catch (exception & ex) {
         cout << ex.what() << endl;
@@ -435,20 +490,20 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
             assistant->the_job.num_chunks   = max_split_chunks;
             assistant->the_job.canvas_w     = canvas_w;
             assistant->the_job.canvas_h     = canvas_h;
-            assistant->the_job.scale        = context->run<double>("scale || 1.0");
+            assistant->the_job.scale        = context->run<double>("typeof scale != 'undefined' ? scale : 1.0");
             assistant->max_frames           = context->run<size_t>("max_frames");
             assistant->realtime             = context->run<bool>("realtime");
             if (!use_stdin || assistant->realtime) {
                 // we call into V8 ourselves to get frames
-                context->call("next", "");
+                call_print_exception(self, "next");
             }
         },
         [=](input_line, string line) {
-            context->call("input", line);
+            call_print_exception(self, "input", line);
         },
         [=](no_more_input) {
             assistant->the_job.last_frame = true;
-            context->call("close", "");
+            call_print_exception(self, "close");
         },
         [=](write_frame, data::job &job) {
             uint32_t width = canvas_w;
@@ -499,7 +554,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
                         self->send(self, next_frame::value);
                         return;
                     }
-                    context->call("next", "");
+                    call_print_exception(self, "next");
                 }
             );
         }

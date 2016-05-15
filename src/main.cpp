@@ -92,13 +92,13 @@ int main(int argc, char *argv[]) {
         streamer_settings.set(streamer_ffmpeg, true);
     }
     if (vm.count("gui")) {
-        bool gui_available = false;
         try {
             auto client = io::remote_actor("127.0.0.1", conf.user.gui_port);
-            gui_available = true;
         }
         catch (network_error &err) {
-            system((std::string(argv[0]) + " --spawn-gui &").c_str());
+            if (0 != system((std::string(argv[0]) + " --spawn-gui &").c_str())) {
+                cout << "System call to --spawn-gui failed.." << endl;
+            }
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             conf.load();
         }

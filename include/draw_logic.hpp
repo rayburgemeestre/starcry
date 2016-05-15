@@ -14,11 +14,11 @@ public:
 
 class line {
 public:
-    double size;
     double x;
     double y;
     double x2;
     double y2;
+    double size;
 
 public:
     line(double x, double y, double x2, double y2, double size = 1)
@@ -89,7 +89,9 @@ public:
 
 };
 
-inline auto constexpr squared_dist(auto num, auto num2) { return (num - num2) * (num - num2); }
+//inline auto constexpr squared_dist(auto num, auto num2) { return (num - num2) * (num - num2); }
+template <typename T, typename T2>
+inline auto constexpr squared_dist(T &&num, T2 &&num2) { return (num - num2) * (num - num2); }
 
 // new replacements
 inline coord move_plus(coord c, double angle, double rotate, double move) {
@@ -318,8 +320,8 @@ public:
                 // Do not loop through unnecessary pixels
                 if (x_left < 0)
                     x_left = 0;
-                if (x_right > width_)
-                    x_right = width_;
+                if (x_right > static_cast<int>(width_))
+                    x_right = static_cast<int>(width_);
 
                 for (int x=x_left; x<=x_right; x++) {
                     double dist_pixel = sqrt(squared_dist(x, aline.center().x) + squared_dist(aline.center().y, current_y));

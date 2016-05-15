@@ -29,7 +29,7 @@ function next() {
 //    add_circle2(new circle(new pos(0, 0, 0), radius, 2, new color(1, 0, 0, 1)));
 //    add_circle2(new circle(new pos(10, 0, 0), radius, 2, new color(1, 0, 0, 1)));
     for (var i=0; i< 100;i ++) {
-        add_circle2(new circle(new pos(0, 0, 0), (i * 15) + (current_frame), 3, new color(1, 0, 0, 1)));
+        add_circle(new circle(new pos(0, 0, 0), (i * 15) + (current_frame), 3, new color(1, 0, 0, 1)));
     }
     write_frame();
 }
