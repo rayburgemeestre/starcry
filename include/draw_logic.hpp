@@ -238,7 +238,13 @@ public:
                                                ((bg.b * bg_opacity) + (b * fg_opacity)),
                                                0));
                                                */
+        /*
         al_put_pixel(absX, absY, al_map_rgba_f(r, g, b, 0));
+        */
+        al_put_pixel(absX, absY, al_map_rgba_f(bg.r + r,
+                                               bg.g + g,
+                                               bg.b + b,
+                                               0));
     }
 
     template <typename double_type>

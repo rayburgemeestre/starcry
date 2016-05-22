@@ -1,12 +1,10 @@
 #include "primitives.h"
 
-#include <iostream>
 color::color(double r, double g, double b, double a) {
     set_r(r);
     set_g(g);
     set_b(b);
     set_a(a);
-    std::cout << "creating color opbj" << std::endl;
 }
 
 double color::get_r() const { return r_; }
