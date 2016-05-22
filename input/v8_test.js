@@ -4,33 +4,35 @@
 var fps           = 25;
 var max_frames    = 10 * fps; // seconds
 var realtime      = false;
-var scale         = 1;
+var scale         = 2;
 var canvas_w      = 1920;
 var canvas_h      = 1080;
 
-var glob = new Y(1.0);
+var grad = new gradient();
 
 function initialize() {
+    grad.add(0.0, new color(1, 0, 0, 0));
+    grad.add(0.2, new color(0, 0, 1, 0));
+    grad.add(1.0, new color(0, 0, 0, 0));
 }
 
 function next() {
-//    var c = new color(1, 0, 1, 1);
-//    var l = new line(0, 0, 0, 10, 10, 10);
-//    output('v2 = ' + l.x2);
+    var index = current_frame / 250.0;
+    // TODO: get color object working.. 
+    var c = grad.get3(index);
+    var r = c.r;
+    var g = c.g;
+    var b = c.b;
+    var a = c.a;
+    output("r = " + r );
+    var tmp  = new gradient();
+    tmp.add(0.0, new color(r, g, b, a))
+    tmp.add(0.9, new color(r, g, b, a))
+    tmp.add(1.0, new color(0, 0, 0, 0));
 
-//    var radius      = current_frame / 10;
-//    var radius_size = 5.0 + current_frame / 2;
-//    //var s1 = new circle(10, 10, 0, radius, radius_size);
-//    var s2 = new circle(new pos(0, 0, 0), radius, radius_size, new color(1, 0, 1, 1));
-    //add_circle(0, 0, 0, radius, radius_size);
-    //add_circle2(s1);
-//    add_circle2(new circle(new pos(0, 0, 0), radius, radius_size, new color(0, 0, 1, 1)));
-//    add_circle2(new circle(new pos(-10, 0, 0), radius, 2, new color(1, 0, 0, 1)));
-//    add_circle2(new circle(new pos(0, 0, 0), radius, 2, new color(1, 0, 0, 1)));
-//    add_circle2(new circle(new pos(10, 0, 0), radius, 2, new color(1, 0, 0, 1)));
-    for (var i=0; i< 100;i ++) {
-        add_circle(new circle(new pos(0, 0, 0), (i * 15) + (current_frame), 3, new color(1, 0, 0, 1)));
-    }
+    add_circle(new circle(new pos(0, 0, 0), 300, 50, tmp)); 
+
+    add_circle(new circle(new pos(0, 0, 0), current_frame, current_frame / 5., grad)); 
     write_frame();
 }
 

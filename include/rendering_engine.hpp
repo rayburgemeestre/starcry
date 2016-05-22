@@ -124,7 +124,7 @@ public:
         draw_logic_.font(font);
         for (auto shape : shapes) {
             if (shape.type == data::shape_type::circle)
-                draw_logic_.render_circle<double>(shape.x, shape.y, shape.radius, shape.radius_size, shape.r, shape.g, shape.b);
+                draw_logic_.render_circle<double>(shape.x, shape.y, shape.radius, shape.radius_size, shape.gradient_);
             else if (shape.type == data::shape_type::line)
                 draw_logic_.render_line<double>(shape.x, shape.y, shape.x2, shape.y2, shape.radius_size, shape.r, shape.g, shape.b);
             else if (shape.type == data::shape_type::text)

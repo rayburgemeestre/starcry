@@ -216,38 +216,7 @@ struct Y : X
     ~Y() { --instance_count; }
 };
 
-struct pos
-{
-    double x_;
-    double y_;
-    double z_;
-
-    explicit pos(double x, double y, double z) {
-        x_ = x;
-        y_ = y;
-        z_ = z;
-    }
-    double get_x() const { return x_; }
-    double get_y() const { return y_; }
-    double get_z() const { return z_; }
-    void set_x(double x) { x_ = x; }
-    void set_y(double y) { y_ = y; }
-    void set_z(double z) { z_ = z; }
-};
-
-struct shape
-{
-    double x_;
-    double y_;
-    double z_;
-
-    double get_x() const { return x_; }
-    double get_y() const { return y_; }
-    double get_z() const { return z_; }
-    void set_x(double x) { x_ = x; }
-    void set_y(double y) { y_ = y; }
-    void set_z(double z) { z_ = z; }
-};
+#include "primitives.h"
 
 struct line : shape
 {
@@ -272,55 +241,6 @@ struct line : shape
     void set_z2(double z) { z2_ = z; }
 };
 
-struct color
-{
-    double r_;
-    double g_;
-    double b_;
-    double a_;
-
-    explicit color(double r, double g, double b, double a) {
-        set_r(r);
-        set_g(g);
-        set_b(b);
-        set_a(a);
-    }
-
-    double get_r() const { return r_; }
-    double get_g() const { return g_; }
-    double get_b() const { return b_; }
-    double get_a() const { return a_; }
-    void set_r(double r) { r_ = r; }
-    void set_g(double g) { g_ = g; }
-    void set_b(double b) { b_ = b; }
-    void set_a(double a) { a_ = a; }
-};
-
-struct circle : shape
-{
-    double radius_;
-    double radiussize_;
-    color color_;
-
-    explicit circle(pos p, double radius, double radiussize, color c)
-        : color_(c)
-    {
-        set_x(p.get_x());
-        set_y(p.get_y());
-        set_z(p.get_z());
-        set_radius(radius);
-        set_radiussize(radiussize);
-    }
-
-    double get_radius() const { return radius_; }
-    void set_radius(double r) { radius_ = r; }
-    double get_radiussize() const { return radiussize_; }
-    void set_radiussize(double r) { radiussize_ = r; }
-    color get_color() const { return color_; }
-    void set_color(color c) { color_ = c; }
-};
-
-
 int Y::instance_count = 0;
 
 void add_circle(circle circ) {
@@ -331,9 +251,7 @@ void add_circle(circle circ) {
     new_shape.type = data::shape_type::circle;
     new_shape.radius = circ.get_radius();
     new_shape.radius_size = circ.get_radiussize();
-    new_shape.r = circ.get_color().get_r();
-    new_shape.g = circ.get_color().get_g();
-    new_shape.b = circ.get_color().get_b();
+    new_shape.gradient_ = circ.get_gradient().to_data_gradient();
     assistant->the_job.shapes.push_back(new_shape);
 }
 
@@ -399,7 +317,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
             // add circle class
             v8pp::class_<circle> circle_class(context.isolate());
             circle_class
-                .ctor<pos, double, double, color>() // TODO: try point or something
+                .ctor<pos, double, double, gradient>() // TODO: try point or something
                 .set("radius", v8pp::property(&circle::get_radius, &circle::set_radius))
                 .inherit<shape>();
             context.set("circle", circle_class);
@@ -432,6 +350,20 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
                 .set("y", v8pp::property(&pos::get_y, &pos::set_y))
                 .set("z", v8pp::property(&pos::get_z, &pos::set_z));
             context.set("pos", pos_class);
+
+            // add gradient class
+            v8pp::class_<gradient> gradient_class(context.isolate());
+            gradient_class
+                .ctor<>()
+                .set("add", &gradient::add_color)
+                .set("get", &gradient::get)
+                .set("get2", &gradient::get2)
+                .set("get3", &gradient::get3)
+                .set("get_r", &gradient::get_r)
+                .set("get_g", &gradient::get_g)
+                .set("get_b", &gradient::get_b)
+                .set("get_a", &gradient::get_a);
+            context.set("gradient", gradient_class);
 
             v8pp::class_<X> X_class(context.isolate());
             X_class

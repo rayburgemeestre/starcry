@@ -3,6 +3,8 @@
 #include <allegro5/allegro_primitives.h>
 #include <algorithm>
 
+#include "data/gradient.hpp"
+
 static constexpr const auto pi = 3.14159265358979323846;
 
 class coord {
@@ -143,7 +145,7 @@ public:
      */
     template <typename double_type>
     inline void render_circle(double_type circle_x, double_type circle_y, double_type radius, double_type radius_size,
-                               double r, double g, double b
+                               data::gradient gradient_
     ){
         circle_x             = ((circle_x * scale_) + center_x_) - offset_x_;
         circle_y             = ((circle_y * scale_) + center_y_) - offset_y_;
@@ -178,14 +180,14 @@ public:
 
                 double_type diff_from_center = reuse_sqrt ? distance<double_type>(abs_x_left, circle_x, abs_y_top, circle_y) : -1;
 
-                render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_left, abs_y_top, diff_from_center, r, g, b);
+                render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_left, abs_y_top, diff_from_center, gradient_);
 
                 if (rel_y != 0)
-                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_left, abs_y_bottom, diff_from_center, r, g, b);
+                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_left, abs_y_bottom, diff_from_center, gradient_);
                 if (rel_x != 0)
-                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_right, abs_y_top, diff_from_center, r, g, b);
+                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_right, abs_y_top, diff_from_center, gradient_);
                 if (rel_x != 0 && rel_y != 0)
-                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_right, abs_y_bottom, diff_from_center, r, g, b);
+                    render_circle_pixel(radius, radius_size, circle_x, circle_y, abs_x_right, abs_y_bottom, diff_from_center, gradient_);
             }
         }
     }
@@ -199,7 +201,7 @@ public:
 
     template <typename double_type>
     void render_circle_pixel(double_type radius, double_type radiussize, double_type posX, double_type posY, int absX, int absY, double_type diffFromCenter,
-                             double r, double g, double b)
+                             data::gradient gradient_)
     {
         if (absX < 0 || absY < 0 || absX >= static_cast<int>(width_) || absY >= static_cast<int>(height_))
             return;
@@ -225,10 +227,18 @@ public:
 
         auto bg = al_get_pixel(al_get_target_bitmap(), absX, absY);
 
+        auto clr = gradient_.get(Opacity);
+        double &r = clr.r;
+        double &g = clr.g;
+        double &b = clr.b;
+
+        /*
         al_put_pixel(absX, absY, al_map_rgba_f(((bg.r * bg_opacity) + (r * fg_opacity)),
                                                ((bg.g * bg_opacity) + (g * fg_opacity)),
                                                ((bg.b * bg_opacity) + (b * fg_opacity)),
                                                0));
+                                               */
+        al_put_pixel(absX, absY, al_map_rgba_f(r, g, b, 0));
     }
 
     template <typename double_type>

@@ -83,11 +83,12 @@ target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/libv8_nosn
 install (TARGETS starcry DESTINATION bin)
 
 # Test files
+file(GLOB_RECURSE starcry_test_SOURCES "src/primitives/**.cpp")
 file(GLOB TEST_FILES "test/*.cpp" "./libs/v8pp/v8pp/context.cpp" "src/v8_wrapper.cpp")
 # Don't include Main.cpp from src
 file(GLOB MAIN_SRC "src/main.cpp")
 #list(REMOVE_ITEM starcry_SOURCES ${MAIN_SRC})
-add_executable(starcry_tests ${TEST_FILES})
+add_executable(starcry_tests ${TEST_FILES} ${starcry_test_SOURCES})
 # Set link libraries (order matters)
 target_link_libraries(starcry_tests libgtest)
 target_link_libraries(starcry_tests libgmock)

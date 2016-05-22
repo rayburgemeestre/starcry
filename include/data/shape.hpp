@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "data/gradient.hpp"
+
 namespace data{
 
     enum class shape_type {
@@ -27,6 +29,7 @@ namespace data{
         double radius_size;
         std::string text;
         std::string align;
+        gradient gradient_;
     };
 
     inline bool operator==(const shape &lhs, const shape &rhs) {

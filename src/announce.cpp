@@ -27,6 +27,10 @@ namespace data {
             &job::shapes,
             &job::scale
         );
+        caf::announce<gradient>(
+            "gradient",
+            &gradient::colors
+        );
         caf::announce<shape>(
             "shape",
             &shape::x,
@@ -42,7 +46,8 @@ namespace data {
             &shape::radius,
             &shape::radius_size,
             &shape::text,
-            &shape::align
+            &shape::align,
+            &shape::gradient_
         );
         caf::announce<ALLEGRO_COLOR>(
             "ALLEGRO_COLOR",

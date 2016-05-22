@@ -10,7 +10,7 @@ function ctrl_c {
 
 #killall -9 starcry
 
-rm -rf test.h264
+rm -rf output.h264
 
 sleep 0.2
 
@@ -40,7 +40,7 @@ done
 
 sleep 0.2
 
-./starcry -r ${1}1-${1}$j -c 1 -n 1 --dim 2560x1440 --render-window-at 10000 --no-video
+./starcry -r ${1}1-${1}$j -c 1 -n 1 --dim 2560x1440 --no-video input/v8_test.js
 pids="$pids $!"
 
 echo kill -9 $pids
