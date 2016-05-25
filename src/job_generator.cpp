@@ -1,3 +1,8 @@
+/*
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 #include "actors/job_generator.h"
 #include "util/image_splitter.hpp"
 #include "data/job.hpp"
