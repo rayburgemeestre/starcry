@@ -16,6 +16,8 @@
 #include "util/actor_info.hpp"
 #include "util/settings.hpp"
 
+#include "webserver.h"
+
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/option.hpp>
 #include <boost/program_options/variables_map.hpp>
@@ -177,6 +179,7 @@ int main(int argc, char *argv[]) {
         s->send(stdin_reader_, start::value);
     }
 
+    webserver ws;
     while (renderer_info.running()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         //s->send(renderer_, show_stats::value);

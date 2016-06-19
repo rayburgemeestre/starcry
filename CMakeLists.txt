@@ -10,12 +10,22 @@ if (EXISTS "/etc/centos-release")
 endif (EXISTS "/etc/centos-release")
 
 find_package(Allegro5 REQUIRED)
-find_package(Boost 1.47.0 REQUIRED program_options system)
+#find_package(Boost 1.47.0 REQUIRED program_options system)
 find_package(CAF REQUIRED core io)
 set (V8_DIR "libs/v8pp/v8/")
 find_package(V8 REQUIRED)
 find_package(FFMPEG)
 find_library(benchmarklib_LIBRARIES benchmarklib REQUIRED)
+
+#crow
+if (MSVC)
+    set(Boost_USE_STATIC_LIBS "On")
+    find_package( Boost 1.52 COMPONENTS program_options system date_time filesystem system thread regex REQUIRED )
+else()
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++1y")
+    find_package( Boost 1.52 COMPONENTS program_options system date_time filesystem system thread REQUIRED )
+endif()
+
 
 message(STATUS ${benchmarklib_LIBRARIES})
 
@@ -36,7 +46,7 @@ find_package( Threads )
 #add_definitions(-O0 -g -Wall -funsigned-char -std=c++14)
 add_definitions(-O3 -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic)
 
-include_directories("./include/" "./libs/v8pp/v8/include" "./libs/v8pp/" "${V8_INCLUDE_DIR}", "./libs/allegro5/include/")
+include_directories("./include/" "./libs/v8pp/v8/include" "./libs/v8pp/" "${V8_INCLUDE_DIR}", "./libs/allegro5/include/" "./libs/crow/include")
 if (EXISTS "/etc/centos-release")
     include_directories("/projects/boost_1_60_0/")
 endif (EXISTS "/etc/centos-release")

@@ -115,6 +115,7 @@ Below are the list of commands I used to add submodules.
 - git submodule add https://github.com/liballeg/allegro5.git libs/allegro5
 - git submodule add https://github.com/pmed/v8pp libs/v8pp
 - git submodule add https://github.com/USCiLab/cereal libs/cereal
+- git submodule add https://github.com/ipkn/crow libs/crow
 
 You can have git check them all out with the `git submodule update --init --recursive`.
 
@@ -260,6 +261,22 @@ Luckily it builds just fine.
 - `./configure --cxx=/usr/local/bin/c++ --enable-shared --disable-swresample --enable-libx264 --enable-gpl`
 - `make -j 4`
 - `make install`
+
+### crow (webserver)
+
+I needed:
+
+    sudo apt-get install libboost-date-time-dev libboost-filesystem-dev libboost-thread-dev
+
+Probably, optional (i ignored the SSL error):
+
+    trigen@zenbook:/projects/starcry[master]> apt-file search openssl/conf.h
+    libssl-dev: /usr/include/openssl/conf.h
+    libwolfssl-dev: /usr/include/cyassl/openssl/conf.h
+    libwolfssl-dev: /usr/include/wolfssl/openssl/conf.h
+
+- cmake .
+- make -j 8
 
 ## Quick start
 
