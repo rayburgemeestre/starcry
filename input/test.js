@@ -11,10 +11,18 @@ var max_frames    = 10 * fps; // seconds
 var realtime      = true;
 var seconds       = 0;
 var begin         = +new Date();
+var canvas_w = 1920;
+var canvas_h = 1080;
+var scale = 5;
 
 function next() {
-    var diff = +new Date() - begin;
-    seconds = (diff / 1000.0) % 60;
-    add_circle(new circle(new pos(0, 0, 0), seconds, 5.0, new color(1, 1, 1, 0)));
+    //var diff = +new Date() - begin;
+    //seconds = (diff / 1000.0) % 60;
+    seconds = current_frame;
+    var tmp = new gradient();
+    tmp.add(0.0, new color(1, 0, 0, 1))
+    tmp.add(1.0, new color(0, 1, 0, 0));
+    var test = new circle(new pos(0, 0, 0), seconds, 5.0, tmp);
+    add_circle(test);
     write_frame();
 }

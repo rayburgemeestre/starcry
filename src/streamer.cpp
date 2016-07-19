@@ -36,10 +36,11 @@ std::optional<size_t> last_frame_streamed;
 
 
 // TODO; add state to streamer object
-
-output_action<ffmpeg_h264_encode> ffmpeg;
-output_action<allegro5_window> allegro5;
-output_aggregate outputs(ffmpeg, allegro5);
+// TODO; refactor this to regular objects.. this doesn't make sense..
+// as a temporary workaround putting stuff inside a unique_ptr...
+unique_ptr<output_action<ffmpeg_h264_encode>> ffmpeg;
+unique_ptr<output_action<allegro5_window>> allegro5;
+unique_ptr<output_aggregate> outputs;
 
 //#define DEBUG_FRAMES
 
@@ -70,19 +71,19 @@ bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chu
         stringstream ss;
         static int i = 1000;
         ss << "frame" << i++;
-        rendering_engine eng;
-        auto bmp = eng.unserialize_bitmap(pixels_all, 1280, 720);
-        eng.write_image(bmp, ss.str());
-        al_destroy_bitmap(bmp);
+        //rendering_engine eng;
+        //auto bmp = eng.unserialize_bitmap(pixels_all, 1280, 720);
+        //eng.write_image(bmp, ss.str());
+        //al_destroy_bitmap(bmp);
 #endif
-        outputs.add_frame(canvas_w, canvas_h, pixels_all); // encoder has it's own frameNumber variable.
+        outputs->add_frame(canvas_w, canvas_h, pixels_all); // encoder has it's own frameNumber variable.
 
         fake_buffer.erase(std::remove_if(fake_buffer.begin(),
                                          fake_buffer.end(),
                                          frame_number_matches),
                           fake_buffer.end());
         if (last_frame_streamed && *last_frame_streamed == frame_number) {
-            outputs.finalize();
+            outputs->finalize();
             aout(self) << "streamer completed frames: " << current_frame2 << ", with FPS: " << (1000.0 / counter2.mean())
                        << " +/- " << counter2.stderr() << endl;
             self->quit(exit_reason::user_shutdown);
@@ -96,12 +97,15 @@ static size_t min_items_in_streamer_queue = 10;
 static size_t max_items_in_streamer_queue = 20;
 
 behavior streamer(event_based_actor* self, const caf::actor &job_storage, int render_window_at, string output_file, uint32_t settings) {
+    ffmpeg   = std::make_unique<output_action<ffmpeg_h264_encode>>();
+    allegro5 = std::make_unique<output_action<allegro5_window>>(self->system());
+    outputs  = std::make_unique<output_aggregate>(*ffmpeg.get(), *allegro5.get());
     if (bitset<32>(settings).test(0)) {
-        ffmpeg.enable(true);
-        ffmpeg.set_filename(output_file);
+        ffmpeg->enable(true);
+        ffmpeg->set_filename(output_file);
     }
     if (bitset<32>(settings).test(1)) {
-        allegro5.enable(true);
+        allegro5->enable(true);
     }
 
     counter2.setDescription("fps");
@@ -111,7 +115,7 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
             if (job.last_frame)
                 last_frame_streamed = std::make_optional(job.frame_number);
 
-            outputs.initialize(job.canvas_w, job.canvas_h, self, render_window_at);
+            outputs->initialize(job.canvas_w, job.canvas_h, self, render_window_at);
 
             fake_buffer.push_back(make_tuple(job.frame_number, job.chunk, job.num_chunks, job.last_frame, pixels)); // needs to become an object later
             while (process_buffer(self, current_frame2, job.num_chunks, job.canvas_w, job.canvas_h))
@@ -124,6 +128,9 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
             }
 
             self->send(job_storage, del_job::value, job.job_number);
+        },
+        [=](start, caf::actor &) {
+            aout(self) << "ERROR: streamer no longer responding to start atom." << endl;
         },
         [=](need_frames) {
             return make_message(need_frames::value, self->mailbox().count() < min_items_in_streamer_queue);

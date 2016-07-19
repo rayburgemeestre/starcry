@@ -31,16 +31,15 @@ using show_stats    = atom_constant<atom("show_stats")>;
 
 #include <regex>
 #include <bitset>
-#include "announce.h"
 
 //#include "caf/io/max_msg_size.hpp"
 //caf::io::max_msg_size(std::numeric_limits<uint32_t>::max());
 
-#include "caf/io/remote_actor.hpp"
+#include "caf/io/middleman.hpp"
 
 int main(int argc, char *argv[]) {
-
-    data::announce();
+    actor_system_config cfg;
+    actor_system system(cfg);
 
     //auto max_thoughput_per_run = 1000;
     //set_scheduler(std::thread::hardware_concurrency(), max_thoughput_per_run);
@@ -100,11 +99,9 @@ int main(int argc, char *argv[]) {
         streamer_settings.set(streamer_ffmpeg, true);
     }
     if (vm.count("gui")) {
-        try {
-            auto client = io::remote_actor("127.0.0.1", conf.user.gui_port);
-        }
-        catch (network_error &err) {
-            if (0 != system((std::string(argv[0]) + " --spawn-gui &").c_str())) {
+        auto client = system.middleman().remote_actor("127.0.0.1", conf.user.gui_port);
+        if (!client) {
+            if (0 != ::system((std::string(argv[0]) + " --spawn-gui &").c_str())) {
                 cout << "System call to --spawn-gui failed.." << endl;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -115,9 +112,7 @@ int main(int argc, char *argv[]) {
     }
     if (vm.count("spawn-gui")) {
         cout << "launching render output window" << endl;
-        scoped_actor s;
-        auto w = spawn(render_window, conf.user.gui_port);
-        s->await_all_other_actors_done();
+        auto w = system.spawn(render_window, conf.user.gui_port);
         return 0;
     }
 
@@ -140,10 +135,11 @@ int main(int argc, char *argv[]) {
     if (num_workers) cout << "num_workers=" << num_workers << endl;
 
     if (use_remote_workers && worker_port) {
-        scoped_actor s;
-        auto w = spawn(worker, worker_port, use_remote_workers);
-        s->await_all_other_actors_done();
-        return 0;
+        // TODO: caf015
+        // TODO: fix, worker needs to become specialized, one will do -> message,
+        //   the other will send back to renderer somehow..
+        //auto w = system.spawn(worker, worker_port, use_remote_workers);
+        //return 0;
     }
     uint32_t canvas_w = 480;
     uint32_t canvas_h = 320;
@@ -157,33 +153,39 @@ int main(int argc, char *argv[]) {
     }
     bool use_stdin  = vm.count("stdin");
 
-    scoped_actor s;
-    auto jobstorage = spawn(job_storage);
-    auto generator  = spawn<detached>(job_generator, jobstorage, script, canvas_w, canvas_h, use_stdin);
-    auto streamer_  = spawn<priority_aware>(streamer, jobstorage, conf.user.gui_port, output_file, streamer_settings.to_ulong());
-    auto renderer_  = spawn(renderer, jobstorage, streamer_, range_begin, range_end);
+    scoped_actor s{system};
+    auto jobstorage = system.spawn(job_storage);
+    auto generator  = system.spawn<detached>(job_generator, jobstorage, script, canvas_w, canvas_h, use_stdin);
+    auto streamer_  = system.spawn<priority_aware>(streamer, jobstorage, conf.user.gui_port, output_file, streamer_settings.to_ulong());
+    auto renderer_  = system.spawn(renderer, jobstorage, streamer_, range_begin, range_end);
 
     // cascade exit from renderer -> job generator -> job storage
-    generator->link_to(renderer_);
-    jobstorage->link_to(generator);
-    streamer_->link_to(renderer_);
+    // TODO: caf015
+// ???
+//    generator->link_to(renderer_);
+//    jobstorage->link_to(generator);
+//    streamer_->link_to(renderer_);
 
-    actor_info renderer_info{renderer_};
+//???
+//    actor_info renderer_info{renderer_};
     s->send(generator, start::value, num_chunks);
     s->send(renderer_, start::value, num_workers);
     s->send(streamer_, start::value, renderer_);
 
     if (use_stdin) {
-        auto stdin_reader_ = spawn(stdin_reader, generator, jobstorage);
-        stdin_reader_->link_to(renderer_);
+        auto stdin_reader_ = system.spawn(stdin_reader, generator, jobstorage);
+        // TODO: caf015
+// ???
+//        stdin_reader_->link_to(renderer_);
         s->send(stdin_reader_, start::value);
     }
 
     webserver ws;
-    while (renderer_info.running()) {
+    while (true) { // while renderer is alive?
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         //s->send(renderer_, show_stats::value);
-        s->send(message_priority::high, streamer_, show_stats::value);
+        // TODO: caf015
+        s->send(/*message_priority::high, */streamer_, show_stats::value);
     }
-    s->await_all_other_actors_done();
+    //s->await_all_other_actors_done();
 }

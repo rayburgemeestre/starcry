@@ -51,4 +51,9 @@ namespace data{
                                 sizeof(gradient));
     }
 
+    template<class Processor>
+    void serialize(Processor &proc, data::gradient &x, const unsigned int) {
+        proc & x.colors;
+    }
+
 }

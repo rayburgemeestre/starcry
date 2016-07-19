@@ -73,39 +73,41 @@ behavior render_loop(event_based_actor* self) {
     };
 }
 
-uint16_t bind_render_window(event_based_actor* self, uint16_t port) {
-    uint16_t bound_port = 0;
-    try {
-        // first try to bind to specified port
-        bound_port = io::publish(self, port, nullptr, true);
-        cout << "succesfully bound to previous port " << port << endl;
-    }
-    catch (bind_failure &err) {
-        cout << "could not publish ourselves on the previously known port." << endl;
-        // try to bind to an available (unprivileged) port
-        try {
-            bound_port = io::publish(self, 0, nullptr, true);
-        }
-        catch (bind_failure &err) {
-            cout << "could not publish ourselves on a new port either." << endl;
-        }
-    }
-    return bound_port;
-
-}
+// TODO: caf015
+//uint16_t bind_render_window(event_based_actor* self, uint16_t port) {
+//    uint16_t bound_port = 0;
+//    // first try to bind to specified port
+//    auto port_ = self->system().middleman().publish(self, port, nullptr, true);
+//    if (!port_) {
+//        cout << "could not publish ourselves on the previously known port." << endl;
+//        auto port_ = self->system().middleman().publish(self, 0, nullptr, true);
+//        if (!port_) {
+//            cout << "could not publish ourselves on a new port either." << endl;
+//        } else {
+//            bound_port = *port_;
+//        }
+//    }
+//    else {
+//        bound_port = *port_;
+//        cout << "succesfully bound to previous port " << bound_port << endl;
+//    }
+//    return bound_port;
+//
+//}
 
 behavior render_window(event_based_actor* self, uint16_t port) {
-    uint16_t bound_port = bind_render_window(self, port);
-    if (bound_port == 0) {
-        self->quit(exit_reason::user_shutdown);
-    }
-    cout << "publishing GUI on port: " << bound_port << endl;
+// TODO: caf015
+//    uint16_t bound_port = bind_render_window(self, port);
+//    if (bound_port == 0) {
+//        self->quit(exit_reason::user_shutdown);
+//    }
+//    cout << "publishing GUI on port: " << bound_port << endl;
+//
+//    settings conf;
+//    conf.user.gui_port = bound_port;
+//    conf.save();
 
-    settings conf;
-    conf.user.gui_port = bound_port;
-    conf.save();
-
-    auto renderloop = spawn(render_loop);
+    auto renderloop = self->spawn(render_loop);
     self->link_to(renderloop);
     data::pixel_data data;
     self->send(renderloop, render::value);
@@ -115,7 +117,7 @@ behavior render_window(event_based_actor* self, uint16_t port) {
             self->send(renderloop, width, height, data);
             return make_message();
         },
-        on("ping") >> [](string) -> message {
+        [=](std::string ping) -> message {
             return make_message("pong");
         }
     };

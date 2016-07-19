@@ -485,7 +485,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
             aout(self) << line << endl;
         },
         [=](next_frame) {
-            self->sync_send(job_storage, num_jobs::value).then(
+            self->request(job_storage, std::chrono::seconds(10), num_jobs::value).then(
                 [=](num_jobs, unsigned long numjobs) {
                     // Renderer has some catching up to do
                     if (numjobs >= desired_num_jobs_queued) {

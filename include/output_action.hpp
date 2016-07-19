@@ -5,6 +5,10 @@
  */
 #include "allegro5/allegro.h"
 
+namespace caf {
+    class actor_system;
+}
+
 template <class output>
 class output_action
 {
@@ -14,6 +18,8 @@ private:
 
 public:
     output_action() : enabled_(false) {}
+
+    output_action(caf::actor_system &x) : enabled_(false), output_(x) {}
 
     void enable(bool enable) {
         enabled_ = enable;

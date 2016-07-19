@@ -7,4 +7,9 @@
 
 #include "common.h"
 
-behavior render_window(event_based_actor* self, uint16_t port);
+namespace caf {
+    class event_based_actor;
+    class actor_system;
+}
+
+behavior render_window(caf::event_based_actor* self, uint16_t port);

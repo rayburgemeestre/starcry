@@ -27,7 +27,7 @@ behavior stdin_reader(event_based_actor *self, const caf::actor &job_generator, 
             self->send(self, read_stdin::value);
         },
         [=](read_stdin) {
-            self->sync_send(job_storage, num_jobs::value).then(
+            self->request(job_storage, std::chrono::seconds(10), num_jobs::value).then(
                 [=](num_jobs, unsigned long numjobs) {
                     if (numjobs >= desired_num_jobs_queued) {
                         this_thread::sleep_for(chrono::milliseconds(100));
