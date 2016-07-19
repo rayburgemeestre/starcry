@@ -12,7 +12,7 @@
 
 using render                = atom_constant<atom("render    ")>;
 ALLEGRO_DISPLAY *display    = NULL;
-struct data::pixel_data data_;
+struct data::pixel_data2 data_;
 
 uint32_t width_             = 0;
 uint32_t height_            = 0;
@@ -41,7 +41,7 @@ behavior render_loop(event_based_actor* self) {
             al_clear_to_color(al_map_rgb_f(0, 0, 0));
             rendering_engine re;
             if (data_.pixels.size()) {
-                auto bmp = re.unserialize_bitmap(data_.pixels, width_, height_);
+                auto bmp = re.unserialize_bitmap2(data_.pixels, width_, height_);
                 al_draw_scaled_bitmap(bmp,
                                       0, 0, al_get_bitmap_width(bmp), al_get_bitmap_height(bmp),
                                       0, 0, al_get_display_width(display), al_get_display_height(display),
@@ -65,7 +65,7 @@ behavior render_loop(event_based_actor* self) {
             std::this_thread::sleep_for(0.2s);
             self->send(self, render::value);
         },
-        [=](uint32_t width, uint32_t height, struct data::pixel_data data) {
+        [=](uint32_t width, uint32_t height, data::pixel_data2 data) {
             std::swap(width_, width);
             std::swap(height_, height);
             std::swap(data_.pixels, data.pixels);
@@ -73,47 +73,45 @@ behavior render_loop(event_based_actor* self) {
     };
 }
 
-// TODO: caf015
-//uint16_t bind_render_window(event_based_actor* self, uint16_t port) {
-//    uint16_t bound_port = 0;
-//    // first try to bind to specified port
-//    auto port_ = self->system().middleman().publish(self, port, nullptr, true);
-//    if (!port_) {
-//        cout << "could not publish ourselves on the previously known port." << endl;
-//        auto port_ = self->system().middleman().publish(self, 0, nullptr, true);
-//        if (!port_) {
-//            cout << "could not publish ourselves on a new port either." << endl;
-//        } else {
-//            bound_port = *port_;
-//        }
-//    }
-//    else {
-//        bound_port = *port_;
-//        cout << "succesfully bound to previous port " << bound_port << endl;
-//    }
-//    return bound_port;
-//
-//}
+uint16_t bind_render_window(event_based_actor* self, uint16_t port) {
+    uint16_t bound_port = 0;
+    // first try to bind to specified port
+    auto port_ = self->system().middleman().publish(static_cast<actor>(self), port, nullptr, true);
+    if (!port_) {
+        cout << "could not publish ourselves on the previously known port." << endl;
+        auto port_ = self->system().middleman().publish(static_cast<actor>(self), 0, nullptr, true);
+        if (!port_) {
+            cout << "could not publish ourselves on a new port either." << endl;
+        } else {
+            bound_port = *port_;
+        }
+    }
+    else {
+        bound_port = *port_;
+        cout << "succesfully bound to previous port " << bound_port << endl;
+    }
+    return bound_port;
+
+}
 
 behavior render_window(event_based_actor* self, uint16_t port) {
-// TODO: caf015
-//    uint16_t bound_port = bind_render_window(self, port);
-//    if (bound_port == 0) {
-//        self->quit(exit_reason::user_shutdown);
-//    }
-//    cout << "publishing GUI on port: " << bound_port << endl;
-//
-//    settings conf;
-//    conf.user.gui_port = bound_port;
-//    conf.save();
+    uint16_t bound_port = bind_render_window(self, port);
+    if (bound_port == 0) {
+        self->quit(exit_reason::user_shutdown);
+    }
+    cout << "publishing GUI on port: " << bound_port << endl;
+
+    settings conf;
+    conf.user.gui_port = bound_port;
+    conf.save();
 
     auto renderloop = self->spawn(render_loop);
     self->link_to(renderloop);
-    data::pixel_data data;
+    data::pixel_data2 data;
     self->send(renderloop, render::value);
 
     return {
-        [=](uint32_t width, uint32_t height, struct data::pixel_data data) -> message {
+        [=](uint32_t width, uint32_t height, data::pixel_data2 data) -> message {
             self->send(renderloop, width, height, data);
             return make_message();
         },

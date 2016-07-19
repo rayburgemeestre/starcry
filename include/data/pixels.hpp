@@ -20,14 +20,23 @@ namespace data {
     }
 
     template <class Processor>
-    void serialize(Processor& proc, data::pixel_data & x, const unsigned int) {
+    void serialize(Processor& proc, struct data::pixel_data & x, const unsigned int) {
+        proc & x.pixels;
+    }
+
+    struct pixel_data2 {
+        std::vector<uint32_t> pixels;
+    };
+
+    template <class Processor>
+    void serialize(Processor& proc, struct data::pixel_data2 & x, const unsigned int) {
         proc & x.pixels;
     }
 
 }
 
 template <class Processor>
-void serialize(Processor& proc, struct ALLEGRO_COLOR & x, const unsigned int) {
+void serialize(Processor& proc, ::ALLEGRO_COLOR & x, const unsigned int) {
     proc & x.r;
     proc & x.g;
     proc & x.b;

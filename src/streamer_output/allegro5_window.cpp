@@ -23,9 +23,9 @@ void allegro5_window::initialize(uint32_t canvas_w, uint32_t canvas_h, event_bas
     client_ = std::move(make_unique<caf::actor>(*tmp));
 }
 
-void allegro5_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ALLEGRO_COLOR> &pixels)
+void allegro5_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels)
 {
-    struct data::pixel_data dat;
+    struct data::pixel_data2 dat;
 
     dat.pixels = pixels;
     rendering_engine re;
@@ -34,11 +34,7 @@ void allegro5_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vecto
     //    // no-op
     //});
 
-    // for now send only every 10th frame to avoid slowness
-    static int i = 0; i++;
-    if (i % 10 == 0) {
-        self_->send(*client_, canvas_w, canvas_h, dat);
-    }
+    self_->send(*client_, canvas_w, canvas_h, dat);
 }
 
 void allegro5_window::finalize()

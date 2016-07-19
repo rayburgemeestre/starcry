@@ -206,6 +206,54 @@ public:
         return;
     }
 
+
+    // new "faster" serialize / unserialize
+
+    template <typename image>
+    vector<uint32_t> serialize_bitmap2(image bitmap, uint32_t width, uint32_t height) {
+        vector<uint32_t> pixels(width * height, 0);
+        al_lock_bitmap(bitmap, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_READONLY);
+        char *data = (char *)bitmap->locked_region.data;
+        size_t index = 0;
+        for (uint32_t y=0; y<height; y++) {
+            for (uint32_t x=0; x<width; x++) {
+                pixels[index] = *(uint32_t *)(data);
+                data += 4;
+                index++;
+            }
+        }
+        al_unlock_bitmap(bitmap);
+        return pixels; // RVO
+    }
+
+    ALLEGRO_BITMAP * unserialize_bitmap2(vector<uint32_t> &pixels, uint32_t width, uint32_t height) {
+        ALLEGRO_BITMAP *bitmap = al_create_bitmap(width, height);
+        auto old_bmp = al_get_target_bitmap();
+        al_set_target_bitmap(bitmap);
+        al_lock_bitmap(bitmap, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
+        unserialize_bitmap2_(pixels, width, height);
+        al_unlock_bitmap(bitmap);
+        // TODO: do this with RAII
+        al_set_target_bitmap(old_bmp);
+        return bitmap;
+    }
+
+    inline void unserialize_bitmap2_(vector<uint32_t> &pixels, uint32_t width, uint32_t height) {
+        ALLEGRO_COLOR color{0};
+        size_t index = 0;
+        for (uint32_t y = 0; y < height; y++) {
+            for (uint32_t x = 0; x < width; x++) {
+                auto _gp_pixel = pixels[index++];
+                _AL_MAP_RGBA(color, (_gp_pixel & 0x00FF0000) >> 16,
+                                    (_gp_pixel & 0x0000FF00) >>  8,
+                                    (_gp_pixel & 0x000000FF) >>  0,
+                                    (_gp_pixel & 0xFF000000) >> 24);
+                al_put_pixel(x, y, color);
+            }
+        }
+        return;
+    }
+
     void run_display_function(std::function<void(ALLEGRO_DISPLAY *)> func) {
         std::unique_lock<std::mutex> lock(m);
         func(display);

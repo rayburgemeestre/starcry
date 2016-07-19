@@ -20,7 +20,7 @@ public:
     allegro5_window(actor_system &system);
 
     void initialize(uint32_t canvas_w, uint32_t canvas_h, caf::event_based_actor* self, int port);
-    void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ALLEGRO_COLOR> &pixels);
+    void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels);
     void finalize();
 
 private:

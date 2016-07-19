@@ -32,16 +32,24 @@
 	* @param c			struct that contains width and height for video
 	* @param frame		video struct that contains pixels in YUV / YCrCb.
 	*/
-void transfer_pixels(std::vector<ALLEGRO_COLOR> &pixels, AVCodecContext * c, AVFrame * frame)
+
+#include "allegro5/allegro.h"
+#include "allegro5/internal/aintern_pixels.h"
+void transfer_pixels(std::vector<uint32_t> &pixels, AVCodecContext * c, AVFrame * frame)
 {
+    ALLEGRO_COLOR color{0};
 	/* Y, Cb and Cr */
 	size_t index = 0;
 	for(int y=0;y<c->height;y++) {
 		for(int x=0;x<c->width;x++) {
-			ALLEGRO_COLOR &currentPixel(pixels[index++]);
-			float R = currentPixel.r * 255;
-			float G = currentPixel.g * 255;
-			float B = currentPixel.b * 255;
+			uint32_t &_gp_pixel(pixels[index++]);
+            _AL_MAP_RGBA(color, (_gp_pixel & 0x00FF0000) >> 16,
+                         (_gp_pixel & 0x0000FF00) >>  8,
+                         (_gp_pixel & 0x000000FF) >>  0,
+                         (_gp_pixel & 0xFF000000) >> 24);
+			float R = color.r * 255;
+			float G = color.g * 255;
+			float B = color.b * 255;
 
 			float Y = (0.257 * R) + (0.504 * G) + (0.098 * B) + 16;
 			float Cb = (-0.148 * R) - (0.291 * G) + (0.439 * B) + 128;
@@ -131,7 +139,7 @@ void ffmpeg_h264_encode::initialize(uint32_t canvas_w, uint32_t canvas_h, caf::e
 //    timer->start();
 }
 
-void ffmpeg_h264_encode::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ALLEGRO_COLOR> &pixels) {
+void ffmpeg_h264_encode::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels) {
 
     transfer_pixels(pixels, c, frame);
 

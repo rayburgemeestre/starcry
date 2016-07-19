@@ -18,6 +18,8 @@ struct worker_data
     uint32_t height                     = 0;
 };
 
-behavior worker(caf::stateful_actor<worker_data> * self, const caf::actor &renderer, size_t worker_num, bool remote);
+behavior worker(caf::stateful_actor<worker_data> * self, size_t worker_num);
+
+behavior remote_worker(caf::stateful_actor<worker_data> * self, size_t worker_num);
 
 behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer, int range_begin, int range_end);

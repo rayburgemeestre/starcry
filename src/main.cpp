@@ -37,8 +37,17 @@ using show_stats    = atom_constant<atom("show_stats")>;
 
 #include "caf/io/middleman.hpp"
 
+#include "data/pixels.hpp"
+
 int main(int argc, char *argv[]) {
     actor_system_config cfg;
+
+    // TODO: apparently, I still need to announce :-)
+    cfg.add_message_type<data::pixel_data>("data::pixel_data");
+    cfg.add_message_type<data::pixel_data2>("data::pixel_data2");
+
+    cfg.load<io::middleman>();
+
     actor_system system(cfg);
 
     //auto max_thoughput_per_run = 1000;
@@ -135,11 +144,8 @@ int main(int argc, char *argv[]) {
     if (num_workers) cout << "num_workers=" << num_workers << endl;
 
     if (use_remote_workers && worker_port) {
-        // TODO: caf015
-        // TODO: fix, worker needs to become specialized, one will do -> message,
-        //   the other will send back to renderer somehow..
-        //auto w = system.spawn(worker, worker_port, use_remote_workers);
-        //return 0;
+        auto w = system.spawn(remote_worker, worker_port);
+        return 0;
     }
     uint32_t canvas_w = 480;
     uint32_t canvas_h = 320;
@@ -170,7 +176,6 @@ int main(int argc, char *argv[]) {
 //    actor_info renderer_info{renderer_};
     s->send(generator, start::value, num_chunks);
     s->send(renderer_, start::value, num_workers);
-    s->send(streamer_, start::value, renderer_);
 
     if (use_stdin) {
         auto stdin_reader_ = system.spawn(stdin_reader, generator, jobstorage);

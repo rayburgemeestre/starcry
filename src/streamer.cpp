@@ -31,7 +31,7 @@ MeasureInterval &counter2 = static_cast<MeasureInterval &>(*benchmark_class2.get
 size_t current_frame2 = 0; // initialize with a start ?
 
 using namespace std;
-vector<tuple<size_t,size_t,size_t,bool, vector<ALLEGRO_COLOR>>> fake_buffer, matches;
+vector<tuple<size_t,size_t,size_t,bool, vector<uint32_t>>> fake_buffer, matches;
 std::optional<size_t> last_frame_streamed;
 
 
@@ -61,7 +61,7 @@ bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chu
         sort(matches.begin(), matches.end(), sort_by_chunk);
 
         // we split the image horizontally so we can just concat all pixels here
-        vector<ALLEGRO_COLOR> pixels_all;
+        vector<uint32_t> pixels_all;
         for (auto &tpl : matches) {
             pixels_all.insert(pixels_all.end(), std::get<4>(tpl).begin(), std::get<4>(tpl).end() );
         }
@@ -111,7 +111,7 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
     counter2.setDescription("fps");
     counter2.startHistogramAtZero(true);
     return {
-        [=](render_frame, struct data::job &job, vector<ALLEGRO_COLOR> &pixels, const caf::actor &renderer) {
+        [=](render_frame, struct data::job &job, vector<uint32_t> &pixels, const caf::actor &renderer) {
             if (job.last_frame)
                 last_frame_streamed = std::make_optional(job.frame_number);
 

@@ -28,23 +28,10 @@ using render_frame         = atom_constant<atom("render_fra")>;
 
 size_t rendered_frame = 0;
 
-behavior worker(caf::stateful_actor<worker_data> * self, const caf::actor &renderer, size_t worker_num, bool remote) {
-    self->state.worker_num = worker_num;
-// TODO: caf015
-//    if (remote) {
-//        rendering_engine engine;
-//        engine.initialize();
-//        aout(self) << "worker publishing myself on port: " << worker_num << endl;
-//        auto p = self->system().middleman().publish(self, worker_num);
-//        if (!p) {
-//            aout(self) << "worker publishing FAILED..: " << self->system().render(p.error()) << endl;
-//        }
-//        else if (*p != worker_num) {
-//            aout(self) << "worker publishing FAILED.." << endl;
-//        }
-//    }
+template <typename T>
+behavior create_worker_behavior(T self) {
     return {
-        [=](get_job, struct data::job j) {
+        [=](get_job, struct data::job j) -> message {
             // make sure our bitmap is of the correct size.
             if ((self->state.width == 0 && self->state.height == 0) || // not initialized
                 (self->state.width != j.width || self->state.height != j.height) || // changed since previous
@@ -65,12 +52,33 @@ behavior worker(caf::stateful_actor<worker_data> * self, const caf::actor &rende
 #endif
             self->state.engine.render(self->state.bitmap, j.shapes, j.offset_x, j.offset_y, j.canvas_w, j.canvas_h, j.scale, ss.str());
 
-            data::pixel_data dat;
-            dat.pixels = self->state.engine.serialize_bitmap(self->state.bitmap, j.width, j.height);
+            data::pixel_data2 dat;
+            dat.pixels = self->state.engine.serialize_bitmap2(self->state.bitmap, j.width, j.height);
 
-            self->send(renderer, ready::value, j, dat);
+            //self->send(renderer, ready::value, j, dat);
+            return make_message(ready::value, j, dat);
         }
     };
+}
+
+behavior remote_worker(caf::stateful_actor<worker_data> * self, size_t worker_num) {
+    self->state.worker_num = worker_num;
+    rendering_engine engine;
+    engine.initialize();
+    aout(self) << "worker publishing myself on port: " << worker_num << endl;
+    auto p = self->system().middleman().publish(static_cast<actor>(self), worker_num);
+    if (!p) {
+        aout(self) << "worker publishing FAILED..: " << self->system().render(p.error()) << endl;
+    }
+    else if (*p != worker_num) {
+        aout(self) << "worker publishing FAILED.." << endl;
+    }
+    return create_worker_behavior(self);
+}
+
+behavior worker(caf::stateful_actor<worker_data> * self, size_t worker_num) {
+    self->state.worker_num = worker_num;
+    return create_worker_behavior(self);
 }
 
 // move to class data
@@ -86,7 +94,7 @@ MeasureInterval &counter = static_cast<MeasureInterval &>(*benchmark_class.get()
 //    rendering_engine engine;
 //};
 
-map<size_t, vector<ALLEGRO_COLOR>> pixel_store;
+map<size_t, vector<uint32_t>> pixel_store;
 // TODO: need class data...
 bool rendering_active_ = true;
 size_t num_workers_ = 0;
@@ -103,19 +111,18 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
             aout(self) << "renderer started, num_workers = " << num_workers << endl;
             auto worker_factory = [&]() -> actor {
                 static size_t worker_num = range_begin;
-// TODO: caf015
-//                if (range_begin != 0) {
-//                    aout(self) << "renderer connecting to worker on port: " << worker_num << endl;
-//                    auto p = self->system().middleman().remote_actor("127.0.0.1", worker_num++);
-//                    if (!p) {
-//                        aout(self) << "spawning remote actor failed: " << self->system().render(p.error()) << endl;
-//                    }
-//                    return *p;
-//                }
-//                else {
+                if (range_begin != 0) {
+                    aout(self) << "renderer connecting to worker on port: " << worker_num << endl;
+                    auto p = self->system().middleman().remote_actor("127.0.0.1", worker_num++);
+                    if (!p) {
+                        aout(self) << "spawning remote actor failed: " << self->system().render(p.error()) << endl;
+                    }
+                    return *p;
+                }
+                else {
                     aout(self) << "renderer spawning own worker" << endl;
-                    return self->spawn(worker, self, worker_num++, false);
-//                }
+                    return self->spawn(worker, worker_num++);
+                }
             };
             pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin())));
 
@@ -157,7 +164,7 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                 }
             );
         },
-        [=](ready, struct data::job j, data::pixel_data pixeldat) {
+        [=](ready, struct data::job j, data::pixel_data2 pixeldat) {
             pixel_store[j.job_number] = pixeldat.pixels;
             auto send_to_streamer = [&](struct data::job &job) {
                 counter.measure();
