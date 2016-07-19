@@ -23,18 +23,21 @@ void allegro5_window::initialize(uint32_t canvas_w, uint32_t canvas_h, event_bas
     client_ = std::move(make_unique<caf::actor>(*tmp));
 }
 
+volatile bool frame_in_transit = false;
 void allegro5_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels)
 {
-    struct data::pixel_data2 dat;
-
-    dat.pixels = pixels;
-    rendering_engine re;
-    // TODO: make non-blocking w/frame skipping so streamer won't slow things down
-    //self_->sync_send(client_, canvas_w, canvas_h, dat).then([](){
-    //    // no-op
-    //});
-
-    self_->send(*client_, canvas_w, canvas_h, dat);
+    // TODO: is a volatile bool enough in this case?
+    if (!frame_in_transit) {
+        frame_in_transit = true;
+        self_->request(*client_, infinite, canvas_w, canvas_h, pixels).then(
+            [](){
+                frame_in_transit = false;
+            },
+            [](error &e) {
+                frame_in_transit = false;
+            }
+        );
+    }
 }
 
 void allegro5_window::finalize()

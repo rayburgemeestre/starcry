@@ -248,6 +248,13 @@ struct line : shape
 
 int Y::instance_count = 0;
 
+void set_background_color(color clr) {
+    assistant->the_job.background_color.r = clr.get_r();
+    assistant->the_job.background_color.g = clr.get_g();
+    assistant->the_job.background_color.b = clr.get_b();
+    assistant->the_job.background_color.a = clr.get_a();
+}
+
 void add_circle(circle circ) {
     data::shape new_shape;
     new_shape.x = circ.get_x();
@@ -400,6 +407,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
         context->add_fun("write_frame", &write_frame_fun);
         context->add_fun("write_frame1", &write_frame_fun1);
         context->add_fun("add_text", &add_text);
+        context->add_fun("set_background_color", &set_background_color);
         context->add_fun("add_circle", &add_circle);
         context->add_fun("add_line", &add_line);
         context->run("var current_frame = 0;");
@@ -430,8 +438,8 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
             assistant->the_job.canvas_w     = canvas_w;
             assistant->the_job.canvas_h     = canvas_h;
             assistant->the_job.scale        = context->run<double>("typeof scale != 'undefined' ? scale : 1.0");
-            assistant->max_frames           = context->run<size_t>("max_frames");
-            assistant->realtime             = context->run<bool>("realtime");
+            assistant->max_frames           = context->run<size_t>("typeof max_frames != 'undefined' ? max_frames : 250");
+            assistant->realtime             = context->run<bool>("typeof realtime != 'undefined' ? realtime : false");
             if (!use_stdin || assistant->realtime) {
                 // we call into V8 ourselves to get frames
                 call_print_exception(self, "next");

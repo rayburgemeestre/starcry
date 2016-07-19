@@ -101,11 +101,11 @@ public:
     }
 
     template <typename image, typename shapes_t>
-    void render(image bmp, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, double scale, std::string label = "") {
+    void render(image bmp, data::color &bg_color, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, double scale, std::string label = "") {
         std::unique_lock<std::mutex> lock(m);
         auto old_bmp = al_get_target_bitmap();
         al_set_target_bitmap(bmp);
-        al_clear_to_color(al_map_rgba(0, 0, 0, 0));
+        al_clear_to_color(al_map_rgba_f(bg_color.r, bg_color.g, bg_color.b, bg_color.a));
         uint32_t width = al_get_bitmap_width(bmp);
         uint32_t height = al_get_bitmap_height(bmp);
         al_lock_bitmap(bmp, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);

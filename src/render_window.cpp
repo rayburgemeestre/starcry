@@ -65,10 +65,10 @@ behavior render_loop(event_based_actor* self) {
             std::this_thread::sleep_for(0.2s);
             self->send(self, render::value);
         },
-        [=](uint32_t width, uint32_t height, data::pixel_data2 data) {
+        [=](uint32_t width, uint32_t height, vector<uint32_t> &pixels) {
             std::swap(width_, width);
             std::swap(height_, height);
-            std::swap(data_.pixels, data.pixels);
+            std::swap(data_.pixels, pixels);
         }
     };
 }
@@ -111,8 +111,8 @@ behavior render_window(event_based_actor* self, uint16_t port) {
     self->send(renderloop, render::value);
 
     return {
-        [=](uint32_t width, uint32_t height, data::pixel_data2 data) -> message {
-            self->send(renderloop, width, height, data);
+        [=](uint32_t width, uint32_t height, vector<uint32_t> &pixels) -> message {
+            self->send(renderloop, width, height, pixels);
             return make_message();
         },
         [=](std::string ping) -> message {

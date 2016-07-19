@@ -50,7 +50,7 @@ behavior create_worker_behavior(T self) {
 #ifdef DEBUG
             ss << "frame " << j.frame_number << " chunk " << j.chunk << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num;
 #endif
-            self->state.engine.render(self->state.bitmap, j.shapes, j.offset_x, j.offset_y, j.canvas_w, j.canvas_h, j.scale, ss.str());
+            self->state.engine.render(self->state.bitmap, j.background_color, j.shapes, j.offset_x, j.offset_y, j.canvas_w, j.canvas_h, j.scale, ss.str());
 
             data::pixel_data2 dat;
             dat.pixels = self->state.engine.serialize_bitmap2(self->state.bitmap, j.width, j.height);
@@ -66,7 +66,7 @@ behavior remote_worker(caf::stateful_actor<worker_data> * self, size_t worker_nu
     rendering_engine engine;
     engine.initialize();
     aout(self) << "worker publishing myself on port: " << worker_num << endl;
-    auto p = self->system().middleman().publish(static_cast<actor>(self), worker_num);
+    auto p = self->system().middleman().publish(static_cast<actor>(self), worker_num, nullptr, true);
     if (!p) {
         aout(self) << "worker publishing FAILED..: " << self->system().render(p.error()) << endl;
     }

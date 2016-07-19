@@ -135,9 +135,10 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
         [=](need_frames) {
             return make_message(need_frames::value, self->mailbox().count() < min_items_in_streamer_queue);
         },
-        [=](show_stats) {
-            aout(self) << "streamer at frame: " << current_frame2 << ", with FPS: " << (1000.0 / counter2.mean())
-                       << " +/- " << counter2.stderr() << endl;
+        [=](show_stats, size_t num_pixels) {
+            auto fps = (1000.0 / counter2.mean());
+            aout(self) << "streamer at frame: " << current_frame2 << ", with FPS: " << fps
+                       << " +/- " << counter2.stderr() << " (" << ((num_pixels * sizeof(uint32_t) * fps) / 1024 / 1024) << " MiB/sec)" << endl;
         }
     };
 }

@@ -38,13 +38,16 @@ using show_stats    = atom_constant<atom("show_stats")>;
 #include "caf/io/middleman.hpp"
 
 #include "data/pixels.hpp"
+#include "data/job.hpp"
 
 int main(int argc, char *argv[]) {
     actor_system_config cfg;
 
     // TODO: apparently, I still need to announce :-)
+    cfg.add_message_type<data::job>("data::job");
     cfg.add_message_type<data::pixel_data>("data::pixel_data");
     cfg.add_message_type<data::pixel_data2>("data::pixel_data2");
+    cfg.add_message_type<vector<uint32_t>>("vector<uint32_t>");
 
     cfg.load<io::middleman>();
 
@@ -190,7 +193,7 @@ int main(int argc, char *argv[]) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         //s->send(renderer_, show_stats::value);
         // TODO: caf015
-        s->send(/*message_priority::high, */streamer_, show_stats::value);
+        s->send(/*message_priority::high, */streamer_, show_stats::value, static_cast<size_t>(3840 * 2160)); // TODO: hardcoded
     }
     //s->await_all_other_actors_done();
 }

@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include "color.hpp"
 #include "shape.hpp"
 
 namespace data {
@@ -23,6 +24,7 @@ namespace data {
         bool last_frame;
         size_t chunk;
         size_t num_chunks;
+        data::color background_color;
         std::vector<shape> shapes;
         double scale;
     };
@@ -45,6 +47,7 @@ namespace data {
         proc & x.last_frame;
         proc & x.chunk;
         proc & x.num_chunks;
+        proc & x.background_color;
         proc & x.shapes;
         proc & x.scale;
     }
