@@ -6,7 +6,7 @@ include("cmake/gtestmockscript.cmake")
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 if (EXISTS "/etc/centos-release")
-    set(BOOST_ROOT "/projects/boost_1_60_0/")
+    set(BOOST_ROOT "/projects/starcry/tmp/boost_1_61_0/")
 endif (EXISTS "/etc/centos-release")
 
 find_package(Allegro5 REQUIRED)
@@ -48,11 +48,11 @@ add_definitions(-O3 -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pe
 
 include_directories("./include/" "./libs/v8pp/v8/include" "./libs/v8pp/" "${V8_INCLUDE_DIR}", "./libs/allegro5/include/" "./libs/crow/include")
 if (EXISTS "/etc/centos-release")
-    include_directories("/projects/boost_1_60_0/")
+    include_directories("/projects/starcry/tmp/boost_1_61_0/")
 endif (EXISTS "/etc/centos-release")
 link_directories("${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/")
 if (EXISTS "/etc/centos-release")
-    link_directories("/projects/boost_1_60_0/stage/lib")
+    link_directories("/projects/starcry/tmp/boost_1_61_0/stage/lib")
 endif (EXISTS "/etc/centos-release")
 
 include_directories("./libs/cereal/include/")
