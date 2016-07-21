@@ -29,7 +29,7 @@ using render_frame         = atom_constant<atom("render_fra")>;
 size_t rendered_frame = 0;
 
 template <typename T>
-behavior create_worker_behavior(T self) {
+behavior create_worker_behavior(T self, bool output_each_frame = false) {
     return {
         [=](get_job, struct data::job j) -> message {
             // make sure our bitmap is of the correct size.
@@ -47,9 +47,13 @@ behavior create_worker_behavior(T self) {
 
             // render
             stringstream ss;
+            if (output_each_frame) {
+                aout(self) << "frame " << j.frame_number << " chunk " << j.chunk << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num << endl;
+            } else {
 #ifdef DEBUG
-            ss << "frame " << j.frame_number << " chunk " << j.chunk << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num;
+                ss << "frame " << j.frame_number << " chunk " << j.chunk << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num;
 #endif
+            }
             self->state.engine.render(self->state.bitmap, j.background_color, j.shapes, j.offset_x, j.offset_y, j.canvas_w, j.canvas_h, j.scale, ss.str());
 
             data::pixel_data2 dat;
@@ -73,7 +77,7 @@ behavior remote_worker(caf::stateful_actor<worker_data> * self, size_t worker_nu
     else if (*p != worker_num) {
         aout(self) << "worker publishing FAILED.." << endl;
     }
-    return create_worker_behavior(self);
+    return create_worker_behavior(self, true);
 }
 
 behavior worker(caf::stateful_actor<worker_data> * self, size_t worker_num) {

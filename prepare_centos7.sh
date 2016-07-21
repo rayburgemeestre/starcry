@@ -7,7 +7,7 @@ git submodule update --init --recursive
 sudo yum install -y freeglut-devel mesa-libGL-devel mesa-libGLU-devel libXcursor-devel
 
 cd libs/allegro5
-cmake -DCMAKE_BUILD_TYPE=release -DSHARED=on -DWANT_FFMPEG=off -DWANT_TTF=on .
+cmake -DCMAKE_BUILD_TYPE=release -DSHARED=on -DSTATIC=on -DWANT_FFMPEG=off -DWANT_TTF=on .
 make -j 8
 sudo make install
 sudo cp -prv lib/pkgconfig/allegro* /usr/share/pkgconfig/
@@ -17,7 +17,7 @@ cd libs/caf
 
 module load gcc
 gx=$(which g++)
-./configure --with-gcc=$gx
+./configure --with-gcc=$gx --build-static
 make -j 8
 sudo make install
 module unload gcc

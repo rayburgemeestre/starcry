@@ -3,6 +3,29 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+#if WORKER_ONLY
+#include "common.h"
+#include "actors/renderer.h"
+#include "caf/io/middleman.hpp"
+#include "data/pixels.hpp"
+#include "data/job.hpp"
+int main()
+{
+    actor_system_config cfg;
+
+    // TODO: apparently, I still need to announce :-)
+    cfg.add_message_type<data::job>("data::job");
+    cfg.add_message_type<data::pixel_data>("data::pixel_data");
+    cfg.add_message_type<data::pixel_data2>("data::pixel_data2");
+    cfg.add_message_type<vector<uint32_t>>("vector<uint32_t>");
+
+    cfg.load<io::middleman>();
+
+    actor_system system(cfg);
+    auto w = system.spawn(remote_worker, 1000);
+    return 0;
+}
+#else
 #include <iostream>
 
 #include "common.h"
@@ -26,7 +49,7 @@
 
 using start         = atom_constant<atom("start     ")>;
 using input_line    = atom_constant<atom("input_line")>;
-using no_more_input    = atom_constant<atom("no_more_in")>;
+using no_more_input = atom_constant<atom("no_more_in")>;
 using show_stats    = atom_constant<atom("show_stats")>;
 
 #include <regex>
@@ -197,3 +220,4 @@ int main(int argc, char *argv[]) {
     }
     //s->await_all_other_actors_done();
 }
+#endif
