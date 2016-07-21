@@ -37,6 +37,25 @@ namespace data{
         gradient gradient_;
     };
 
+    template<class Processor>
+    void serialize(Processor &proc, data::shape &x, const unsigned int) {
+        proc & x.x;
+        proc & x.y;
+        proc & x.z;
+        proc & x.x2;
+        proc & x.y2;
+        proc & x.z2;
+        proc & x.type;
+        proc & x.r;
+        proc & x.g;
+        proc & x.b;
+        proc & x.radius;
+        proc & x.radius_size;
+        proc & x.text;
+        proc & x.align;
+        proc & x.gradient_;
+    }
+
     inline bool operator==(const shape &lhs, const shape &rhs) {
         return 0 == std::memcmp(reinterpret_cast<const void *>(&lhs),
                                 reinterpret_cast<const void *>(&rhs),

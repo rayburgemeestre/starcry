@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include "color.hpp"
 #include "shape.hpp"
 
 namespace data {
@@ -23,12 +24,32 @@ namespace data {
         bool last_frame;
         size_t chunk;
         size_t num_chunks;
+        data::color background_color;
         std::vector<shape> shapes;
         double scale;
     };
 
-    inline bool operator==(const job& lhs, const job& rhs) {
+    inline bool operator==(const job &lhs, const job &rhs) {
         return lhs.job_number == rhs.job_number;
     }
 
+    template<class Processor>
+    void serialize(Processor &proc, data::job &x, const unsigned int) {
+        proc & x.width;
+        proc & x.height;
+        proc & x.offset_x;
+        proc & x.offset_y;
+        proc & x.canvas_w;
+        proc & x.canvas_h;
+        proc & x.job_number;
+        proc & x.frame_number;
+        proc & x.rendered;
+        proc & x.last_frame;
+        proc & x.chunk;
+        proc & x.num_chunks;
+        proc & x.background_color;
+        proc & x.shapes;
+        proc & x.scale;
+    }
 }
+

@@ -101,11 +101,11 @@ public:
     }
 
     template <typename image, typename shapes_t>
-    void render(image bmp, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, double scale, std::string label = "") {
+    void render(image bmp, data::color &bg_color, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, double scale, std::string label = "") {
         std::unique_lock<std::mutex> lock(m);
         auto old_bmp = al_get_target_bitmap();
         al_set_target_bitmap(bmp);
-        al_clear_to_color(al_map_rgba(0, 0, 0, 0));
+        al_clear_to_color(al_map_rgba_f(bg_color.r, bg_color.g, bg_color.b, bg_color.a));
         uint32_t width = al_get_bitmap_width(bmp);
         uint32_t height = al_get_bitmap_height(bmp);
         al_lock_bitmap(bmp, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
@@ -201,6 +201,54 @@ public:
         for (uint32_t y = 0; y < height; y++) {
             for (uint32_t x = 0; x < width; x++) {
                 al_put_pixel(x, y, pixels[index++]);
+            }
+        }
+        return;
+    }
+
+
+    // new "faster" serialize / unserialize
+
+    template <typename image>
+    vector<uint32_t> serialize_bitmap2(image bitmap, uint32_t width, uint32_t height) {
+        vector<uint32_t> pixels(width * height, 0);
+        al_lock_bitmap(bitmap, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_READONLY);
+        char *data = (char *)bitmap->locked_region.data;
+        size_t index = 0;
+        for (uint32_t y=0; y<height; y++) {
+            for (uint32_t x=0; x<width; x++) {
+                pixels[index] = *(uint32_t *)(data);
+                data += 4;
+                index++;
+            }
+        }
+        al_unlock_bitmap(bitmap);
+        return pixels; // RVO
+    }
+
+    ALLEGRO_BITMAP * unserialize_bitmap2(vector<uint32_t> &pixels, uint32_t width, uint32_t height) {
+        ALLEGRO_BITMAP *bitmap = al_create_bitmap(width, height);
+        auto old_bmp = al_get_target_bitmap();
+        al_set_target_bitmap(bitmap);
+        al_lock_bitmap(bitmap, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
+        unserialize_bitmap2_(pixels, width, height);
+        al_unlock_bitmap(bitmap);
+        // TODO: do this with RAII
+        al_set_target_bitmap(old_bmp);
+        return bitmap;
+    }
+
+    inline void unserialize_bitmap2_(vector<uint32_t> &pixels, uint32_t width, uint32_t height) {
+        ALLEGRO_COLOR color{0};
+        size_t index = 0;
+        for (uint32_t y = 0; y < height; y++) {
+            for (uint32_t x = 0; x < width; x++) {
+                auto _gp_pixel = pixels[index++];
+                _AL_MAP_RGBA(color, (_gp_pixel & 0x00FF0000) >> 16,
+                                    (_gp_pixel & 0x0000FF00) >>  8,
+                                    (_gp_pixel & 0x000000FF) >>  0,
+                                    (_gp_pixel & 0xFF000000) >> 24);
+                al_put_pixel(x, y, color);
             }
         }
         return;

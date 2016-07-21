@@ -24,4 +24,12 @@ namespace data{
                                 sizeof(color));
     }
 
+    template<class Processor>
+    void serialize(Processor &proc, data::color &x, const unsigned int) {
+        proc & x.r;
+        proc & x.g;
+        proc & x.b;
+        proc & x.a;
+    }
+
 }

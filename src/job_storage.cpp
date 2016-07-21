@@ -6,6 +6,7 @@
 #include "common.h"
 #include "actors/job_storage.h"
 #include "data/job.hpp"
+#include "caf/none.hpp"
 
 // public
 using get_job              = atom_constant<atom("get_job   ")>;
@@ -18,14 +19,14 @@ std::vector<data::job> jobs;
 
 behavior job_storage(event_based_actor* self) {
     return {
-        [=](get_job, size_t job) -> message {
+        [=](get_job, size_t job) -> optional<data::job> {
             auto it = std::find_if (jobs.begin(), jobs.end(), [&job](auto &j) {
                 return j.job_number == job;
             });
             if (it == jobs.end()) {
-                return make_message(no_jobs_available::value);
+                return none;
             }
-            return make_message(get_job::value, *it);
+            return *it;
         },
         [=](add_job, data::job new_job) {
             jobs.push_back(new_job);

@@ -194,9 +194,11 @@ This command should yield results now:
 ### C++ Actor Framework
 
 - `cd libs/caf`
-- `./configure`
+- `./configure --build-static`
 - `make`
 - `sudo make install`
+
+The `--build-static` flag will build both shared and static in this case.
 
 Note for CentOS7u2 I used a few extra flags for the configure step because default `g++` in path was not new enough, and to disable unused stuff that caused errors:
 
@@ -322,3 +324,8 @@ Instruct starcry to use these remote workers:
     job_storage->job_generator: N
     job_generator->V8: [N < threshold] next() javascript
     job_generator->job_generator: [N >= threshold] sleep X;\nnext_frame
+
+
+## Notes on static compiling
+
+yum install libicu-devel mesa-libGLU-devel

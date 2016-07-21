@@ -11,15 +11,20 @@
 namespace caf {
     class event_based_actor;
     class actor;
+    class actor_system;
 }
 
 class allegro5_window
 {
 public:
-    caf::event_based_actor *self_;
-    caf::actor client_;
+    allegro5_window(actor_system &system);
 
     void initialize(uint32_t canvas_w, uint32_t canvas_h, caf::event_based_actor* self, int port);
-    void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ALLEGRO_COLOR> &pixels);
+    void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels);
     void finalize();
+
+private:
+    caf::event_based_actor *self_;
+    caf::actor_system &system_;
+    std::unique_ptr<caf::actor> client_;
 };

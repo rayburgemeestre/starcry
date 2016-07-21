@@ -19,8 +19,30 @@ namespace data {
         return std::equal(lhs.pixels.begin(), lhs.pixels.end(), rhs.pixels.begin(), rhs.pixels.end());
     }
 
+    template <class Processor>
+    void serialize(Processor& proc, struct data::pixel_data & x, const unsigned int) {
+        proc & x.pixels;
+    }
+
+    struct pixel_data2 {
+        std::vector<uint32_t> pixels;
+    };
+
+    template <class Processor>
+    void serialize(Processor& proc, struct data::pixel_data2 & x, const unsigned int) {
+        proc & x.pixels;
+    }
 
 }
+
+template <class Processor>
+void serialize(Processor& proc, ::ALLEGRO_COLOR & x, const unsigned int) {
+    proc & x.r;
+    proc & x.g;
+    proc & x.b;
+    proc & x.a;
+}
+
 
 inline bool operator==(const ALLEGRO_COLOR& lhs, const ALLEGRO_COLOR& rhs) {
     return 0 == std::memcmp(reinterpret_cast<const void *>(&lhs),

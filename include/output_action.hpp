@@ -5,6 +5,10 @@
  */
 #include "allegro5/allegro.h"
 
+namespace caf {
+    class actor_system;
+}
+
 template <class output>
 class output_action
 {
@@ -15,6 +19,8 @@ private:
 public:
     output_action() : enabled_(false) {}
 
+    output_action(caf::actor_system &x) : enabled_(false), output_(x) {}
+
     void enable(bool enable) {
         enabled_ = enable;
     }
@@ -22,7 +28,7 @@ public:
         if (!enabled_) return;
         output_.initialize(canvas_w, canvas_h, self, port);
     }
-    void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ALLEGRO_COLOR> &pixels) {
+    void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels) {
         if (!enabled_) return;
         output_.add_frame(canvas_w, canvas_h, pixels);
     }
@@ -58,7 +64,7 @@ public:
         ffmpeg_.initialize(canvas_w, canvas_h, self, port);
         allegro5_.initialize(canvas_w, canvas_h, self, port);
     }
-    void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ALLEGRO_COLOR> &pixels) {
+    void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels) {
         ffmpeg_.add_frame(canvas_w, canvas_h, pixels);
         allegro5_.add_frame(canvas_w, canvas_h, pixels);
     }
