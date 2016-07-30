@@ -107,6 +107,7 @@ int main(int argc, char *argv[]) {
                       ("gui", "open GUI window (writes state to $HOME/.starcry.conf)")
                       ("spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")
                       ("no-video-output", "disable video output using ffmpeg")
+                      ("webserver", "start embedded webserver")
                       ("stdin", "read from stdin and send this to job generator actor")
                       ("dimensions,dim", po::value<string>(&dimensions), "specify canvas dimensions i.e. 1920x1080")
                       ("script,s", po::value<string>(&script), "javascript file to use for processing")
@@ -211,7 +212,11 @@ int main(int argc, char *argv[]) {
         s->send(stdin_reader_, start::value);
     }
 
-    webserver ws;
+    shared_ptr<webserver> ws;
+    if (vm.count("webserver")) {
+        ws = make_shared<webserver>();
+    }
+
     while (true) { // while renderer is alive?
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         //s->send(renderer_, show_stats::value);
