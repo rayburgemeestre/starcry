@@ -45,6 +45,7 @@ endif()
 
 message(STATUS ${FFMPEG_LIBRARIES})
 message(STATUS ${benchmarklib_LIBRARIES})
+message(STATUS ${CAF_LIBRARIES})
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
@@ -64,7 +65,7 @@ find_package( Threads )
 set (COMPILE_FLAGS "-O3 -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic")
 add_definitions(${COMPILE_FLAGS})
 
-include_directories("./include/" "./libs/v8pp/v8/include" "./libs/v8pp/" "${V8_INCLUDE_DIR}", "./libs/allegro5/include/" "./libs/crow/include")
+include_directories("./include/" "./libs/v8pp/v8/include" "./libs/v8pp/" "${V8_INCLUDE_DIR}" "./libs/allegro5/include/" "./libs/crow/include")
 if (EXISTS "/etc/centos-release")
     include_directories("/projects/starcry/tmp/boost_1_61_0/")
 endif (EXISTS "/etc/centos-release")
@@ -94,14 +95,14 @@ else()
     target_link_libraries(starcry ${CAF_LIBRARIES})
     target_link_libraries(starcry ${FFMPEG_LIBRARIES})
 endif()
+target_link_libraries(starcry -lz) # NEEDED FOR CENTOS7u2, && Ubuntu it seems?
 if (EXISTS "/etc/centos-release")
-    target_link_libraries(starcry -lz) # NEEDED FOR CENTOS7u2
     target_link_libraries(starcry -llzma) # NEEDED FOR CENTOS7u2
 endif (EXISTS "/etc/centos-release")
 
 # This order works on my Ubuntu 15.10 box at home *and* box at work.
 
-if (static)
+if (STATIC)
     target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/libv8_base.a")
 else()
     target_link_libraries(starcry -lv8)
@@ -112,7 +113,7 @@ target_link_libraries(starcry -licui18n)
 target_link_libraries(starcry -licuuc)
 # I already included this statically..
 target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/libv8_libplatform.a")
-target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/libv8_libsampler.a") # this one was not needed in shared build
+# UBUNTU NOT NEEDED ?? target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/libv8_libsampler.a") # this one was not needed in shared build
 target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/libv8_base.a")
 target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/libv8_libbase.a")
 target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/libv8_nosnapshot.a")
@@ -125,6 +126,12 @@ if (STATIC)
     target_link_libraries(starcry -lGLU)
     target_link_libraries(starcry -lGL)
     target_link_libraries(starcry -lfreetype)
+    #UBUNTU SPECIFIC ?
+    target_link_libraries(starcry -lXrandr)
+    target_link_libraries(starcry -lXinerama)
+    target_link_libraries(starcry -lXi)
+    #xrandr xi xxf86vm gl
+    #END
     #-lX11 -ltiff -ljpeg -lpng -llapack -lGLU -lGL -ldc1394  -L -lXext -pthread
     target_link_libraries(starcry ${ALLEGRO_LIBRARIES})
 else()
