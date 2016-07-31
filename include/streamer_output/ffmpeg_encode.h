@@ -32,6 +32,7 @@ private:
     FILE *f;
     AVFrame *frame;
     AVPacket pkt;
+    size_t bitrate_;
 
 public:
     ffmpeg_h264_encode();
@@ -39,4 +40,5 @@ public:
     void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels);
     void finalize();
     void set_filename(std::string filename);
+    void set_bitrate(size_t bitrate);
 };

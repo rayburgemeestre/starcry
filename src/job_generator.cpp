@@ -438,6 +438,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
             assistant->the_job.canvas_w     = canvas_w;
             assistant->the_job.canvas_h     = canvas_h;
             assistant->the_job.scale        = context->run<double>("typeof scale != 'undefined' ? scale : 1.0");
+            assistant->the_job.bitrate      = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");
             assistant->max_frames           = context->run<size_t>("typeof max_frames != 'undefined' ? max_frames : 250");
             assistant->realtime             = context->run<bool>("typeof realtime != 'undefined' ? realtime : false");
             if (!use_stdin || assistant->realtime) {

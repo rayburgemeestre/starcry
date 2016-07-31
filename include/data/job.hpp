@@ -27,6 +27,7 @@ namespace data {
         data::color background_color;
         std::vector<shape> shapes;
         double scale;
+        size_t bitrate;
     };
 
     inline bool operator==(const job &lhs, const job &rhs) {
@@ -50,6 +51,7 @@ namespace data {
         proc & x.background_color;
         proc & x.shapes;
         proc & x.scale;
+        proc & x.bitrate;
     }
 }
 

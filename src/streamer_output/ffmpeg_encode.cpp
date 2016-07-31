@@ -84,7 +84,9 @@ void ffmpeg_h264_encode::initialize(uint32_t canvas_w, uint32_t canvas_h, caf::e
     }
 
     /* put sample parameters */
-    c->bit_rate = 400000 * 10;
+    //c->bit_rate = 400000 * 10;
+    std::cout << "using bitrate: " << this->bitrate_ << std::endl;
+    c->bit_rate = this->bitrate_;
     /* resolution must be a multiple of two */
     c->width = canvas_w;
     c->height = canvas_h;
@@ -203,4 +205,9 @@ void ffmpeg_h264_encode::finalize()
 void ffmpeg_h264_encode::set_filename(std::string filename)
 {
     this->filename = filename;
+}
+
+void ffmpeg_h264_encode::set_bitrate(size_t bitrate)
+{
+    this->bitrate_ = bitrate;
 }

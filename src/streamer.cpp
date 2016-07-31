@@ -115,6 +115,7 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
             if (job.last_frame)
                 last_frame_streamed = std::make_optional(job.frame_number);
 
+            ffmpeg->set_bitrate(job.bitrate); // todo put in initialize?
             outputs->initialize(job.canvas_w, job.canvas_h, self, render_window_at);
 
             fake_buffer.push_back(make_tuple(job.frame_number, job.chunk, job.num_chunks, job.last_frame, pixels)); // needs to become an object later

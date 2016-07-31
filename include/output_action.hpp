@@ -41,6 +41,10 @@ public:
         if (!enabled_) return;
         output_.set_filename(filename);
     }
+    void set_bitrate(size_t bitrate) {
+        if (!enabled_) return;
+        output_.set_bitrate(bitrate);
+    }
 };
 
 // TODO: eventually this should move outside..
@@ -74,5 +78,8 @@ public:
     }
     void set_filename(std::string filename) {
         ffmpeg_.set_filename(filename);
+    }
+    void set_bitrate(size_t bitrate) {
+        ffmpeg_.set_bitrate(bitrate);
     }
 };
