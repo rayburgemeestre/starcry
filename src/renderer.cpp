@@ -104,6 +104,8 @@ bool rendering_active_ = true;
 size_t num_workers_ = 0;
 
 behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer, int range_begin, int range_end) {
+    self->link_to(streamer);
+    self->link_to(job_storage);
     rendering_engine engine;
     engine.initialize();
 

@@ -286,6 +286,7 @@ void call_print_exception(event_based_actor *self, string fn, T arg)
 }
 
 behavior job_generator(event_based_actor *self, const caf::actor &job_storage, const string &filename, uint32_t canvas_w, uint32_t canvas_h, bool use_stdin) {
+    self->link_to(job_storage);
     context = make_shared<v8_wrapper>(filename);
     try {
         ifstream stream(filename.c_str());

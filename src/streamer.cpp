@@ -107,11 +107,13 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
     if (bitset<32>(settings).test(1)) {
         allegro5->enable(true);
     }
+    size_t num_pixels = 0;
 
     counter2.setDescription("fps");
     counter2.startHistogramAtZero(true);
     return {
-        [=](render_frame, struct data::job &job, vector<uint32_t> &pixels, const caf::actor &renderer) {
+        [=, &num_pixels](render_frame, struct data::job &job, vector<uint32_t> &pixels, const caf::actor &renderer) {
+            num_pixels = job.canvas_w * job.canvas_h;
             if (job.last_frame)
                 last_frame_streamed = std::make_optional(job.frame_number);
 
@@ -136,7 +138,7 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
         [=](need_frames) {
             return make_message(need_frames::value, self->mailbox().count() < min_items_in_streamer_queue);
         },
-        [=](show_stats, size_t num_pixels) {
+        [=, &num_pixels](show_stats) {
             auto fps = (1000.0 / counter2.mean());
             aout(self) << "streamer at frame: " << current_frame2 << ", with FPS: " << fps
                        << " +/- " << counter2.stderr() << " (" << ((num_pixels * sizeof(uint32_t) * fps) / 1024 / 1024) << " MiB/sec)" << endl;

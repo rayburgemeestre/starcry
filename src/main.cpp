@@ -189,26 +189,17 @@ int main(int argc, char *argv[]) {
     scoped_actor s{system};
     auto jobstorage = system.spawn(job_storage);
     auto generator  = system.spawn<detached>(job_generator, jobstorage, script, canvas_w, canvas_h, use_stdin);
+    // generator links to job storage
     auto streamer_  = system.spawn<priority_aware>(streamer, jobstorage, conf.user.gui_port, output_file, streamer_settings.to_ulong());
     auto renderer_  = system.spawn(renderer, jobstorage, streamer_, range_begin, range_end);
+    // renderer links to streamer and job storage
 
-    // cascade exit from renderer -> job generator -> job storage
-    // TODO: caf015
-// ???
-//    generator->link_to(renderer_);
-//    jobstorage->link_to(generator);
-//    streamer_->link_to(renderer_);
-
-//???
-//    actor_info renderer_info{renderer_};
+    actor_info streamer_info{streamer_};
     s->send(generator, start::value, num_chunks);
     s->send(renderer_, start::value, num_workers);
 
     if (use_stdin) {
         auto stdin_reader_ = system.spawn(stdin_reader, generator, jobstorage);
-        // TODO: caf015
-// ???
-//        stdin_reader_->link_to(renderer_);
         s->send(stdin_reader_, start::value);
     }
 
@@ -217,12 +208,10 @@ int main(int argc, char *argv[]) {
         ws = make_shared<webserver>();
     }
 
-    while (true) { // while renderer is alive?
+    while (streamer_info.running()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        //s->send(renderer_, show_stats::value);
-        // TODO: caf015
-        s->send(/*message_priority::high, */streamer_, show_stats::value, static_cast<size_t>(3840 * 2160)); // TODO: hardcoded
+        s->send(/*message_priority::high, */streamer_, show_stats::value);
     }
-    //s->await_all_other_actors_done();
+    s->await_all_other_actors_done();
 }
 #endif
