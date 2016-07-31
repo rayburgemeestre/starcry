@@ -118,3 +118,26 @@ struct circle : shape
     gradient get_gradient() const;
     void set_gradient(gradient c);
 };
+
+struct line : shape
+{
+    double x2_;
+    double y2_;
+    double z2_;
+    double size_;
+    gradient gradient_;
+
+    explicit line(pos p, pos p2, double size, gradient grad);
+
+    double get_x2() const;
+    double get_y2() const;
+    double get_z2() const;
+    double get_size() const;
+    void set_x2(double x);
+    void set_y2(double y);
+    void set_z2(double z);
+    void set_size(double size);
+    gradient get_gradient() const;
+    void set_gradient(gradient c);
+};
+

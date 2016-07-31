@@ -150,7 +150,7 @@ public:
      */
     template <typename double_type>
     inline void render_circle(double_type circle_x, double_type circle_y, double_type radius, double_type radius_size,
-                               data::gradient gradient_
+                               data::gradient &gradient_
     ){
         circle_x             = ((circle_x * scale_) + center_x_) - offset_x_;
         circle_y             = ((circle_y * scale_) + center_y_) - offset_y_;
@@ -206,7 +206,7 @@ public:
 
     template <typename double_type>
     void render_circle_pixel(double_type radius, double_type radiussize, double_type posX, double_type posY, int absX, int absY, double_type diffFromCenter,
-                             data::gradient gradient_)
+                             data::gradient &gradient_)
     {
         if (absX < 0 || absY < 0 || absX >= static_cast<int>(width_) || absY >= static_cast<int>(height_))
             return;
@@ -259,7 +259,7 @@ public:
     }
 
     template <typename double_type>
-    void render_line(double x1, double y1, double x2, double y2, double size, double red, double green, double blue) {
+    void render_line(double x1, double y1, double x2, double y2, double size, data::gradient &gradient_) {
         x1    = ((x1 * scale_) + center_x_) - offset_x_;
         y1    = ((y1 * scale_) + center_y_) - offset_y_;
         x2    = ((x2 * scale_) + center_x_) - offset_x_;
@@ -405,7 +405,7 @@ public:
                         double dist_from_center_line = sqrt(squared_dist(x, intersect_x) + squared_dist(current_y, intersect_y));
                         double normalized_dist_from_center = (dist_pixel / dist_max);
                         double normalized_dist_from_line = (dist_from_center_line / aline.size);
-                        render_line_pixel<double_type>(x, current_y, normalized_dist_from_center, normalized_dist_from_line);
+                        render_line_pixel<double_type>(x, current_y, normalized_dist_from_center, normalized_dist_from_line, gradient_);
                     }
                 }
             }
@@ -417,7 +417,7 @@ public:
     }
 
     template <typename double_type>
-    void render_line_pixel(int absX, int absY, double normalized_dist_from_center, double normalized_dist_from_line) {
+    void render_line_pixel(int absX, int absY, double normalized_dist_from_center, double normalized_dist_from_line, data::gradient &gradient_) {
         if (normalized_dist_from_center > 1.0 ||
             normalized_dist_from_center < 0.0) {
             return;
@@ -435,7 +435,10 @@ public:
 
         //al_put_pixel(absX, absY, al_map_rgba_f(0, 0, (1.0 /*- test*/) * num, 0));
         auto bg = al_get_pixel(al_get_target_bitmap(), absX, absY);
-        bg.b = (bg.b * num) + 1.0 * (1.0 - num); // we blend ourselves..
+        //bg.b = (bg.b * num) + 1.0 * (1.0 - num); // we blend ourselves..
+        bg.r = min(1., bg.r + gradient_.get(num).r);
+        bg.g = min(1., bg.g + gradient_.get(num).g);
+        bg.b = min(1., bg.b + gradient_.get(num).b);
         al_put_pixel(absX, absY, al_map_rgba_f(bg.r, bg.g, bg.b, 0));
     }
 

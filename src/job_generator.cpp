@@ -164,6 +164,8 @@ void v8_wrapper::run<void>(std::string const& source)
     }
 }
 
+#include "primitives.h"
+
 class assistent_ {
 public:
     assistent_(event_based_actor *job_gen) : job_generator(job_gen) {}
@@ -185,20 +187,21 @@ void add_text(double x, double y, double z, string text, string align) {
     new_shape.align = align;
     assistant->the_job.shapes.push_back(new_shape);
 }
-void add_line(double x, double y, double z, double x2, double y2, double z2, double size,
-              double r, double g, double b) {
+
+void add_line(line l) {
     data::shape new_shape;
-    new_shape.x = x;
-    new_shape.y = y;
-    new_shape.z = z;
-    new_shape.x2 = x2;
-    new_shape.y2 = y2;
-    new_shape.z2 = z2;
-    new_shape.r = r;
+    new_shape.x = l.get_x();
+    new_shape.y = l.get_y();
+    new_shape.z = l.get_z();
+    new_shape.x2 = l.get_x2();
+    new_shape.y2 = l.get_y2();
+    new_shape.z2 = l.get_z2();
+/*  new_shape.r = r;
     new_shape.g = g;
-    new_shape.b = b;
+    new_shape.b = b;  */
+    new_shape.gradient_ = l.get_gradient().to_data_gradient();
     new_shape.type = data::shape_type::line;
-    new_shape.radius_size = size;
+    new_shape.radius_size = l.get_size();
     assistant->the_job.shapes.push_back(new_shape);
 }
 
@@ -219,31 +222,6 @@ struct Y : X
 
     explicit Y(double x) { var = x; ++instance_count; }
     ~Y() { --instance_count; }
-};
-
-#include "primitives.h"
-
-struct line : shape
-{
-    double x2_;
-    double y2_;
-    double z2_;
-
-    explicit line(double x, double y, double z, double x2, double y2, double z2) {
-        set_x(x);
-        set_y(y);
-        set_z(z);
-        set_x2(x2);
-        set_y2(y2);
-        set_z2(z2);
-    }
-
-    double get_x2() const { return x2_; }
-    double get_y2() const { return y2_; }
-    double get_z2() const { return z2_; }
-    void set_x2(double x) { x2_ = x; }
-    void set_y2(double y) { y2_ = y; }
-    void set_z2(double z) { z2_ = z; }
 };
 
 int Y::instance_count = 0;
@@ -337,7 +315,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
             // add line class
             v8pp::class_<line> line_class(context.isolate());
             line_class
-                .ctor<double, double, double, double, double, double>() // TODO: try point or something
+                .ctor<pos, pos, double, gradient>() // TODO: try point or something
                 .set("x2", v8pp::property(&line::get_x2, &line::set_x2))
                 .set("y2", v8pp::property(&line::get_y2, &line::set_y2))
                 .set("z2", v8pp::property(&line::get_z2, &line::set_z2))
