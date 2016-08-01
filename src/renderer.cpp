@@ -16,6 +16,7 @@ using start                = atom_constant<atom("start     ")>;
 using show_stats           = atom_constant<atom("show_stats")>;
 using start_rendering      = atom_constant<atom("start_rend")>;
 using stop_rendering       = atom_constant<atom("stop_rende")>;
+using debug                = atom_constant<atom("debug     ")>;
 
 // external
 using get_job              = atom_constant<atom("get_job   ")>;
@@ -200,6 +201,9 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
         [=](show_stats) {
             aout(self) << "renderer at job: " << job_sequence << ", with jobs/sec: " << (1000.0 / counter.mean())
                        << " +/- " << counter.stderr() << endl;
+        },
+        [=](debug) {
+            aout(self) << "renderer mailbox = " << self->mailbox().count() << endl;
         }
     };
 }

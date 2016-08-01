@@ -14,6 +14,7 @@ using add_job              = atom_constant<atom("add_job   ")>;
 using del_job              = atom_constant<atom("del_job   ")>;
 using num_jobs             = atom_constant<atom("num_jobs  ")>;
 using no_jobs_available    = atom_constant<atom("no_jobs_av")>;
+using debug                = atom_constant<atom("debug     ")>;
 
 std::vector<data::job> jobs;
 
@@ -38,6 +39,9 @@ behavior job_storage(event_based_actor* self) {
         },
         [=](num_jobs) -> message {
             return make_message(num_jobs::value, jobs.size());
+        },
+        [=](debug) {
+            aout(self) << "job_storage mailbox = " << self->mailbox().count() << endl;
         }
     };
 }

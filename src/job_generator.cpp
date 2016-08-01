@@ -11,6 +11,7 @@
 using start            = atom_constant<atom("start     ")>;
 using input_line       = atom_constant<atom("input_line")>;
 using no_more_input    = atom_constant<atom("no_more_in")>;
+using debug            = atom_constant<atom("debug     ")>;
 
 // external
 using add_job          = atom_constant<atom("add_job   ")>;
@@ -177,11 +178,12 @@ public:
 };
 unique_ptr<assistent_> assistant = nullptr;
 
-void add_text(double x, double y, double z, string text, string align) {
+void add_text(double x, double y, double z, double textsize, string text, string align) {
     data::shape new_shape;
     new_shape.x = x;
     new_shape.y = y;
     new_shape.z = z;
+    new_shape.text_size = textsize;
     new_shape.type = data::shape_type::text;
     new_shape.text = text;
     new_shape.align = align;
@@ -484,6 +486,9 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
                     call_print_exception(self, "next");
                 }
             );
+        },
+        [=](debug) {
+            aout(self) << "job_generator mailbox = " << self->mailbox().count() << endl;
         }
     };
 }

@@ -32,6 +32,7 @@ namespace data{
         double b;
         double radius;
         double radius_size;
+        double text_size;
         std::string text;
         std::string align;
         gradient gradient_;
@@ -50,6 +51,7 @@ namespace data{
         proc & x.g;
         proc & x.b;
         proc & x.radius;
+        proc & x.text_size;
         proc & x.radius_size;
         proc & x.text;
         proc & x.align;

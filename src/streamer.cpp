@@ -15,6 +15,7 @@ using start            = atom_constant<atom("start     ")>;
 using render_frame     = atom_constant<atom("render_fra")>;
 using show_stats       = atom_constant<atom("show_stats")>;
 using need_frames      = atom_constant<atom("need_frame")>;
+using debug            = atom_constant<atom("debug     ")>;
 
 // external
 using del_job          = atom_constant<atom("del_job   ")>;
@@ -142,6 +143,9 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
             auto fps = (1000.0 / counter2.mean());
             aout(self) << "streamer at frame: " << current_frame2 << ", with FPS: " << fps
                        << " +/- " << counter2.stderr() << " (" << ((num_pixels * sizeof(uint32_t) * fps) / 1024 / 1024) << " MiB/sec)" << endl;
+        },
+        [=](debug) {
+            aout(self) << "streamer mailbox = " << self->mailbox().count() << endl;
         }
     };
 }

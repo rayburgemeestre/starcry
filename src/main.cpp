@@ -51,6 +51,7 @@ using start         = atom_constant<atom("start     ")>;
 using input_line    = atom_constant<atom("input_line")>;
 using no_more_input = atom_constant<atom("no_more_in")>;
 using show_stats    = atom_constant<atom("show_stats")>;
+using debug         = atom_constant<atom("debug     ")>;
 
 #include <regex>
 #include <bitset>
@@ -211,6 +212,10 @@ int main(int argc, char *argv[]) {
     while (streamer_info.running()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         s->send(/*message_priority::high, */streamer_, show_stats::value);
+//        s->send(streamer_, debug::value);
+//        s->send(generator, debug::value);
+//        s->send(jobstorage, debug::value);
+//        s->send(renderer_, debug::value);
     }
     s->await_all_other_actors_done();
 }

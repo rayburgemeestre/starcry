@@ -129,6 +129,14 @@ class draw_logic {
 public:
 
     /**
+     * Constructor
+     */
+    draw_logic() {
+        font_.reserve(1024);
+        for (size_t i=0; i<1024; i++) font_[i] = nullptr;
+    }
+
+    /**
      * Circle drawing function
      *
      * Optimizations used:
@@ -197,11 +205,20 @@ public:
         }
     }
     template <typename double_type>
-    inline void render_text(double_type textX, double_type textY, string text, string align) {
+    inline void render_text(double_type textX, double_type textY, double_type textsize, string text, string align) {
         textX    = ((textX * scale_) + center_x_) - offset_x_;
         textY    = ((textY * scale_) + center_y_) - offset_y_;
-        auto alignment = align == "center" ? ALLEGRO_ALIGN_CENTER : ALLEGRO_ALIGN_LEFT;
-        al_draw_text(font_, al_map_rgb(255, 255, 255), textX, textY - (14 /*font height*/ / 2), alignment, text.c_str());
+        size_t index = textsize * scale_;
+        auto alignment = align == "center" ? ALLEGRO_ALIGN_CENTER : (align == "left" ? ALLEGRO_ALIGN_LEFT : ALLEGRO_ALIGN_RIGHT);
+
+        if (!font_[index]) {
+            font_[index] = al_load_ttf_font("Monaco_Linux-Powerline.ttf", index, 0);
+            if (!font_[index]){
+                fprintf(stderr, "Could not load monaco ttf font.\n");
+                return;
+            }
+        }
+        al_draw_text(font_[index], al_map_rgb(255, 255, 255), textX, textY - (index /*font height*/ / 2), alignment, text.c_str());
     }
 
     template <typename double_type>
@@ -246,9 +263,11 @@ public:
         /*
         al_put_pixel(absX, absY, al_map_rgba_f(r, g, b, 0));
         */
-        r += bg.r;
-        g += bg.g;
-        b += bg.b;
+        if (Opacity >= 1.0) {
+            r += bg.r;
+            g += bg.g;
+            b += bg.b;
+        }
         if (r > 1.0) r = 1.0;
         if (g > 1.0) g = 1.0;
         if (b > 1.0) b = 1.0;
@@ -436,9 +455,12 @@ public:
         //al_put_pixel(absX, absY, al_map_rgba_f(0, 0, (1.0 /*- test*/) * num, 0));
         auto bg = al_get_pixel(al_get_target_bitmap(), absX, absY);
         //bg.b = (bg.b * num) + 1.0 * (1.0 - num); // we blend ourselves..
-        bg.r = min(1., bg.r + gradient_.get(num).r);
-        bg.g = min(1., bg.g + gradient_.get(num).g);
-        bg.b = min(1., bg.b + gradient_.get(num).b);
+        //bg.r = min(1., bg.r + gradient_.get(num).r);
+        //bg.g = min(1., bg.g + gradient_.get(num).g);
+        //bg.b = min(1., bg.b + gradient_.get(num).b);
+        bg.r = gradient_.get(num).r;
+        bg.g = gradient_.get(num).g;
+        bg.b = gradient_.get(num).b;
         al_put_pixel(absX, absY, al_map_rgba_f(bg.r, bg.g, bg.b, 0));
     }
 
@@ -447,7 +469,6 @@ public:
     void height(uint32_t height) { height_ = height; }
     void center(double x, double y) { center_x_ = x; center_y_ = y; }
     void offset(double x, double y) { offset_x_ = x; offset_y_ = y; }
-    void font(ALLEGRO_FONT *font) { font_ = font; }
 
 private:
 
@@ -458,5 +479,5 @@ private:
     double offset_y_;
     uint32_t width_;
     uint32_t height_;
-    ALLEGRO_FONT * font_;
+    std::vector<ALLEGRO_FONT *> font_;
 };
