@@ -104,7 +104,7 @@ map<size_t, vector<uint32_t>> pixel_store;
 bool rendering_active_ = true;
 size_t num_workers_ = 0;
 
-behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer, int range_begin, int range_end) {
+behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer, const vector<pair<string, int>> &workers_vec) {
     self->link_to(streamer);
     self->link_to(job_storage);
     rendering_engine engine;
@@ -116,25 +116,35 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
         [=](start, size_t num_workers) {
             num_workers_ = num_workers;
             aout(self) << "renderer started, num_workers = " << num_workers << endl;
-            auto worker_factory = [&]() -> actor {
-                static size_t worker_num = range_begin;
-                if (range_begin != 0) {
-                    aout(self) << "renderer connecting to worker on port: " << worker_num << endl;
-                    auto p = self->system().middleman().remote_actor("127.0.0.1", worker_num++);
+
+            if (workers_vec.empty()) {
+                auto worker_factory = [&]() -> actor {
+                    static size_t worker_num = 1000;
+                    aout(self) << "renderer spawning own worker" << endl;
+                    return self->spawn(worker, worker_num++);
+                };
+                pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin())));
+                self->link_to(*pool);
+                for (size_t i=0; i<num_workers_; i++) self->send(self, render_frame::value);
+            }
+            else {
+                aout(self) << "renderer started, num workers in text file = " << workers_vec.size() << endl;
+                num_workers_ = workers_vec.size();
+                auto worker_factory = [&]() -> actor {
+                    static size_t index = 0;
+                    aout(self) << "renderer connecting to worker on : " << workers_vec[index].first << ":" << workers_vec[index].second << endl;
+                    auto p = self->system().middleman().remote_actor(workers_vec[index].first, workers_vec[index].second);
                     if (!p) {
                         aout(self) << "spawning remote actor failed: " << self->system().render(p.error()) << endl;
                     }
+                    index++;
                     return *p;
-                }
-                else {
-                    aout(self) << "renderer spawning own worker" << endl;
-                    return self->spawn(worker, worker_num++);
-                }
-            };
-            pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin())));
-
-            self->link_to(*pool);
-            for (size_t i=0; i<num_workers_; i++) self->send(self, render_frame::value);
+                };
+                pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin())));
+                self->link_to(*pool);
+                cout << "launching " << num_workers_ << "worker threads.., verify against: " << num_workers << endl;
+                for (size_t i=0; i<num_workers_; i++) self->send(self, render_frame::value);
+            }
         },
         [=](start_rendering) {
             rendering_active_ = true;

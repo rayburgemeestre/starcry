@@ -9,8 +9,12 @@
 #include "caf/io/middleman.hpp"
 #include "data/pixels.hpp"
 #include "data/job.hpp"
-int main()
+int main(int argc, char *argv[])
 {
+    if (argc < 2) {
+        std::cerr << "Usage " << argv[0] << " <worker_port>" << endl << endl;
+        return 1;
+    }
     actor_system_config cfg;
 
     // TODO: apparently, I still need to announce :-)
@@ -22,7 +26,7 @@ int main()
     cfg.load<io::middleman>();
 
     actor_system system(cfg);
-    auto w = system.spawn(remote_worker, 1000);
+    auto w = system.spawn(remote_worker, atoi(argv[1]));
     return 0;
 }
 #else
@@ -154,15 +158,23 @@ int main(int argc, char *argv[]) {
     }
 
     bool use_remote_workers    = vm.count("remote") || vm.count("worker");
-    int range_begin = 0, range_end = 0;
+    vector<pair<string, int>> workers_vec;
     if (use_remote_workers) {
-        regex range("([0-9]+)-([0-9]+)");
-        smatch m;
-        if (std::regex_match(worker_ports, m, range) && m.size() == 3) {
-            { stringstream os(m[1]); os >> range_begin; }
-            { stringstream os(m[2]); os >> range_end; }
-            if (range_end < range_begin) swap(range_begin, range_end);
-            num_workers = range_end - (range_begin - 1); // overruling
+        ifstream infile(worker_ports);
+        string line;
+        while (getline(infile, line))
+        {
+            if (line[0] == ';' || line[0] == '#') continue;
+            size_t pos = line.find(":");
+            if (pos != string::npos)
+                line[pos] = ' ';
+            pos = line.find(" ");
+            if (pos == string::npos) {
+                cerr << "erroneous line in servers text: " << line << endl;
+                continue;
+            }
+            cout << "found server: " << line.substr(0, pos) << " and port: " << atoi(line.substr(pos + 1).c_str()) << endl;
+            workers_vec.push_back(make_pair(line.substr(0, pos), atoi(line.substr(pos + 1).c_str())));
         }
     }
 
@@ -192,12 +204,12 @@ int main(int argc, char *argv[]) {
     auto generator  = system.spawn<detached>(job_generator, jobstorage, script, canvas_w, canvas_h, use_stdin);
     // generator links to job storage
     auto streamer_  = system.spawn<priority_aware>(streamer, jobstorage, conf.user.gui_port, output_file, streamer_settings.to_ulong());
-    auto renderer_  = system.spawn(renderer, jobstorage, streamer_, range_begin, range_end);
+    auto renderer_  = system.spawn(renderer, jobstorage, streamer_, workers_vec);
     // renderer links to streamer and job storage
 
     actor_info streamer_info{streamer_};
     s->send(generator, start::value, num_chunks);
-    s->send(renderer_, start::value, num_workers);
+    s->send(renderer_, start::value, use_remote_workers ? workers_vec.size() : num_workers);
 
     if (use_stdin) {
         auto stdin_reader_ = system.spawn(stdin_reader, generator, jobstorage);
