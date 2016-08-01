@@ -113,7 +113,11 @@ target_link_libraries(starcry -licui18n)
 target_link_libraries(starcry -licuuc)
 # I already included this statically..
 target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/libv8_libplatform.a")
-# UBUNTU NOT NEEDED ?? target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/libv8_libsampler.a") # this one was not needed in shared build
+if (STATIC)
+    if (EXISTS "/etc/centos-release")
+        target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/libv8_libsampler.a")
+    endif()
+endif()
 target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/libv8_base.a")
 target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/libv8_libbase.a")
 target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/v8pp/v8/lib/libv8_nosnapshot.a")
@@ -126,11 +130,12 @@ if (STATIC)
     target_link_libraries(starcry -lGLU)
     target_link_libraries(starcry -lGL)
     target_link_libraries(starcry -lfreetype)
-    #UBUNTU SPECIFIC ?
-    target_link_libraries(starcry -lXrandr)
-    target_link_libraries(starcry -lXinerama)
-    target_link_libraries(starcry -lXi)
-    #xrandr xi xxf86vm gl
+    if (NOT EXISTS "/etc/centos-release")
+        target_link_libraries(starcry -lXrandr)
+        target_link_libraries(starcry -lXinerama)
+        target_link_libraries(starcry -lXi)
+        #xrandr xi xxf86vm gl
+    endif()
     #END
     #-lX11 -ltiff -ljpeg -lpng -llapack -lGLU -lGL -ldc1394  -L -lXext -pthread
     target_link_libraries(starcry ${ALLEGRO_LIBRARIES})
