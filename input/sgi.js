@@ -3,6 +3,13 @@
  License, v. 2.0. If a copy of the MPL was not distributed with this
  file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+function simple_gradient(colr) {
+    var grad = new gradient();
+    grad.add(0.0, colr);
+    grad.add(1.0, new color(0, 0, 0, 0));
+    return grad;
+}
+
 var data = [
     ["r01i00compute00", 29693, "datanode", 33456],
     ["r01i00compute00", 29693, "datanode", 50010],
@@ -787,6 +794,9 @@ var data = [
     ["headnode", '',  "job", '']
 ];
 
+var usages = {};
+var pid_to_service = {};
+
 /*
 data.sort(function(a, b) {
     return a[3] > b[3];
@@ -941,6 +951,17 @@ var ips = {
     '10.141.255.254'  : 'headnode',
 };
 
+
+var canvas_w      = 1920;
+var canvas_h      = 1080;
+var scale         = 1;
+var canvas_w      = 3840;
+var canvas_h      = 2160;
+var scale         = 2;
+var left_x        = 1920 / 2.0;
+var left_y        = 1080 / 2.0;
+var bitrate       = 1000 /* kilobyte */ * 1024 /* bytes */ * 8 /* bits */;
+
 var fps            = 25;
 var max_frames     = 10000000 * fps;
 var realtime       = false;
@@ -952,51 +973,21 @@ var current_frame  = 0;
 var previous_frame = 0;
 var nodes          = {};
 
+var rainbow = new gradient();
+
 function draw_box(x, y, width, height) {
     var r = 1, g = 0, b = 0;
     width /= 2.0;
     height /= 2.0;
 
-    add_line(x - width, y - height, 0,
-             x - width, y + height, 0, 2.0, r, g, b);
-    add_line(x - width, y + height, 0,
-             x + width, y + height, 0, 2.0, r, g, b);
-    add_line(x + width, y - height, 0,
-             x + width, y + height, 0, 2.0, r, g, b);
-    add_line(x + width, y - height, 0,
-             x - width, y - height, 0, 2.0, r, g, b);
+    add_line(new line(new pos(x - width, y - height, 0), new pos(x - width, y + height, 0), 2.0, simple_gradient(new color(r, g, b, 0))));
+    add_line(new line(new pos(x - width, y + height, 0), new pos(x + width, y + height, 0), 2.0, simple_gradient(new color(r, g, b, 0))));
+    add_line(new line(new pos(x + width, y - height, 0), new pos(x + width, y + height, 0), 2.0, simple_gradient(new color(r, g, b, 0))));
+    add_line(new line(new pos(x + width, y - height, 0), new pos(x - width, y - height, 0), 2.0, simple_gradient(new color(r, g, b, 0))));
 }
 
 var coords = {};
-function calculate_coords(node, x, y) {
-    var offset = 0;
-    for (service in nodes[node]) {
-        //if (service.indexOf('datanode') != -1) continue;
-        //if (service.indexOf('nodemanager') != -1) continue;
-        //output(service);
-        // service
-        var service_x = x;
-        var service_y = y + offset;
 
-        // ports
-        offset += 10;
-        var ports = nodes[node][service].ports;
-        var len = 0;
-        for (port in ports) { len++; }
-        var port_offset = -1 * (((len - 1) / 2.0) * 20);
-        for (port in ports) {
-            var port_x = x + port_offset;
-            var port_y = y + offset;
-            coords[node + port] = { x: port_x, y: port_y };
-            port_offset += 20;
-        }
-
-        // extra spacing
-        offset += 50;
-
-        coords[node + service] = { x: service_x + 40 + 2.5, y: service_y - 2.5 };
-    }
-}
 function draw_node(node, x, y) {
     var offset = 0;
     for (service in nodes[node]) {
@@ -1006,7 +997,7 @@ function draw_node(node, x, y) {
         // service
         var service_x = x;
         var service_y = y + offset;
-        add_text(service_x, service_y, 0, service, 'center');
+        add_text(service_x, service_y, 0, 14, service, 'center');
 
         // ports
         offset += 10;
@@ -1017,7 +1008,7 @@ function draw_node(node, x, y) {
         for (port in ports) {
             var port_x = x + port_offset;
             var port_y = y + offset;
-            add_text(port_x, port_y, 0, '' + port, 'center');
+            add_text(port_x, port_y, 0, 14, '' + port, 'center');
             draw_box(port_x, port_y, 18, 6);
             coords[node + port] = { x: port_x, y: port_y };
             port_offset += 20;
@@ -1039,16 +1030,47 @@ var console = [];
 var header = '';
 
 function draw_header(x, y) {
-    add_text(x, y, 0, header, 'left');
+    add_text(x, y, 0, 24, header, 'left');
 }
 
 function draw_console(x, y) {
-    console = console.slice(-30);
+    console = console.slice(-10);
     var offset = 0;
     for (var i=0; i<console.length; i++) {
-        add_text(x, y + offset, 0, console[i], 'left');
-        offset += 10;
+        add_text(x, y + offset, 0, 14, console[i], 'left');
+        offset += 20;
     }
+}
+
+function draw_legend(x, y) {
+    var offset_x = x, offset = 20, fontsize = 12;
+    add_text( offset_x, y, 0, 14, 'Legend', 'right');
+    add_text( offset_x, y + (offset * 1), 0, fontsize, 'datanode', 'right');
+    add_circle(new circle(new pos( 50 + offset_x, y + (offset * 1), 0), 0, 5, simple_gradient(new color(0.5, 0.5, 1, 0))));
+
+    add_text( offset_x, y + (offset * 2), 0, fontsize, 'nodemanager', 'right');
+    add_circle(new circle(new pos( 50 + offset_x, y + (offset * 2), 0), 0, 5, simple_gradient(new color(0, 1, 0, 0))));
+    add_text( offset_x, y + (offset * 3), 0, fontsize, 'servicename', 'right');
+    add_text( 50 + offset_x, y + (offset * 3), 0, 10, 'zkfc', 'center');
+    add_text( offset_x, y + (offset * 4), 0, fontsize, 'node', 'right');
+    add_text( 50 + offset_x, y + (offset * 4), 0, 8, 'r01i00compute05', 'center');
+    add_text( offset_x, y + (offset * 5), 0, fontsize, 'port', 'right');
+    add_text( 50 + offset_x, y + (offset * 5), 0, 8, '8088', 'center');
+
+    add_text( offset_x, y + (offset * 6), 0, fontsize, 'some data', 'right');
+    add_line(new line(new pos( offset_x + 25, y + (offset * 6), 0), new pos( offset_x + 75, y + (offset * 6), 0), 2, simple_gradient(rainbow.get3(0))));
+    
+    add_text( offset_x, y + (offset * 7), 0, fontsize, 'large data', 'right');
+    add_line(new line(new pos( offset_x + 25, y + (offset * 7), 0), new pos( offset_x + 75, y + (offset * 7), 0), 2, simple_gradient(rainbow.get3(0.5))));
+
+    add_text( offset_x, y + (offset * 8), 0, fontsize, 'very large data', 'right');
+    add_line(new line(new pos( offset_x + 25, y + (offset * 8), 0), new pos( offset_x + 75, y + (offset * 8), 0), 2, simple_gradient(rainbow.get3(1.0))));
+
+    add_text( offset_x, y + (offset * 9), 0, fontsize, 'small CPU usage', 'right');
+    add_circle(new circle(new pos( 50 + offset_x, y + (offset * 9), 0), 2.0, 2, simple_gradient(new color(1, 0, 0, 0))));
+
+    add_text( offset_x, y + (offset * 10), 0, fontsize, 'large CPU usage', 'right');
+    add_circle(new circle(new pos( 50 + offset_x, y + (offset * 10), 0), 5.0, 2, simple_gradient(new color(1, 0, 0, 0))));
 }
 
 function process() {
@@ -1056,7 +1078,8 @@ function process() {
         while (current_frame < frame) {
             for (var a in activity) {
                 if (activity[a].bytes > 20) {
-                    activity[a].bytes /= 1.2;
+                    //activity[a].bytes /= 1.2;
+                    activity[a].bytes /= 1.05;
                 }
                 else {
                     activity[a].bytes -= 1;
@@ -1071,23 +1094,26 @@ function process() {
             }
 
             for (var i=0; i<buffer.length; i++) {
-                var line = buffer[i];
+                var line_ = buffer[i];
 
-                if (line.startsWith('@@usage@@')) {
-                    line = line.substr(10);
-                    //console.push('usage = ' + line);
+                if (line_.startsWith('@@usage@@')) {
+                    line_ = line_.substr(10);
+                    var chunks = line_.replace(/  /g, ' ').split(" ");
+                    //output('usage = ' + line_ + " --> " + chunks[0] + "/" + chunks[1] + "/" + chunks[2]);
+                    usages[pid_to_service[chunks[0]]] = chunks[1];
+                    //usages[node + service] = 0;
                     continue;
                 }
-                else if (line.startsWith('@@job@@')) {
-                    line = line.substr(8);
-                    if (line.startsWith('INFO'))
-                        header = line.substr(5);
+                else if (line_.startsWith('@@job@@')) {
+                    line_ = line_.substr(8);
+                    if (line_.startsWith('INFO'))
+                        header = line_.substr(5);
                     else
-                        console.push(line);
+                        console.push(line_);
                     continue;
                 }
 
-                var c = line.split(' ');
+                var c = line_.split(' ');
                 c[4] = c[4] == '127.0.0.1' ? c[0] : ips[c[4]];
                 if (!c[4]) continue;
                 var from = c[0] + c[1]; // node + service
@@ -1102,33 +1128,18 @@ function process() {
             buffer = [];
             current_frame++;
 
-            //calculate_coords('node1',    -250, -125);
-            //calculate_coords('node2',    -150, -125);
-            //calculate_coords('node3',    -50,  -125);
-            
-            //mark
-            for (var i=0; i<data.length; i++) {
-                var node = data[i];
-                if (node[0].indexOf('compute') !== -1 /*&& node[2] !== 'datanode'*/) {
-                    var x = -250 + i;
-                    var y = -125;
-                    calculate_coords(node[0], x, y);
-                }
-            }
-
-            calculate_coords('headnode', -150,   80);
-            draw_console(10, -125);
-            draw_header(-250, -150);
-            add_circle(0, 0, 0, 100, 2.0);
+            draw_console( 100 - left_x, 320);
+            draw_legend( 735, 320);
+            draw_header( 100 - left_x, 280);
 
             for (var a in activity) {
                 var act = activity[a];
                 var from = coords[act.from];
                 var to = coords[act.to];
-                output(act.from + " + " + act.to);
+                //output(act.from + " + " + act.to);
                 if (act.to.endsWith('53') && from) {
                     if (act.bytes > 0) {
-                        add_text(from.x - 90, from.y, 0, 'DNS', 'left');
+                        //add_text(from.x, from.y, 0, 14, 'DNS', 'left');
                     }
                 }
                 /*
@@ -1142,11 +1153,22 @@ function process() {
                 if (from && to) {
                     var size = act.bytes / 10.0;
                     if (size > 100) size = 100.0;
+
                     if (act.bytes > 0) {
-                        add_line(from.x, from.y, 0, to.x, to.y, 0, size + 1, 0, 1, 0);
+                        //add_line(new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), size + 1, simple_gradient(new color(0, 1, 0, 0))));
+                        // temp rbu
+                        // try something new..
+                        size /= 100.0;
+                        /*var r = rainbow.getr(size > 0 && size < 1 ? size : 0);
+                        var g = rainbow.getg(size > 0 && size < 1 ? size : 0);
+                        var b = rainbow.getb(size > 0 && size < 1 ? size : 0);
+                        */
+                        add_line(new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 1 + size*5, simple_gradient(rainbow.get3(size))));
                     }
                     else if (act.shadow > 0.1) {
-                        add_line(from.x, from.y, 0, to.x, to.y, 0, 5.0, act.shadow, act.shadow, act.shadow);
+                        //add_line(new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 5.0, simple_gradient(new color(act.shadow, act.shadow, act.shadow, 0))));
+                        // temp rbu
+                        //add_line(new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 1.0, simple_gradient(new color(act.shadow, act.shadow, act.shadow, 0))));
                     }
                 }
             }
@@ -1156,25 +1178,160 @@ function process() {
             //draw_node('node2',    -150, -125);
             //draw_node('node3',    -50,  -125);
             //mark
-            for (var i=0; i<data.length; i++) {
-                var node = data[i];
-                if (node[0].indexOf('compute') !== -1) {
-                    var x = -250 + (i * 5);
-                    var y = -125;
-                    draw_node(node[0], x, y);
+            for (var pass=1; pass<=2; pass++) {
+                var counter = 0, offset = 0;
+                var previous_service = null;
+                for (var i=0; i<data.length; i++) {
+                    var node = data[i][0];
+                    var service = data[i][2];
+                    var port = data[i][3];
+                    if (node.indexOf('compute') !== -1) {
+                        if (service.indexOf('datanode') === -1 && 
+                            service.indexOf('nodemanager') === -1 &&
+                            ((pass == 1 && service.indexOf('namenode') === -1) || (pass == 2 && service.indexOf('namenode') !== -1))
+                        ){
+                            var offset_x = left_x - 35;
+                            var offset_y = pass == 2 ? left_y - 100 : left_y;
+
+                            if (previous_service == null) {
+                                previous_service = node + service;
+                            }
+                            else if (previous_service != node + service) {
+                                counter++;
+                                offset = 0;
+                            }
+                            var per_row = 17;
+                            var width   = 100;
+                            var height  = 100;
+                            var col = counter % per_row;
+                            var row = Math.floor(counter / per_row);
+                            var x = col * width + 100;
+                            var y = row * height + 100;
+                            //draw_node(node[0], x - offset_x + per_row, y - offset_y + per_row);
+                            //
+                            if (node + service == 'r01i00compute05namenode') {
+                                coords[node + service] = coords['r01i00compute07timelineserver'];
+                                offset_x = 0;
+                                offset_y = -100;
+                                x = coords[node + service].x;
+                                y = coords[node + service].y;
+                            }
+                            if (node + service == 'r01i00compute06namenode') {
+                                coords[node + service] = coords['r01i00compute08timelineserver'];
+                                offset_x = 0;
+                                offset_y = -100;
+                                x = coords[node + service].x;
+                                y = coords[node + service].y;
+                            }
+                            var normalized_usage = usages[node + service] / 20.0;
+                            add_circle(new circle(new pos(x - offset_x, y - offset_y + 40 + offset, 0), normalized_usage * 20.0, 2, simple_gradient(new color(1, 0, 0, 0))));
+
+                            add_text(x - offset_x, y - offset_y, 0, 10, '' + service, 'center');
+                            add_text(x - offset_x, y - offset_y + 20, 0, 8, '' + node, 'center');
+                            add_text(x - offset_x, y - offset_y + 40 + offset, 0, 8, '' + port, 'center');
+
+
+                            coords[node + service] = { x: x - offset_x, y: y - offset_y };
+                            coords[node + port] = { x: x - offset_x, y: y - offset_y + 40 + offset };
+
+                            if (node + service == 'r01i00compute06zkfc') {
+                                coords[node + service] = coords['r01i00compute06zkfc'];
+                                //offset_x = 0;
+                                //offset_y = -100;
+                                var job_x = coords[node + service].x;
+                                var job_y = coords[node + service].y;
+                                add_text(job_x, job_y + 100, 0, 8, 'job', 'center');
+                                add_text(job_x, job_y + 100 + 20, 0, 8, 'headnode', 'center');
+                                add_text(job_x, job_y + 100 + 40, 0, 8, '-', 'center');
+                                coords['headnodejob'] = { x: job_x, y: job_y + 100 + 40};
+                            }
+
+                            //var ports = nodes[node][service].ports;
+                            //for (port in ports) {
+                                //add_text(port_x, port_y, 0, 14, '' + port, 'center');
+                            //
+                            //
+                            //
+                            offset += per_row;
+                            previous_service = node + service;
+                        }
+                    }
                 }
             }
 
+            var counter = 0, offset = 0;
+            var previous_node = null;
 
-            draw_node('headnode', -150,   100);
+            for (var i=0; i<data.length; i++) {
+                var node = data[i][0];
+                var service = data[i][2];
+                var port = data[i][3];
+                if (node.indexOf('compute') !== -1) {
+                   if (service.indexOf('datanode') !== -1 || 
+                       service.indexOf('nodemanager') !== -1
+                   ){
+                       var label = false;
+                        if (previous_node == null) {
+                            previous_node = node;
+                            offset = 5; // radiussize
+                            label = true;
+                        }
+                        else if (previous_node != node) {
+                            counter++;
+                            offset = 5;
+                            label = true;
+                            offset += 10;
+                        } else {
+                            offset += 10;
+                        }
+                        var per_row = 17;
+                        var width   = 100;
+                        var height  = 40;
+                        var col = counter % per_row;
+                        var row = Math.floor(counter / per_row);
+                        var x = col * width + 100;
+                        var y = row * height + 100;
+                        if (label)
+                            add_text(x - left_x, y - 200, 0, 8, node, 'left');
+
+                        //draw_node(node[0], x - left_x + per_row, y - left_y + per_row);
+                        //
+                        //add_text(x - left_x, y - 300, 0, 14, '' + service, 'center');
+                        //add_text(x - left_x, y - 300 + 20, 0, 8, '' + node, 'center');
+
+                        var colr = simple_gradient(new color(0.5, 0.5, 1, 0));
+                        if (service.indexOf('nodemanager') !== -1) {
+                            colr = simple_gradient(new color(0, 1, 0, 0));
+                        }
+                        coords[node + service] = { x: x - left_x, y: y - 190 };
+                        coords[node + port] = { x: offset + x - left_x, y: y - 190 };
+
+                        var normalized_usage = usages[node + service] / 20.0;
+                        add_circle(new circle(new pos(offset + x - left_x, y - 190, 0), normalized_usage * 20.0, 2, simple_gradient(new color(1, 0, 0, 0))));
+
+                        add_circle(new circle(new pos(offset + x - left_x, y - 190, 0), 0, 5, colr));
+
+                        //var ports = nodes[node][service].ports;
+                        //for (port in ports) {
+                            //add_text(port_x, port_y, 0, 14, '' + port, 'center');
+                        //
+                        //
+                        //
+                        
+                        previous_node = node;
+                    }
+                }
+            }
+
+            //draw_node('headnode', -150,   100);
 
             write_frame();
         }
     }
 }
 
-function input(line) {
-    var matches = line.match(/(\d+):(\d+):(\d+).(\d+) (.*)/ );
+function input(line_) {
+    var matches = line_.match(/(\d+):(\d+):(\d+).(\d+) (.*)/ );
     var time    = matches[1] + ':' + matches[2] + ':'  + matches[3];
     var dt      = new Date('1984-02-23 ' + time); // add a date for Mr. Javascript
 
@@ -1191,6 +1348,11 @@ function input(line) {
 }
 
 function initialize() {
+
+    rainbow.add(0, new color(1, 0, 0, 0));
+    rainbow.add(0.5, new color(0, 1, 0, 0));
+    rainbow.add(1.0, new color(1, 1, 1, 0));
+
     for (var i=0; i<data.length; i++) {
         var node    = data[i][0];
         var pid     = data[i][1];
@@ -1203,6 +1365,8 @@ function initialize() {
             ports : {},
         };
         nodes[node][service].ports[port] = {};
+        pid_to_service[pid] = node + service;
+        usages[node + service] = 0;
     }
 }
 
