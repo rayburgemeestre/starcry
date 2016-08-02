@@ -3,6 +3,32 @@
  License, v. 2.0. If a copy of the MPL was not distributed with this
  file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+var datanode_colr = simple_gradient(new color(0.5, 0.5, 1, 0));
+var nodemanager_colr = simple_gradient(new color(0, 1, 0, 0));
+var circles = {};
+var lines = {};
+var gradients = {};
+function make_circle(key, construct_func)
+{
+    if (!(key in circles)) {
+        circles[key] = construct_func ? construct_func() : new circle(new pos(0, 0, 0), 0, 0, simple_gradient(new color(1, 1, 1, 0)));
+    }
+    return circles[key];
+}
+function make_line(key, construct_func)
+{
+    if (!(key in lines)) {
+        lines[key] = construct_func ? construct_func() : new line(new pos(0, 0, 0), new pos(0, 0, 0), 0, simple_gradient(new color(1, 1, 1, 0)));
+    }
+    return lines[key];
+}
+function make_gradient(key, construct_func)
+{
+    if (!(key in gradients)) {
+        gradients[key] = construct_func ? construct_func() : simple_gradient(new color(1, 1, 1, 0));
+    }
+    return gradients[key];
+}
 function simple_gradient(colr) {
     var grad = new gradient();
     grad.add(0.0, colr);
@@ -974,57 +1000,7 @@ var previous_frame = 0;
 var nodes          = {};
 
 var rainbow = new gradient();
-
-function draw_box(x, y, width, height) {
-    var r = 1, g = 0, b = 0;
-    width /= 2.0;
-    height /= 2.0;
-
-    add_line(new line(new pos(x - width, y - height, 0), new pos(x - width, y + height, 0), 2.0, simple_gradient(new color(r, g, b, 0))));
-    add_line(new line(new pos(x - width, y + height, 0), new pos(x + width, y + height, 0), 2.0, simple_gradient(new color(r, g, b, 0))));
-    add_line(new line(new pos(x + width, y - height, 0), new pos(x + width, y + height, 0), 2.0, simple_gradient(new color(r, g, b, 0))));
-    add_line(new line(new pos(x + width, y - height, 0), new pos(x - width, y - height, 0), 2.0, simple_gradient(new color(r, g, b, 0))));
-}
-
 var coords = {};
-
-function draw_node(node, x, y) {
-    var offset = 0;
-    for (service in nodes[node]) {
-        //if (service.indexOf('datanode') != -1) continue;
-        //if (service.indexOf('nodemanager') != -1) continue;
-
-        // service
-        var service_x = x;
-        var service_y = y + offset;
-        add_text(service_x, service_y, 0, 14, service, 'center');
-
-        // ports
-        offset += 10;
-        var ports = nodes[node][service].ports;
-        var len = 0;
-        for (port in ports) { len++; }
-        var port_offset = -1 * (((len - 1) / 2.0) * 20);
-        for (port in ports) {
-            var port_x = x + port_offset;
-            var port_y = y + offset;
-            add_text(port_x, port_y, 0, 14, '' + port, 'center');
-            draw_box(port_x, port_y, 18, 6);
-            coords[node + port] = { x: port_x, y: port_y };
-            port_offset += 20;
-        }
-
-        // extra spacing
-        offset += 50;
-
-        draw_box(service_x, service_y + 5, 70, 20);
-        draw_box(service_x + 40 + 2.5, service_y - 2.5, 5, 5);
-        coords[node + service] = { x: service_x + 40 + 2.5, y: service_y - 2.5 };
-        draw_box(service_x + 40 - 2.5, service_y - 2.5, 5, 0);
-
-    }
-}
-
 var activity = {};
 var console = [];
 var header = '';
@@ -1132,6 +1108,7 @@ function process() {
             draw_legend( 735, 320);
             draw_header( 100 - left_x, 280);
 
+            var counter = 0;
             for (var a in activity) {
                 var act = activity[a];
                 var from = coords[act.from];
@@ -1163,7 +1140,19 @@ function process() {
                         var g = rainbow.getg(size > 0 && size < 1 ? size : 0);
                         var b = rainbow.getb(size > 0 && size < 1 ? size : 0);
                         */
-                        add_line(new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 1 + size*5, simple_gradient(rainbow.get3(size))));
+                        var l = make_line('line_' + counter, function () {
+                            return new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 1 + size*5, simple_gradient(rainbow.get3(size)));
+                        });
+                        l.x = from.x;
+                        l.y = from.y;
+                        l.x2 = to.x;
+                        l.y2 = to.y;
+                        l.radiussize = 1 + size * 5;
+                        var g = make_gradient('grad_' + size, function () {
+                            return simple_gradient(rainbow.get3(size));
+                        });
+                        l.gradient = g;// optimize this too!
+                        add_line(l);
                     }
                     else if (act.shadow > 0.1) {
                         //add_line(new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 5.0, simple_gradient(new color(act.shadow, act.shadow, act.shadow, 0))));
@@ -1173,11 +1162,6 @@ function process() {
                 }
             }
 
-            // TODO: refactor these functions so they use coords[] instead!
-            //draw_node('node1',    -250, -125);
-            //draw_node('node2',    -150, -125);
-            //draw_node('node3',    -50,  -125);
-            //mark
             for (var pass=1; pass<=2; pass++) {
                 var counter = 0, offset = 0;
                 var previous_service = null;
@@ -1224,7 +1208,12 @@ function process() {
                                 y = coords[node + service].y;
                             }
                             var normalized_usage = usages[node + service] / 20.0;
-                            add_circle(new circle(new pos(x - offset_x, y - offset_y + 40 + offset, 0), normalized_usage * 20.0, 2, simple_gradient(new color(1, 0, 0, 0))));
+
+                            var c = make_circle('datanode_usage_pass' + pass + '_' + i, function () {
+                                return new circle(new pos(x - offset_x, y - offset_y + 40 + offset, 0), normalized_usage * 20.0, 2, simple_gradient(new color(1, 0, 0, 0)));
+                            });
+                            c.radius = normalized_usage * 20.0;
+                            add_circle(c);
 
                             add_text(x - offset_x, y - offset_y, 0, 10, '' + service, 'center');
                             add_text(x - offset_x, y - offset_y + 20, 0, 8, '' + node, 'center');
@@ -1299,17 +1288,25 @@ function process() {
                         //add_text(x - left_x, y - 300, 0, 14, '' + service, 'center');
                         //add_text(x - left_x, y - 300 + 20, 0, 8, '' + node, 'center');
 
-                        var colr = simple_gradient(new color(0.5, 0.5, 1, 0));
-                        if (service.indexOf('nodemanager') !== -1) {
-                            colr = simple_gradient(new color(0, 1, 0, 0));
-                        }
                         coords[node + service] = { x: x - left_x, y: y - 190 };
                         coords[node + port] = { x: offset + x - left_x, y: y - 190 };
 
                         var normalized_usage = usages[node + service] / 20.0;
-                        add_circle(new circle(new pos(offset + x - left_x, y - 190, 0), normalized_usage * 20.0, 2, simple_gradient(new color(1, 0, 0, 0))));
 
-                        add_circle(new circle(new pos(offset + x - left_x, y - 190, 0), 0, 5, colr));
+                        var c = make_circle('datanode_usage_' + i, function () {
+                            return new circle(new pos(offset + x - left_x, y - 190, 0), normalized_usage * 20.0, 2, simple_gradient(new color(1, 0, 0, 0)));
+                        });
+                        c.x = offset + x - left_x;
+                        c.y = y - 190;
+                        c.radius = normalized_usage * 20.0;
+                        add_circle(c);
+
+                        var c2 = make_circle('datanode_service_' + i, function () {
+                            return new circle(new pos(offset + x - left_x, y - 190, 0), 0, 5, (service.indexOf('nodemanager') !== -1) ? nodemanager_colr : datanode_colr);
+                        });
+                        c2.x = offset + x - left_x;
+                        c2.y = y - 190;
+                        add_circle(c2);
 
                         //var ports = nodes[node][service].ports;
                         //for (port in ports) {
@@ -1370,5 +1367,5 @@ function initialize() {
     }
 }
 
-function close() { frame++; process(); }
+function close() { write_frame1(true);/*hacky*/ }
 
