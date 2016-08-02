@@ -11,8 +11,9 @@ using read_stdin       = atom_constant<atom("read_stdin")>;
 using num_jobs         = atom_constant<atom("num_jobs  ")>;
 using no_more_input    = atom_constant<atom("no_more_in")>;
 
-int max_num_lines_batch = 100;
-extern size_t desired_num_jobs_queued;
+int max_num_lines_batch = 5000;
+int desired_max_mailbox_generator = 1000;
+//extern size_t desired_num_jobs_queued;
 
 using namespace std;
 
@@ -29,10 +30,9 @@ behavior stdin_reader(event_based_actor *self, const caf::actor &job_generator, 
             self->send(self, read_stdin::value);
         },
         [=](read_stdin) {
-            self->request(job_storage, infinite, num_jobs::value).then(
+            self->request(job_generator, infinite, num_jobs::value).then( // TODO: rename mailbox_size::value ?
                 [=](num_jobs, unsigned long numjobs) {
-                    if (numjobs >= desired_num_jobs_queued) {
-                        this_thread::sleep_for(chrono::milliseconds(100));
+                    if (numjobs >= desired_max_mailbox_generator) {
                         self->send(self, read_stdin::value);
                         return;
                     }
@@ -41,6 +41,7 @@ behavior stdin_reader(event_based_actor *self, const caf::actor &job_generator, 
                     // TODO: make this asynchronous.. so stdin_reader can be pulled from a different actor, and also exited in case enough input is gathered..
                     for (int i=0; i<max_num_lines_batch; i++) {
                         if (!getline(cin, line)) {
+                            aout(self) << "stdin_reader: EOF" << endl;
                             self->send(job_generator, no_more_input::value);
                             return;
                         }
