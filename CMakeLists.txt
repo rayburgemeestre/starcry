@@ -182,6 +182,12 @@ target_link_libraries(starcry_worker -lpng)
 target_link_libraries(starcry_worker -lGLU)
 target_link_libraries(starcry_worker -lGL)
 target_link_libraries(starcry_worker -lfreetype)
+if (NOT EXISTS "/etc/centos-release")
+    target_link_libraries(starcry_worker -lXrandr)
+    target_link_libraries(starcry_worker -lXinerama)
+    target_link_libraries(starcry_worker -lXi)
+    #xrandr xi xxf86vm gl
+endif()
 target_link_libraries(starcry_worker ${ALLEGRO_LIBRARIES})
 #######################################################
 
