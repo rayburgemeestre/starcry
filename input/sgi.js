@@ -1140,19 +1140,21 @@ function process() {
                         var g = rainbow.getg(size > 0 && size < 1 ? size : 0);
                         var b = rainbow.getb(size > 0 && size < 1 ? size : 0);
                         */
-                        var l = make_line('line_' + counter, function () {
-                            return new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 1 + size*5, simple_gradient(rainbow.get3(size)));
-                        });
-                        l.x = from.x;
-                        l.y = from.y;
-                        l.x2 = to.x;
-                        l.y2 = to.y;
-                        l.radiussize = 1 + size * 5;
-                        var g = make_gradient('grad_' + size, function () {
-                            return simple_gradient(rainbow.get3(size));
-                        });
-                        l.gradient = g;// optimize this too!
-                        add_line(l);
+//                        var l = make_line('line_' + counter, function () {
+//                            return new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 1 + size*5, simple_gradient(rainbow.get3(size)));
+//                        });
+//                        l.x = from.x;
+//                        l.y = from.y;
+//                        l.x2 = to.x;
+//                        l.y2 = to.y;
+//                        l.radiussize = 1 + size * 5;
+//                        var g = make_gradient('grad_' + size, function () {
+//                            return simple_gradient(rainbow.get3(size));
+//                        });
+//                        // TODO; this doesn't work yet..
+//                        l.gradient = simple_gradient(rainbow.get3(size));//g;// optimize this too!
+//                        add_line(l);
+                        add_line(new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 1 + size*5, simple_gradient(rainbow.get3(size))));
                     }
                     else if (act.shadow > 0.1) {
                         //add_line(new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 5.0, simple_gradient(new color(act.shadow, act.shadow, act.shadow, 0))));
