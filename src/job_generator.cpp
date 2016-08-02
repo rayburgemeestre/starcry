@@ -12,6 +12,7 @@ using start            = atom_constant<atom("start     ")>;
 using input_line       = atom_constant<atom("input_line")>;
 using no_more_input    = atom_constant<atom("no_more_in")>;
 using debug            = atom_constant<atom("debug     ")>;
+using show_stats       = atom_constant<atom("show_stats")>;
 
 // external
 using add_job          = atom_constant<atom("add_job   ")>;
@@ -27,6 +28,10 @@ size_t desired_num_jobs_queued = 100;
 size_t current_job = 0;
 size_t current_frame = 0;
 size_t max_split_chunks = 0;
+
+#include "benchmark.h"
+auto benchmark_class_ = std::make_unique<MeasureInterval>(TimerFactory::Type::BoostChronoTimerImpl);
+MeasureInterval &fps_counter = static_cast<MeasureInterval &>(*benchmark_class_.get());
 
 #include "v8.h"
 #include "libplatform/libplatform.h"
@@ -287,8 +292,10 @@ void call_print_exception(event_based_actor *self, string fn, T arg)
     }
 }
 
-behavior job_generator(event_based_actor *self, const caf::actor &job_storage, const string &filename, uint32_t canvas_w, uint32_t canvas_h, bool use_stdin) {
+behavior job_generator(event_based_actor *self, const caf::actor &job_storage, const string &filename, uint32_t canvas_w, uint32_t canvas_h, bool use_stdin, bool rendering_enabled) {
     self->link_to(job_storage);
+    fps_counter.setDescription("fps");
+    fps_counter.startHistogramAtZero(true);
     context = make_shared<v8_wrapper>(filename);
     try {
         ifstream stream(filename.c_str());
@@ -435,6 +442,37 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
             call_print_exception(self, "close");
         },
         [=](write_frame, data::job &job) {
+            // Every 1000th frame see if we're not flooding the job storage,
+            //  if so, pause processing.
+            static bool generator_paused = false;
+            if (generator_paused) {
+                self->request(job_storage, infinite, num_jobs::value).await(
+                    [=](num_jobs, unsigned long numjobs) {
+                        // Unpause if "queue" is half empty
+                        if (numjobs <= (desired_num_jobs_queued / 2.0)) {
+                            generator_paused = false;
+                        }
+                    }
+                );
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                self->send(self, write_frame::value, job);
+                return;
+            }
+            if (job.frame_number % 1000 == 0) {
+                self->request(job_storage, infinite, num_jobs::value).await(
+                    [=](num_jobs, unsigned long numjobs) {
+                        // Too much generated.. pause job generator
+                        if (numjobs >= desired_num_jobs_queued) {
+                            generator_paused = true;
+                            // let's try again in 100 milliseconds..
+                            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                            self->send(self, write_frame::value, job);
+                            return;
+                        }
+                    }
+                );
+            }
+
             uint32_t width = canvas_w;
             uint32_t height = canvas_h;
 
@@ -455,17 +493,23 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
                 job.offset_y = rectangles[i].y();
                 job.job_number = current_job++;
                 job.chunk = counter;
-                self->send(job_storage, add_job::value, job);
+                if (rendering_enabled) {
+                    self->send(job_storage, add_job::value, job);
+                }
                 counter++;
             }
             current_frame++;
             context->run("current_frame++;");
+            fps_counter.measure();
+            job.shapes.clear();
             if (job.last_frame) {
                 aout(self) << "job_generator: there are no more jobs to be generated." << endl;
                 self->become(nothing);
+                if (!rendering_enabled)
+                    // this actor shuts down the system in that case
+                    self->quit(exit_reason::user_shutdown);
                 return;
             }
-            job.shapes.clear();
 
             if (!use_stdin || assistant->realtime) {
                 self->send(self, next_frame::value);
@@ -475,10 +519,12 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
             aout(self) << line << endl;
         },
         [=](next_frame) {
-            self->request(job_storage, std::chrono::seconds(10), num_jobs::value).then(
+            self->request(job_storage, infinite, num_jobs::value).then(
                 [=](num_jobs, unsigned long numjobs) {
                     // Renderer has some catching up to do
+                    std::cout << "comparing in next_frame: " << numjobs << " >= " << desired_num_jobs_queued << endl;
                     if (numjobs >= desired_num_jobs_queued) {
+                        std::cout << "sleeping here as well..." << std::endl;
                         std::this_thread::sleep_for(std::chrono::milliseconds(100));
                         self->send(self, next_frame::value);
                         return;
@@ -489,7 +535,14 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
         },
         [=](debug) {
             aout(self) << "job_generator mailbox = " << self->mailbox().count() << endl;
-        }
+        },
+        [=](show_stats) {
+            aout(self) << "generator at frame: " << current_frame << ", with frames/sec: " << (1000.0 / fps_counter.mean())
+                       << " +/- " << fps_counter.stderr() << " mailbox: " << self->mailbox().count() << endl;
+        },
+        [=](num_jobs) -> message {
+            return make_message(num_jobs::value, self->mailbox().count());
+        },
     };
 }
 

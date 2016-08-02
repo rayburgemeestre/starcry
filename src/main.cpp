@@ -98,6 +98,7 @@ int main(int argc, char *argv[]) {
     bitset<32> streamer_settings(settings_);
     po::options_description desc{"Allowed options"};
     string script{"test.js"};
+    bool rendering_enabled = true;
 
     po::positional_options_description p;
     p.add("script", 1);
@@ -112,6 +113,7 @@ int main(int argc, char *argv[]) {
                       ("gui", "open GUI window (writes state to $HOME/.starcry.conf)")
                       ("spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")
                       ("no-video-output", "disable video output using ffmpeg")
+                      ("no-rendering", "disable rendering (useful for testing javascript performance)")
                       ("webserver", "start embedded webserver")
                       ("stdin", "read from stdin and send this to job generator actor")
                       ("dimensions,dim", po::value<string>(&dimensions), "specify canvas dimensions i.e. 1920x1080")
@@ -127,6 +129,7 @@ int main(int argc, char *argv[]) {
         std::cout << desc << std::endl;
         return false;
     }
+    rendering_enabled = ! vm.count("no-rendering");
     if (vm.count("script")) {
         cout << "Script: " << vm["script"].as<string>() << "\n";
     }
@@ -201,7 +204,7 @@ int main(int argc, char *argv[]) {
 
     scoped_actor s{system};
     auto jobstorage = system.spawn(job_storage);
-    auto generator  = system.spawn<detached>(job_generator, jobstorage, script, canvas_w, canvas_h, use_stdin);
+    auto generator  = system.spawn<priority_aware + detached>(job_generator, jobstorage, script, canvas_w, canvas_h, use_stdin, rendering_enabled);
     // generator links to job storage
     auto streamer_  = system.spawn<priority_aware>(streamer, jobstorage, conf.user.gui_port, output_file, streamer_settings.to_ulong());
     auto renderer_  = system.spawn(renderer, jobstorage, streamer_, workers_vec);
@@ -223,7 +226,11 @@ int main(int argc, char *argv[]) {
 
     while (streamer_info.running()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        s->send(/*message_priority::high, */streamer_, show_stats::value);
+        if (rendering_enabled) {
+            s->send<message_priority::high>(streamer_, show_stats::value);
+        } else {
+            s->send<message_priority::high>(generator, show_stats::value);
+        }
 //        s->send(streamer_, debug::value);
 //        s->send(generator, debug::value);
 //        s->send(jobstorage, debug::value);
