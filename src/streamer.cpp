@@ -97,6 +97,8 @@ bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chu
 static size_t min_items_in_streamer_queue = 10;
 static size_t max_items_in_streamer_queue = 20;
 
+size_t num_pixels = 0;
+
 behavior streamer(event_based_actor* self, const caf::actor &job_storage, int render_window_at, string output_file, uint32_t settings) {
     ffmpeg   = std::make_unique<output_action<ffmpeg_h264_encode>>();
     allegro5 = std::make_unique<output_action<allegro5_window>>(self->system());
@@ -108,14 +110,12 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
     if (bitset<32>(settings).test(1)) {
         allegro5->enable(true);
     }
-    size_t num_pixels = 0;
 
     counter2.setDescription("fps");
     counter2.startHistogramAtZero(true);
     return {
         [=, &num_pixels](render_frame, struct data::job &job, vector<uint32_t> &pixels, const caf::actor &renderer) {
-            if (num_pixels != job.canvas_w * job.canvas_h)
-                num_pixels = job.canvas_w * job.canvas_h;
+            num_pixels = job.canvas_w * job.canvas_h;
             if (job.last_frame)
                 last_frame_streamed = std::make_optional(job.frame_number);
 

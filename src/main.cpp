@@ -70,8 +70,10 @@ using debug         = atom_constant<atom("debug     ")>;
 
 int main(int argc, char *argv[]) {
     actor_system_config cfg;
+    //cfg.scheduler_enable_profiling = true;
+    //cfg.scheduler_profiling_ms_resolution = 100;
+    //cfg.scheduler_profiling_output_file = "/projects/starcry/output_stats";
 
-    // TODO: apparently, I still need to announce :-)
     cfg.add_message_type<data::job>("data::job");
     cfg.add_message_type<data::pixel_data>("data::pixel_data");
     cfg.add_message_type<data::pixel_data2>("data::pixel_data2");

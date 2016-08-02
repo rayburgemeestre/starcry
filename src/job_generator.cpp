@@ -522,9 +522,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
             self->request(job_storage, infinite, num_jobs::value).then(
                 [=](num_jobs, unsigned long numjobs) {
                     // Renderer has some catching up to do
-                    std::cout << "comparing in next_frame: " << numjobs << " >= " << desired_num_jobs_queued << endl;
                     if (numjobs >= desired_num_jobs_queued) {
-                        std::cout << "sleeping here as well..." << std::endl;
                         std::this_thread::sleep_for(std::chrono::milliseconds(100));
                         self->send(self, next_frame::value);
                         return;
