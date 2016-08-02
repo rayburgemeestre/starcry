@@ -142,7 +142,6 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                 };
                 pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin())));
                 self->link_to(*pool);
-                cout << "launching " << num_workers_ << "worker threads.., verify against: " << num_workers << endl;
                 for (size_t i=0; i<num_workers_; i++) self->send(self, render_frame::value);
             }
         },
@@ -157,7 +156,7 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 // TODO: caf015
                 // TODO: also replace by scoped_actor ?
-                self->request(streamer, std::chrono::seconds(10), need_frames::value).then(
+                self->request(streamer, infinite, need_frames::value).then(
                     [=](need_frames, bool answer) {
                         if (answer) {
                             rendering_active_ = true;
@@ -171,15 +170,16 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
             // TODO: want to convert this to asynchronous, but this gave me segfaults..
             //  Need to figure out why that is..
             scoped_actor s{self->system()};
-            s->request(job_storage, std::chrono::seconds(10), get_job::value, rendered_frame).receive(
+            s->request(job_storage, infinite, get_job::value, rendered_frame).receive(
                 [=](data::job j) {
                     self->send(*pool, get_job::value, j);
                     rendered_frame++;
                 },
                 [=](error &e) {
-                    self->send(self, render_frame::value);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 }
             );
+            self->send(self, render_frame::value);
         },
         [=](ready, struct data::job j, data::pixel_data2 pixeldat) {
             pixel_store[j.job_number] = pixeldat.pixels;
