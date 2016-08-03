@@ -104,6 +104,10 @@ map<size_t, vector<uint32_t>> pixel_store;
 bool rendering_active_ = true;
 size_t num_workers_ = 0;
 
+std::optional<size_t> empty_job_slot;
+vector<std::optional<size_t>> render_worker_job_in_progress;
+vector<actor> render_workers;
+
 behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer, const vector<pair<string, int>> &workers_vec) {
     self->link_to(streamer);
     self->link_to(job_storage);
@@ -118,32 +122,32 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
             aout(self) << "renderer started, num_workers = " << num_workers << endl;
 
             if (workers_vec.empty()) {
-                auto worker_factory = [&]() -> actor {
-                    static size_t worker_num = 1000;
-                    aout(self) << "renderer spawning own worker" << endl;
-                    return self->spawn(worker, worker_num++);
-                };
-                pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin())));
-                self->link_to(*pool);
-                for (size_t i=0; i<num_workers_; i++) self->send(self, render_frame::value);
+                render_workers.reserve(num_workers);
+                render_worker_job_in_progress.reserve(num_workers);
+                for (size_t worker_num=0; worker_num<num_workers; worker_num++) {
+                    aout(self) << "renderer spawning local worker " << worker_num << endl;
+                    render_workers.push_back(self->spawn(worker, worker_num));
+                    render_worker_job_in_progress.push_back(empty_job_slot);
+                    self->link_to(render_workers[worker_num]);
+                }
             }
             else {
-                aout(self) << "renderer started, num workers in text file = " << workers_vec.size() << endl;
-                num_workers_ = workers_vec.size();
-                auto worker_factory = [&]() -> actor {
-                    static size_t index = 0;
-                    aout(self) << "renderer connecting to worker on : " << workers_vec[index].first << ":" << workers_vec[index].second << endl;
-                    auto p = self->system().middleman().remote_actor(workers_vec[index].first, workers_vec[index].second);
-                    if (!p) {
-                        aout(self) << "spawning remote actor failed: " << self->system().render(p.error()) << endl;
+                render_workers.reserve(num_workers);
+                render_worker_job_in_progress.reserve(num_workers);
+                size_t index = 0;
+                for (const auto &p : workers_vec) {
+                    const auto &host = p.first;
+                    const auto &port = p.second;
+                    auto remoteactor = self->system().middleman().remote_actor(host, port);
+                    if (!remoteactor) {
+                        aout(self) << "spawning remote actor failed: " << self->system().render(remoteactor.error()) << endl;
                     }
+                    render_workers.push_back(*remoteactor);
+                    render_worker_job_in_progress.push_back(empty_job_slot);
                     index++;
-                    return *p;
-                };
-                pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin())));
-                self->link_to(*pool);
-                for (size_t i=0; i<num_workers_; i++) self->send(self, render_frame::value);
+                }
             }
+            self->send(self, render_frame::value);
         },
         [=](start_rendering) {
             rendering_active_ = true;
@@ -167,19 +171,24 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                 return;
             }
 
-            // TODO: want to convert this to asynchronous, but this gave me segfaults..
-            //  Need to figure out why that is..
-            scoped_actor s{self->system()};
-            s->request(job_storage, infinite, get_job::value, rendered_frame).receive(
-                [=](data::job j) {
-                    self->send(*pool, get_job::value, j);
-                    rendered_frame++;
-                },
-                [=](error &e) {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            size_t worker_index = 0;
+            for (const auto &job_number : render_worker_job_in_progress) {
+                if (!job_number) {
+                    scoped_actor s{self->system()};
+                    s->request(job_storage, infinite, get_job::value, rendered_frame).receive(
+                        [=](data::job j) {
+                            self->send(render_workers[worker_index], get_job::value, j);
+                            render_worker_job_in_progress[worker_index] = j.job_number;
+                            rendered_frame++;
+                        },
+                        [=](error &e) {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                            self->send(self, render_frame::value);
+                        }
+                    );
                 }
-            );
-            self->send(self, render_frame::value);
+                worker_index++;
+            }
         },
         [=](ready, struct data::job j, data::pixel_data2 pixeldat) {
             pixel_store[j.job_number] = pixeldat.pixels;
@@ -206,6 +215,13 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
             } else {
                 jobs_done.push_back(j);
             }
+
+            for (auto &job_number : render_worker_job_in_progress) {
+                if (*job_number == j.job_number) {
+                    job_number = empty_job_slot;
+                    break;
+                }
+            }
             self->send(self, render_frame::value);
         },
         [=](show_stats) {
@@ -213,7 +229,10 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                        << " +/- " << counter.stderr() << endl;
         },
         [=](debug) {
-            aout(self) << "renderer mailbox = " << self->mailbox().count() << endl;
+            stringstream ss;
+            for (const auto job : render_worker_job_in_progress)
+                ss << ", " << (job ? to_string(*job) : "x");
+            aout(self) << "renderer mailbox = " << self->mailbox().count() << " --> " << ss.str() << endl;
         }
     };
 }
