@@ -94,8 +94,8 @@ bool process_buffer(event_based_actor* self, size_t frame_number, size_t num_chu
     return false;
 }
 
-static size_t min_items_in_streamer_queue = 10;
-static size_t max_items_in_streamer_queue = 20;
+static size_t min_items_in_streamer_queue = 20;
+static size_t max_items_in_streamer_queue = 50;
 
 size_t num_pixels = 0;
 
@@ -144,6 +144,12 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
             auto fps = (1000.0 / counter2.mean());
             aout(self) << "streamer at frame: " << current_frame2 << ", with FPS: " << fps
                        << " +/- " << counter2.stderr() << " (" << ((num_pixels * sizeof(uint32_t) * fps) / 1024 / 1024) << " MiB/sec)" << endl;
+        },
+        [=, &num_pixels](show_stats, string renderer_stats) {
+            auto fps = (1000.0 / counter2.mean());
+            aout(self) << "streamer at frame: " << current_frame2 << ", with FPS: " << fps
+                       << " +/- " << counter2.stderr() << " (" << ((num_pixels * sizeof(uint32_t) * fps) / 1024 / 1024) << " MiB/sec), "
+                       << renderer_stats << endl;
         },
         [=](debug) {
             aout(self) << "streamer mailbox = " << self->mailbox().count() << endl;

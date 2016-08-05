@@ -205,11 +205,11 @@ int main(int argc, char *argv[]) {
     bool use_stdin  = vm.count("stdin");
 
     scoped_actor s{system};
-    auto jobstorage = system.spawn(job_storage);
+    auto jobstorage = system.spawn<priority_aware>(job_storage);
     auto generator  = system.spawn<priority_aware + detached>(job_generator, jobstorage, script, canvas_w, canvas_h, use_stdin, rendering_enabled);
     // generator links to job storage
     auto streamer_  = system.spawn<priority_aware>(streamer, jobstorage, conf.user.gui_port, output_file, streamer_settings.to_ulong());
-    auto renderer_  = system.spawn(renderer, jobstorage, streamer_, workers_vec);
+    auto renderer_  = system.spawn<priority_aware>(renderer, jobstorage, streamer_, workers_vec);
     // renderer links to streamer and job storage
 
     actor_info streamer_info{streamer_};
@@ -229,14 +229,16 @@ int main(int argc, char *argv[]) {
     while (streamer_info.running()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         if (rendering_enabled) {
-            s->send<message_priority::high>(streamer_, show_stats::value);
+            //s->send(renderer_, show_stats::value);
+            s->send<message_priority::high>(renderer_, show_stats::value);
+           // s->send<message_priority::high>(streamer_, show_stats::value);
         } else {
             s->send<message_priority::high>(generator, show_stats::value);
         }
-//        s->send(streamer_, debug::value);
-//        s->send(generator, debug::value);
-//        s->send(jobstorage, debug::value);
-//        s->send(renderer_, debug::value);
+        s->send(streamer_, debug::value);
+        s->send(generator, debug::value);
+        s->send<message_priority::high>(jobstorage, debug::value);
+        s->send(renderer_, debug::value);
     }
     s->await_all_other_actors_done();
 }

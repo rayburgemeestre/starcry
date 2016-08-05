@@ -11,6 +11,8 @@
 
 #include "caf/io/all.hpp"
 
+#include <limits>
+
 // public
 using start                = atom_constant<atom("start     ")>;
 using show_stats           = atom_constant<atom("show_stats")>;
@@ -22,10 +24,10 @@ using debug                = atom_constant<atom("debug     ")>;
 using get_job              = atom_constant<atom("get_job   ")>;
 using del_job              = atom_constant<atom("del_job   ")>;
 using need_frames          = atom_constant<atom("need_frame")>;
+using render_frame         = atom_constant<atom("render_fra")>;
 
 // internal
 using ready                = atom_constant<atom("ready     ")>;
-using render_frame         = atom_constant<atom("render_fra")>;
 
 size_t rendered_frame = 0;
 
@@ -61,6 +63,7 @@ behavior create_worker_behavior(T self, bool output_each_frame = false) {
             dat.pixels = self->state.engine.serialize_bitmap2(self->state.bitmap, j.width, j.height);
 
             //self->send(renderer, ready::value, j, dat);
+            cout << "RBU3, worker is sending = " << j.job_number << endl;
             return make_message(ready::value, j, dat);
         }
     };
@@ -108,6 +111,15 @@ std::optional<size_t> empty_job_slot;
 vector<std::optional<size_t>> render_worker_job_in_progress;
 vector<actor> render_workers;
 
+enum class status {
+    active,
+    malfunctioning,
+    deactivated
+};
+vector<status> render_worker_status;
+
+vector<data::job> jobs_outstanding; // outstanding jobs
+
 behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer, const vector<pair<string, int>> &workers_vec) {
     self->link_to(streamer);
     self->link_to(job_storage);
@@ -116,6 +128,7 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
 
     counter.setDescription("fps");
     counter.startHistogramAtZero(true);
+
     return {
         [=](start, size_t num_workers) {
             num_workers_ = num_workers;
@@ -127,6 +140,7 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                 for (size_t worker_num=0; worker_num<num_workers; worker_num++) {
                     aout(self) << "renderer spawning local worker " << worker_num << endl;
                     render_workers.push_back(self->spawn(worker, worker_num));
+                    render_worker_status.push_back(status::active);
                     render_worker_job_in_progress.push_back(empty_job_slot);
                     self->link_to(render_workers[worker_num]);
                 }
@@ -142,12 +156,28 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                     if (!remoteactor) {
                         aout(self) << "spawning remote actor failed: " << self->system().render(remoteactor.error()) << endl;
                     }
+                    self->monitor(*remoteactor); // so we can notice if the connection closes.
+                    self->set_down_handler([=](down_msg& dm) {
+                        cout << "ACTOR DOWN MOFO " << endl;
+                        size_t worker_index = 0;
+                        for (const auto &b : render_workers) {
+                            if (dm.source == b) {
+                                cout << "I KNOW THIS GUY HE HAS INDEX " << worker_index << endl;
+                                render_worker_status.push_back(status::malfunctioning);
+                            }
+                            worker_index++;
+                        }
+                    });
+
                     render_workers.push_back(*remoteactor);
+                    render_worker_status.push_back(status::active);
                     render_worker_job_in_progress.push_back(empty_job_slot);
                     index++;
                 }
             }
-            self->send(self, render_frame::value);
+            self->send<message_priority::high>(self, render_frame::value);
+        },
+        [=](down_msg, actor &a) {
         },
         [=](start_rendering) {
             rendering_active_ = true;
@@ -155,84 +185,208 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
         [=](stop_rendering) {
             rendering_active_ = false;
         },
+        // reuse for test
         [=](render_frame) {
-            if (!rendering_active_) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                // TODO: caf015
-                // TODO: also replace by scoped_actor ?
-                self->request(streamer, infinite, need_frames::value).then(
-                    [=](need_frames, bool answer) {
-                        if (answer) {
-                            rendering_active_ = true;
+            bool found = true;
+            do {
+                size_t min_job_nr = std::numeric_limits<size_t>::max();
+                size_t max_job_nr = 0;
+                for (const auto &job_number : render_worker_job_in_progress) {
+                    if (job_number) {
+                        min_job_nr = min(min_job_nr, *job_number);
+                        max_job_nr = max(max_job_nr, *job_number);
+                    }
+                }
+
+                auto relocate_job = [=](auto &job_to_give_to_other) {
+                    size_t worker_index = 0;
+                    for (const auto &job_number : render_worker_job_in_progress) {
+                        if (!job_number) {
+                            cout << "RBU2, so I will be duplicating: " << job_to_give_to_other << endl;
+                            // put it here!
+                            auto f = std::find_if(jobs_outstanding.begin(), jobs_outstanding.end(), [&](data::job &j) { return j.job_number == job_to_give_to_other; }); // todo: also remove!
+                            cout << "RBU2, that's this job to be precise: " << (*f).job_number << endl;
+                            stringstream ss;
+                            for (const auto job : render_worker_job_in_progress)
+                                ss << ", " << (job ? to_string(*job) : "x");
+                            aout(self) << "RBU2, problem in here: " << self->mailbox().count() << " --> " << ss.str() << endl;
+                            //
+                            self->send(render_workers[worker_index], get_job::value, *f);
+                            /*
+                            //
+                            //self->send(render_workers[worker_index], get_job::value, j);
+                            self->request(render_workers[worker_index], infinite, get_job::value, *f).await(
+                                [=](ready, struct data::job j, data::pixel_data2 pixeldat)
+                                {
+                                    cout << "JEEJ!! RBU4" << endl;
+                                },
+                                [=](error &e) {
+                                    cout << "RBU4: error#3 sending something to worker?" << to_string(e) << endl;
+                                }
+                            );
+                            */
+                            //
+                            //
+                            render_worker_job_in_progress[worker_index] = (*f).job_number;
+                            ss.clear(); ss.str("");
+                            for (const auto job : render_worker_job_in_progress)
+                                ss << ", " << (job ? to_string(*job) : "x");
+                            aout(self) << "RBU2, solution? here: " << self->mailbox().count() << " --> " << ss.str() << endl;
+                            return true;
+                        }
+                        worker_index++;
+                    }
+                    return false;
+                };
+
+                if (max_job_nr - min_job_nr >= 50) {
+                    relocate_job(min_job_nr);
+                }
+
+                size_t worker_index = 0;
+                for (const auto &stat : render_worker_status) {
+                    if (stat == status::malfunctioning) {
+                        if (render_worker_job_in_progress[worker_index]) {
+                            if (relocate_job(*render_worker_job_in_progress[worker_index])) {
+                                render_worker_job_in_progress[worker_index] = empty_job_slot;
+                                render_worker_status[worker_index] = status::deactivated;
+                            }
+                        } else {
+                            render_worker_status[worker_index] = status::deactivated;
                         }
                     }
-                );
-                self->send(self, render_frame::value);
-                return;
-            }
-
-            size_t worker_index = 0;
-            for (const auto &job_number : render_worker_job_in_progress) {
-                if (!job_number) {
-                    scoped_actor s{self->system()};
-                    s->request(job_storage, infinite, get_job::value, rendered_frame).receive(
-                        [=](data::job j) {
-                            self->send(render_workers[worker_index], get_job::value, j);
-                            render_worker_job_in_progress[worker_index] = j.job_number;
-                            rendered_frame++;
-                        },
-                        [=](error &e) {
-                            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                            self->send(self, render_frame::value);
-                        }
-                    );
                 }
-                worker_index++;
-            }
+
+
+
+                found = false;
+                worker_index = 0;
+                for (const auto &job_number : render_worker_job_in_progress) {
+                    if (render_worker_status[worker_index] != status::active) {
+                        cout << "skipping worker: " << worker_index << endl;
+                        continue;
+                    }
+                    if (!job_number) {
+                        found = true;
+                        scoped_actor s{self->system()};
+                        s->request(job_storage, infinite, get_job::value, rendered_frame).receive(
+                        //self->request(job_storage, infinite, get_job::value, rendered_frame).await(
+                            [=, &jobs_outstanding](data::job j) {
+                                jobs_outstanding.push_back(j);
+                                self->send(render_workers[worker_index], get_job::value, j);
+//                                self->request(render_workers[worker_index], infinite, get_job::value, j).await(
+//                                    [](error &e) {
+//                                        cout << "RBUX: extra error handler on line " << __LINE__ << " - " << to_string(e) << endl;
+//                                    }
+//                                );
+                                render_worker_job_in_progress[worker_index] = j.job_number;
+                                rendered_frame++;
+                            },
+                            [=](error &e) {
+                                cout << "RBU4: error#2 sending something to worker?" << to_string(e) << endl;
+                                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                                //self->send(self, render_frame::value);
+                            }
+                        );
+                    }
+                    worker_index++;
+                }
+            } while (found);
         },
+//        [=](render_frame) {
+//            if (!rendering_active_) {
+//                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+//                // TODO: caf015
+//                // TODO: also replace by scoped_actor ?
+//                self->request(streamer, infinite, need_frames::value).then(
+//                    [=](need_frames, bool answer) {
+//                        if (answer) {
+//                            rendering_active_ = true;
+//                        }
+//                    }
+//                );
+//                self->send(self, render_frame::value);
+//                return;
+//            }
+//
+//            // block 1
+//            size_t worker_index = 0;
+//            for (const auto &job_number : render_worker_job_in_progress) {
+//                if (!job_number) {
+//                    scoped_actor s{self->system()};
+//                    s->request(job_storage, infinite, get_job::value, rendered_frame).receive(
+//                        [=](data::job j) {
+//                            self->send(render_workers[worker_index], get_job::value, j);
+//                            render_worker_job_in_progress[worker_index] = j.job_number;
+//                            rendered_frame++;
+//                        },
+//                        [=](error &e) {
+//                            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+//                            self->send(self, render_frame::value);
+//                        }
+//                    );
+//                }
+//                worker_index++;
+//            }
+//        },
         [=](ready, struct data::job j, data::pixel_data2 pixeldat) {
-            pixel_store[j.job_number] = pixeldat.pixels;
-            auto send_to_streamer = [&](struct data::job &job) {
-                counter.measure();
-                self->send(streamer, render_frame::value, job, pixel_store[job.job_number], self);
-                auto it = pixel_store.find(job.job_number);
-                pixel_store.erase(it);
-            };
-            if (j.job_number == job_sequence) {
-                send_to_streamer(j);
-                job_sequence++;
-                while (true) {
-                    auto pos = find_if(jobs_done.begin(), jobs_done.end(), [&](auto &job) {
-                        return job.job_number == job_sequence;
-                    });
-                    if (pos == jobs_done.end()) {
-                        break;
-                    }
-                    send_to_streamer(*pos);
-                    jobs_done.erase(pos);
-                    job_sequence++;
-                }
-            } else {
-                jobs_done.push_back(j);
-            }
-
+            cout << "RBU3, ready (receiving side) = " << j.job_number << endl;
+            bool expected = false;
             for (auto &job_number : render_worker_job_in_progress) {
                 if (*job_number == j.job_number) {
+                    cout << "RBU, unsetting: " << j.job_number << endl;
                     job_number = empty_job_slot;
-                    break;
+                    expected = true;
                 }
             }
-            self->send(self, render_frame::value);
+
+            if (expected) {
+                pixel_store[j.job_number] = pixeldat.pixels;
+                auto send_to_streamer = [&](struct data::job &job) {
+                    counter.measure();
+                    self->send(streamer, render_frame::value, job, pixel_store[job.job_number], self);
+                    auto it = pixel_store.find(job.job_number);
+                    pixel_store.erase(it);
+                };
+                if (j.job_number == job_sequence) {
+                    send_to_streamer(j);
+                    job_sequence++;
+                    while (true) {
+                        auto pos = find_if(jobs_done.begin(), jobs_done.end(), [&](auto &job) {
+                            return job.job_number == job_sequence;
+                        });
+                        if (pos == jobs_done.end()) {
+                            break;
+                        }
+                        send_to_streamer(*pos);
+                        jobs_done.erase(pos);
+                        job_sequence++;
+                    }
+                } else {
+                    jobs_done.push_back(j);
+                }
+            }
+            self->send<message_priority::high>(self, render_frame::value);
         },
         [=](show_stats) {
+            stringstream ss;
+            ss << "renderer[" << self->mailbox().count() << "],";
+            for (const auto job : render_worker_job_in_progress)
+                ss << " " << (job ? to_string(*job) : "x");
             aout(self) << "renderer at job: " << job_sequence << ", with jobs/sec: " << (1000.0 / counter.mean())
                        << " +/- " << counter.stderr() << endl;
+            self->send<message_priority::high>(streamer, show_stats::value, ss.str());
         },
         [=](debug) {
             stringstream ss;
             for (const auto job : render_worker_job_in_progress)
                 ss << ", " << (job ? to_string(*job) : "x");
             aout(self) << "renderer mailbox = " << self->mailbox().count() << " --> " << ss.str() << endl;
+        },
+        [=](error &e) {
+            cout << "RBU4: error#2 sending something to worker?" << to_string(e) << endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            //self->send(self, render_frame::value);
         }
     };
 }
