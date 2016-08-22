@@ -984,6 +984,19 @@ var scale         = 1;
 var canvas_w      = 3840;
 var canvas_h      = 2160;
 var scale         = 2;
+/*
+// test...
+var canvas_w      = 800;
+var canvas_h      = 600;
+var scale         = 0.6;
+// test even more...
+var canvas_w      = 800 / 2;
+var canvas_h      = 600 / 2;
+var scale         = 0.6 / 2;
+ */
+
+var my_current_frame = 0;
+
 var left_x        = 1920 / 2.0;
 var left_y        = 1080 / 2.0;
 var bitrate       = 1000 /* kilobyte */ * 1024 /* bytes */ * 8 /* bits */;
@@ -995,7 +1008,6 @@ var offset_date    = false;
 var first_frame    = false;
 var buffer         = [];
 var frame          = 0;
-var current_frame  = 0;
 var previous_frame = 0;
 var nodes          = {};
 
@@ -1050,8 +1062,10 @@ function draw_legend(x, y) {
 }
 
 function process() {
+    //if (my_current_frame > 200)
+    //    return;
     if (frame != previous_frame) {
-        while (current_frame < frame) {
+        while (my_current_frame < frame) {
             for (var a in activity) {
                 if (activity[a].bytes > 20) {
                     //activity[a].bytes /= 1.2;
@@ -1102,10 +1116,10 @@ function process() {
                 activity[from + to].bytes += c[6];
             }
             buffer = [];
-            current_frame++;
+            my_current_frame++;
 
             draw_console( 100 - left_x, 320);
-            draw_legend( 735, 320);
+            draw_legend( 735, 280);
             draw_header( 100 - left_x, 280);
 
             var counter = 0;
@@ -1324,7 +1338,12 @@ function process() {
 
             //draw_node('headnode', -150,   100);
 
+            add_text(0, 0, 0, 32, 'Frame ' + my_current_frame, 'center');
+
             write_frame();
+            // TEMP HACK: try to reproduce something..
+            //if (my_current_frame == 200)
+            //    return close();
         }
     }
 }
@@ -1369,5 +1388,5 @@ function initialize() {
     }
 }
 
-function close() { write_frame1(true);/*hacky*/ }
+//function close() { write_frame1(true);/*hacky*/ }
 

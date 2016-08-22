@@ -35,6 +35,7 @@ template <typename T>
 behavior create_worker_behavior(T self, bool output_each_frame = false) {
     return {
         [=](get_job, struct data::job j) -> message {
+            cout << "RBU3, worker is getting = " << j.job_number << endl;
             // make sure our bitmap is of the correct size.
             if ((self->state.width == 0 && self->state.height == 0) || // not initialized
                 (self->state.width != j.width || self->state.height != j.height) || // changed since previous
@@ -191,10 +192,13 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
             do {
                 size_t min_job_nr = std::numeric_limits<size_t>::max();
                 size_t max_job_nr = 0;
+                size_t num_empty_slots = 0;
                 for (const auto &job_number : render_worker_job_in_progress) {
                     if (job_number) {
                         min_job_nr = min(min_job_nr, *job_number);
                         max_job_nr = max(max_job_nr, *job_number);
+                    } else {
+                        num_empty_slots++;
                     }
                 }
 
@@ -239,8 +243,9 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                     return false;
                 };
 
-                if (max_job_nr - min_job_nr >= 50) {
-                    relocate_job(min_job_nr);
+                if (max_job_nr - min_job_nr >= 50 || num_empty_slots > 2) { // todo: add one using time..
+                    if (min_job_nr != std::numeric_limits<size_t>::max())
+                        relocate_job(min_job_nr);
                 }
 
                 size_t worker_index = 0;
@@ -269,6 +274,7 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                     if (!job_number) {
                         found = true;
                         scoped_actor s{self->system()};
+                        bool termin = false;
                         s->request(job_storage, infinite, get_job::value, rendered_frame).receive(
                         //self->request(job_storage, infinite, get_job::value, rendered_frame).await(
                             [=, &jobs_outstanding](data::job j) {
@@ -282,12 +288,15 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                                 render_worker_job_in_progress[worker_index] = j.job_number;
                                 rendered_frame++;
                             },
-                            [=](error &e) {
-                                cout << "RBU4: error#2 sending something to worker?" << to_string(e) << endl;
+                            [=, &termin](error &e) {
                                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                                //self->send(self, render_frame::value);
+                                termin = true;
                             }
                         );
+                        if (termin) {
+                            self->send(self, render_frame::value);
+                            return;
+                        }
                     }
                     worker_index++;
                 }
@@ -340,8 +349,9 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                 }
             }
 
+            pixel_store[j.job_number] = pixeldat.pixels;
+
             if (expected) {
-                pixel_store[j.job_number] = pixeldat.pixels;
                 auto send_to_streamer = [&](struct data::job &job) {
                     counter.measure();
                     self->send(streamer, render_frame::value, job, pixel_store[job.job_number], self);
@@ -382,11 +392,6 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
             for (const auto job : render_worker_job_in_progress)
                 ss << ", " << (job ? to_string(*job) : "x");
             aout(self) << "renderer mailbox = " << self->mailbox().count() << " --> " << ss.str() << endl;
-        },
-        [=](error &e) {
-            cout << "RBU4: error#2 sending something to worker?" << to_string(e) << endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            //self->send(self, render_frame::value);
         }
     };
 }

@@ -235,10 +235,10 @@ int main(int argc, char *argv[]) {
         } else {
             s->send<message_priority::high>(generator, show_stats::value);
         }
-        s->send(streamer_, debug::value);
-        s->send(generator, debug::value);
+        s->send<message_priority::high>(streamer_, debug::value);
+        s->send<message_priority::high>(generator, debug::value);
         s->send<message_priority::high>(jobstorage, debug::value);
-        s->send(renderer_, debug::value);
+        s->send<message_priority::high>(renderer_, debug::value);
     }
     s->await_all_other_actors_done();
 }

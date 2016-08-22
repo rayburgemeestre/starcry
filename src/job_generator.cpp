@@ -257,14 +257,17 @@ void output(string s) {
     assistant->job_generator->send(assistant->job_generator, output_line::value, s);
 }
 
-void write_frame_fun1(bool last_frame) {
+void write_frame_fun_impl(bool last_frame) {
     if (!assistant->the_job.last_frame)
         assistant->the_job.last_frame = last_frame || (assistant->max_frames && assistant->max_frames == current_frame);
     assistant->job_generator->send(assistant->job_generator, write_frame::value, assistant->the_job);
     assistant->the_job.shapes.clear();
 }
+void close_fun() {
+    write_frame_fun_impl(true);
+}
 void write_frame_fun() {
-    write_frame_fun1(false);
+    write_frame_fun_impl(false);
 }
 
 #include "v8pp/class.hpp"
@@ -393,7 +396,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
         context->add_fun("version", &get_version);
         context->add_fun("output", &output);
         context->add_fun("write_frame", &write_frame_fun);
-        context->add_fun("write_frame1", &write_frame_fun1);
+        context->add_fun("close", &close_fun);
         context->add_fun("add_text", &add_text);
         context->add_fun("set_background_color", &set_background_color);
         context->add_fun("add_circle", &add_circle);
@@ -417,18 +420,18 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
         [=](start, size_t num_chunks) {
             max_split_chunks = num_chunks;
             assistant = std::make_unique<assistent_>(self);
-            assistant->the_job.width        = canvas_w;
-            assistant->the_job.height       = canvas_h;
-            assistant->the_job.frame_number = current_frame;
-            assistant->the_job.rendered     = false;
-            assistant->the_job.last_frame   = false;
-            assistant->the_job.num_chunks   = max_split_chunks;
-            assistant->the_job.canvas_w     = canvas_w;
-            assistant->the_job.canvas_h     = canvas_h;
-            assistant->the_job.scale        = context->run<double>("typeof scale != 'undefined' ? scale : 1.0");
-            assistant->the_job.bitrate      = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");
-            assistant->max_frames           = context->run<size_t>("typeof max_frames != 'undefined' ? max_frames : 250");
-            assistant->realtime             = context->run<bool>("typeof realtime != 'undefined' ? realtime : false");
+            assistant->the_job.width         = canvas_w;
+            assistant->the_job.height        = canvas_h;
+            assistant->the_job.frame_number  = current_frame;
+            assistant->the_job.rendered      = false;
+            assistant->the_job.last_frame    = false;
+            assistant->the_job.num_chunks    = max_split_chunks;
+            assistant->the_job.canvas_w      = canvas_w;
+            assistant->the_job.canvas_h      = canvas_h;
+            assistant->the_job.scale         = context->run<double>("typeof scale != 'undefined' ? scale : 1.0");
+            assistant->the_job.bitrate       = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");
+            assistant->max_frames            = context->run<size_t>("typeof max_frames != 'undefined' ? max_frames : 250");
+            assistant->realtime              = context->run<bool>("typeof realtime != 'undefined' ? realtime : false");
             if (!use_stdin || assistant->realtime) {
                 // we call into V8 ourselves to get frames
                 call_print_exception(self, "next");
@@ -442,6 +445,13 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
             call_print_exception(self, "close");
         },
         [=](write_frame, data::job &job) {
+            /*
+             There is something wrong with this logic
+             ----------------------------------------
+             Edit: maybe because of the reference?
+             Edit2: No, you just cannot put it here, at some point its processing the last job for instance...
+                    put the delay / wait somewhere else..
+             
             // Every 1000th frame see if we're not flooding the job storage,
             //  if so, pause processing.
             static bool generator_paused = false;
@@ -472,6 +482,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
                     }
                 );
             }
+            */
 
             uint32_t width = canvas_w;
             uint32_t height = canvas_h;
@@ -499,15 +510,22 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
                 counter++;
             }
             current_frame++;
-            context->run("current_frame++;");
+            // in some cases a javascript may want manual control over incrementing the current frame.
+            // i.e., if you buffer multiple lines, and after X time manually output a frame..
+            //if (!assistant->control_current_frame) {
+            context->run("current_frame = " + to_string(current_frame) + ";");
+
+            //std::cout << "RBU7: created job frame number " << job.frame_number << endl;
+           // }
             fps_counter.measure();
             job.shapes.clear();
             if (job.last_frame) {
                 aout(self) << "job_generator: there are no more jobs to be generated." << endl;
-                self->become(nothing);
-                if (!rendering_enabled)
+                // self->become(nothing); don't do this, v8 might be calling into us still..
+                if (!rendering_enabled) {
                     // this actor shuts down the system in that case
                     self->quit(exit_reason::user_shutdown);
+                }
                 return;
             }
 

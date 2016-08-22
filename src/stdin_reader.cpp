@@ -11,8 +11,10 @@ using read_stdin       = atom_constant<atom("read_stdin")>;
 using num_jobs         = atom_constant<atom("num_jobs  ")>;
 using no_more_input    = atom_constant<atom("no_more_in")>;
 
-int max_num_lines_batch = 5000;
-int desired_max_mailbox_generator = 1000;
+//int max_num_lines_batch = 5000;
+//int desired_max_mailbox_generator = 1000;
+int max_num_lines_batch = 500;
+int desired_max_mailbox_generator = 100;
 //extern size_t desired_num_jobs_queued;
 
 using namespace std;
