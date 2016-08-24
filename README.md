@@ -116,6 +116,7 @@ Below are the list of commands I used to add submodules.
 - git submodule add https://github.com/pmed/v8pp libs/v8pp
 - git submodule add https://github.com/USCiLab/cereal libs/cereal
 - git submodule add https://github.com/ipkn/crow libs/crow
+- git submodule add https://github.com/lemire/FastPFor libs/FastPFor
 
 You can have git check them all out with the `git submodule update --init --recursive`.
 
@@ -279,6 +280,12 @@ Probably, optional (i ignored the SSL error):
 
 - cmake .
 - make -j 8
+
+### LibPFor
+
+cd libs/FastPFor
+cmake .
+make -j 8 
 
 ## Quick start
 
