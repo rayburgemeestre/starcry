@@ -989,11 +989,15 @@ var scale         = 2;
 var canvas_w      = 800;
 var canvas_h      = 600;
 var scale         = 0.6;
+*/
 // test even more...
-var canvas_w      = 800 / 2;
-var canvas_h      = 600 / 2;
-var scale         = 0.6 / 2;
- */
+//var canvas_w      = 800 / 2;
+//var canvas_h      = 600 / 2;
+//var scale         = 0.6 / 2;
+// test even more...
+var canvas_w      = 100;
+var canvas_h      = 100;
+var scale         = 1;
 
 var my_current_frame = 0;
 
@@ -1062,7 +1066,8 @@ function draw_legend(x, y) {
 }
 
 function process() {
-    //if (my_current_frame > 200)
+    // debug
+    //if (my_current_frame > 500)
     //    return;
     if (frame != previous_frame) {
         while (my_current_frame < frame) {
@@ -1338,11 +1343,13 @@ function process() {
 
             //draw_node('headnode', -150,   100);
 
-            add_text(0, 0, 0, 32, 'Frame ' + my_current_frame, 'center');
+            // debug..
+            // add_text(0, 0, 0, 32, 'Frame ' + my_current_frame, 'center');
 
             write_frame();
             // TEMP HACK: try to reproduce something..
-            //if (my_current_frame == 200)
+            // //debug
+            //if (my_current_frame == 500)
             //    return close();
         }
     }

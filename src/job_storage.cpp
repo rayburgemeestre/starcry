@@ -20,14 +20,19 @@ std::vector<data::job> jobs;
 
 behavior job_storage(event_based_actor* self) {
     return {
-        [=](get_job, size_t job) -> optional<data::job> {
+        [=](get_job, size_t job, const caf::actor &sender) /*-> optional<data::job>*/ {
+            std::cout << "job_storage got request for job" << endl;
             auto it = std::find_if (jobs.begin(), jobs.end(), [&job](auto &j) {
                 return j.job_number == job;
             });
             if (it == jobs.end()) {
-                return none;
+                //return none;
+                std::cout << "sending false.."<< endl;
+                self->send(sender, get_job::value, false);
             }
-            return *it;
+            //return *it;
+                std::cout << "sending thing.."<< endl;
+            self->send(sender, get_job::value, *it);
         },
         [=](add_job, data::job new_job) {
             jobs.push_back(new_job);
@@ -41,7 +46,7 @@ behavior job_storage(event_based_actor* self) {
             return make_message(num_jobs::value, jobs.size());
         },
         [=](debug) {
-            aout(self) << "job_storage mailbox = " << self->mailbox().count() << endl;
+            aout(self) << "job_storage mailbox = " << self->mailbox().count() << " " << self->mailbox().counter() << endl;
         }
     };
 }

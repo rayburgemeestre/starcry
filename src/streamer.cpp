@@ -98,8 +98,10 @@ static size_t min_items_in_streamer_queue = 20;
 static size_t max_items_in_streamer_queue = 50;
 
 size_t num_pixels = 0;
+bool linked_to_renderer = false;
 
 behavior streamer(event_based_actor* self, const caf::actor &job_storage, int render_window_at, string output_file, uint32_t settings) {
+    self->link_to(job_storage);
     ffmpeg   = std::make_unique<output_action<ffmpeg_h264_encode>>();
     allegro5 = std::make_unique<output_action<allegro5_window>>(self->system());
     outputs  = std::make_unique<output_aggregate>(*ffmpeg.get(), *allegro5.get());
@@ -115,6 +117,11 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
     counter2.startHistogramAtZero(true);
     return {
         [=, &num_pixels](render_frame, struct data::job &job, vector<uint32_t> &pixels, const caf::actor &renderer) {
+            if (!linked_to_renderer) {
+                self->link_to(renderer);
+                linked_to_renderer = true;
+                aout(self) << "LINKED TO RENDERER FROM STREAMER NOW!!" << endl;
+            }
             num_pixels = job.canvas_w * job.canvas_h;
             if (job.last_frame)
                 last_frame_streamed = std::make_optional(job.frame_number);
@@ -147,12 +154,12 @@ behavior streamer(event_based_actor* self, const caf::actor &job_storage, int re
         },
         [=, &num_pixels](show_stats, string renderer_stats) {
             auto fps = (1000.0 / counter2.mean());
-            aout(self) << "streamer at frame: " << current_frame2 << ", with FPS: " << fps
+            aout(self) << "streamer[" << self->mailbox().count() << "] at frame: " << current_frame2 << ", with FPS: " << fps
                        << " +/- " << counter2.stderr() << " (" << ((num_pixels * sizeof(uint32_t) * fps) / 1024 / 1024) << " MiB/sec), "
                        << renderer_stats << endl;
         },
         [=](debug) {
-            aout(self) << "streamer mailbox = " << self->mailbox().count() << endl;
+            aout(self) << "streamer mailbox = " << self->mailbox().count() << " " << self->mailbox().counter() << endl;
         }
     };
 }

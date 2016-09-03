@@ -10,6 +10,7 @@ using input_line       = atom_constant<atom("input_line")>;
 using read_stdin       = atom_constant<atom("read_stdin")>;
 using num_jobs         = atom_constant<atom("num_jobs  ")>;
 using no_more_input    = atom_constant<atom("no_more_in")>;
+using debug            = atom_constant<atom("debug     ")>;
 
 //int max_num_lines_batch = 5000;
 //int desired_max_mailbox_generator = 1000;
@@ -52,6 +53,9 @@ behavior stdin_reader(event_based_actor *self, const caf::actor &job_generator, 
                     self->send(self, read_stdin::value);
                 }
             );
-        }
+        },
+        [=](debug) {
+            aout(self) << "stdin_reader mailbox = " << self->mailbox().count() << " " << self->mailbox().counter() << endl;
+        },
     };
 }

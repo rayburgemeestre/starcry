@@ -550,7 +550,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
             );
         },
         [=](debug) {
-            aout(self) << "job_generator mailbox = " << self->mailbox().count() << endl;
+            aout(self) << "job_generator mailbox = " << self->mailbox().count() << " " << self->mailbox().counter() << endl;
         },
         [=](show_stats) {
             aout(self) << "generator at frame: " << current_frame << ", with frames/sec: " << (1000.0 / fps_counter.mean())

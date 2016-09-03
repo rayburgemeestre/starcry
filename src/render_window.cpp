@@ -52,7 +52,7 @@ behavior render_loop(event_based_actor* self) {
             al_wait_for_event_timed(queue, &event, 0.001);
             if (event.type == ALLEGRO_EVENT_DISPLAY_RESIZE) {
                 // TODO: suddenly segfaults for some reason??
-                //al_acknowledge_resize(event.display.source);
+                // al_acknowledge_resize(event.display.source);
             }
             if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
                 al_unregister_event_source(queue, al_get_display_event_source(display));

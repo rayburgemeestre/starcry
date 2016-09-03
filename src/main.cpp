@@ -56,6 +56,7 @@ using input_line    = atom_constant<atom("input_line")>;
 using no_more_input = atom_constant<atom("no_more_in")>;
 using show_stats    = atom_constant<atom("show_stats")>;
 using debug         = atom_constant<atom("debug     ")>;
+using terminate_    = atom_constant<atom("terminate ")>;
 
 #include <regex>
 #include <bitset>
@@ -209,15 +210,16 @@ int main(int argc, char *argv[]) {
     auto generator  = system.spawn<priority_aware + detached>(job_generator, jobstorage, script, canvas_w, canvas_h, use_stdin, rendering_enabled);
     // generator links to job storage
     auto streamer_  = system.spawn<priority_aware>(streamer, jobstorage, conf.user.gui_port, output_file, streamer_settings.to_ulong());
-    auto renderer_  = system.spawn<priority_aware>(renderer, jobstorage, streamer_, workers_vec);
-    // renderer links to streamer and job storage
+    auto renderer_  = system.spawn<priority_aware>(renderer, jobstorage, streamer_, generator, workers_vec, rendering_enabled);
+    // renderer links to streamer, job storage & generator
 
-    actor_info streamer_info{streamer_};
+    actor_info streamer_info{"streamer", streamer_};
     s->send(generator, start::value, num_chunks);
     s->send(renderer_, start::value, use_remote_workers ? workers_vec.size() : num_workers);
 
+    auto stdin_reader_ = system.spawn<priority_aware>(stdin_reader, generator, jobstorage);
+    // stdin_reader is linked to generator and jobstorage
     if (use_stdin) {
-        auto stdin_reader_ = system.spawn(stdin_reader, generator, jobstorage);
         s->send(stdin_reader_, start::value);
     }
 
@@ -225,6 +227,15 @@ int main(int argc, char *argv[]) {
     if (vm.count("webserver")) {
         ws = make_shared<webserver>();
     }
+
+    // TODO: if no rendering, no video, ! generator_info.running().. -> terminate all
+    // or just link renderer to generator in that case
+
+    // debug only:
+    actor_info generator_info{"generator", generator};
+    actor_info renderer_info{"renderer", renderer_};
+    actor_info storage_info{"storage", jobstorage};
+    actor_info stdin_reader_info{"stdin_reader", stdin_reader_};
 
     while (streamer_info.running()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -239,6 +250,14 @@ int main(int argc, char *argv[]) {
         s->send<message_priority::high>(generator, debug::value);
         s->send<message_priority::high>(jobstorage, debug::value);
         s->send<message_priority::high>(renderer_, debug::value);
+        if (use_stdin) {
+            s->send<message_priority::high>(stdin_reader_, debug::value);
+        }
+    }
+    if (renderer_info.running()) {
+        // I have this "bug" it seems, that exit doesn't seem to cascade to renderer
+        //  in some cases
+        s->send<message_priority::high>(renderer_, terminate_::value);
     }
     s->await_all_other_actors_done();
 }
