@@ -505,6 +505,7 @@ behavior job_generator(event_based_actor *self, const caf::actor &job_storage, c
                 job.job_number = current_job++;
                 job.chunk = counter;
                 if (rendering_enabled) {
+                    cout << "job generator sending job nr: " << job.job_number << endl;
                     self->send(job_storage, add_job::value, job);
                 }
                 counter++;

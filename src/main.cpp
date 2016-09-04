@@ -101,6 +101,7 @@ int main(int argc, char *argv[]) {
     bitset<32> streamer_settings(settings_);
     po::options_description desc{"Allowed options"};
     string script{"test.js"};
+    bool compress = false;
     bool rendering_enabled = true;
 
     po::positional_options_description p;
@@ -121,6 +122,7 @@ int main(int argc, char *argv[]) {
                       ("stdin", "read from stdin and send this to job generator actor")
                       ("dimensions,dim", po::value<string>(&dimensions), "specify canvas dimensions i.e. 1920x1080")
                       ("script,s", po::value<string>(&script), "javascript file to use for processing")
+                      ("compress", po::value<bool>(&compress), "compress and decompress frames to reduce I/O")
         ;
     po::variables_map vm;
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
@@ -210,7 +212,7 @@ int main(int argc, char *argv[]) {
     auto generator  = system.spawn<priority_aware + detached>(job_generator, jobstorage, script, canvas_w, canvas_h, use_stdin, rendering_enabled);
     // generator links to job storage
     auto streamer_  = system.spawn<priority_aware>(streamer, jobstorage, conf.user.gui_port, output_file, streamer_settings.to_ulong());
-    auto renderer_  = system.spawn<priority_aware>(renderer, jobstorage, streamer_, generator, workers_vec, rendering_enabled);
+    auto renderer_  = system.spawn<priority_aware>(renderer, jobstorage, streamer_, generator, workers_vec, rendering_enabled, compress);
     // renderer links to streamer, job storage & generator
 
     actor_info streamer_info{"streamer", streamer_};

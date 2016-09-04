@@ -30,9 +30,14 @@ using need_frames          = atom_constant<atom("need_frame")>;
 // internal
 using ready                = atom_constant<atom("ready     ")>;
 using render_frame         = atom_constant<atom("render_fra")>;
+using process_job          = atom_constant<atom("process_jo")>;
 
 size_t rendered_frame = 0;
 size_t pool_outstanding = 0;
+size_t expect_from_storage = 0;
+size_t got_from_storage = 0;
+size_t send_pool = 0;
+size_t rcvd_pool = 0;
 
 extern vector<uint32_t> compress_vector(vector<uint32_t> &in);
 extern vector<uint32_t> decompress_vector(vector<uint32_t> &in);
@@ -42,15 +47,32 @@ IntegerCODEC &codec = *CODECFactory::getFromName("simdfastpfor256");
 
 map<int, size_t> last_job_for_worker;
 
+set<data::job> jobs_set;
+
 template <typename T>
 behavior create_worker_behavior(T self, bool output_each_frame = false) {
     return {
-        [=](get_job, struct data::job j) -> message {
+        [=](get_job, struct data::job job_in, const caf::actor &renderer) {
+            jobs_set.insert(job_in);
+            self->send(self, process_job::value, renderer);
+        },
+        [=](process_job, const caf::actor &renderer) {
+            stringstream ss1;
+            for (const auto &job_ : jobs_set) {
+                ss1 << " " << job_.job_number;
+            }
+            cout << "jobs~~: " << ss1.str() << endl;
+
+            auto jobmin = jobs_set.cbegin();
+            data::job j = *jobmin; // copy
+            jobs_set.erase(*jobmin);
+            cout << "jobs~1: " << j.job_number << endl;
+
             // make sure our bitmap is of the correct size.
             if ((self->state.width == 0 && self->state.height == 0) || // not initialized
                 (self->state.width != j.width || self->state.height != j.height) || // changed since previous
                 self->state.bitmap == nullptr
-            ){
+                ){
                 self->state.width = j.width;
                 self->state.height = j.height;
                 if (self->state.bitmap != nullptr) {
@@ -62,7 +84,8 @@ behavior create_worker_behavior(T self, bool output_each_frame = false) {
             // render
             stringstream ss;
             if (output_each_frame) {
-                aout(self) << "processing: frame " << j.frame_number << " chunk " << j.chunk << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num << endl;
+                aout(self) << "processing: frame " << j.frame_number << " chunk " << j.chunk << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num
+                << " mailbox=" << self->mailbox().count() << " - " << self->mailbox().counter() << endl;
             } else {
 #ifdef DEBUG
                 ss << "frame " << j.frame_number << " chunk " << j.chunk << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num;
@@ -73,27 +96,31 @@ behavior create_worker_behavior(T self, bool output_each_frame = false) {
             data::pixel_data2 dat;
             dat.pixels = self->state.engine.serialize_bitmap2(self->state.bitmap, j.width, j.height);
 
-/*
             // compression expirimental..
-            using namespace FastPForLib;
-            vector<uint32_t> compressed_output(dat.pixels.size() + 1024);
-            size_t compressedsize = compressed_output.size();
-            codec.encodeArray(dat.pixels.data(), dat.pixels.size(), compressed_output.data(), compressedsize);
-            compressed_output.resize(compressedsize);
-            compressed_output.shrink_to_fit();
-            if (output_each_frame) {
-                aout(self) << "sending: frame compressed from 100\% to "
-                           << 100.0 * static_cast<double>(compressed_output.size()) / static_cast<double>(dat.pixels.size())
-                           << "\%. " << std::endl;
+            if (j.compress) {
+                using namespace FastPForLib;
+                vector<uint32_t> compressed_output(dat.pixels.size() + 1024);
+                size_t compressedsize = compressed_output.size();
+                codec.encodeArray(dat.pixels.data(), dat.pixels.size(), compressed_output.data(), compressedsize);
+                compressed_output.resize(compressedsize);
+                compressed_output.shrink_to_fit();
+                if (output_each_frame) {
+                    aout(self) << "sending: frame compressed from 100\% to "
+                    << 100.0 * static_cast<double>(compressed_output.size()) / static_cast<double>(dat.pixels.size())
+                    << "%. mailbox still = " << self->mailbox().count() << " - " << self->mailbox().counter() <<
+                    std::endl;
+                }
+                dat.pixels = compressed_output;
             }
-            dat.pixels = compressed_output;
-*/
+
+            aout(self) << "IDLE." << endl;
 
             //dat.pixels = compress_vector(dat.pixels);
             //dat.pixels.shrink_to_fit();
 
             //self->send(renderer, ready::value, j, dat);
-            return make_message(ready::value, self->state.worker_num, j, dat);
+            //return make_message(ready::value, self->state.worker_num, j, dat);
+            self->send(renderer, ready::value, self->state.worker_num, j, dat);
         }
     };
 }
@@ -136,7 +163,7 @@ map<size_t, vector<uint32_t>> pixel_store;
 bool rendering_active_ = true;
 size_t num_workers_ = 0;
 
-behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer, const caf::actor &generator, const vector<pair<string, int>> &workers_vec, bool rendering_enabled) {
+behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer, const caf::actor &generator, const vector<pair<string, int>> &workers_vec, bool rendering_enabled, bool compress) {
     self->link_to(streamer);
     self->link_to(job_storage);
     /*if (!rendering_enabled) {
@@ -160,7 +187,7 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                 };
                 pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin())));
                 self->link_to(*pool);
-                for (size_t i=0; i<num_workers_; i++) self->send(self, render_frame::value);
+                for (size_t i=0; i<num_workers_; i++) self->send(self, render_frame::value, static_cast<size_t>(0));
             }
             else {
                 aout(self) << "renderer started, num workers in text file = " << workers_vec.size() << endl;
@@ -182,7 +209,7 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
                 pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin())));
                 self->link_to(*pool);
             }
-            self->send<message_priority::high>(self, render_frame::value);
+            self->send<message_priority::high>(self, render_frame::value, static_cast<size_t>(0));
         },
         [=](start_rendering) {
             rendering_active_ = true;
@@ -190,77 +217,81 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
         [=](stop_rendering) {
             rendering_active_ = false;
         },
-        [=](render_frame) {
-            if (!rendering_active_) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                // TODO: caf015
-                // TODO: also replace by scoped_actor ?
-                self->request(streamer, infinite, need_frames::value).then(
-                    [=](need_frames, bool answer) {
-                        if (answer) {
-                            rendering_active_ = true;
-                        }
-                    }
-                );
-                self->send(self, render_frame::value);
-                return;
-            }
+        [=](render_frame, size_t next_frame) {
+//            if (!rendering_active_) {
+//                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+//                // TODO: caf015
+//                // TODO: also replace by scoped_actor ?
+//                self->request(streamer, infinite, need_frames::value).then(
+//                    [=](need_frames, bool answer) {
+//                        if (answer) {
+//                            rendering_active_ = true;
+//                        }
+//                    }
+//                );
+//                self->send(self, render_frame::value, next_frame);
+//                return;
+//            }
 
             // TODO: want to convert this to asynchronous, but this gave me segfaults..
             //  Need to figure out why that is..
-            scoped_actor s{self->system()};
-            if (pool_outstanding >= (num_workers_ * 1)) {
-               // std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                return;
+            //scoped_actor s{self->system()};
+            while (pool_outstanding < (num_workers_ * 20)) {
+                cout << "renderer requesting A NEW job: " << next_frame << endl;
+                self->send(job_storage, get_job::value, self);
+                expect_from_storage++;
+                pool_outstanding++;
             }
-            cout << "sending.... " << endl;
-            /*s->request(job_storage, infinite, get_job::value, rendered_frame).receive(
-                [=](data::job j) {
-                    //cout << "sending: " << j.job_number << " while pool has queue of: " << pool_outstanding << endl;
-                    self->send(*pool, get_job::value, j);
-                    rendered_frame++;
-                    pool_outstanding++;
-                },
-                [=](error &e) {
-                    // std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                }
-            );*/
-            //lets try async
-            s->send(job_storage, get_job::value, rendered_frame, self);
-            cout << "sending.... done." << endl;
-            // // sync way::
-           // self->send<message_priority::high>(self, render_frame::value);
-            pool_outstanding++;
         },
 
                 [=](get_job, bool false_) {
-                    cout << "sending: nothing!" << endl;
+                    cout << "receiving: nothing!" << endl;
                     //self->send(*pool, get_job::value, j);
                     //rendered_frame++;
-                    //pool_outstanding++;
-                    self->send<message_priority::high>(self, render_frame::value);
+                    got_from_storage++;
+                    pool_outstanding--; // there was actually nothing prepared yet
+                    //if (rendered_frame == size_t(0))
+                    {
+                        self->send(job_storage, get_job::value, self);
+                        pool_outstanding++;
+                        expect_from_storage++;
+                    }
+                    //self->send<message_priority::high>(self, render_frame::value, rendered_frame); // this may be a wrong choice..
                 },
                 [=](get_job, data::job j) {
-                    cout << "sending: " << j.job_number << " while pool has queue of: " << pool_outstanding << endl;
-                    self->send(*pool, get_job::value, j);
+                    got_from_storage++;
+                    cout << "receiving: " << j.job_number << " while pool has queue of: " << pool_outstanding << " p:" << send_pool << " / " << expect_from_storage << "/" << got_from_storage << endl;
+                    j.compress = compress;
+                    self->send<message_priority::high>(*pool, get_job::value, j, self);
+                    send_pool++;
                     rendered_frame++;
-                    self->send<message_priority::high>(self, render_frame::value);
+                    //self->send<message_priority::high>(self, render_frame::value, rendered_frame);
                     //pool_outstanding++;
                 },
 
         [=](ready, size_t worker_num, struct data::job j, data::pixel_data2 pixeldat) {
+            rcvd_pool++;
+
             last_job_for_worker[worker_num] = j.job_number;
             //pixeldat.pixels = decompress_vector(pixeldat.pixels);
-/*
-            // experimental decompression
-            std::vector<uint32_t> mydataback(j.width * j.height);
-            size_t recoveredsize = mydataback.size();
-            codec.decodeArray(pixeldat.pixels.data(), pixeldat.pixels.size(), mydataback.data(), recoveredsize);
-            mydataback.resize(recoveredsize);
-            pixeldat.pixels = mydataback;
-*/
+            if (j.compress) {
+                // experimental decompression
+                std::vector<uint32_t> mydataback(j.width * j.height);
+                size_t recoveredsize = mydataback.size();
+                codec.decodeArray(pixeldat.pixels.data(), pixeldat.pixels.size(), mydataback.data(), recoveredsize);
+                mydataback.resize(recoveredsize);
+                pixeldat.pixels = mydataback;
+            }
 
+            cout << "REady enzo" << " " << rcvd_pool << "/" << send_pool << endl;
             pool_outstanding--;
+            //while (pool_outstanding < (num_workers_ * 4)) {
+                cout << "renderer requesting A NEW job" << endl;
+                self->send(job_storage, get_job::value, self);
+                pool_outstanding++;
+                expect_from_storage++;
+            //}
+
             pixel_store[j.job_number] = pixeldat.pixels;
             auto send_to_streamer = [&](struct data::job &job) {
                 counter.measure();
@@ -285,7 +316,7 @@ behavior renderer(event_based_actor* self, const caf::actor &job_storage, const 
             } else {
                 jobs_done.push_back(j);
             }
-            self->send<message_priority::high>(self, render_frame::value);
+//            self->send<message_priority::high>(self, render_frame::value, rendered_frame);
         },
         [=](show_stats) {
             stringstream ss;

@@ -995,9 +995,9 @@ var scale         = 0.6;
 //var canvas_h      = 600 / 2;
 //var scale         = 0.6 / 2;
 // test even more...
-var canvas_w      = 100;
-var canvas_h      = 100;
-var scale         = 1;
+//var canvas_w      = 100;
+//var canvas_h      = 100;
+//var scale         = 1;
 
 var my_current_frame = 0;
 

@@ -16,31 +16,45 @@ using num_jobs             = atom_constant<atom("num_jobs  ")>;
 using no_jobs_available    = atom_constant<atom("no_jobs_av")>;
 using debug                = atom_constant<atom("debug     ")>;
 
-std::vector<data::job> jobs;
+std::set<data::job> jobs;
 
 behavior job_storage(event_based_actor* self) {
     return {
+        [=](get_job, const caf::actor &sender) {
+            std::cout << "job_storage got request for a job " << endl;
+            if (jobs.empty()) {
+                self->send(sender, get_job::value, false);
+                return;
+            }
+            auto &j  =(*jobs.cbegin());
+            std::cout << "sending job.." << j.job_number << endl;
+            self->send(sender, get_job::value, j);
+            std::cout << "removing job already..." << endl;
+            jobs.erase(j);
+        },
         [=](get_job, size_t job, const caf::actor &sender) /*-> optional<data::job>*/ {
-            std::cout << "job_storage got request for job" << endl;
+            std::cout << "job_storage got request for job: " << job << endl;
             auto it = std::find_if (jobs.begin(), jobs.end(), [&job](auto &j) {
                 return j.job_number == job;
             });
             if (it == jobs.end()) {
                 //return none;
-                std::cout << "sending false.."<< endl;
                 self->send(sender, get_job::value, false);
+                return;
             }
             //return *it;
-                std::cout << "sending thing.."<< endl;
+            std::cout << "sending job.." << (*it).job_number << endl;
             self->send(sender, get_job::value, *it);
         },
         [=](add_job, data::job new_job) {
-            jobs.push_back(new_job);
+            jobs.insert(new_job);
         },
         [=](del_job, size_t jobdone) {
-            jobs.erase( std::remove_if(jobs.begin(), jobs.end(), [&jobdone](struct data::job j) {
-                return j.job_number == jobdone;
-            }), jobs.end() );
+//            auto f = std::find_if(jobs.begin(), jobs.end(), [&jobdone](struct data::job j) {
+//                return j.job_number == jobdone;
+//            });
+//            if (f != jobs.end())
+//                jobs.erase(*f);
         },
         [=](num_jobs) -> message {
             return make_message(num_jobs::value, jobs.size());

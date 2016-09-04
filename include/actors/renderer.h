@@ -22,4 +22,4 @@ behavior worker(caf::stateful_actor<worker_data> * self, size_t worker_num);
 
 behavior remote_worker(caf::stateful_actor<worker_data> * self, size_t worker_num);
 
-behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer, const caf::actor &generator, const std::vector<std::pair<std::string, int>> &workers_vec, bool rendering_enabled = true);
+behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer, const caf::actor &generator, const std::vector<std::pair<std::string, int>> &workers_vec, bool rendering_enabled = true, bool compress = false);
