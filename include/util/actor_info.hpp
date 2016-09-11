@@ -12,9 +12,9 @@ class actor_info
 {
 public:
     std::atomic<bool> flag_;
-    actor_info(const caf::actor &actor) : flag_(true) {
+    actor_info(const std::string &actor_name, const caf::actor &actor) : flag_(true) {
         actor->attach_functor([=](const caf::error &reason) {
-            std::cout << "actor exited: " << actor.home_system().render(reason) << std::endl;
+            std::cout << "actor " << actor_name << " exited: " << actor.home_system().render(reason) << std::endl;
             flag_.store(false);
         });
     }

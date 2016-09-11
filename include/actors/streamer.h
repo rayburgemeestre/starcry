@@ -9,5 +9,18 @@
 constexpr static int streamer_ffmpeg = 0;
 constexpr static int streamer_allegro5 = 1;
 
-behavior streamer(event_based_actor* self, const caf::actor &job_storage, int render_window_at, std::string output_file, uint32_t settings);
+class MeasureInterval;
+
+struct streamer_data
+{
+    int render_window_at;
+    std::string output_file;
+    uint32_t settings;
+    std::shared_ptr<MeasureInterval> fps_counter;
+    size_t num_pixels = 0;
+    size_t min_items_in_streamer_queue = 10;
+    size_t current_frame = 0;
+};
+
+behavior streamer(stateful_actor<streamer_data> * self, std::optional<size_t> port);
 

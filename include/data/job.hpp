@@ -28,6 +28,11 @@ namespace data {
         std::vector<shape> shapes;
         double scale;
         size_t bitrate;
+        bool compress;
+
+        inline bool operator<(const job &other) const {
+            return job_number < other.job_number; // there can be no ties
+        }
     };
 
     inline bool operator==(const job &lhs, const job &rhs) {
@@ -52,6 +57,7 @@ namespace data {
         proc & x.shapes;
         proc & x.scale;
         proc & x.bitrate;
+        proc & x.compress;
     }
 }
 
