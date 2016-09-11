@@ -15,7 +15,11 @@ cd ../../
 
 cd libs/caf
 gx=$(which g++)
-./configure --with-gcc=$gx --build-static
+./configure --with-gcc=$gx --build-static \
+    --no-examples \
+    --no-unit-tests \
+    --no-benchmarks \
+    --no-tools
 make -j 8
 sudo make install
 cd ../../
