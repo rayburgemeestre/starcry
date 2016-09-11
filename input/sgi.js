@@ -1395,5 +1395,4 @@ function initialize() {
     }
 }
 
-//function close() { write_frame1(true);/*hacky*/ }
 

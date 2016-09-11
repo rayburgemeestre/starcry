@@ -5,6 +5,15 @@
  */
 #pragma once
 
+#include <vector>
+#include "data/gradient.hpp" // TODO: get rid of this dependency
+#include <v8.h>
+
+namespace v8pp {
+    class context;
+}
+
+
 struct pos
 {
     double x_;
@@ -22,8 +31,9 @@ struct pos
     void set_x(double x) { x_ = x; }
     void set_y(double y) { y_ = y; }
     void set_z(double z) { z_ = z; }
-};
 
+    static void add_to_context(v8pp::context &ctx);
+};
 
 struct shape
 {
@@ -37,6 +47,8 @@ struct shape
     void set_x(double x) { x_ = x; }
     void set_y(double y) { y_ = y; }
     void set_z(double z) { z_ = z; }
+
+    static void add_to_context(v8pp::context &ctx);
 };
 
 struct color
@@ -56,12 +68,10 @@ struct color
     void set_g(double g);
     void set_b(double b);
     void set_a(double a);
+
+    static void add_to_context(v8pp::context &ctx);
 };
 
-#include <vector>
-
-#include "data/gradient.hpp"
-#include <v8.h>
 class gradient
 {
 private:
@@ -102,6 +112,7 @@ public:
         return grad;
     }
 
+    static void add_to_context(v8pp::context &ctx);
 };
 
 struct circle : shape
@@ -117,6 +128,8 @@ struct circle : shape
     void set_radiussize(double r);
     gradient get_gradient() const;
     void set_gradient(gradient c);
+
+    static void add_to_context(v8pp::context &ctx);
 };
 
 struct line : shape
@@ -139,5 +152,7 @@ struct line : shape
     void set_size(double size);
     gradient get_gradient() const;
     void set_gradient(gradient c);
+
+    static void add_to_context(v8pp::context &ctx);
 };
 

@@ -7,4 +7,24 @@
 
 #include "common.h"
 
-behavior job_generator(event_based_actor *self, const caf::actor &job_storage, const std::string &filename, uint32_t canvas_w, uint32_t canvas_h, bool use_stdin = false, bool rendering_enabled = true);
+class MeasureInterval;
+
+struct job_generator_data
+{
+    uint32_t canvas_w;
+    uint32_t canvas_h;
+    size_t current_job = 0;
+    size_t num_chunks = 0;
+    size_t lines_received = 0;
+    size_t jobs_queued_for_renderer = 0;
+    size_t max_jobs_queued_for_renderer = 1;
+    bool has_max_jobs_queued_for_renderer = false;
+    std::optional<actor> renderer_ptr;
+    std::shared_ptr<MeasureInterval> fps_counter;
+    size_t bitrate = 0;
+};
+
+behavior job_generator(stateful_actor<job_generator_data> *self, const std::string &filename, uint32_t canvas_w, uint32_t canvas_h, bool use_stdin = false, bool rendering_enabled = true);
+
+void call_print_exception(event_based_actor *self, std::string fn);
+template <typename T> void call_print_exception(event_based_actor *self, std::string fn, T arg);

@@ -3,76 +3,58 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 #include "actors/renderer.h"
 #include "data/job.hpp"
 #include "data/pixels.hpp"
-
+#include "util/compress_vector.h"
+#include "util/remote_actors.h"
 #include "benchmark.h"
-
 #include "caf/io/all.hpp"
-
-#include "headers/codecfactory.h"
-#include "headers/deltautil.h"
 
 // public
 using start                = atom_constant<atom("start     ")>;
 using show_stats           = atom_constant<atom("show_stats")>;
-using start_rendering      = atom_constant<atom("start_rend")>;
-using stop_rendering       = atom_constant<atom("stop_rende")>;
 using debug                = atom_constant<atom("debug     ")>;
 using terminate_           = atom_constant<atom("terminate ")>;
+using add_job              = atom_constant<atom("add_job   ")>;
 
 // external
 using get_job              = atom_constant<atom("get_job   ")>;
-using del_job              = atom_constant<atom("del_job   ")>;
-using need_frames          = atom_constant<atom("need_frame")>;
+using job_processed        = atom_constant<atom("job_proces")>;
 
 // internal
 using ready                = atom_constant<atom("ready     ")>;
+using streamer_ready       = atom_constant<atom("streamer_r")>;
 using render_frame         = atom_constant<atom("render_fra")>;
 using process_job          = atom_constant<atom("process_jo")>;
-
-size_t rendered_frame = 0;
-size_t pool_outstanding = 0;
-size_t expect_from_storage = 0;
-size_t got_from_storage = 0;
-size_t send_pool = 0;
-size_t rcvd_pool = 0;
-
-extern vector<uint32_t> compress_vector(vector<uint32_t> &in);
-extern vector<uint32_t> decompress_vector(vector<uint32_t> &in);
-
-using namespace FastPForLib;
-IntegerCODEC &codec = *CODECFactory::getFromName("simdfastpfor256");
-
-map<int, size_t> last_job_for_worker;
-
-set<data::job> jobs_set;
+using initialize           = atom_constant<atom("initialize")>;
 
 template <typename T>
-behavior create_worker_behavior(T self, bool output_each_frame = false) {
+behavior create_worker_behavior(T self, const string &renderer_host, const int &renderer_port, const string &streamer_host, const int &streamer_port, bool output_each_frame = false) {
+    connect_remote_worker(self->system(), "renderer", renderer_host, renderer_port, &self->state.renderer_ptr);
+    connect_remote_worker(self->system(), "streamer", streamer_host, streamer_port, &self->state.streamer_ptr);
     return {
-        [=](get_job, struct data::job job_in, const caf::actor &renderer) {
-            jobs_set.insert(job_in);
-            self->send(self, process_job::value, renderer);
+        [=](get_job, const data::job &j, const caf::actor &renderer, const caf::actor &streamer) {
+            self->state.job_queue.insert(j);
+            self->send(self, process_job::value, renderer, streamer);
         },
-        [=](process_job, const caf::actor &renderer) {
-            stringstream ss1;
-            for (const auto &job_ : jobs_set) {
-                ss1 << " " << job_.job_number;
-            }
-            cout << "jobs~~: " << ss1.str() << endl;
-
-            auto jobmin = jobs_set.cbegin();
+        [=](process_job, const caf::actor &renderer, const caf::actor &streamer) {
+            auto jobmin = self->state.job_queue.cbegin();
             data::job j = *jobmin; // copy
-            jobs_set.erase(*jobmin);
-            cout << "jobs~1: " << j.job_number << endl;
+            self->state.job_queue.erase(*jobmin);
+
+            if (output_each_frame) {
+                aout(self) << "processing: frame " << j.frame_number << " chunk " << j.chunk << " offsets "
+                           << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num
+                           << " mailbox=" << self->mailbox().count() << " - " << self->mailbox().counter() << endl;
+            }
 
             // make sure our bitmap is of the correct size.
             if ((self->state.width == 0 && self->state.height == 0) || // not initialized
                 (self->state.width != j.width || self->state.height != j.height) || // changed since previous
                 self->state.bitmap == nullptr
-                ){
+            ){
                 self->state.width = j.width;
                 self->state.height = j.height;
                 if (self->state.bitmap != nullptr) {
@@ -81,264 +63,146 @@ behavior create_worker_behavior(T self, bool output_each_frame = false) {
                 self->state.bitmap = al_create_bitmap(j.width, j.height);
             }
 
-            // render
-            stringstream ss;
-            if (output_each_frame) {
-                aout(self) << "processing: frame " << j.frame_number << " chunk " << j.chunk << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num
-                << " mailbox=" << self->mailbox().count() << " - " << self->mailbox().counter() << endl;
-            } else {
-#ifdef DEBUG
-                ss << "frame " << j.frame_number << " chunk " << j.chunk << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num;
-#endif
-            }
-            self->state.engine.render(self->state.bitmap, j.background_color, j.shapes, j.offset_x, j.offset_y, j.canvas_w, j.canvas_h, j.scale, ss.str());
-
+            // render + serialize + compress
+            auto timer = TimerFactory::factory(TimerFactory::Type::BoostTimerImpl);
+            timer->start();
+            self->state.engine.render(self->state.bitmap, j.background_color, j.shapes, j.offset_x, j.offset_y, j.width,
+                                      j.height, j.scale, ""); // last param is label (useful for debugging)
             data::pixel_data2 dat;
             dat.pixels = self->state.engine.serialize_bitmap2(self->state.bitmap, j.width, j.height);
-
-            // compression expirimental..
+            stringstream ss;
             if (j.compress) {
-                using namespace FastPForLib;
-                vector<uint32_t> compressed_output(dat.pixels.size() + 1024);
-                size_t compressedsize = compressed_output.size();
-                codec.encodeArray(dat.pixels.data(), dat.pixels.size(), compressed_output.data(), compressedsize);
-                compressed_output.resize(compressedsize);
-                compressed_output.shrink_to_fit();
+                compress_vector<uint32_t> cv;
+                double compression_rate = 0;
+                cv.compress(&dat.pixels, &compression_rate);
                 if (output_each_frame) {
-                    aout(self) << "sending: frame compressed from 100\% to "
-                    << 100.0 * static_cast<double>(compressed_output.size()) / static_cast<double>(dat.pixels.size())
-                    << "%. mailbox still = " << self->mailbox().count() << " - " << self->mailbox().counter() <<
-                    std::endl;
+                    ss << "compressed from 100% to " << compression_rate << "% ";
                 }
-                dat.pixels = compressed_output;
             }
+            //double render_time = timer->end();
+            //ss << "mailbox = " << self->mailbox().count() << ", ";
+            //ss << "render time = " << render_time << ".";
+            //aout(self) << "worker idle, " << ss.str() << endl;
 
-            aout(self) << "IDLE." << endl;
-
-            //dat.pixels = compress_vector(dat.pixels);
-            //dat.pixels.shrink_to_fit();
-
-            //self->send(renderer, ready::value, j, dat);
-            //return make_message(ready::value, self->state.worker_num, j, dat);
-            self->send(renderer, ready::value, self->state.worker_num, j, dat);
+            auto &r = (self->state.renderer_ptr) ? *self->state.renderer_ptr : renderer;
+            auto &s = (self->state.streamer_ptr) ? *self->state.streamer_ptr : streamer;
+            self->send(r, ready::value, self->state.worker_num, j);
+            self->send(s, render_frame::value, j, dat, renderer);
         }
     };
 }
 
-behavior remote_worker(caf::stateful_actor<worker_data> * self, size_t worker_num) {
+behavior remote_worker(caf::stateful_actor<worker_data> * self, size_t worker_num, const string & renderer_host, const int &renderer_port, const string & streamer_host, const int &streamer_port) {
     self->state.worker_num = worker_num;
     rendering_engine engine;
     engine.initialize();
-    aout(self) << "worker publishing myself on port: " << worker_num << endl;
-    auto p = self->system().middleman().publish(static_cast<actor>(self), worker_num, nullptr, true);
-    if (!p) {
-        aout(self) << "worker publishing FAILED..: " << self->system().render(p.error()) << endl;
+    if (!publish_remote_actor("worker", static_cast<event_based_actor *>(self), worker_num)) {
+        std::exit(1);
     }
-    else if (*p != worker_num) {
-        aout(self) << "worker publishing FAILED.." << endl;
-    }
-    return create_worker_behavior(self, true);
+    return create_worker_behavior(self, renderer_host, renderer_port, streamer_host, streamer_port, true);
 }
 
-behavior worker(caf::stateful_actor<worker_data> * self, size_t worker_num) {
+behavior worker(caf::stateful_actor<worker_data> * self, const string & streamer_host, const int &streamer_port, size_t worker_num) {
     self->state.worker_num = worker_num;
-    return create_worker_behavior(self);
+    return create_worker_behavior(self, "", 0, streamer_host, streamer_port);
 }
 
 // move to class data
-std::vector<data::job> jobs_done;
-size_t job_sequence = 0;
-std::unique_ptr<actor> pool;
 
-auto benchmark_class = std::make_unique<MeasureInterval>(TimerFactory::Type::BoostChronoTimerImpl);
-MeasureInterval &counter = static_cast<MeasureInterval &>(*benchmark_class.get());
+void send_jobs_to_streamer(caf::stateful_actor<renderer_data> *self)
+{
+    for (size_t i=self->state.outstanding_jobs; i<self->state.max_outstanding_jobs; i++) {
+        if (self->state.job_queue.empty()) {
+            break;
+        }
+        auto j = * self->state.job_queue.cbegin();
+        self->send<message_priority::high>(*self->state.pool, get_job::value, j, self, *self->state.streamer);
+        self->state.outstanding_jobs++;
+        self->state.job_queue.erase(j);
+    }
+}
 
-//struct renderer_data
-//{
-//    rendering_engine engine;
-//};
-
-map<size_t, vector<uint32_t>> pixel_store;
-// TODO: need class data...
-bool rendering_active_ = true;
-size_t num_workers_ = 0;
-
-behavior renderer(event_based_actor* self, const caf::actor &job_storage, const caf::actor &streamer, const caf::actor &generator, const vector<pair<string, int>> &workers_vec, bool rendering_enabled, bool compress) {
-    self->link_to(streamer);
-    self->link_to(job_storage);
-    /*if (!rendering_enabled) {
-        self->link_to(generator);
-    }*/
-    rendering_engine engine;
-    engine.initialize();
-
-    counter.setDescription("fps");
-    counter.startHistogramAtZero(true);
+behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_t> port) {
+    publish_remote_actor("renderer", static_cast<event_based_actor *>(self), port ? *port : 0);
+    // initialize jps counter
+    self->state.jps_counter = std::make_shared<MeasureInterval>(TimerFactory::Type::BoostChronoTimerImpl);
+    self->state.jps_counter->setDescription("jps");
+    self->state.jps_counter->startHistogramAtZero(true);
     return {
+        [=](initialize, const caf::actor &streamer, const caf::actor &generator, const vector<pair<string, int>> &workers_vec,
+           string streamer_host, int streamer_port, bool compress
+        ){
+            self->state.remote_streamer_host = streamer_host;
+            self->state.remote_streamer_port = streamer_port;
+            self->state.streamer = streamer;
+            self->state.generator = generator;
+            self->state.workers_vec = workers_vec;
+            self->state.engine.initialize();
+            if (streamer_port) {
+                connect_remote_worker(self->system(), "streamer", streamer_host, streamer_port, &self->state.streamer);
+            }
+        },
         [=](start, size_t num_workers) {
-            num_workers_ = num_workers;
             aout(self) << "renderer started, num_workers = " << num_workers << endl;
-
-            if (workers_vec.empty()) {
+            if (self->state.workers_vec.empty()) {
                 auto worker_factory = [&]() -> actor {
                     static size_t worker_num = 1000;
                     aout(self) << "renderer spawning own worker" << endl;
-                    return self->spawn(worker, worker_num++);
+                    const auto &host = self->state.remote_streamer_host;
+                    const auto &port = self->state.remote_streamer_port;
+                    return self->spawn(worker, host, port, worker_num++);
                 };
-                pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin())));
-                self->link_to(*pool);
-                for (size_t i=0; i<num_workers_; i++) self->send(self, render_frame::value, static_cast<size_t>(0));
+                self->state.pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), num_workers, worker_factory,
+                                                                          actor_pool::round_robin())));
             }
             else {
-                aout(self) << "renderer started, num workers in text file = " << workers_vec.size() << endl;
-                num_workers_ = workers_vec.size();
+                aout(self) << "renderer started, num workers in text file = " << self->state.workers_vec.size() << endl;
                 auto worker_factory = [&]() -> actor {
                     static size_t index = 0;
-                    aout(self) << "renderer connecting to worker on : " << workers_vec[index].first << ":" << workers_vec[index].second << endl;
-                    auto p = self->system().middleman().remote_actor(workers_vec[index].first, workers_vec[index].second);
-                    if (!p) {
-                        aout(self) << "spawning remote actor failed: " << self->system().render(p.error()) << endl;
-                    }
-                    self->monitor(*p); // so we can notice if the connection closes.
-                    self->set_down_handler([=](down_msg& dm) {
-                        cout << "TODO: ACTOR FROM POOL DOWN!!" << endl;
-                    });
+                    const auto &host = self->state.workers_vec[index].first;
+                    const auto &port = self->state.workers_vec[index].second;
+                    aout(self) << "renderer connecting to worker on : " << host << ":" << port << endl;
+                    std::optional<actor> actor_ptr;
+                    connect_remote_worker(self->system(), "worker", host, port, &actor_ptr);
                     index++;
-                    return *p;
-                };
-                pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin())));
-                self->link_to(*pool);
+                    return *actor_ptr;
+               };
+               self->state.pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), self->state.workers_vec.size(),
+                                                                         worker_factory, actor_pool::round_robin())));
             }
-            self->send<message_priority::high>(self, render_frame::value, static_cast<size_t>(0));
+            self->link_to(*self->state.pool);
         },
-        [=](start_rendering) {
-            rendering_active_ = true;
+        [=](add_job, data::job j) {
+            self->state.job_queue.insert(j);
+            send_jobs_to_streamer(self);
         },
-        [=](stop_rendering) {
-            rendering_active_ = false;
+        [=](ready, size_t worker_num, struct data::job j) {
+            self->send<message_priority::high>(*self->state.generator, job_processed::value);
+            self->state.last_job_for_worker[worker_num] = j.job_number;
+            self->state.outstanding_jobs--;
+            self->state.job_sequence++;
         },
-        [=](render_frame, size_t next_frame) {
-//            if (!rendering_active_) {
-//                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-//                // TODO: caf015
-//                // TODO: also replace by scoped_actor ?
-//                self->request(streamer, infinite, need_frames::value).then(
-//                    [=](need_frames, bool answer) {
-//                        if (answer) {
-//                            rendering_active_ = true;
-//                        }
-//                    }
-//                );
-//                self->send(self, render_frame::value, next_frame);
-//                return;
-//            }
-
-            // TODO: want to convert this to asynchronous, but this gave me segfaults..
-            //  Need to figure out why that is..
-            //scoped_actor s{self->system()};
-            while (pool_outstanding < (num_workers_ * 20)) {
-                cout << "renderer requesting A NEW job: " << next_frame << endl;
-                self->send(job_storage, get_job::value, self);
-                expect_from_storage++;
-                pool_outstanding++;
-            }
-        },
-
-                [=](get_job, bool false_) {
-                    cout << "receiving: nothing!" << endl;
-                    //self->send(*pool, get_job::value, j);
-                    //rendered_frame++;
-                    got_from_storage++;
-                    pool_outstanding--; // there was actually nothing prepared yet
-                    //if (rendered_frame == size_t(0))
-                    {
-                        self->send(job_storage, get_job::value, self);
-                        pool_outstanding++;
-                        expect_from_storage++;
-                    }
-                    //self->send<message_priority::high>(self, render_frame::value, rendered_frame); // this may be a wrong choice..
-                },
-                [=](get_job, data::job j) {
-                    got_from_storage++;
-                    cout << "receiving: " << j.job_number << " while pool has queue of: " << pool_outstanding << " p:" << send_pool << " / " << expect_from_storage << "/" << got_from_storage << endl;
-                    j.compress = compress;
-                    self->send<message_priority::high>(*pool, get_job::value, j, self);
-                    send_pool++;
-                    rendered_frame++;
-                    //self->send<message_priority::high>(self, render_frame::value, rendered_frame);
-                    //pool_outstanding++;
-                },
-
-        [=](ready, size_t worker_num, struct data::job j, data::pixel_data2 pixeldat) {
-            rcvd_pool++;
-
-            last_job_for_worker[worker_num] = j.job_number;
-            //pixeldat.pixels = decompress_vector(pixeldat.pixels);
-            if (j.compress) {
-                // experimental decompression
-                std::vector<uint32_t> mydataback(j.width * j.height);
-                size_t recoveredsize = mydataback.size();
-                codec.decodeArray(pixeldat.pixels.data(), pixeldat.pixels.size(), mydataback.data(), recoveredsize);
-                mydataback.resize(recoveredsize);
-                pixeldat.pixels = mydataback;
-            }
-
-            cout << "REady enzo" << " " << rcvd_pool << "/" << send_pool << endl;
-            pool_outstanding--;
-            //while (pool_outstanding < (num_workers_ * 4)) {
-                cout << "renderer requesting A NEW job" << endl;
-                self->send(job_storage, get_job::value, self);
-                pool_outstanding++;
-                expect_from_storage++;
-            //}
-
-            pixel_store[j.job_number] = pixeldat.pixels;
-            auto send_to_streamer = [&](struct data::job &job) {
-                counter.measure();
-                self->send(streamer, render_frame::value, job, pixel_store[job.job_number], self);
-                auto it = pixel_store.find(job.job_number);
-                pixel_store.erase(it);
-            };
-            if (j.job_number == job_sequence) {
-                send_to_streamer(j);
-                job_sequence++;
-                while (true) {
-                    auto pos = find_if(jobs_done.begin(), jobs_done.end(), [&](auto &job) {
-                        return job.job_number == job_sequence;
-                    });
-                    if (pos == jobs_done.end()) {
-                        break;
-                    }
-                    send_to_streamer(*pos);
-                    jobs_done.erase(pos);
-                    job_sequence++;
-                }
-            } else {
-                jobs_done.push_back(j);
-            }
-//            self->send<message_priority::high>(self, render_frame::value, rendered_frame);
+        [=](streamer_ready) {
+            send_jobs_to_streamer(self);
         },
         [=](show_stats) {
             stringstream ss;
-            ss << "renderer[" << self->mailbox().count() << "],";
-            for (const auto p : last_job_for_worker)
-            {
-                const auto &worker_num = p.first;
+            ss << "renderer[" << self->mailbox().count() << "] at job " << self->state.job_sequence << ", Q:";
+            for (const auto p : self->state.last_job_for_worker) {
                 const auto &job_number = p.second;
-                ss << " " << job_number;// << (job ? to_string(*job) : "x");
+                ss << " " << job_number;
             }
-            ss << " pool_outstanding = " << pool_outstanding;
-            aout(self) << "renderer at job: " << job_sequence << ", with jobs/sec: " << (1000.0 / counter.mean())
-                       << " +/- " << counter.stderr() << endl;
-            self->send<message_priority::high>(streamer, show_stats::value, ss.str());
+            //aout(self) << "renderer at job: " << self->state.job_sequence << ", with jobs/sec: " << (1000.0 / self->state.jps_counter->mean())
+            //           << " +/- " << self->state.jps_counter->stderr() << endl;
+            self->send<message_priority::high>(*self->state.streamer, show_stats::value, ss.str());
         },
         [=](debug) {
             aout(self) << "renderer mailbox = " << self->mailbox().count() << " " << self->mailbox().counter() << endl;
         },
         [=](terminate_) {
             aout(self) << "terminating.." << endl;
+            self->state.pool.release();
             self->quit(exit_reason::user_shutdown);
         }
     };
 }
-

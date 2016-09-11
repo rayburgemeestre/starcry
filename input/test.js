@@ -25,4 +25,7 @@ function next() {
     var test = new circle(new pos(0, 0, 0), seconds, 5.0, tmp);
     add_circle(test);
     write_frame();
+    if (current_frame == max_frames) {
+        close();
+    }
 }
