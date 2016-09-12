@@ -1,3 +1,34 @@
+This is a new version of Starcry which was originally a rendering engine with a desktop UI (see screenshot).
+It aimed to be the *Photoshop for Video*, albeit vector-based.
+The first version was already quite advanced with features including Motion blur, Textures, Gradients, Polygons, Lines, Circles, Ellipses, Rectangles.
+Gravity effects, all kinds of Motions, Behaviors, Custom Easing (Linear, Exponential, ..), etc., etc.
+The code got a little unmaintainable which led to this rewrite.
+
+![screenshot](https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/screenshot_v1.png)
+
+One of the videos that could be rendered with this system can be found [here][https://vimeo.com/20206213].
+
+## Project goal
+
+The goal is to make scripting more first-class with reasonable V8 integration.
+Streaming frames to video or online streaming service, as opposed to rendering individual BMP files first.
+Web-based UI with less entanglement with the rest of the system.
+
+The codebase should stay maintainable so a new rewrite won't be needed anytime soon.
+
+## Documentation
+
+Building
+
+    make -C docs html
+    
+Browsing locally
+
+    php -S localhost:9999 -t $PWD/docs/_build/html/
+
+Open `http://localhost:9999/` in browser.
+
+## Examples
 Here are some examples of videos that can be generated (or streamed) using simple javascript.
 
 ![example1](https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/ex1.gif)
@@ -86,23 +117,6 @@ function close() {
     write_frame();
 }
 ```
-
-This is a new version of Starcry which was originally a rendering engine. Aiming to be the Photoshop for Video (albeit vector-based).
-The first version was already quite advanced with Motion blur, Textures, Gradients, Polygons, Lines, Circles, Ellipses, Rectangles.
-Gravity effects, all kinds of Motions, Behaviors, Easing (Linear, Exponential, ..), etc., etc.
-The code got a little unmaintainable and I had more ideas that I wanted to support. So there was need for a "second" system. 
-
-A screenshot from the first system:
-
-![screenshot](https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/screenshot_v1.png)
-
-A video that could be rendered with it [here][https://vimeo.com/20206213].
-
-## Architecture overview
-
-The architecture is really simple, the following sequence diagram shows best the typical messaging flow when rendering a video.
-
-![sequencediagram](https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/seqdiag.png)
 
 ## Starcry dependencies
 
@@ -306,33 +320,6 @@ Instruct starcry to use these remote workers:
 
 - `./starcry -r 10000-10003`
 
-## Misc
-
-### Websequencediagram for job flow
-
-    main->job_generator: start
-    job_generator->V8: next() javascript
-    V8->job_generator: add shape **
-    V8->job_generator: write_frame
-    job_generator->job_storage: add_job *
-    main->renderer: start
-    main->streamer: start
-    renderer->renderer: render_frame
-    renderer->job_storage: get_job
-    job_storage->renderer: <JOB>
-    renderer->worker: <JOB>
-    worker->renderer: job_ready
-    renderer->streamer: frame **
-    streamer->streamer: combine
-    streamer->output: video frame
-    streamer->job_storage: del_job
-    job_generator->job_generator: next_frame
-    job_generator->job_storage: num_jobs ?
-    job_storage->job_generator: N
-    job_generator->V8: [N < threshold] next() javascript
-    job_generator->job_generator: [N >= threshold] sleep X;\nnext_frame
-
-
-## Notes on static compiling
+## Misc - Notes on static compiling
 
 yum install libicu-devel mesa-libGLU-devel
