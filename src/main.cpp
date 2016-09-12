@@ -225,7 +225,7 @@ public:
 
         //auto jobstorage = system.spawn(job_storage);
         auto generator  = system.spawn<detached>(job_generator, script, canvas_w, canvas_h, use_stdin,
-                                                                 rendering_enabled);
+                                                                 rendering_enabled, compress);
         // generator links to job storage
         actor streamer_ = spawn_actor_local_or_remote(streamer, string("streamer"), string("use-remote-streamer"),
                                                       remote_streamer_info);
@@ -243,7 +243,7 @@ public:
                 std::exit(2);
             }
         );
-        s->send(renderer_, initialize::value, streamer_, generator, workers_vec, streamer_host, streamer_port, compress);
+        s->send(renderer_, initialize::value, streamer_, generator, workers_vec, streamer_host, streamer_port);
 
         s->send(generator, start::value, max_jobs_queued_for_renderer, num_chunks, renderer_);
         s->send(renderer_, start::value, use_remote_workers ? workers_vec.size() : num_workers);

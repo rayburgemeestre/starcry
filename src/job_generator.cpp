@@ -46,7 +46,8 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
                        uint32_t canvas_w,
                        uint32_t canvas_h,
                        bool use_stdin,
-                       bool rendering_enabled
+                       bool rendering_enabled,
+                       bool compress
 ){
     // initialize fps counter
     self->state.fps_counter = std::make_shared<MeasureInterval>(TimerFactory::Type::BoostChronoTimerImpl);
@@ -117,6 +118,7 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
             job.canvas_w          = self->state.canvas_w;
             job.canvas_h          = self->state.canvas_h;
             job.scale             = context->run<double>("typeof scale != 'undefined' ? scale : 1.0");
+            job.compress          = compress;
             assistant->max_frames = context->run<size_t>("typeof max_frames != 'undefined' ? max_frames : 250");
             assistant->realtime   = context->run<bool>("typeof realtime != 'undefined' ? realtime : false");
             if (!use_stdin || assistant->realtime) {

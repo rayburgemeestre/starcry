@@ -24,7 +24,7 @@ struct job_generator_data
     size_t bitrate = 0;
 };
 
-behavior job_generator(stateful_actor<job_generator_data> *self, const std::string &filename, uint32_t canvas_w, uint32_t canvas_h, bool use_stdin = false, bool rendering_enabled = true);
+behavior job_generator(stateful_actor<job_generator_data> *self, const std::string &filename, uint32_t canvas_w, uint32_t canvas_h, bool use_stdin = false, bool rendering_enabled = true, bool compress = false);
 
 void call_print_exception(event_based_actor *self, std::string fn);
 template <typename T> void call_print_exception(event_based_actor *self, std::string fn, T arg);
