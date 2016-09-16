@@ -263,11 +263,11 @@ public:
         /*
         al_put_pixel(absX, absY, al_map_rgba_f(r, g, b, 0));
         */
-        if (Opacity >= 1.0) {
+        //if (Opacity >= 1.0) {
             r += bg.r;
             g += bg.g;
             b += bg.b;
-        }
+       // }
         if (r > 1.0) r = 1.0;
         if (g > 1.0) g = 1.0;
         if (b > 1.0) b = 1.0;

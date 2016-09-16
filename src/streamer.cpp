@@ -72,9 +72,10 @@ std::optional<size_t> last_frame_streamed;
 // TODO; add state to streamer object
 // TODO; refactor this to regular objects.. this doesn't make sense..
 // as a temporary workaround putting stuff inside a unique_ptr...
-unique_ptr<output_action<ffmpeg_h264_encode>> ffmpeg;
-unique_ptr<output_action<allegro5_window>> allegro5;
-unique_ptr<output_aggregate> outputs;
+#include "streamer_output/ffmpeg_encode.h"
+#include "streamer_output/allegro5_window.h"
+std::unique_ptr<ffmpeg_h264_encode> ffmpeg;
+std::unique_ptr<allegro5_window> allegro5;
 
 bool all_frame_chunks_present(set<rendered_job> &rendered_jobs_set, size_t frame_number, size_t num_chunks) {
     size_t num_chunks_for_frame_available = 0;
@@ -99,11 +100,18 @@ bool process_buffer(stateful_actor<streamer_data> *self, const actor &renderer, 
     }
     //cout << "streamer completed frame: " << self->state.current_frame << " number of pixels equal to: "
     //     << pixels_all.size() << endl; // debug
-    outputs->add_frame(canvas_w, canvas_h, pixels_all);
+    if (ffmpeg)
+        ffmpeg->add_frame(pixels_all);
+    if (allegro5)
+        allegro5->add_frame(canvas_w, canvas_h, pixels_all);
+
     counter2.measure();
     self->send(renderer, streamer_ready::value);
     if (last_frame_streamed && *last_frame_streamed == frame_number) {
-        outputs->finalize();
+        if (ffmpeg)
+            ffmpeg->finalize();
+        if (allegro5)
+            allegro5->finalize();
         aout(self) << "streamer completed frames: " << self->state.current_frame << ", with FPS: " << (1000.0 / counter2.mean())
                    << " +/- " << counter2.stderr() << endl;
         self->quit(exit_reason::user_shutdown);
@@ -124,18 +132,7 @@ behavior streamer(stateful_actor<streamer_data>* self, std::optional<size_t> por
             self->state.render_window_at = render_window_at;
             self->state.output_file = output_file;
             self->state.settings = settings;
-
-            ffmpeg   = std::make_unique<output_action<ffmpeg_h264_encode>>();
-            allegro5 = std::make_unique<output_action<allegro5_window>>(self->system());
-            outputs  = std::make_unique<output_aggregate>(*ffmpeg.get(), *allegro5.get());
-            if (bitset<32>(settings).test(0)) {
-                ffmpeg->enable(true);
-                ffmpeg->set_filename(output_file);
-                ffmpeg->set_bitrate(bitrate);
-            }
-            if (bitset<32>(settings).test(1)) {
-                allegro5->enable(true);
-            }
+            self->state.bitrate = bitrate;
         },
         [=](render_frame, struct data::job &job, data::pixel_data2 pixeldat, const caf::actor &renderer) {
             //cout << "streamer processing... " << job.job_number << endl;
@@ -150,7 +147,12 @@ behavior streamer(stateful_actor<streamer_data>* self, std::optional<size_t> por
             if (job.last_frame)
                 last_frame_streamed = std::make_optional(job.frame_number);
 
-            outputs->initialize(job.canvas_w, job.canvas_h, self, self->state.render_window_at);
+            if (!ffmpeg && bitset<32>(self->state.settings).test(0)) {
+                ffmpeg = make_unique<ffmpeg_h264_encode>(self->state.output_file, self->state.bitrate, job.canvas_w, job.canvas_h);
+            }
+            if (!allegro5 && bitset<32>(self->state.settings).test(1)) {
+                allegro5 = make_unique<allegro5_window>(self->system(), self, self->state.render_window_at);
+            }
 
             rendered_jobs_set.emplace(job.frame_number, job.chunk, job.num_chunks, job.last_frame, pixels);
             while (process_buffer(self, renderer, self->state.current_frame, job.num_chunks, job.canvas_w, job.canvas_h))

@@ -130,7 +130,7 @@ behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_
     self->state.jps_counter->startHistogramAtZero(true);
     return {
         [=](initialize, const caf::actor &streamer, const caf::actor &generator, const vector<pair<string, int>> &workers_vec,
-           string streamer_host, int streamer_port, bool compress
+           string streamer_host, int streamer_port
         ){
             self->state.remote_streamer_host = streamer_host;
             self->state.remote_streamer_port = streamer_port;

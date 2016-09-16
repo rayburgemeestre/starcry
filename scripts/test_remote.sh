@@ -1,49 +1,92 @@
-trap ctrl_c INT
-
-pids=""
-
-function ctrl_c {
-    echo "** Trapped CTRL-C"
-    echo kill -9 $pids
-    kill -9 $pids
-}
-
-#killall -9 starcry
-
-rm -rf output.h264
-
-sleep 0.2
+. $HOME/.kshrc
 
 make -j 8 starcry
 
-if ! [[ $? -eq 0 ]]; then
-    echo compiliation failed
-    exit
-fi
+typeset -a processes=(sc_worker sc_streamer sc_renderer sc_gui)
+killall -9 starcry ${processes[@]}
 
-if ! [[ "$1" ]]; then
-    echo please specify port-range, i.e. 1000, will result in 10001, 10002, etc.
-    exit
-fi
+sleep 0.5
 
-#./starcry --render-window 10002 &
-sleep 1
-
-export j=4 # num workers
-
-for i in `seq 1 $j`
-do
-    echo ./starcry -w ${1}$i -c 1 -n 1  &
-    ./starcry -w ${1}$i -c 1 -n 1  &
-    pids="$pids $!"
+for process in ${processes[@]}; do
+    cp -prv starcry $process
 done
+sync
 
-sleep 0.2
+typeset remote_renderer=false
+typeset remote_streamer=false
+#typeset remote_renderer=20000
+#typeset remote_streamer=20001
 
-./starcry -r ${1}1-${1}$j -c 1 -n 1 --dim 2560x1440 --no-video input/v8_test.js
-pids="$pids $!"
+typeset cli_args=
 
-echo kill -9 $pids
-kill -9 $pids
+if [[ $remote_renderer != false ]]; then
+    cli_args="$cli_args --use-remote-renderer localhost:$remote_renderer"
+fi
+if [[ $remote_streamer != false ]]; then
+    cli_args="$cli_args --use-remote-streamer localhost:$remote_streamer"
+fi
 
-ffplay test.h264
+function worker
+{
+    ./sc_worker $cli_args -w $2 | tee worker_${2}.log 1>/dev/null 2>/dev/null
+}
+
+function launch_workers
+{
+    while read line; do
+        launch worker $line
+    done < /dev/stdin
+}
+
+function launch_renderer
+{
+    ./sc_renderer $cli_args --spawn-renderer $remote_renderer > renderer.log
+}
+
+function launch_streamer
+{
+    ./sc_streamer $cli_args --spawn-streamer $remote_streamer > streamer.log
+}
+
+function launch_gui
+{
+    ./sc_gui --spawn-gui > gui.log
+}
+
+function start
+{
+    cat servers.txt | egrep -v "^;|^#" | sed 's/:/ /' | launch_workers
+}
+
+if [[ $remote_renderer != false ]]; then
+    echo launching renderer..
+    launch launch_renderer
+fi
+if [[ $remote_streamer != false ]]; then
+    echo launching streamer..
+    launch launch_streamer
+fi
+#launch launch_gui
+echo launching workers..
+launch start
+
+sleep 2
+
+function cleanup
+{
+    killall -9 starcry ${processes[@]}
+    exit 0
+}
+
+trap "cleanup" 2
+
+#cat sgi.log | ./starcry $cli_args --stdin -r servers.txt -s input/sgi.js --gui -c 1 2>&1 | tee ray.log
+cat sgi.log | ./starcry $cli_args --stdin -r servers.txt -s input/sgi.js --gui -c 1 2>&1 | tee ray.log
+#./starcry $cli_args -r servers.txt -s input/test.js --gui -c 3 2>&1 | tee ray.log
+#cat input.txt | ./starcry $cli_args -r servers.txt -s input/test2.js --stdin  -c 1 2>&1 | tee ray.log
+
+echo starcry stopped.... | tee -a starcry.log
+
+#killall -9 starcry ${processes[@]}
+wait
+

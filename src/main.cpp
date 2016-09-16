@@ -225,7 +225,7 @@ public:
 
         //auto jobstorage = system.spawn(job_storage);
         auto generator  = system.spawn<detached>(job_generator, script, canvas_w, canvas_h, use_stdin,
-                                                                 rendering_enabled);
+                                                                 rendering_enabled, compress);
         // generator links to job storage
         actor streamer_ = spawn_actor_local_or_remote(streamer, string("streamer"), string("use-remote-streamer"),
                                                       remote_streamer_info);
@@ -236,14 +236,18 @@ public:
         auto stdin_reader_ = system.spawn(stdin_reader, generator);
 
         s->request(generator, infinite, initialize::value).receive(
-            [&](size_t bitrate) {
+            [&](size_t bitrate, bool use_stdin_) {
+//                const auto &bitrate = std::get<0>(tpl);
+//                const auto &use_stdin_ = std::get<1>(tpl);
+                use_stdin = use_stdin_;
+                std::cout << "OPPOSITE SENDING" << (use_stdin ? "y" : "N") << endl;
                 s->send(streamer_, initialize::value, int(conf.user.gui_port), string(output_file), bitrate, output_settings);
             },
             [=](error &err) {
                 std::exit(2);
             }
         );
-        s->send(renderer_, initialize::value, streamer_, generator, workers_vec, streamer_host, streamer_port, compress);
+        s->send(renderer_, initialize::value, streamer_, generator, workers_vec, streamer_host, streamer_port);
 
         s->send(generator, start::value, max_jobs_queued_for_renderer, num_chunks, renderer_);
         s->send(renderer_, start::value, use_remote_workers ? workers_vec.size() : num_workers);

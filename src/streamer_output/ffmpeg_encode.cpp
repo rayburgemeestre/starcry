@@ -64,9 +64,8 @@ void transfer_pixels(std::vector<uint32_t> &pixels, AVCodecContext * c, AVFrame 
 	}
 }
 
-ffmpeg_h264_encode::ffmpeg_h264_encode() {}
+ffmpeg_h264_encode::ffmpeg_h264_encode(std::string filename, size_t bitrate, uint32_t canvas_w, uint32_t canvas_h) {
 
-void ffmpeg_h264_encode::initialize(uint32_t canvas_w, uint32_t canvas_h, caf::event_based_actor *, int) {
     avcodec_register_all();
 
     printf("Encode video file %s\n", filename.c_str());
@@ -85,8 +84,8 @@ void ffmpeg_h264_encode::initialize(uint32_t canvas_w, uint32_t canvas_h, caf::e
 
     /* put sample parameters */
     //c->bit_rate = 400000 * 10;
-    std::cout << "using bitrate: " << this->bitrate_ << std::endl;
-    c->bit_rate = this->bitrate_;
+    std::cout << "using bitrate: " << bitrate << std::endl;
+    c->bit_rate = bitrate;
     /* resolution must be a multiple of two */
     c->width = canvas_w;
     c->height = canvas_h;
@@ -141,7 +140,7 @@ void ffmpeg_h264_encode::initialize(uint32_t canvas_w, uint32_t canvas_h, caf::e
 //    timer->start();
 }
 
-void ffmpeg_h264_encode::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels) {
+void ffmpeg_h264_encode::add_frame(std::vector<uint32_t> &pixels) {
 
     transfer_pixels(pixels, c, frame);
 
@@ -200,14 +199,4 @@ void ffmpeg_h264_encode::finalize()
     av_freep(&frame->data[0]);
     av_frame_free(&frame);
     printf("\n");
-}
-
-void ffmpeg_h264_encode::set_filename(std::string filename)
-{
-    this->filename = filename;
-}
-
-void ffmpeg_h264_encode::set_bitrate(size_t bitrate)
-{
-    this->bitrate_ = bitrate;
 }
