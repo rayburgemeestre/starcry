@@ -49,6 +49,8 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
                        bool rendering_enabled,
                        bool compress
 ){
+    self->state.use_stdin = use_stdin;
+
     // initialize fps counter
     self->state.fps_counter = std::make_shared<MeasureInterval>(TimerFactory::Type::BoostChronoTimerImpl);
     MeasureInterval &fps_counter = *self->state.fps_counter;
@@ -93,8 +95,9 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
     // return actor behavior
     return {
         [=](initialize) -> message { // by main
-            self->state.bitrate           = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");
-            return make_message(self->state.bitrate);
+            self->state.bitrate = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");
+            self->state.use_stdin = context->run<bool>("typeof stdin != 'undefined' ? stdin : false");
+            return make_message(self->state.bitrate, self->state.use_stdin);
         },
         [=](start, size_t max_jobs_queued_for_renderer, size_t num_chunks, actor &renderer) { // by main
             // further initialize state
@@ -121,9 +124,10 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
             job.compress          = compress;
             assistant->max_frames = context->run<size_t>("typeof max_frames != 'undefined' ? max_frames : 250");
             assistant->realtime   = context->run<bool>("typeof realtime != 'undefined' ? realtime : false");
-            if (!use_stdin || assistant->realtime) {
+            if (!self->state.use_stdin || assistant->realtime) {
                 // we call into V8 ourselves to get frames
                 call_print_exception(self, "next");
+                write_frame_fun();
             }
         },
         [=](input_line, string line) { // by stdin_reader
@@ -144,10 +148,10 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
             self->state.jobs_queued_for_renderer--;
             self->state.has_max_jobs_queued_for_renderer =
                 (self->state.jobs_queued_for_renderer >= self->state.max_jobs_queued_for_renderer);
-            if (!use_stdin || assistant->realtime) {
+            if (!self->state.use_stdin || assistant->realtime) {
                 if (!self->state.has_max_jobs_queued_for_renderer) {
-                    // self->delayed_send(self, std::chrono::milliseconds(1), next_frame::value);
-                    self->send<message_priority::high>(self, next_frame::value);
+                    self->delayed_send(self, std::chrono::milliseconds(8), next_frame::value);
+                    //self->send<message_priority::high>(self, next_frame::value);
                 }
             }
         },
@@ -197,6 +201,9 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
         },
         [=](next_frame) { // self (job_generator)
             call_print_exception(self, "next");
+            if (!self->state.use_stdin) {
+                write_frame_fun();
+            }
         },
         [=](debug) { // main
             aout(self) << "job_generator mailbox = " << self->mailbox().count() << " " << self->mailbox().counter()

@@ -1,6 +1,7 @@
 /**
  * Generate video where circle radius increases by time.
  */
+var stdin         = true;
 var fps           = 25;
 var canvas_w      = 3840; // 4K UHD
 var canvas_h      = 2160;

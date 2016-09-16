@@ -80,6 +80,7 @@ function cleanup
 
 trap "cleanup" 2
 
+#cat sgi.log | ./starcry $cli_args --stdin -r servers.txt -s input/sgi.js --gui -c 1 2>&1 | tee ray.log
 cat sgi.log | ./starcry $cli_args --stdin -r servers.txt -s input/sgi.js --gui -c 1 2>&1 | tee ray.log
 #./starcry $cli_args -r servers.txt -s input/test.js --gui -c 3 2>&1 | tee ray.log
 #cat input.txt | ./starcry $cli_args -r servers.txt -s input/test2.js --stdin  -c 1 2>&1 | tee ray.log

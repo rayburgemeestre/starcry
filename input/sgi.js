@@ -1050,13 +1050,13 @@ function draw_legend(x, y) {
     add_text( 50 + offset_x, y + (offset * 5), 0, 8, '8088', 'center');
 
     add_text( offset_x, y + (offset * 6), 0, fontsize, 'some data', 'right');
-    add_line(new line(new pos( offset_x + 25, y + (offset * 6), 0), new pos( offset_x + 75, y + (offset * 6), 0), 2, simple_gradient(rainbow.get3(0))));
+    add_line(new line(new pos( offset_x + 25, y + (offset * 6), 0), new pos( offset_x + 75, y + (offset * 6), 0), 2, simple_gradient(rainbow.get(0))));
     
     add_text( offset_x, y + (offset * 7), 0, fontsize, 'large data', 'right');
-    add_line(new line(new pos( offset_x + 25, y + (offset * 7), 0), new pos( offset_x + 75, y + (offset * 7), 0), 2, simple_gradient(rainbow.get3(0.5))));
+    add_line(new line(new pos( offset_x + 25, y + (offset * 7), 0), new pos( offset_x + 75, y + (offset * 7), 0), 2, simple_gradient(rainbow.get(0.5))));
 
     add_text( offset_x, y + (offset * 8), 0, fontsize, 'very large data', 'right');
-    add_line(new line(new pos( offset_x + 25, y + (offset * 8), 0), new pos( offset_x + 75, y + (offset * 8), 0), 2, simple_gradient(rainbow.get3(1.0))));
+    add_line(new line(new pos( offset_x + 25, y + (offset * 8), 0), new pos( offset_x + 75, y + (offset * 8), 0), 2, simple_gradient(rainbow.get(1.0))));
 
     add_text( offset_x, y + (offset * 9), 0, fontsize, 'small CPU usage', 'right');
     add_circle(new circle(new pos( 50 + offset_x, y + (offset * 9), 0), 2.0, 2, simple_gradient(new color(1, 0, 0, 0))));
@@ -1160,7 +1160,7 @@ function process() {
                         var b = rainbow.getb(size > 0 && size < 1 ? size : 0);
                         */
 //                        var l = make_line('line_' + counter, function () {
-//                            return new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 1 + size*5, simple_gradient(rainbow.get3(size)));
+//                            return new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 1 + size*5, simple_gradient(rainbow.get(size)));
 //                        });
 //                        l.x = from.x;
 //                        l.y = from.y;
@@ -1168,12 +1168,12 @@ function process() {
 //                        l.y2 = to.y;
 //                        l.radiussize = 1 + size * 5;
 //                        var g = make_gradient('grad_' + size, function () {
-//                            return simple_gradient(rainbow.get3(size));
+//                            return simple_gradient(rainbow.get(size));
 //                        });
 //                        // TODO; this doesn't work yet..
-//                        l.gradient = simple_gradient(rainbow.get3(size));//g;// optimize this too!
+//                        l.gradient = simple_gradient(rainbow.get(size));//g;// optimize this too!
 //                        add_line(l);
-                        add_line(new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 1 + size*5, simple_gradient(rainbow.get3(size))));
+                        add_line(new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 1 + size*5, simple_gradient(rainbow.get(size))));
                     }
                     else if (act.shadow > 0.1) {
                         //add_line(new line(new pos(from.x, from.y, 0), new pos(to.x, to.y, 0), 5.0, simple_gradient(new color(act.shadow, act.shadow, act.shadow, 0))));

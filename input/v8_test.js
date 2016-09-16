@@ -22,7 +22,7 @@ function initialize() {
 }
 
 function next() {
-    var clr = grad.get3(current_frame / (max_frames + 0.0));
+    var clr = grad.get(current_frame / (max_frames + 0.0));
 
     var tmp = new gradient();
     tmp.add(0.0, new color(clr.r, clr.g, clr.b, clr.a))

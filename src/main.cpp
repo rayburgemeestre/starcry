@@ -236,7 +236,11 @@ public:
         auto stdin_reader_ = system.spawn(stdin_reader, generator);
 
         s->request(generator, infinite, initialize::value).receive(
-            [&](size_t bitrate) {
+            [&](size_t bitrate, bool use_stdin_) {
+//                const auto &bitrate = std::get<0>(tpl);
+//                const auto &use_stdin_ = std::get<1>(tpl);
+                use_stdin = use_stdin_;
+                std::cout << "OPPOSITE SENDING" << (use_stdin ? "y" : "N") << endl;
                 s->send(streamer_, initialize::value, int(conf.user.gui_port), string(output_file), bitrate, output_settings);
             },
             [=](error &err) {
