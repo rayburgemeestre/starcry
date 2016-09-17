@@ -7,6 +7,7 @@
 
 // #define DEBUGMODE
 
+#include "util/scope_exit.hpp"
 #include "allegro5/allegro.h"
 //#include "allegro5/debug.h"
 #include <allegro5/allegro_image.h>
@@ -101,11 +102,16 @@ public:
     }
 
     template <typename image, typename shapes_t>
-    void render(image bmp, data::color &bg_color, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, double scale, std::string label = "") {
+    void render(image bmp, data::color &bg_color, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, double scale) {
         std::unique_lock<std::mutex> lock(m);
         auto old_bmp = al_get_target_bitmap();
         al_set_target_bitmap(bmp);
         al_clear_to_color(al_map_rgba_f(bg_color.r, bg_color.g, bg_color.b, bg_color.a));
+        auto exit_func = [&](){
+            al_unlock_bitmap(bmp);
+            al_set_target_bitmap(old_bmp);
+        };
+        scope_exit<decltype(exit_func)> se(exit_func);
         uint32_t width = al_get_bitmap_width(bmp);
         uint32_t height = al_get_bitmap_height(bmp);
         al_lock_bitmap(bmp, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
@@ -115,9 +121,6 @@ public:
             font = al_load_ttf_font("Monaco_Linux-Powerline.ttf", 14, 0);
             if (!font){
                 fprintf(stderr, "Could not load monaco ttf font.\n");
-                // TODO: do this with RAII
-                al_unlock_bitmap(bmp);
-                al_set_target_bitmap(old_bmp);
                 return;
             }
         }
@@ -135,14 +138,9 @@ public:
             else if (shape.type == data::shape_type::text)
                 draw_logic_.render_text<double>(shape.x, shape.y, shape.text_size, shape.text, shape.align);
         }
-        if (!label.empty()) {
-            for (uint32_t y = 0; y < height; y++) al_put_pixel(0, y, al_map_rgba(0, 255, 0, 255));
-            for (uint32_t x = 0; x < width; x++)  al_put_pixel(x, 0, al_map_rgba(255, 0, 0, 255));
-            al_draw_text(font, al_map_rgb(255, 255, 255), 10, 10, ALLEGRO_ALIGN_LEFT, label.c_str());
-        }
-        // TODO: do this with RAII
-        al_unlock_bitmap(bmp);
-        al_set_target_bitmap(old_bmp);
+        //for (uint32_t y = 0; y < height; y++) al_put_pixel(0, y, al_map_rgba(0, 255, 0, 255));
+        //for (uint32_t x = 0; x < width; x++)  al_put_pixel(x, 0, al_map_rgba(255, 0, 0, 255));
+        //al_draw_text(font, al_map_rgb(255, 255, 255), 10, 10, ALLEGRO_ALIGN_LEFT, label.c_str());
     }
 
 

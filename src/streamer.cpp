@@ -3,19 +3,19 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-#include "actors/streamer.h"
 
+#include "actors/streamer.h"
 #include "benchmark.h"
-#include <bitset>
 #include "data/job.hpp"
 #include "data/pixels.hpp"
 #include "output_action.hpp"
+#include "streamer_output/ffmpeg_encode.h"
+#include "streamer_output/allegro5_window.h"
 #include "util/compress_vector.h"
-#include "caf/io/all.hpp"
 #include "util/remote_actors.h"
+#include "caf/io/all.hpp"
+#include <bitset>
 
-
-using terminate_           = atom_constant<atom("terminate ")>;
 // public
 using start            = atom_constant<atom("start     ")>;
 using render_frame     = atom_constant<atom("render_fra")>;
@@ -24,6 +24,7 @@ using need_frames      = atom_constant<atom("need_frame")>;
 using debug            = atom_constant<atom("debug     ")>;
 using initialize       = atom_constant<atom("initialize")>;
 using checkpoint       = atom_constant<atom("checkpoint")>;
+using terminate_       = atom_constant<atom("terminate ")>;
 
 // external
 using del_job          = atom_constant<atom("del_job   ")>;
@@ -34,48 +35,7 @@ using streamer_ready   = atom_constant<atom("streamer_r")>;
 using ready            = atom_constant<atom("ready     ")>;
 using recheck_test     = atom_constant<atom("recheck_te")>;
 
-auto benchmark_class2 = std::make_unique<MeasureInterval>(TimerFactory::Type::BoostChronoTimerImpl);
-MeasureInterval &counter2 = static_cast<MeasureInterval &>(*benchmark_class2.get());
-
-struct rendered_job
-{
-    size_t frame_number;
-    size_t chunk;
-    size_t num_chunks;
-    bool last_frame;
-    std::vector<uint32_t> pixels;
-
-    rendered_job(size_t frame_number,
-                 size_t chunk,
-                 size_t num_chunks,
-                 bool last_frame,
-                 std::vector<uint32_t> &pixels)
-    : frame_number(frame_number),
-      chunk(chunk),
-      num_chunks(num_chunks),
-      last_frame(last_frame),
-      pixels(pixels)
-    {}
-
-    bool operator <(const rendered_job &other) const {
-        if (frame_number == other.frame_number)
-            return chunk < other.chunk;
-        return frame_number < other.frame_number;
-    }
-};
-
 using namespace std;
-//vector<tuple<size_t, size_t, size_t, bool, vector<uint32_t>>> fake_buffer, matches;
-set<rendered_job> rendered_jobs_set;
-std::optional<size_t> last_frame_streamed;
-
-// TODO; add state to streamer object
-// TODO; refactor this to regular objects.. this doesn't make sense..
-// as a temporary workaround putting stuff inside a unique_ptr...
-#include "streamer_output/ffmpeg_encode.h"
-#include "streamer_output/allegro5_window.h"
-std::unique_ptr<ffmpeg_h264_encode> ffmpeg;
-std::unique_ptr<allegro5_window> allegro5;
 
 bool all_frame_chunks_present(set<rendered_job> &rendered_jobs_set, size_t frame_number, size_t num_chunks) {
     size_t num_chunks_for_frame_available = 0;
@@ -88,32 +48,41 @@ bool all_frame_chunks_present(set<rendered_job> &rendered_jobs_set, size_t frame
     return false;
 }
 
-bool process_buffer(stateful_actor<streamer_data> *self, const actor &renderer, size_t frame_number, size_t num_chunks, uint32_t canvas_w, uint32_t canvas_h) {
-    if (!all_frame_chunks_present(rendered_jobs_set, frame_number, num_chunks))
+bool process_buffer(stateful_actor<streamer_data> *self, const actor &renderer, size_t frame_num, const data::job &j) {
+    size_t frame_number = frame_num;
+    size_t num_chunks = j.num_chunks;
+    size_t canvas_w = j.canvas_w;
+    uint32_t canvas_h = j.canvas_h;
+    auto & rendered_jobs = self->state.rendered_jobs_set;
+
+    if (!all_frame_chunks_present(rendered_jobs, frame_number, num_chunks))
         return false;
+
     // we split the image horizontally so we can just concat all pixels here
     vector<uint32_t> pixels_all;
     pixels_all.reserve(canvas_w * canvas_h);
     for (size_t i=0; i<num_chunks; i++) {
-        pixels_all.insert(pixels_all.end(), rendered_jobs_set.cbegin()->pixels.cbegin(), rendered_jobs_set.cbegin()->pixels.cend() );
-        rendered_jobs_set.erase(rendered_jobs_set.begin());
+        auto &pixels = rendered_jobs.cbegin()->pixels;
+        pixels_all.insert(pixels_all.end(), pixels.cbegin(), pixels.cend() );
+        rendered_jobs.erase(rendered_jobs.begin());
     }
     //cout << "streamer completed frame: " << self->state.current_frame << " number of pixels equal to: "
     //     << pixels_all.size() << endl; // debug
-    if (ffmpeg)
-        ffmpeg->add_frame(pixels_all);
-    if (allegro5)
-        allegro5->add_frame(canvas_w, canvas_h, pixels_all);
+    if (self->state.ffmpeg)
+        self->state.ffmpeg->add_frame(pixels_all);
+    if (self->state.allegro5)
+        self->state.allegro5->add_frame(canvas_w, canvas_h, pixels_all);
 
-    counter2.measure();
+    self->state.fps_counter->measure();
     self->send(renderer, streamer_ready::value);
-    if (last_frame_streamed && *last_frame_streamed == frame_number) {
-        if (ffmpeg)
-            ffmpeg->finalize();
-        if (allegro5)
-            allegro5->finalize();
-        aout(self) << "streamer completed frames: " << self->state.current_frame << ", with FPS: " << (1000.0 / counter2.mean())
-                   << " +/- " << counter2.stderr() << endl;
+    if (self->state.last_frame_streamed && *self->state.last_frame_streamed == frame_number) {
+        if (self->state.ffmpeg)
+            self->state.ffmpeg->finalize();
+        if (self->state.allegro5)
+            self->state.allegro5->finalize();
+        aout(self) << "streamer completed frames: " << self->state.current_frame << ", with FPS: "
+                   << (1000.0 / self->state.fps_counter->mean())
+                   << " +/- " << self->state.fps_counter->stderr() << endl;
         self->quit(exit_reason::user_shutdown);
     }
     return true;
@@ -135,47 +104,45 @@ behavior streamer(stateful_actor<streamer_data>* self, std::optional<size_t> por
             self->state.bitrate = bitrate;
         },
         [=](render_frame, struct data::job &job, data::pixel_data2 pixeldat, const caf::actor &renderer) {
-            //cout << "streamer processing... " << job.job_number << endl;
             if (job.compress) {
                 compress_vector<uint32_t> cv;
                 cv.decompress(&pixeldat.pixels, job.width * job.height);
             }
-
-            vector<uint32_t> &pixels = pixeldat.pixels;
-
             self->state.num_pixels = job.canvas_w * job.canvas_h;
             if (job.last_frame)
-                last_frame_streamed = std::make_optional(job.frame_number);
+                self->state.last_frame_streamed = std::make_optional(job.frame_number);
 
-            if (!ffmpeg && bitset<32>(self->state.settings).test(0)) {
-                ffmpeg = make_unique<ffmpeg_h264_encode>(self->state.output_file, self->state.bitrate, job.canvas_w, job.canvas_h);
+            if (!self->state.ffmpeg && bitset<32>(self->state.settings).test(0)) {
+                self->state.ffmpeg = make_shared<ffmpeg_h264_encode>(self->state.output_file, self->state.bitrate,
+                                                                     job.canvas_w, job.canvas_h);
             }
-            if (!allegro5 && bitset<32>(self->state.settings).test(1)) {
-                allegro5 = make_unique<allegro5_window>(self->system(), self, self->state.render_window_at);
+            if (!self->state.allegro5 && bitset<32>(self->state.settings).test(1)) {
+                self->state.allegro5 = make_unique<allegro5_window>(self->system(), self, self->state.render_window_at);
             }
 
-            rendered_jobs_set.emplace(job.frame_number, job.chunk, job.num_chunks, job.last_frame, pixels);
-            while (process_buffer(self, renderer, self->state.current_frame, job.num_chunks, job.canvas_w, job.canvas_h))
+            auto &rendered_jobs = self->state.rendered_jobs_set;
+            rendered_jobs.emplace(job.frame_number, job.chunk, job.num_chunks, job.last_frame, pixeldat.pixels);
+            while (process_buffer(self, renderer, self->state.current_frame, job))
                 self->state.current_frame++;
-
-            //cout << "IDLE." << endl;
         },
         [=](checkpoint) -> message {
             bool need_frames = self->mailbox().count() < self->state.min_items_in_streamer_queue;
             return make_message(need_frames);
         },
         [=](show_stats, string renderer_stats) {
-            auto fps = (1000.0 / counter2.mean());
-            aout(self) << "streamer[" << self->mailbox().count() << "] at frame: " << self->state.current_frame << ", with FPS: " << fps
-                       << " +/- " << counter2.stderr() << " (" << ((self->state.num_pixels * sizeof(uint32_t) * fps) / 1024 / 1024) << " MiB/sec), "
+            auto fps = (1000.0 / self->state.fps_counter->mean());
+            aout(self) << "streamer[" << self->mailbox().count() << "] at frame: "
+                       << self->state.current_frame << ", with FPS: " << fps
+                       << " +/- " << self->state.fps_counter->stderr() << " ("
+                       << ((self->state.num_pixels * sizeof(uint32_t) * fps) / 1024 / 1024) << " MiB/sec), "
                        << renderer_stats << endl;
-        },
-        [=](debug) {
-            aout(self) << "streamer mailbox = " << self->mailbox().count() << " " << self->mailbox().counter() << endl;
         },
         [=](terminate_) {
             aout(self) << "terminating.." << endl;
             self->quit(exit_reason::user_shutdown);
+        },
+        [=](debug) {
+            aout(self) << "streamer mailbox = " << self->mailbox().count() << " " << self->mailbox().counter() << endl;
         }
     };
 }

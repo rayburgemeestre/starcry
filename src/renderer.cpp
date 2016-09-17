@@ -31,7 +31,11 @@ using process_job          = atom_constant<atom("process_jo")>;
 using initialize           = atom_constant<atom("initialize")>;
 
 template <typename T>
-behavior create_worker_behavior(T self, const string &renderer_host, const int &renderer_port, const string &streamer_host, const int &streamer_port, bool output_each_frame = false) {
+behavior create_worker_behavior(T self,
+                                const string &renderer_host, const int &renderer_port,
+                                const string &streamer_host, const int &streamer_port,
+                                bool output_each_frame = false
+){
     connect_remote_worker(self->system(), "renderer", renderer_host, renderer_port, &self->state.renderer_ptr);
     connect_remote_worker(self->system(), "streamer", streamer_host, streamer_port, &self->state.streamer_ptr);
     return {
@@ -66,10 +70,12 @@ behavior create_worker_behavior(T self, const string &renderer_host, const int &
             // render + serialize + compress
             auto timer = TimerFactory::factory(TimerFactory::Type::BoostTimerImpl);
             timer->start();
-            self->state.engine.render(self->state.bitmap, j.background_color, j.shapes, j.offset_x, j.offset_y, j.width,
-                                      j.height, j.scale, ""); // last param is label (useful for debugging)
+            self->state.engine.render(self->state.bitmap, j.background_color, j.shapes,j.offset_x, j.offset_y,
+                                      j.width, j.height, j.scale);
             data::pixel_data2 dat;
             dat.pixels = self->state.engine.serialize_bitmap2(self->state.bitmap, j.width, j.height);
+
+            // compress the frame
             stringstream ss;
             if (j.compress) {
                 compress_vector<uint32_t> cv;
@@ -92,7 +98,10 @@ behavior create_worker_behavior(T self, const string &renderer_host, const int &
     };
 }
 
-behavior remote_worker(caf::stateful_actor<worker_data> * self, size_t worker_num, const string & renderer_host, const int &renderer_port, const string & streamer_host, const int &streamer_port) {
+behavior remote_worker(caf::stateful_actor<worker_data> * self, size_t worker_num,
+                       const string & renderer_host, const int &renderer_port,
+                       const string & streamer_host, const int &streamer_port
+){
     self->state.worker_num = worker_num;
     rendering_engine engine;
     engine.initialize();
@@ -102,12 +111,12 @@ behavior remote_worker(caf::stateful_actor<worker_data> * self, size_t worker_nu
     return create_worker_behavior(self, renderer_host, renderer_port, streamer_host, streamer_port, true);
 }
 
-behavior worker(caf::stateful_actor<worker_data> * self, const string & streamer_host, const int &streamer_port, size_t worker_num) {
+behavior worker(caf::stateful_actor<worker_data> * self, const string & streamer_host,const int &streamer_port,
+                size_t worker_num
+){
     self->state.worker_num = worker_num;
     return create_worker_behavior(self, "", 0, streamer_host, streamer_port);
 }
-
-// move to class data
 
 void send_jobs_to_streamer(caf::stateful_actor<renderer_data> *self)
 {
@@ -123,13 +132,14 @@ void send_jobs_to_streamer(caf::stateful_actor<renderer_data> *self)
 }
 
 behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_t> port) {
+    using workers_vec_type = vector<pair<string, int>>;
     publish_remote_actor("renderer", static_cast<event_based_actor *>(self), port ? *port : 0);
     // initialize jps counter
     self->state.jps_counter = std::make_shared<MeasureInterval>(TimerFactory::Type::BoostChronoTimerImpl);
     self->state.jps_counter->setDescription("jps");
     self->state.jps_counter->startHistogramAtZero(true);
     return {
-        [=](initialize, const caf::actor &streamer, const caf::actor &generator, const vector<pair<string, int>> &workers_vec,
+        [=](initialize, const caf::actor &streamer, const caf::actor &generator, const workers_vec_type &workers_vec,
            string streamer_host, int streamer_port
         ){
             self->state.remote_streamer_host = streamer_host;
@@ -152,8 +162,8 @@ behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_
                     const auto &port = self->state.remote_streamer_port;
                     return self->spawn(worker, host, port, worker_num++);
                 };
-                self->state.pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), num_workers, worker_factory,
-                                                                          actor_pool::round_robin())));
+                auto tmp = actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin());
+                self->state.pool = std::move(std::make_unique<actor>(tmp));
             }
             else {
                 aout(self) << "renderer started, num workers in text file = " << self->state.workers_vec.size() << endl;
@@ -166,9 +176,10 @@ behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_
                     connect_remote_worker(self->system(), "worker", host, port, &actor_ptr);
                     index++;
                     return *actor_ptr;
-               };
-               self->state.pool = std::move(std::make_unique<actor>(actor_pool::make(self->context(), self->state.workers_vec.size(),
-                                                                         worker_factory, actor_pool::round_robin())));
+                };
+                auto num_workers = self->state.workers_vec.size();
+                auto tmp = actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin());
+                self->state.pool = std::move(std::make_unique<actor>(tmp));
             }
             self->link_to(*self->state.pool);
         },
@@ -192,17 +203,17 @@ behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_
                 const auto &job_number = p.second;
                 ss << " " << job_number;
             }
-            //aout(self) << "renderer at job: " << self->state.job_sequence << ", with jobs/sec: " << (1000.0 / self->state.jps_counter->mean())
+            //aout(self) << "renderer at job: " << self->state.job_sequence << ", with jobs/sec: "
+            //           << (1000.0 / self->state.jps_counter->mean())
             //           << " +/- " << self->state.jps_counter->stderr() << endl;
             self->send<message_priority::high>(*self->state.streamer, show_stats::value, ss.str());
         },
-        [=](debug) {
-            aout(self) << "renderer mailbox = " << self->mailbox().count() << " " << self->mailbox().counter() << endl;
-        },
         [=](terminate_) {
-            aout(self) << "terminating.." << endl;
             self->state.pool.release();
             self->quit(exit_reason::user_shutdown);
+        },
+        [=](debug) {
+            aout(self) << "renderer mailbox = " << self->mailbox().count() << " " << self->mailbox().counter() << endl;
         }
     };
 }
