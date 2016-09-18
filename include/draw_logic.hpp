@@ -244,8 +244,8 @@ public:
         // TODO, check al_set_new_bitmap_format(ALLEGRO_PIXEL_FORMAT_ANY_32_WITH_ALPHA);
         // TODO, check ALLEGRO_NO_PREMULTIPLIED_ALPHA, because I prefer separate alpha channel
         //       unless it's not recommended for other reasons I don't understand..
-        auto & bg_opacity = Opacity;
-        auto fg_opacity = 1.0 - Opacity;
+        //auto & bg_opacity = Opacity;
+        //auto fg_opacity = 1.0 - Opacity;
 
         auto bg = al_get_pixel(al_get_target_bitmap(), absX, absY);
 

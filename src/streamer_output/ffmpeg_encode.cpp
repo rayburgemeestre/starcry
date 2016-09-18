@@ -155,7 +155,12 @@ void ffmpeg_h264_encode::add_frame(std::vector<uint32_t> &pixels) {
     //frame->pts += av_rescale_q(1, c->time_base, c->time_base);
 
     /* encode the image */
+    // deprecated perhaps, but the documentation still uses it in the examples
+    // https://github.com/FFmpeg/FFmpeg/blob/master/doc/examples/decoding_encoding.c
+    // I cannot find a proper example for the new non-deprecated API
+    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     ret = avcodec_encode_video2(c, &pkt, frame, &got_output);
+    #pragma GCC diagnostic warning "-Wdeprecated-declarations"
     if (ret < 0) {
         fprintf(stderr, "Error encoding frame\n");
         exit(1);
@@ -164,7 +169,7 @@ void ffmpeg_h264_encode::add_frame(std::vector<uint32_t> &pixels) {
     if (got_output) {
         //printf("Write frame %3d (size=%5d)\n", frameNumber, pkt.size);
         fwrite(pkt.data, 1, pkt.size, f);
-        av_free_packet(&pkt);
+        av_packet_unref(&pkt);
     }
     frameNumber++;
 }
@@ -175,7 +180,9 @@ void ffmpeg_h264_encode::finalize()
     for (got_output = 1; got_output; frameNumber++) {
         fflush(stdout);
 
+        #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         ret = avcodec_encode_video2(c, &pkt, NULL, &got_output);
+        #pragma GCC diagnostic warning "-Wdeprecated-declarations"
         if (ret < 0) {
             fprintf(stderr, "Error encoding frame\n");
             exit(1);
@@ -184,7 +191,7 @@ void ffmpeg_h264_encode::finalize()
         if (got_output) {
             //printf("Write frame %3d (size=%5d)\n", frameNumber, pkt.size);
             fwrite(pkt.data, 1, pkt.size, f);
-            av_free_packet(&pkt);
+            av_packet_unref(&pkt);
         }
     }
 

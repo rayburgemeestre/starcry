@@ -113,8 +113,8 @@ public:
             al_set_target_bitmap(old_bmp);
         };
         scope_exit<decltype(exit_func)> se(exit_func);
-        uint32_t width = al_get_bitmap_width(bmp);
-        uint32_t height = al_get_bitmap_height(bmp);
+        //uint32_t width = al_get_bitmap_width(bmp);
+        //uint32_t height = al_get_bitmap_height(bmp);
         al_lock_bitmap(bmp, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
 
         // debug font

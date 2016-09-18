@@ -62,7 +62,7 @@ find_package( Threads )
 # whole program optimizations screws things over
 #add_definitions(-O3 -fwhole-program -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic)
 #add_definitions(-O0 -g -Wall -funsigned-char -std=c++14)
-set (COMPILE_FLAGS "-O3 -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic")
+set (COMPILE_FLAGS "-O3 -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic -mssse3")
 #set (COMPILE_FLAGS "-O0 -g -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic")
 add_definitions(${COMPILE_FLAGS})
 
