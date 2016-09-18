@@ -222,9 +222,9 @@ public:
     }
 
     template <typename double_type>
-    void render_circle_pixel(double_type radius, double_type radiussize, double_type posX, double_type posY, int absX, int absY, double_type diffFromCenter,
-                             data::gradient &gradient_)
-    {
+    void render_circle_pixel(double_type radius, double_type radiussize, double_type posX, double_type posY,
+                             int absX, int absY, double_type diffFromCenter, data::gradient &gradient_
+    ){
         if (absX < 0 || absY < 0 || absX >= static_cast<int>(width_) || absY >= static_cast<int>(height_))
             return;
 
@@ -436,7 +436,9 @@ public:
     }
 
     template <typename double_type>
-    void render_line_pixel(int absX, int absY, double normalized_dist_from_center, double normalized_dist_from_line, data::gradient &gradient_) {
+    void render_line_pixel(int absX, int absY, double normalized_dist_from_center, double normalized_dist_from_line,
+                           data::gradient &gradient_
+    ){
         if (normalized_dist_from_center > 1.0 ||
             normalized_dist_from_center < 0.0) {
             return;

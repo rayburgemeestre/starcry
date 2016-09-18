@@ -8,7 +8,6 @@
 #include "benchmark.h"
 #include "data/job.hpp"
 #include "data/pixels.hpp"
-#include "output_action.hpp"
 #include "streamer_output/ffmpeg_encode.h"
 #include "streamer_output/allegro5_window.h"
 #include "util/compress_vector.h"
@@ -138,7 +137,6 @@ behavior streamer(stateful_actor<streamer_data>* self, std::optional<size_t> por
                        << renderer_stats << endl;
         },
         [=](terminate_) {
-            aout(self) << "terminating.." << endl;
             self->quit(exit_reason::user_shutdown);
         },
         [=](debug) {

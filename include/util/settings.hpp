@@ -58,7 +58,7 @@ public:
         catch (cereal::Exception &ex) {
             std::cout << "Failure saving configuration to ~/.starcry.conf: " << ex.what() << endl;
         }
-        catch (exception &ex) {
+        catch (std::exception &ex) {
             std::cout << "Unexpected failure saving configuration to ~/.starcry.conf: " << ex.what() << endl;
         }
         catch (...) {

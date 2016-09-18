@@ -11,6 +11,7 @@
 #include "util/remote_actors.h"
 #include "benchmark.h"
 #include "caf/io/all.hpp"
+#include "allegro5/allegro5.h"
 
 // public
 using start                = atom_constant<atom("start     ")>;
@@ -32,8 +33,8 @@ using initialize           = atom_constant<atom("initialize")>;
 
 template <typename T>
 behavior create_worker_behavior(T self,
-                                const string &renderer_host, const int &renderer_port,
-                                const string &streamer_host, const int &streamer_port,
+                                const std::string &renderer_host, const int &renderer_port,
+                                const std::string &streamer_host, const int &streamer_port,
                                 bool output_each_frame = false
 ){
     connect_remote_worker(self->system(), "renderer", renderer_host, renderer_port, &self->state.renderer_ptr);
@@ -76,7 +77,7 @@ behavior create_worker_behavior(T self,
             dat.pixels = self->state.engine.serialize_bitmap2(self->state.bitmap, j.width, j.height);
 
             // compress the frame
-            stringstream ss;
+            std::stringstream ss;
             if (j.compress) {
                 compress_vector<uint32_t> cv;
                 double compression_rate = 0;
@@ -99,11 +100,11 @@ behavior create_worker_behavior(T self,
 }
 
 behavior remote_worker(caf::stateful_actor<worker_data> * self, size_t worker_num,
-                       const string & renderer_host, const int &renderer_port,
-                       const string & streamer_host, const int &streamer_port
+                       const std::string & renderer_host, const int &renderer_port,
+                       const std::string & streamer_host, const int &streamer_port
 ){
     self->state.worker_num = worker_num;
-    rendering_engine engine;
+    rendering_engine_wrapper engine;
     engine.initialize();
     if (!publish_remote_actor("worker", static_cast<event_based_actor *>(self), worker_num)) {
         std::exit(1);
@@ -111,7 +112,7 @@ behavior remote_worker(caf::stateful_actor<worker_data> * self, size_t worker_nu
     return create_worker_behavior(self, renderer_host, renderer_port, streamer_host, streamer_port, true);
 }
 
-behavior worker(caf::stateful_actor<worker_data> * self, const string & streamer_host,const int &streamer_port,
+behavior worker(caf::stateful_actor<worker_data> * self, const std::string & streamer_host,const int &streamer_port,
                 size_t worker_num
 ){
     self->state.worker_num = worker_num;
@@ -132,7 +133,7 @@ void send_jobs_to_streamer(caf::stateful_actor<renderer_data> *self)
 }
 
 behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_t> port) {
-    using workers_vec_type = vector<pair<string, int>>;
+    using workers_vec_type = std::vector<std::pair<std::string, int>>;
     publish_remote_actor("renderer", static_cast<event_based_actor *>(self), port ? *port : 0);
     // initialize jps counter
     self->state.jps_counter = std::make_shared<MeasureInterval>(TimerFactory::Type::BoostChronoTimerImpl);
@@ -140,7 +141,7 @@ behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_
     self->state.jps_counter->startHistogramAtZero(true);
     return {
         [=](initialize, const caf::actor &streamer, const caf::actor &generator, const workers_vec_type &workers_vec,
-           string streamer_host, int streamer_port
+           std::string streamer_host, int streamer_port
         ){
             self->state.remote_streamer_host = streamer_host;
             self->state.remote_streamer_port = streamer_port;
@@ -197,7 +198,7 @@ behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_
             send_jobs_to_streamer(self);
         },
         [=](show_stats) {
-            stringstream ss;
+            std::stringstream ss;
             ss << "renderer[" << self->mailbox().count() << "] at job " << self->state.job_sequence << ", Q:";
             for (const auto p : self->state.last_job_for_worker) {
                 const auto &job_number = p.second;

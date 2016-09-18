@@ -7,8 +7,11 @@
 #include "data/job.hpp"
 #include "data/pixels.hpp"
 #include "caf/io/all.hpp"
-#include "rendering_engine.hpp"
+#include "rendering_engine_wrapper.h"
 #include "util/settings.hpp"
+
+#include <allegro5/allegro5.h>
+#include <allegro5/allegro_image.h>
 
 using render                = atom_constant<atom("render    ")>;
 ALLEGRO_DISPLAY *display    = NULL;
@@ -39,7 +42,7 @@ behavior render_loop(event_based_actor* self) {
     return {
         [=](render) {
             al_clear_to_color(al_map_rgb_f(0, 0, 0));
-            rendering_engine re;
+            rendering_engine_wrapper re;
             if (data_.pixels.size()) {
                 auto bmp = re.unserialize_bitmap2(data_.pixels, width_, height_);
                 al_draw_scaled_bitmap(bmp,
@@ -62,11 +65,11 @@ behavior render_loop(event_based_actor* self) {
                 return;
             }
             al_flip_display();
-            //using namespace std::literals;
+            using namespace std::literals;
             std::this_thread::sleep_for(0.2s);
             self->send(self, render::value);
         },
-        [=](uint32_t width, uint32_t height, vector<uint32_t> &pixels) {
+        [=](uint32_t width, uint32_t height, std::vector<uint32_t> &pixels) {
             std::swap(width_, width);
             std::swap(height_, height);
             std::swap(data_.pixels, pixels);
@@ -79,17 +82,17 @@ uint16_t bind_render_window(event_based_actor* self, uint16_t port) {
     // first try to bind to specified port
     auto port_ = self->system().middleman().publish(static_cast<actor>(self), port, nullptr, true);
     if (!port_) {
-        cout << "could not publish ourselves on the previously known port." << endl;
+        std::cout << "could not publish ourselves on the previously known port." << endl;
         auto port_ = self->system().middleman().publish(static_cast<actor>(self), 0, nullptr, true);
         if (!port_) {
-            cout << "could not publish ourselves on a new port either." << endl;
+            std::cout << "could not publish ourselves on a new port either." << endl;
         } else {
             bound_port = *port_;
         }
     }
     else {
         bound_port = *port_;
-        cout << "succesfully bound to previous port " << bound_port << endl;
+        std::cout << "succesfully bound to previous port " << bound_port << endl;
     }
     return bound_port;
 
@@ -100,7 +103,7 @@ behavior render_window(event_based_actor* self, uint16_t port) {
     if (bound_port == 0) {
         self->quit(exit_reason::user_shutdown);
     }
-    cout << "publishing GUI on port: " << bound_port << endl;
+    std::cout << "publishing GUI on port: " << bound_port << endl;
 
     settings conf;
     conf.user.gui_port = bound_port;
@@ -112,7 +115,7 @@ behavior render_window(event_based_actor* self, uint16_t port) {
     self->send(renderloop, render::value);
 
     return {
-        [=](uint32_t width, uint32_t height, vector<uint32_t> &pixels) -> message {
+        [=](uint32_t width, uint32_t height, std::vector<uint32_t> &pixels) -> message {
             self->send(renderloop, width, height, pixels);
             return make_message();
         },

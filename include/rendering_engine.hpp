@@ -15,6 +15,7 @@
 #include <allegro5/allegro_ttf.h>
 
 #include <cstring>
+#include <cmath>
 #include <iostream>
 #include <sstream>
 #include <mutex>

@@ -60,6 +60,20 @@ using initialize    = atom_constant<atom("initialize")>;
 
 namespace po = ::boost::program_options;
 
+#include <bitset>
+using std::bitset;
+using std::vector;
+using std::pair;
+using std::ifstream;
+using std::string;
+using std::cout;
+using std::cerr;
+using std::regex;
+using std::smatch;
+using std::stringstream;
+using std::shared_ptr;
+using std::make_shared;
+
 class main_program
 {
 private:
@@ -73,7 +87,7 @@ private:
     string dimensions;
     string output_file            = "output.h264";
     uint32_t settings_            = 0;
-    po::options_description desc  = "Allowed options"s;
+    po::options_description desc  = string("Allowed options");
     string script                 = "test.js";
     bool compress                 = false;
     bool rendering_enabled        = true;
