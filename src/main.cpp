@@ -20,11 +20,12 @@ int main(int argc, char *argv[])
     cfg.add_message_type<data::job>("data::job");
     cfg.add_message_type<data::pixel_data>("data::pixel_data");
     cfg.add_message_type<data::pixel_data2>("data::pixel_data2");
-    cfg.add_message_type<vector<uint32_t>>("vector<uint32_t>");
+    cfg.add_message_type<std::vector<uint32_t>>("vector<uint32_t>");
     cfg.load<io::middleman>();
 
     actor_system system(cfg);
-    auto w = system.spawn(remote_worker, atoi(argv[1]));
+    // TODO: remote renderer and/or streamer is not yet supported here
+    auto w = system.spawn(remote_worker, atoi(argv[1]), "", 0, "", 0);
     return 0;
 }
 #else

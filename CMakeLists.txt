@@ -159,12 +159,13 @@ install (TARGETS starcry DESTINATION bin)
 ###################################################### Light renderer
 # let's always link the worker statically... for convenience.
 #target_compile_options(starcry_worker PUBLIC  -DWORKER_ONLY=1)
-file(GLOB_RECURSE starcry_worker_SOURCES "src/main.cpp" "src/renderer.cpp")
+file(GLOB_RECURSE starcry_worker_SOURCES "src/main.cpp" "src/renderer.cpp" "src/rendering_engine_wrapper.cpp" "src/util/compress_vector.cpp" "src/util/remote_actors.cpp")
 # Don't include Main.cpp from src
 file(GLOB MAIN_SRC "src/main.cpp")
 add_executable(starcry_worker ${starcry_worker_SOURCES})
 set_target_properties (starcry_worker PROPERTIES COMPILE_FLAGS "-DWORKER_ONLY=1")
 install (TARGETS starcry_worker DESTINATION bin)
+target_link_libraries(starcry_worker "${PROJECT_SOURCE_DIR}/libs/FastPFor/libFastPFor.a")
 target_link_libraries(starcry_worker ${benchmarklib_LIBRARIES})
 target_link_libraries(starcry_worker ${Boost_LIBRARIES})
 target_link_libraries(starcry_worker ${CMAKE_THREAD_LIBS_INIT})
