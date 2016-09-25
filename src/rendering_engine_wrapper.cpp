@@ -5,6 +5,7 @@
  */
 
 #include "rendering_engine_wrapper.h"
+#include "primitives.h"
 #include "rendering_engine.hpp"
 
 struct rendering_engine_wrapper_class_data

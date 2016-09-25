@@ -64,7 +64,9 @@ void transfer_pixels(std::vector<uint32_t> &pixels, AVCodecContext * c, AVFrame 
 	}
 }
 
-ffmpeg_h264_encode::ffmpeg_h264_encode(std::string filename, size_t bitrate, uint32_t canvas_w, uint32_t canvas_h) {
+ffmpeg_h264_encode::ffmpeg_h264_encode(std::string filename, size_t bitrate, size_t fps,
+                                       uint32_t canvas_w, uint32_t canvas_h
+){
 
     avcodec_register_all();
 
@@ -92,7 +94,7 @@ ffmpeg_h264_encode::ffmpeg_h264_encode(std::string filename, size_t bitrate, uin
 
     /* frames per second (we'll recode later anyway)*/
     c->time_base.num = 1;
-    c->time_base.den = 25;
+    c->time_base.den = static_cast<int>(fps);
 
     c->gop_size = 10; /* emit one intra frame every ten frames */
     c->max_b_frames=1;

@@ -232,6 +232,7 @@ public:
             }
         }
         bool use_stdin  = vm.count("stdin");
+        size_t use_fps = 25;
         shared_ptr<webserver> ws;
         if (vm.count("webserver")) {
             ws = make_shared<webserver>();
@@ -251,12 +252,12 @@ public:
         auto stdin_reader_ = system.spawn(stdin_reader, generator);
 
         s->request(generator, infinite, initialize::value).receive(
-            [&](size_t bitrate, bool use_stdin_) {
+            [&](size_t bitrate, bool use_stdin_, size_t use_fps_) {
 //                const auto &bitrate = std::get<0>(tpl);
 //                const auto &use_stdin_ = std::get<1>(tpl);
                 use_stdin = use_stdin_;
-                std::cout << "OPPOSITE SENDING" << (use_stdin ? "y" : "N") << endl;
-                s->send(streamer_, initialize::value, int(conf.user.gui_port), string(output_file), bitrate, output_settings);
+                use_fps   = use_fps_;
+                s->send(streamer_, initialize::value, int(conf.user.gui_port), string(output_file), bitrate, use_fps, output_settings);
             },
             [=](error &err) {
                 std::exit(2);

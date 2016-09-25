@@ -20,3 +20,8 @@ void color::set_r(double r) { r_ = r; }
 void color::set_g(double g) { g_ = g; }
 void color::set_b(double b) { b_ = b; }
 void color::set_a(double a) { a_ = a; }
+
+transparency::transparency(double a) : a_(a) { }
+double transparency::get_a() const { return a_; }
+void transparency::set_a(double a) { a_ = a; }
+

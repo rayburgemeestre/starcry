@@ -30,10 +30,10 @@ namespace data{
                     double color2_mult  = 1.0 - color1_mult;
                     const color &color1 = colors[counter    ].second;
                     const color &color2 = colors[counter - 1].second;
-                    return color{ (color1.r * color1_mult) + (color2.r * color2_mult),
-                                  (color1.g * color1_mult) + (color2.g * color2_mult),
-                                  (color1.b * color1_mult) + (color2.b * color2_mult),
-                                  (color1.a * color1_mult) + (color2.a * color2_mult) };
+                    return color{ (color1.r * color1_mult * color1.a) + (color2.r * color2_mult * color2.a),
+                                  (color1.g * color1_mult * color1.a) + (color2.g * color2_mult * color2.a),
+                                  (color1.b * color1_mult * color1.a) + (color2.b * color2_mult * color2.a),
+                                  (color1.a * color1_mult * color1.a) + (color2.a * color2_mult) };
                 } else {
                     processed_index = current_idx;
                 }

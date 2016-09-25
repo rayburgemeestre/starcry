@@ -133,9 +133,9 @@ public:
         draw_logic_.offset(offset_x, offset_y);
         for (auto shape : shapes) {
             if (shape.type == data::shape_type::circle)
-                draw_logic_.render_circle<double>(shape.x, shape.y, shape.radius, shape.radius_size, shape.gradient_);
+                draw_logic_.render_circle<double>(shape.x, shape.y, shape.radius, shape.radius_size, shape.gradient_, shape.blending_);
             else if (shape.type == data::shape_type::line)
-                draw_logic_.render_line<double>(shape.x, shape.y, shape.x2, shape.y2, shape.radius_size, shape.gradient_);
+                draw_logic_.render_line<double>(shape.x, shape.y, shape.x2, shape.y2, shape.radius_size, shape.gradient_, shape.blending_);
             else if (shape.type == data::shape_type::text)
                 draw_logic_.render_text<double>(shape.x, shape.y, shape.text_size, shape.text, shape.align);
         }
@@ -260,5 +260,5 @@ public:
 
     ALLEGRO_DISPLAY *display = NULL;
     ALLEGRO_FONT *font = NULL;
-    draw_logic draw_logic_;
+    draw_logic::draw_logic draw_logic_;
 };

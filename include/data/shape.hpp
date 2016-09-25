@@ -17,6 +17,60 @@ namespace data{
         line,
     };
 
+    // This is not an enum class because it was easier to use this in V8 (or in other words; I didn't know how to use
+    //  enums with V8)
+    class blending_type {
+    public:
+        static const int normal = 0;
+        static const int lighten = 1;
+        static const int darken = 2;
+        static const int multiply = 3;
+        static const int average = 4;
+        static const int add = 5;
+        static const int subtract = 6;
+        static const int difference = 7;
+        static const int negation = 8;
+        static const int screen = 9;
+        static const int exclusion = 10;
+        static const int overlay = 11;
+        static const int softlight = 12;
+        static const int hardlight = 13;
+        static const int colordodge = 14;
+        static const int colorburn = 15;
+        static const int lineardodge = 16;
+        static const int linearburn = 17;
+        static const int linearlight = 18;
+        static const int vividlight = 19;
+        static const int pinlight = 20;
+        static const int hardmix = 21;
+        static const int reflect = 22;
+        static const int glow = 23;
+        static const int phoenix = 24;
+        static const int hue = 25;
+        static const int saturation = 26;
+        static const int color = 27;
+        static const int luminosity = 28;
+
+        blending_type() : type_(blending_type::normal)
+        {
+        }
+
+        blending_type(int type) : type_(type)
+        {
+        }
+
+        data::blending_type & operator=(const blending_type &other)
+        {
+            type_ = other.type_;
+            return *this;
+        }
+
+        const int & type() { return type_; }
+
+    private:
+        int type_;
+    };
+
     //template <typename T>
     struct shape
     {
@@ -36,6 +90,7 @@ namespace data{
         std::string text;
         std::string align;
         gradient gradient_;
+        blending_type blending_;
     };
 
     template<class Processor>

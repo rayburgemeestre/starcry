@@ -1,3 +1,4 @@
+#include <v8pp/module.hpp>
 #include "primitives.h"
 
 #include "v8.h"
@@ -13,8 +14,49 @@ void shape::add_to_context(v8pp::context &context)
         .ctor()
         .set("x", v8pp::property(&shape::get_x, &shape::set_x))
         .set("y", v8pp::property(&shape::get_y, &shape::set_y))
-        .set("z", v8pp::property(&shape::get_z, &shape::set_z));
+        .set("z", v8pp::property(&shape::get_z, &shape::set_z))
+        .set("blending_type", v8pp::property(&shape::get_blending_type, &shape::set_blending_type));
     context.set("shape", shape_class);
+
+//    using data::blending_type;
+//    v8pp::class_<data::blending_type> blending_type_enum_class(context.isolate());
+//    blending_type_enum_class
+//        .ctor<data::blending_type>();
+//    context.set("blending_type", blending_type_enum_class);
+
+    v8pp::module consts(context.isolate());
+    consts
+        .set_const("normal", data::blending_type::normal)
+        .set_const("lighten", data::blending_type::lighten)
+        .set_const("darken", data::blending_type::darken)
+        .set_const("multiply", data::blending_type::multiply)
+        .set_const("average", data::blending_type::average)
+        .set_const("add", data::blending_type::add)
+        .set_const("subtract", data::blending_type::subtract)
+        .set_const("difference", data::blending_type::difference)
+        .set_const("negation", data::blending_type::negation)
+        .set_const("screen", data::blending_type::screen)
+        .set_const("exclusion", data::blending_type::exclusion)
+        .set_const("overlay", data::blending_type::overlay)
+        .set_const("softlight", data::blending_type::softlight)
+        .set_const("hardlight", data::blending_type::hardlight)
+        .set_const("colordodge", data::blending_type::colordodge)
+        .set_const("colorburn", data::blending_type::colorburn)
+        .set_const("lineardodge", data::blending_type::lineardodge)
+        .set_const("linearburn", data::blending_type::linearburn)
+        .set_const("linearlight", data::blending_type::linearlight)
+        .set_const("vividlight", data::blending_type::vividlight)
+        .set_const("pinlight", data::blending_type::pinlight)
+        .set_const("hardmix", data::blending_type::hardmix)
+        .set_const("reflect", data::blending_type::reflect)
+        .set_const("glow", data::blending_type::glow)
+        .set_const("phoenix", data::blending_type::phoenix)
+        .set_const("hue", data::blending_type::hue)
+        .set_const("saturation", data::blending_type::saturation)
+        .set_const("color", data::blending_type::color)
+        .set_const("luminosity", data::blending_type::luminosity)
+        ;
+    context.set("blending_type", consts);
 }
 
 void circle::add_to_context(v8pp::context &context)

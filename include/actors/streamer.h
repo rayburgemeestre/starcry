@@ -47,6 +47,7 @@ struct streamer_data
     std::string output_file;
     uint32_t settings;
     size_t bitrate;
+    size_t fps;
     std::shared_ptr<MeasureInterval> fps_counter;
     size_t num_pixels = 0;
     size_t min_items_in_streamer_queue = 10;

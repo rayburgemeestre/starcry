@@ -23,6 +23,7 @@ struct job_generator_data
     std::shared_ptr<MeasureInterval> fps_counter;
     size_t bitrate = 0;
     bool use_stdin = false;
+    size_t use_fps = 25;
 };
 
 behavior job_generator(stateful_actor<job_generator_data> *self, const std::string &filename, uint32_t canvas_w, uint32_t canvas_h, bool use_stdin = false, bool rendering_enabled = true, bool compress = false);

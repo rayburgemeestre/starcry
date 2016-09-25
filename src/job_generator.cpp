@@ -97,7 +97,8 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
         [=](initialize) -> message { // by main
             self->state.bitrate = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");
             self->state.use_stdin = context->run<bool>("typeof stdin != 'undefined' ? stdin : false");
-            return make_message(self->state.bitrate, self->state.use_stdin);
+            self->state.use_fps = context->run<size_t>("typeof fps != 'undefined' ? fps : 25");
+            return make_message(self->state.bitrate, self->state.use_stdin, self->state.use_fps);
         },
         [=](start, size_t max_jobs_queued_for_renderer, size_t num_chunks, actor &renderer) { // by main
             // further initialize state
@@ -112,16 +113,16 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
             // initialize job object
             assistant = std::make_unique<assistant_>(self);
             auto &job = assistant->the_job;
-            job.width             = self->state.canvas_w;
-            job.height            = self->state.canvas_h;
-            job.frame_number      = assistant->current_frame;
-            job.rendered          = false;
-            job.last_frame        = false;
-            job.num_chunks        = self->state.num_chunks;
-            job.canvas_w          = self->state.canvas_w;
-            job.canvas_h          = self->state.canvas_h;
-            job.scale             = context->run<double>("typeof scale != 'undefined' ? scale : 1.0");
-            job.compress          = compress;
+            job.width        = self->state.canvas_w;
+            job.height       = self->state.canvas_h;
+            job.frame_number = assistant->current_frame;
+            job.rendered     = false;
+            job.last_frame   = false;
+            job.num_chunks   = self->state.num_chunks;
+            job.canvas_w     = self->state.canvas_w;
+            job.canvas_h     = self->state.canvas_h;
+            job.scale        = context->run<double>("typeof scale != 'undefined' ? scale : 1.0");
+            job.compress     = compress;
             assistant->max_frames = context->run<size_t>("typeof max_frames != 'undefined' ? max_frames : 250");
             assistant->realtime   = context->run<bool>("typeof realtime != 'undefined' ? realtime : false");
             if (!self->state.use_stdin || assistant->realtime) {

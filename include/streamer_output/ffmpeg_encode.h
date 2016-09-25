@@ -28,13 +28,14 @@ private:
     AVCodec *codec;
     AVCodecContext *c= NULL;
     size_t frameNumber = 0;
+    size_t fps = 25;
     int ret, x, y, got_output;
     FILE *f;
     AVFrame *frame;
     AVPacket pkt;
 
 public:
-    ffmpeg_h264_encode(std::string filename, size_t bitrate, uint32_t canvas_w, uint32_t canvas_h);
+    ffmpeg_h264_encode(std::string filename, size_t bitrate, size_t fps, uint32_t canvas_w, uint32_t canvas_h);
     void add_frame(std::vector<uint32_t> &pixels);
     void finalize();
 };

@@ -96,11 +96,12 @@ behavior streamer(stateful_actor<streamer_data>* self, std::optional<size_t> por
     self->state.fps_counter->setDescription("fps");
     self->state.fps_counter->startHistogramAtZero(true);
     return {
-        [=](initialize, int render_window_at, string output_file, size_t bitrate, uint32_t settings) {
+        [=](initialize, int render_window_at, string output_file, size_t bitrate, size_t fps, uint32_t settings) {
             self->state.render_window_at = render_window_at;
             self->state.output_file = output_file;
             self->state.settings = settings;
             self->state.bitrate = bitrate;
+            self->state.fps = fps;
         },
         [=](render_frame, struct data::job &job, data::pixel_data2 pixeldat, const caf::actor &renderer) {
             if (job.compress) {
@@ -113,7 +114,7 @@ behavior streamer(stateful_actor<streamer_data>* self, std::optional<size_t> por
 
             if (!self->state.ffmpeg && bitset<32>(self->state.settings).test(0)) {
                 self->state.ffmpeg = make_shared<ffmpeg_h264_encode>(self->state.output_file, self->state.bitrate,
-                                                                     job.canvas_w, job.canvas_h);
+                                                                     self->state.fps, job.canvas_w, job.canvas_h);
             }
             if (!self->state.allegro5 && bitset<32>(self->state.settings).test(1)) {
                 self->state.allegro5 = make_unique<allegro5_window>(self->system(), self, self->state.render_window_at);

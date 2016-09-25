@@ -8,6 +8,7 @@
 #include <vector>
 #include "data/gradient.hpp" // TODO: get rid of this dependency
 #include <v8.h>
+#include <data/shape.hpp>
 
 namespace v8pp {
     class context;
@@ -40,13 +41,16 @@ struct shape
     double x_;
     double y_;
     double z_;
+    int blending_type_;
 
     double get_x() const { return x_; }
     double get_y() const { return y_; }
     double get_z() const { return z_; }
+    int get_blending_type() const { return blending_type_; }
     void set_x(double x) { x_ = x; }
     void set_y(double y) { y_ = y; }
     void set_z(double z) { z_ = z; }
+    void set_blending_type(int bt) { blending_type_ = bt; }
 
     static void add_to_context(v8pp::context &ctx);
 };
@@ -72,6 +76,13 @@ struct color
     static void add_to_context(v8pp::context &ctx);
 };
 
+struct transparency {
+    double a_;
+    transparency(double a);
+    double get_a() const;
+    void set_a(double a);
+};
+
 class gradient
 {
 private:
@@ -80,13 +91,30 @@ private:
 public:
     gradient();
 
+    void add_color(double index, const color &col) {
+        colors.emplace_back(std::make_pair(index, col));
+    }
+
     template <typename... Args>
-    void add(double index, Args &&... args) {
+    void add_impl(double index, std::true_type, transparency &trans, Args &&... args) {
+        if (colors.empty()) {
+            color color_with_correct_transparency(0, 0, 0, trans.get_a());
+            colors.emplace_back(std::make_pair(index, color_with_correct_transparency));
+        }
+        else {
+            color previous_color_with_correct_alpha = colors[colors.size() - 1].second;
+            previous_color_with_correct_alpha.set_a(trans.get_a());
+            colors.emplace_back(std::make_pair(index, previous_color_with_correct_alpha));
+        }
+    }
+    template <typename... Args>
+    void add_impl(double index, std::false_type, Args &&... args) {
         colors.emplace_back(std::make_pair(index, color(std::forward<Args>(args)...)));
     }
 
-    void add_color(double index, const color &col) {
-        colors.emplace_back(std::make_pair(index, col));
+    template <typename T, typename... Args>
+    void add(double index, T T1, Args &&... args) {
+        add_impl(index, std::is_same<transparency, T>(), T1, std::forward<Args>(args)...);
     }
 
     const color get(double index); 
