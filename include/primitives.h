@@ -43,6 +43,8 @@ struct shape
     double z_;
     int blending_type_;
 
+    shape() : blending_type_(data::blending_type::normal) {}
+
     double get_x() const { return x_; }
     double get_y() const { return y_; }
     double get_z() const { return z_; }

@@ -67,9 +67,14 @@ namespace data{
 
         const int & type() { return type_; }
 
-    private:
+    public:
         int type_;
     };
+
+    template<class Processor>
+    void serialize(Processor &proc, data::blending_type &x, const unsigned int) {
+        proc & x.type_;
+    }
 
     //template <typename T>
     struct shape
@@ -111,6 +116,7 @@ namespace data{
         proc & x.text;
         proc & x.align;
         proc & x.gradient_;
+        proc & x.blending_;
     }
 
     inline bool operator==(const shape &lhs, const shape &rhs) {
