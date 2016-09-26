@@ -15,7 +15,6 @@ cat ../prepare_linux.sh | while IFS= read -r line; do
     fi
 done
 
-exit 0
 ../starcry --help > cli_help.txt
 make clean
 make html

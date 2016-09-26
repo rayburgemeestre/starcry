@@ -3,6 +3,7 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+#include <util/compress_vector.h>
 #include "common.h"
 #include "streamer_output/allegro5_window.h"
 #include "caf/io/all.hpp"
@@ -32,6 +33,10 @@ void allegro5_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vecto
     // TODO: is a volatile bool enough in this case?
     if (!frame_in_transit) {
         frame_in_transit = true;
+        compress_vector<uint32_t> cv;
+        double compression_rate = 0;
+        //auto pixels_copy = pixels;
+        cv.compress(&pixels, &compression_rate);
         self_->request(*client_, infinite, canvas_w, canvas_h, pixels).then(
             [](){
                 frame_in_transit = false;

@@ -5,7 +5,9 @@
  */
 #include "primitives.h"
 
-line::line(pos p, pos p2, double size, gradient grad) {
+line::line(pos p, pos p2, double size, gradient grad, int blending_type)
+    : shape(blending_type)
+{
     set_x(p.get_x());
     set_y(p.get_y());
     set_z(p.get_z());

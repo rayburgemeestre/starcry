@@ -5,8 +5,8 @@
  */
 #include "primitives.h"
 
-circle::circle(pos p, double radius, double radiussize, gradient grad)
-    : gradient_(grad)
+circle::circle(pos p, double radius, double radiussize, gradient grad, int bt)
+    : shape(bt), gradient_(grad)
 {
     set_x(p.get_x());
     set_y(p.get_y());

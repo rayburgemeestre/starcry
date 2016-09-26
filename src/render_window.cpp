@@ -12,6 +12,7 @@
 
 #include <allegro5/allegro5.h>
 #include <allegro5/allegro_image.h>
+#include <util/compress_vector.h>
 
 using render                = atom_constant<atom("render    ")>;
 ALLEGRO_DISPLAY *display    = NULL;
@@ -66,7 +67,7 @@ behavior render_loop(event_based_actor* self) {
             }
             al_flip_display();
             using namespace std::literals;
-            std::this_thread::sleep_for(0.2s);
+            //std::this_thread::sleep_for(0.2s);
             self->send(self, render::value);
         },
         [=](uint32_t width, uint32_t height, std::vector<uint32_t> &pixels) {
@@ -116,6 +117,8 @@ behavior render_window(event_based_actor* self, uint16_t port) {
 
     return {
         [=](uint32_t width, uint32_t height, std::vector<uint32_t> &pixels) -> message {
+            compress_vector<uint32_t> cv;
+            cv.decompress(&pixels, width * height);
             self->send(renderloop, width, height, pixels);
             return make_message();
         },

@@ -43,7 +43,8 @@ struct shape
     double z_;
     int blending_type_;
 
-    shape() : blending_type_(data::blending_type::normal) {}
+    shape() : shape(data::blending_type::normal) {}
+    shape(int blending_type) : blending_type_(blending_type) {}
 
     double get_x() const { return x_; }
     double get_y() const { return y_; }
@@ -151,7 +152,7 @@ struct circle : shape
     double radiussize_;
     gradient gradient_;
 
-    explicit circle(pos p, double radius, double radiussize, gradient grad);
+    explicit circle(pos p, double radius, double radiussize, gradient grad, int bt = data::blending_type::normal);
     double get_radius() const;
     void set_radius(double r);
     double get_radiussize() const;
@@ -170,7 +171,7 @@ struct line : shape
     double size_;
     gradient gradient_;
 
-    explicit line(pos p, pos p2, double size, gradient grad);
+    explicit line(pos p, pos p2, double size, gradient grad, int bt = data::blending_type::normal);
 
     double get_x2() const;
     double get_y2() const;
