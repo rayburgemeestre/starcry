@@ -8,6 +8,7 @@
 extern "C" {
 #include <libavutil/opt.h>
 #include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h> // for streaming
 #include <libavutil/imgutils.h>
 }
 

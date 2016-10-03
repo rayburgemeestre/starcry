@@ -3,6 +3,7 @@
  License, v. 2.0. If a copy of the MPL was not distributed with this
  file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+var stdin = true;
 var datanode_colr = simple_gradient(new color(0.5, 0.5, 1, 0));
 var nodemanager_colr = simple_gradient(new color(0, 1, 0, 0));
 var circles = {};

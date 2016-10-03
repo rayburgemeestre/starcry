@@ -35,6 +35,7 @@ find_package(FFMPEG)
 
 #find_library(benchmarklib_LIBRARIES libbenchmarklib REQUIRED)
 find_library(benchmarklib_LIBRARIES NAMES libbenchmarklib.a REQUIRED)
+find_library(crtmpserver_LIBRARIES NAMES libcrtmpserver.a REQUIRED)
 
 #crow
 if (MSVC)
@@ -85,6 +86,29 @@ include_directories("${LIB_PREFIX_DIR}/libs/cereal/include/")
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "${LIB_PREFIX_DIR}/libs/v8pp/v8pp/context.cpp")
 add_executable(starcry ${starcry_SOURCES})
 target_link_libraries(starcry ${benchmarklib_LIBRARIES})
+    #target_link_libraries(starcry ${crtmpserver_LIBRARIES})
+    target_link_libraries(starcry /projects/crtmpserver/builders/cmake/crtmpserver/libcrtmpserver.a)
+
+target_link_libraries(starcry /projects/crtmpserver/builders/cmake/applications/admin/libadmin.a)
+target_link_libraries(starcry /projects/crtmpserver/builders/cmake/applications/appselector/libappselector.a)
+#target_link_libraries(starcry /projects/crtmpserver/builders/cmake/applications/flvplayback/libflvplayback.a)
+target_link_libraries(starcry /projects/crtmpserver/builders/cmake/applications/proxypublish/libproxypublish.a)
+target_link_libraries(starcry /projects/crtmpserver/builders/cmake/applications/samplefactory/libsamplefactory.a)
+target_link_libraries(starcry /projects/crtmpserver/builders/cmake/applications/stresstest/libstresstest.a)
+target_link_libraries(starcry /projects/crtmpserver/builders/cmake/applications/vptests/libvptests.a)
+
+
+target_link_libraries(starcry /projects/crtmpserver/builders/cmake/applications/flvplayback/libflvplayback.a)
+target_link_libraries(starcry /projects/crtmpserver/builders/cmake/thelib/libthelib.a)
+target_link_libraries(starcry /projects/crtmpserver/builders/cmake/common/libcommon.a)
+target_link_libraries(starcry /projects/crtmpserver/builders/cmake/tinyxml/libtinyxml.a)
+target_link_libraries(starcry /projects/crtmpserver/builders/cmake/lua/liblua.a)
+target_link_libraries(starcry -lssl)
+target_link_libraries(starcry -lcrypto)
+#/usr/lib/x86_64-linux-gnu/libcrypto.so
+#/usr/lib/x86_64-linux-gnu/libz.a
+#/lib/x86_64-linux-gnu/libdl.so.2
+
 target_link_libraries(starcry ${Boost_LIBRARIES})
 target_link_libraries(starcry ${CMAKE_THREAD_LIBS_INIT})
 if (STATIC)
