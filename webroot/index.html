@@ -1,3 +1,26 @@
+<h1>Another test with JWPlayer</h1>
+
+<script type="text/javascript" src="/scripts/jwplayer.js"></script>
+
+<script type="text/javascript">
+function f68jwpl() {
+    jwplayer("myElement").setup({
+    //    file: "rtmp://cppse.nl/app/flv:/video",
+    // works with python file: "rtmp://cppse.nl/appflv:video",
+        file: "rtmp://localhost/flvplayback/flv:video",
+        autostart: true,
+        width: 800,
+        height: 600
+    });
+};
+</script>
+
+<div id="myElement" class="playerElement">Loading the player...</div>
+
+<img src="http://cdn.cppse.nl/does-not-exist.jpg" onerror="f68jwpl()" width=1 height=1 />
+
+<hr>
+
 <script src="/scripts/vue.js"></script>
 <script src="/scripts/zepto.js"></script>
 <link href="/css/style.css" rel="stylesheet" type="text/css" />

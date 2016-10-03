@@ -61,6 +61,8 @@ using initialize    = atom_constant<atom("initialize")>;
 
 namespace po = ::boost::program_options;
 
+extern int main__(int argc, const char *argv[]);
+
 #include <bitset>
 using std::bitset;
 using std::vector;
@@ -102,6 +104,18 @@ private:
 
 public:
     main_program(actor_system &system, int argc, char *argv[]) : system(system) {
+
+        std::thread start_crtmpserver_as_well( [&]() {
+            // just a test :-)
+            int argc = 2; 
+            const char *argv[] = { 
+                "starcry", 
+                "crtmpserver.lua" 
+            }; 
+            main__(argc, argv);
+            std::cout << "Goodbye !" << endl;
+        });
+
         settings conf;
         conf.load();
 
@@ -299,6 +313,7 @@ public:
         if (generator_info.running())
             s->send<message_priority::high>(generator, terminate_::value);
         s->await_all_other_actors_done();
+        start_crtmpserver_as_well.join();
     }
 
     bool extract_host_port_string(string host_port_str, string *host_ptr, int *port_ptr)
