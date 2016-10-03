@@ -46,7 +46,7 @@ behavior stdin_reader(stateful_actor<stdin_reader_data> *self, const caf::actor 
         },
         [=](debug) {
             aout(self) << "stdin_reader mailbox = " << self->mailbox().count()
-                       << " " << self->mailbox().counter() << endl;
+                       << /*" " << self->mailbox().counter() << */endl;
         },
     };
 }

@@ -52,7 +52,7 @@ behavior create_worker_behavior(T self,
             if (output_each_frame) {
                 aout(self) << "processing: frame " << j.frame_number << " chunk " << j.chunk << " offsets "
                            << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num
-                           << " mailbox=" << self->mailbox().count() << " - " << self->mailbox().counter() << endl;
+                           << " mailbox=" << self->mailbox().count() /* << " - " << self->mailbox().counter()*/ << endl;
             }
 
             // make sure our bitmap is of the correct size.
@@ -214,7 +214,7 @@ behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_
             self->quit(exit_reason::user_shutdown);
         },
         [=](debug) {
-            aout(self) << "renderer mailbox = " << self->mailbox().count() << " " << self->mailbox().counter() << endl;
+            aout(self) << "renderer mailbox = " << self->mailbox().count() /* << " " << self->mailbox().counter()*/ << endl;
         }
     };
 }

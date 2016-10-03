@@ -141,7 +141,7 @@ behavior streamer(stateful_actor<streamer_data>* self, std::optional<size_t> por
             self->quit(exit_reason::user_shutdown);
         },
         [=](debug) {
-            aout(self) << "streamer mailbox = " << self->mailbox().count() << " " << self->mailbox().counter() << endl;
+            aout(self) << "streamer mailbox = " << self->mailbox().count() << /*" " << self->mailbox().counter() <<*/ endl;
         }
     };
 }

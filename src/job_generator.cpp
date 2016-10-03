@@ -207,7 +207,7 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
             }
         },
         [=](debug) { // main
-            aout(self) << "job_generator mailbox = " << self->mailbox().count() << " " << self->mailbox().counter()
+            aout(self) << "job_generator mailbox = " << self->mailbox().count() /*<< " " << self->mailbox().counter()*/
                        << endl;
         },
         [=](show_stats) { // main
