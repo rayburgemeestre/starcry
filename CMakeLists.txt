@@ -17,11 +17,9 @@ if (NOT LIB_PREFIX_DIR)
   set (LIB_PREFIX_DIR "${PROJECT_SOURCE_DIR}/")
 endif()
 
-if (EXISTS "/etc/centos-release")
-    if (NOT BOOST_ROOT)
-        set(BOOST_ROOT "${LIB_PREFIX_DIR}/boost_1_61_0/")
-    endif()
-endif (EXISTS "/etc/centos-release")
+if (NOT BOOST_ROOT)
+    set(BOOST_ROOT "${LIB_PREFIX_DIR}/boost_1_61_0/")
+endif()
 
 if (STATIC)
     find_package(Allegro5static REQUIRED)
@@ -224,3 +222,15 @@ target_link_libraries(starcry_tests "${V8_DIR}/lib/libv8_nosnapshot.a")
 target_link_libraries(starcry_tests -ldl)
 
 add_test(NAME starcry COMMAND starcry_tests --unittests)
+
+#add_executable(starcry_ubuntu)
+#add_custom_target(
+#    clean_ubuntu
+#    COMMAND docker run -i -t -v ${PROJECT_SOURCE_DIR}:/projects/starcry sc_build_ubuntu:16.04 sh -c \"cmake -DSTATIC=1 -DLIB_PREFIX_DIR=/usr/local/src/starcry . ; make clean\"
+#)
+#add_custom_target(
+#    build_ubuntu
+#    COMMAND docker run -i -t -v ${PROJECT_SOURCE_DIR}:/projects/starcry sc_build_ubuntu:16.04 sh -c \"cmake -DSTATIC=1 -DLIB_PREFIX_DIR=/usr/local/src/starcry . ; time make -j8 starcry\"
+#)
+#add_dependencies(starcry_ubuntu build_ubuntu)
+#

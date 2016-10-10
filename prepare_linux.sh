@@ -146,6 +146,8 @@ module unload gcc
 cd ../
 #END
 
+cd ../
+
 #BEGIN: fastpfor_build
 cd libs/FastPFor
 cmake .
