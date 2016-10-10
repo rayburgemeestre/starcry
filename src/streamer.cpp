@@ -9,6 +9,7 @@
 #include "data/job.hpp"
 #include "data/pixels.hpp"
 #include "streamer_output/ffmpeg_encode.h"
+#include "streamer_output/ffmpeg_stream.h"
 #include "streamer_output/allegro5_window.h"
 #include "util/compress_vector.h"
 #include "util/remote_actors.h"
@@ -69,6 +70,8 @@ bool process_buffer(stateful_actor<streamer_data> *self, const actor &renderer, 
     //     << pixels_all.size() << endl; // debug
     if (self->state.ffmpeg)
         self->state.ffmpeg->add_frame(pixels_all);
+    if (self->state.ffmpeg_stream)
+        self->state.ffmpeg_stream->add_frame(pixels_all);
     if (self->state.allegro5)
         self->state.allegro5->add_frame(canvas_w, canvas_h, pixels_all);
 
@@ -77,6 +80,8 @@ bool process_buffer(stateful_actor<streamer_data> *self, const actor &renderer, 
     if (self->state.last_frame_streamed && *self->state.last_frame_streamed == frame_number) {
         if (self->state.ffmpeg)
             self->state.ffmpeg->finalize();
+        if (self->state.ffmpeg_stream)
+            self->state.ffmpeg_stream->finalize();
         if (self->state.allegro5)
             self->state.allegro5->finalize();
         aout(self) << "streamer completed frames: " << self->state.current_frame << ", with FPS: "
@@ -112,9 +117,22 @@ behavior streamer(stateful_actor<streamer_data>* self, std::optional<size_t> por
             if (job.last_frame)
                 self->state.last_frame_streamed = std::make_optional(job.frame_number);
 
-            if (!self->state.ffmpeg && bitset<32>(self->state.settings).test(0)) {
-                self->state.ffmpeg = make_shared<ffmpeg_h264_encode>(self->state.output_file, self->state.bitrate,
-                                                                     self->state.fps, job.canvas_w, job.canvas_h);
+            if (self->state.output_file.substr(0, 4) == "rtmp") {
+                if (!self->state.ffmpeg_stream && bitset<32>(self->state.settings).test(0)) {
+                    self->state.ffmpeg_stream = make_shared<ffmpeg_flv_stream>(self->state.output_file,
+                                                                               self->state.bitrate,
+                                                                               self->state.fps,
+                                                                               job.canvas_w,
+                                                                               job.canvas_h);
+                }
+            } else {
+                if (!self->state.ffmpeg && bitset<32>(self->state.settings).test(0)) {
+                    self->state.ffmpeg = make_shared<ffmpeg_h264_encode>(self->state.output_file,
+                                                                         self->state.bitrate,
+                                                                         self->state.fps,
+                                                                         job.canvas_w,
+                                                                         job.canvas_h);
+                }
             }
             if (!self->state.allegro5 && bitset<32>(self->state.settings).test(1)) {
                 self->state.allegro5 = make_unique<allegro5_window>(self->system(), self, self->state.render_window_at);
