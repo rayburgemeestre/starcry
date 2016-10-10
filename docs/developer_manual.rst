@@ -40,6 +40,7 @@ These were added using the following commands.
 - git submodule add https://github.com/USCiLab/cereal libs/cereal
 - git submodule add https://github.com/ipkn/crow libs/crow
 - git submodule add https://github.com/lemire/FastPFor libs/FastPFor
+- git submodule add https://github.com/rayburgemeestre/crtmpserver libs/crtmpserver
 
 When cloning the starcry repository you still need to check out all the submodules with the following command.
 
