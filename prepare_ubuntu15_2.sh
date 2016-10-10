@@ -3,9 +3,9 @@
 export UBUNTU15=true
 
 #BEGIN: crtmpserver_build
-cd libs/crtmpserver/builders
+cd libs/crtmpserver/builders/cmake/
 cmake .
 make clean
 make -j 8 
-cd ../../../
+cd ../../../../
 #END
