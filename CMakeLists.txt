@@ -90,7 +90,7 @@ target_link_libraries(starcry ${benchmarklib_LIBRARIES})
 #target_link_libraries(starcry ${crtmpserver_LIBRARIES})
 target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/crtmpserver/libcrtmpserver.a)
 
-#target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/admin/libadmin.a)
+target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/admin/libadmin.a)
 target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/appselector/libappselector.a)
 #target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/flvplayback/libflvplayback.a)
 target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/proxypublish/libproxypublish.a)

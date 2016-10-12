@@ -52,6 +52,6 @@ protected:
     AVStream *add_stream(AVFormatContext *oc, AVCodec **codec, enum AVCodecID codec_id);
     void open_video(AVFormatContext *oc, AVCodec *codec, AVStream *st);
     void open_audio(AVFormatContext *oc, AVCodec *codec, AVStream *st);
-    void write_video_frame(AVFormatContext *oc, AVStream *st);
+    void write_video_frame(std::vector<uint32_t> &pixels, AVFormatContext *oc, AVStream *st);
     void close_video(AVFormatContext *oc, AVStream *st);
 };

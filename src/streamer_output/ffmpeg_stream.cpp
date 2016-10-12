@@ -117,6 +117,11 @@ ffmpeg_flv_stream::ffmpeg_flv_stream(std::string url, size_t bitrate, size_t fps
 
     timer->start();
 
+    // fix a few warnings..
+    frame->format = STREAM_PIX_FMT;
+    frame->width = width_;
+    frame->height = height_;
+
     frame->pts = timer->end();
 
 
@@ -366,48 +371,57 @@ void ffmpeg_flv_stream::open_video(AVFormatContext *oc, AVCodec *codec, AVStream
 	* @param HEIGHT
 	* @param frame		DIFFERENT, it's a PICTURE not a FRAME
 	*/
-void transfer_pixels2(unsigned char * pixels, int width, int height, AVPicture * frame)
-{
-    /* Y, Cb and Cr */
-//	auto *pixelptr = pixels;
-    for(int y=0;y<height;y++) {
-        for(int x=0;x<width;x++) {
-
-            int tmp = (x + y * width) * 4;
-
-            float R = pixels[tmp]; //(*(pixelptr++));
-            float G = pixels[tmp+1]; //(*(pixelptr++));
-            float B = pixels[tmp+2]; //(*(pixelptr++));
-            //pixelptr++; //ignore alpha value
-
-
-            float Y = (0.257 * R) + (0.504 * G) + (0.098 * B) + 16;
-            float Cb = (-0.148 * R) - (0.291 * G) + (0.439 * B) + 128;
-            float Cr = (0.439 * R) - (0.368 * G) - (0.071 * B) + 128;
-
-            //int xx = width - x;
-            int xx = x;
-            int yy = height - y;
-
-
-            frame->data[0][yy * frame->linesize[0] + xx] = Y;
-            if ((yy % 2) == 0 && (xx % 2) == 0) {
-                frame->data[1][(yy/2) * frame->linesize[1] + (xx/2)] = Cb;
-                frame->data[2][(yy/2) * frame->linesize[2] + (xx/2)] = Cr;
-            }
-        }
-    }
-}
+//void transfer_pixels2(unsigned char * pixels, int width, int height, AVPicture * frame)
+//{
+//    /* Y, Cb and Cr */
+////	auto *pixelptr = pixels;
+//    for(int y=0;y<height;y++) {
+//        for(int x=0;x<width;x++) {
+//
+//            int tmp = (x + y * width) * 4;
+//
+//            float R = pixels[tmp]; //(*(pixelptr++));
+//            float G = pixels[tmp+1]; //(*(pixelptr++));
+//            float B = pixels[tmp+2]; //(*(pixelptr++));
+//            //pixelptr++; //ignore alpha value
+//
+//
+//            float Y = (0.257 * R) + (0.504 * G) + (0.098 * B) + 16;
+//            float Cb = (-0.148 * R) - (0.291 * G) + (0.439 * B) + 128;
+//            float Cr = (0.439 * R) - (0.368 * G) - (0.071 * B) + 128;
+//
+//            //int xx = width - x;
+//            int xx = x;
+//            int yy = height - y;
+//
+//
+//            frame->data[0][yy * frame->linesize[0] + xx] = Y;
+//            if ((yy % 2) == 0 && (xx % 2) == 0) {
+//                frame->data[1][(yy/2) * frame->linesize[1] + (xx/2)] = Cb;
+//                frame->data[2][(yy/2) * frame->linesize[2] + (xx/2)] = Cr;
+//            }
+//        }
+//    }
+//}
 
 /* Prepare a dummy image. */
 unsigned char *get_pixels();
-static void fill_yuv_image(AVPicture *pict, int frame_index,
+
+
+extern void transfer_pixels_avpicture(std::vector<uint32_t> &pixels, AVCodecContext * c, AVPicture *frame);
+
+static void fill_yuv_image(std::vector<uint32_t> &pixels, AVPicture *pict, int frame_index,
                            int width, int height)
 {
-    transfer_pixels2(get_pixels(), width, height, pict);
+    AVCodecContext c;
+    c.width = width;
+    c.height = height;
+
+    //transfer_pixels2(get_pixels(), width, height, pict);
+    transfer_pixels_avpicture(pixels, &c, pict);
 }
 
-void ffmpeg_flv_stream::write_video_frame(AVFormatContext *oc, AVStream *st)
+void ffmpeg_flv_stream::write_video_frame(std::vector<uint32_t> &pixels, AVFormatContext *oc, AVStream *st)
 {
     int ret;
     static struct SwsContext *sws_ctx;
@@ -431,12 +445,12 @@ void ffmpeg_flv_stream::write_video_frame(AVFormatContext *oc, AVStream *st)
                 exit(1);
             }
         }
-        fill_yuv_image(&src_picture, frame_count, c->width, c->height);
+        fill_yuv_image(pixels, &src_picture, frame_count, c->width, c->height);
         sws_scale(sws_ctx,
                   (const uint8_t * const *)src_picture.data, src_picture.linesize,
                   0, c->height, dst_picture.data, dst_picture.linesize);
     } else {
-        fill_yuv_image(&dst_picture, frame_count, c->width, c->height);
+        fill_yuv_image(pixels, &dst_picture, frame_count, c->width, c->height);
     }
 //g    }
 
@@ -514,10 +528,9 @@ const std::string currentDateTime() {
 //extern void sfml_init(unsigned char **pixels, size_t *pixelSize);
 //static void transfer_pixels( unsigned char * pixels, AVCodecContext * c, AVFrame * frame);
 
-unsigned char *pixels = NULL;
-size_t pixelSize = 0;
-
-unsigned char *get_pixels() { return pixels; }
+//unsigned char *pixels = NULL;
+//size_t pixelSize = 0;
+//unsigned char *get_pixels() { return pixels; }
 
 void ffmpeg_flv_stream::add_frame(std::vector<uint32_t> &pixels) {
     //sfml_generate_frame();
@@ -554,8 +567,8 @@ void ffmpeg_flv_stream::add_frame(std::vector<uint32_t> &pixels) {
         return;
     }
 
-    printf("using pts of: %f while prev was: %f\n", endTime, frame->pts);
-    std::cout << "writing frame " << currentframe++ << " at " << (endTime / 1000.0) << "... ";
+    //printf("using pts of: %f while prev was: %f\n", endTime, frame->pts);
+    //std::cout << "writing frame " << currentframe++ << " at " << (endTime / 1000.0) << "... ";
 
     // Make sure to write enough audio frames until the audio timer lines up
     if (audio)
@@ -566,14 +579,14 @@ void ffmpeg_flv_stream::add_frame(std::vector<uint32_t> &pixels) {
             if (audio_pts >= video_pts)
                 break;
 
-            std::cout << "+A";
+            //std::cout << "+A";
             write_audio_frame(oc, audio_st);
 
         }
 
     // Write video frame
-    write_video_frame(oc, video_st);
-    std::cout << "+V" << std::endl;
+    write_video_frame(pixels, oc, video_st);
+    //std::cout << "+V" << std::endl;
 
     frame->pts = endTime;
 }

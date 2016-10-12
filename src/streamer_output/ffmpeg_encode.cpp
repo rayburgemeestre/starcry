@@ -35,7 +35,8 @@
 
 #include "allegro5/allegro.h"
 #include "allegro5/internal/aintern_pixels.h"
-void transfer_pixels(std::vector<uint32_t> &pixels, AVCodecContext * c, AVFrame * frame)
+template <typename T>
+inline void transfer_pixels(std::vector<uint32_t> &pixels, AVCodecContext * c, T *frame)
 {
     ALLEGRO_COLOR color{0};
 	/* Y, Cb and Cr */
@@ -62,6 +63,17 @@ void transfer_pixels(std::vector<uint32_t> &pixels, AVCodecContext * c, AVFrame 
 			}
 		}
 	}
+}
+void transfer_pixels(std::vector<uint32_t> &pixels, AVCodecContext * c, AVFrame *frame); // used by this file
+void transfer_pixels(std::vector<uint32_t> &pixels, AVCodecContext * c, AVPicture *frame); //used by stream version
+
+void transfer_pixels_avframe(std::vector<uint32_t> &pixels, AVCodecContext * c, AVFrame *frame)
+{
+    transfer_pixels<AVFrame>(pixels, c, frame);
+}
+void transfer_pixels_avpicture(std::vector<uint32_t> &pixels, AVCodecContext * c, AVPicture *frame)
+{
+    transfer_pixels<AVPicture>(pixels, c, frame);
 }
 
 ffmpeg_h264_encode::ffmpeg_h264_encode(std::string filename, size_t bitrate, size_t fps,
@@ -144,7 +156,7 @@ ffmpeg_h264_encode::ffmpeg_h264_encode(std::string filename, size_t bitrate, siz
 
 void ffmpeg_h264_encode::add_frame(std::vector<uint32_t> &pixels) {
 
-    transfer_pixels(pixels, c, frame);
+    transfer_pixels_avframe(pixels, c, frame);
 
     av_init_packet(&pkt);
     pkt.data = NULL;    // packet data will be allocated by the encoder
