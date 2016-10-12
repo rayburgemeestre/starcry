@@ -11,6 +11,8 @@ if [[ $UBUNTU15 == true ]]; then
 #BEGIN: UBUNTU15_initialize
 sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev
 sudo apt-get install -y pkg-config
+sudo apt-get install -y libssl-dev
+sudo apt-get install -y curl
 #END
 elif [[ $CENTOS7 == true ]]; then
 #BEGIN: CENTOS7_initialize
@@ -38,7 +40,7 @@ fi
 
 
 if [[ $UBUNTU15 == true ]]; then
-apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev
+    sudo apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev
 fi
 
 #BEGIN: allegro5_build
@@ -104,8 +106,7 @@ cd ../../
 #END
 
 
-apt-get install -y curl
-
+# apt-get install -y curl
 #BEGIN: v8_build
 cd libs/v8pp
 ./build-v8.sh
@@ -153,4 +154,14 @@ cd libs/FastPFor
 cmake .
 make -j 8 
 cd ../../
+#END
+
+
+#apt-get install -y libssl-dev
+#BEGIN: crtmpserver_build
+cd libs/crtmpserver/builders/cmake/
+COMPILE_STATIC=1 cmake .
+make clean
+make -j 8 
+cd ../../../../
 #END
