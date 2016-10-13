@@ -9,10 +9,8 @@ echo preparing $ARCH
 
 if [[ $UBUNTU15 == true ]]; then
 #BEGIN: UBUNTU15_initialize
-sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev
-sudo apt-get install -y pkg-config
-sudo apt-get install -y libssl-dev
-sudo apt-get install -y curl
+sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev \
+                        pkg-config libssl-dev curl
 #END
 elif [[ $CENTOS7 == true ]]; then
 #BEGIN: CENTOS7_initialize
@@ -42,6 +40,19 @@ fi
 if [[ $UBUNTU15 == true ]]; then
     sudo apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev
 fi
+
+
+#apt-get install -y libssl-dev
+#BEGIN: crtmpserver_build
+cd libs/crtmpserver/builders/cmake/
+COMPILE_STATIC=1 cmake .
+make clean
+make -j 8 
+cd ../../../../
+#END
+
+
+(
 
 #BEGIN: allegro5_build
 cd libs/allegro5
@@ -110,6 +121,9 @@ cd ../../
 #BEGIN: v8_build
 cd libs/v8pp
 ./build-v8.sh
+# In my case the first ./build-v8.sh always throws a few errors very early one
+# Simply re-running it seems to reliably build the libs though..
+./build-v8.sh
 # Now building is done, I always put everything in /usr/local/lib/
 sudo cp -prv ./v8/lib/lib* /usr/local/lib
 sudo ldconfig
@@ -142,12 +156,12 @@ module load gcc
 gx=$(which g++)
 ./configure --cxx=$gx --enable-shared --disable-swresample --enable-libx264 --enable-gpl
 make -j 4
-make install
+sudo make install
 module unload gcc
 cd ../
 #END
 
-cd ../
+cd ../ # leave "tmp"
 
 #BEGIN: fastpfor_build
 cd libs/FastPFor
@@ -156,12 +170,5 @@ make -j 8
 cd ../../
 #END
 
+) # see if this fixes it..
 
-#apt-get install -y libssl-dev
-#BEGIN: crtmpserver_build
-cd libs/crtmpserver/builders/cmake/
-COMPILE_STATIC=1 cmake .
-make clean
-make -j 8 
-cd ../../../../
-#END

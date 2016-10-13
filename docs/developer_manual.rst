@@ -1,11 +1,25 @@
 .. _developer_manual:
 
-Building Starcry
-================
+Building Starcry with Docker
+============================
+
+A docker image is currently available for Ubuntu >= 15.
+
+Simply install docker, pull in the image XYZ and issue the build like this:
+
+..
+
+    docker run -i -t -v $PWD:/projects/starcry sc_build_ubuntu:16.04 sh -c "cmake -DSTATIC=1 -DLIB_PREFIX_DIR=/usr/local/src/starcry . ;  make -j8 starcry"
+
+Inside the docker image all dependencies have been precompiled in ``/usr/local/src/starcry``., so you don't have to setup all the prerequisites.
+
+Building on Ubuntu or CentOS from scratch
+=========================================
 
 Currently there are no packages for Starcry and building requires quite a few steps as it is build on top of many libraries.
 
 (Most of this documentation includes snippets from the ``prepare_*.sh`` script in the root of the project.)
+
 
 Prerequisites
 -------------

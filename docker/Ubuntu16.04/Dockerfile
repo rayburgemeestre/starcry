@@ -14,15 +14,7 @@ WORKDIR /usr/local/src/starcry/
 
 RUN git submodule update --init --recursive
 
-RUN bash prepare_ubuntu15.sh
-
-# some patching..
-RUN cd libs/FastPFor && cmake . && make -j 8 && cd ../../
-RUN cd libs/v8pp && ./build-v8.sh && sudo cp -prv ./v8/lib/lib* /usr/local/lib && sudo ldconfig && cd ../../
-
-RUN git  pull  origin master 
-RUN git submodule update --init --recursive
-RUN bash prepare_ubuntu15_2.sh
+RUN bash prepare_ubuntu15.sh 2>&1 | tee /tmp/install.log
 
 WORKDIR /projects/starcry
 
