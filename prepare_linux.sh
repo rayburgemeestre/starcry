@@ -7,6 +7,30 @@ fi
 
 echo preparing $ARCH
 
+# steps
+typeset STEP="$1"
+typeset STEP_INITIALIZE=false
+typeset STEP_V8=false
+typeset STEP_CRTMPSERVER=false
+typeset STEP_ALLEGRO=false
+typeset STEP_CAF=false
+typeset STEP_BOOST=false
+typeset STEP_BENCHMARKLIB=false
+typeset STEP_FFMPEG=false
+typeset STEP_FASTPFOR=false
+
+if [[ $STEP == "" ]] || [[ $STEP == "initialize" ]]; then STEP_INITIALIZE=true; fi
+if [[ $STEP == "" ]] || [[ $STEP == "v8" ]]; then STEP_V8=true; fi
+if [[ $STEP == "" ]] || [[ $STEP == "crtmpserver" ]]; then STEP_CRTMPSERVER=true; fi
+if [[ $STEP == "" ]] || [[ $STEP == "allegro" ]]; then STEP_ALLEGRO=true; fi
+if [[ $STEP == "" ]] || [[ $STEP == "caf" ]]; then STEP_CAF=true; fi
+if [[ $STEP == "" ]] || [[ $STEP == "boost" ]]; then STEP_BOOST=true; fi
+if [[ $STEP == "" ]] || [[ $STEP == "benchmarklib" ]]; then STEP_BENCHMARKLIB=true; fi
+if [[ $STEP == "" ]] || [[ $STEP == "ffmpeg" ]]; then STEP_FFMPEG=true; fi
+if [[ $STEP == "" ]] || [[ $STEP == "fastpfor" ]]; then STEP_FASTPFOR=true; fi
+
+if [[ $STEP_INITIALIZE == true ]]; then
+
 if [[ $UBUNTU15 == true ]]; then
 #BEGIN: UBUNTU15_initialize
 sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev \
@@ -41,18 +65,75 @@ if [[ $UBUNTU15 == true ]]; then
     sudo apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev
 fi
 
+fi # if STEP_INITIALIZE
+
+if [[ $STEP_V8 == true ]]; then
+
+# apt-get install -y curl
+# build v8 first, I think boost screws up the environment, causing v8 to fail..
+#BEGIN: v8_build
+
+cd libs/v8pp
+
+for i in `seq 1 10`;
+do
+    print "Running ./build-v8.sh attempt $i"
+    ./build-v8.sh
+    sudo cp -prv ./v8/lib/lib* /usr/local/lib
+    sudo ldconfig
+
+    if [[ $(find ./v8/lib/ -name '*.a'|wc -l) -lt 3 ]]; then
+        print "Not all libraries found in ./v8/lib:"
+        find ./v8/lib/ -name '*.a'
+        print "Therefore trying another ./build-v8.sh.."
+    else
+        print "All artifacts were in ./v8/lib:"
+        find ./v8/lib/ -name '*.a'
+        print "This was ./build-v8.sh run number $i.."
+        break
+    fi
+done
+cd ../../
+#END
+# gave errors, but maybe thats "normal"
+
+if [[ $(find ./libs/v8pp/v8/lib/ -name '*.a'|wc -l) -lt 3 ]]; then
+    echo FAILED
+    exit 1
+fi
+
+fi # STEP v8
+if [[ $STEP_CRTMPSERVER == true ]]; then
+
+# crtmpserver is also difficult to build...
 
 #apt-get install -y libssl-dev
 #BEGIN: crtmpserver_build
 cd libs/crtmpserver/builders/cmake/
+cmake .
+# First run always results in a few segfaults somehow..
+make -j 8 1>/dev/null 2>/dev/null
+# Second run should be better!
+make -j 8
+if [[ $? -ne 0 ]]; then
+    exit 1 # early exit
+fi
+# Now we can try to build the static one
 COMPILE_STATIC=1 cmake .
 make clean
-make -j 8 
+# Same story though..
+make -j 8 1>/dev/null 2>/dev/null
+make -j 8
+if [[ $? -ne 0 ]]; then
+    exit 1 # early exit
+fi
 cd ../../../../
 #END
 
+fi # if [[ $STEP_CRTMPSERVER == true ]]; then
 
-(
+
+if [[ $STEP_ALLEGRO == true ]]; then
 
 #BEGIN: allegro5_build
 cd libs/allegro5
@@ -69,6 +150,9 @@ sudo cp -prv lib/pkgconfig/allegro* /usr/share/pkgconfig/
 cd ../../
 #END
 
+fi # if [[ $STEP_ALLEGRO == true ]]; then
+if [[ $STEP_CAF == true ]]; then
+
 #BEGIN: caf_build
 cd libs/caf
 gx=$(which g++)
@@ -82,6 +166,9 @@ sudo make install
 cd ../../
 #END
 
+fi #if [[ $STEP_CAF == true ]]; then
+
+if [[ $STEP_BOOST == true ]]; then
 
 mkdir -p /usr/local/src/starcry/boost_1_61_0/
 
@@ -98,9 +185,13 @@ module unload gcc
 cd ..
 #END
 
+fi # if [[ $STEP_BOOST == true ]]; then
+
 # no idea why, but boost doesn't use the target prefix.. it's actually here:
 # /usr/local/src/starcry/boost_1_61_0/
 # /usr/local/src/starcry/boost_1_61_0/stage/lib/
+
+if [[ $STEP_BENCHMARKLIB == true ]]; then
 
 #BEGIN: benchmarklib_build
 module load gcc
@@ -116,20 +207,9 @@ sudo make install
 cd ../../
 #END
 
+fi # if [[ $STEP_BENCHMARKLIB == true ]]; then
 
-# apt-get install -y curl
-#BEGIN: v8_build
-cd libs/v8pp
-./build-v8.sh
-# In my case the first ./build-v8.sh always throws a few errors very early one
-# Simply re-running it seems to reliably build the libs though..
-./build-v8.sh
-# Now building is done, I always put everything in /usr/local/lib/
-sudo cp -prv ./v8/lib/lib* /usr/local/lib
-sudo ldconfig
-cd ../../
-#END
-# gave errors, but maybe thats "normal"
+if [[ $STEP_FFMPEG == true ]]; then
 
 #BEGIN: ffmpeg_build
 # dependency for building ffmpeg is yasm (assembly compiler)
@@ -163,6 +243,10 @@ cd ../
 
 cd ../ # leave "tmp"
 
+fi # if [[ $STEP_FFMPEG == true ]]; then
+
+if [[ $STEP_FASTPFOR == true ]]; then
+
 #BEGIN: fastpfor_build
 cd libs/FastPFor
 cmake .
@@ -170,5 +254,4 @@ make -j 8
 cd ../../
 #END
 
-) # see if this fixes it..
-
+fi # if [[ $STEP_FASTPFOR == true ]]; then
