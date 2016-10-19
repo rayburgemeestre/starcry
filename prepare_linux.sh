@@ -37,6 +37,9 @@ sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev \
                         pkg-config libssl-dev curl
 #END
 elif [[ $CENTOS7 == true ]]; then
+    yum install -y which  # I can get rid of the which usage in this script, but I like where I can plug in the compiler in all the scripts as well
+    yum install -y sudo
+    sed -ibak 's/Defaults    requiretty/#Defaults    requiretty/g' /etc/sudoers
 #BEGIN: CENTOS7_initialize
 sudo yum install -y cmake git wget
 #END
@@ -55,7 +58,8 @@ sudo apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev \
 #END
 elif [[ $CENTOS7 == true ]]; then
 #BEGIN: CENTOS7_allegro5_packages
-sudo yum install -y freeglut-devel mesa-libGL-devel mesa-libGLU-devel libXcursor-devel
+sudo yum install -y freeglut-devel mesa-libGL-devel mesa-libGLU-devel libXcursor-devel \
+                    freetype-devel
 #END
 
 fi
@@ -63,6 +67,9 @@ fi
 
 if [[ $UBUNTU15 == true ]]; then
     sudo apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev
+else
+    sudo yum install -y xz-devel bzip2-devel libjpeg-turbo-devel libpng-devel \
+                        openssl-devel # crtmpserver
 fi
 
 fi # if STEP_INITIALIZE
@@ -75,24 +82,10 @@ if [[ $STEP_V8 == true ]]; then
 
 cd libs/v8pp
 
-for i in `seq 1 10`;
-do
-    print "Running ./build-v8.sh attempt $i"
-    ./build-v8.sh
-    sudo cp -prv ./v8/lib/lib* /usr/local/lib
-    sudo ldconfig
+./build-v8.sh
+sudo cp -prv ./v8/lib/lib* /usr/local/lib
+sudo ldconfig
 
-    if [[ $(find ./v8/lib/ -name '*.a'|wc -l) -lt 3 ]]; then
-        print "Not all libraries found in ./v8/lib:"
-        find ./v8/lib/ -name '*.a'
-        print "Therefore trying another ./build-v8.sh.."
-    else
-        print "All artifacts were in ./v8/lib:"
-        find ./v8/lib/ -name '*.a'
-        print "This was ./build-v8.sh run number $i.."
-        break
-    fi
-done
 cd ../../
 #END
 # gave errors, but maybe thats "normal"
@@ -110,23 +103,8 @@ if [[ $STEP_CRTMPSERVER == true ]]; then
 #apt-get install -y libssl-dev
 #BEGIN: crtmpserver_build
 cd libs/crtmpserver/builders/cmake/
-cmake .
-# First run always results in a few segfaults somehow..
-make -j 8 1>/dev/null 2>/dev/null
-# Second run should be better!
-make -j 8
-if [[ $? -ne 0 ]]; then
-    exit 1 # early exit
-fi
-# Now we can try to build the static one
 COMPILE_STATIC=1 cmake .
-make clean
-# Same story though..
-make -j 8 1>/dev/null 2>/dev/null
-make -j 8
-if [[ $? -ne 0 ]]; then
-    exit 1 # early exit
-fi
+make -j8
 cd ../../../../
 #END
 
@@ -177,11 +155,9 @@ wget -c "http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_
 tar -xvf boost_1_61_0.tar.bz2
 cd boost_1_61_0
 mkdir target
-module load gcc
 gx=$(which g++)
 CXX=$gx ./bootstrap.sh --prefix=/usr/local/src/starcry/boost_1_61_0/target/
 ./b2 --prefix=/usr/local/src/starcry/boost_1_61_0/target/
-module unload gcc
 cd ..
 #END
 
@@ -194,7 +170,6 @@ fi # if [[ $STEP_BOOST == true ]]; then
 if [[ $STEP_BENCHMARKLIB == true ]]; then
 
 #BEGIN: benchmarklib_build
-module load gcc
 gx=$(which g++)
 cd libs/benchmarklib
 rm CMakeCache.txt
@@ -212,9 +187,19 @@ fi # if [[ $STEP_BENCHMARKLIB == true ]]; then
 if [[ $STEP_FFMPEG == true ]]; then
 
 #BEGIN: ffmpeg_build
-# dependency for building ffmpeg is yasm (assembly compiler)
+
+# TODO move in separate block for documentation :-)
 if [[ $UBUNTU15 == true ]]; then
 	sudo apt-get install -y yasm
+else
+    yum install -y autoconf automake cmake freetype-devel gcc gcc-c++ git libtool make mercurial nasm pkgconfig zlib-devel
+    git clone --depth 1 git://github.com/yasm/yasm.git && \
+        cd yasm && \
+        autoreconf -fiv && \
+        ./configure && \
+        make && \
+        make install && \
+        make distclean && cd ..
 fi
 
 # create temporary folder for building x264 and ffmpeg
@@ -232,12 +217,10 @@ cd ../
 # clone ffmpeg, build, install
 git clone git://source.ffmpeg.org/ffmpeg.git
 cd ffmpeg
-module load gcc
 gx=$(which g++)
 ./configure --cxx=$gx --enable-shared --disable-swresample --enable-libx264 --enable-gpl
 make -j 4
 sudo make install
-module unload gcc
 cd ../
 #END
 

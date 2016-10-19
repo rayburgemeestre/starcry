@@ -2,7 +2,7 @@
 
 export CENTOS7=true
 
-bash prepare_linux.sh
+bash prepare_linux.sh $1
 
 exit 0
 

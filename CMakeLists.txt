@@ -84,6 +84,7 @@ include_directories("${LIB_PREFIX_DIR}/libs/cereal/include/")
 
 #include_directories(${CAF_INCLUDE_DIRS})
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "${LIB_PREFIX_DIR}/libs/v8pp/v8pp/context.cpp")
+#file(GLOB_RECURSE starcry_SOURCES "src/main.cpp")
 add_executable(starcry ${starcry_SOURCES})
 target_link_libraries(starcry ${benchmarklib_LIBRARIES})
 
@@ -134,25 +135,21 @@ endif (EXISTS "/etc/centos-release")
 
 # This order works on my Ubuntu 15.10 box at home *and* box at work.
 
-if (STATIC)
-    target_link_libraries(starcry "${V8_DIR}/lib/libv8_base.a")
-else()
-    target_link_libraries(starcry -lv8)
-endif()
-
 target_link_libraries(starcry -ldl)
+
+
+target_link_libraries(starcry "${V8_DIR}/lib/libv8_base.a")
+target_link_libraries(starcry -lv8_libbase)
+target_link_libraries(starcry "${V8_DIR}/lib/libv8_nosnapshot.a")
+target_link_libraries(starcry "${V8_DIR}/lib/libv8_libplatform.a")
+target_link_libraries(starcry "${V8_DIR}/lib/libv8_libsampler.a")
 target_link_libraries(starcry -licui18n)
 target_link_libraries(starcry -licuuc)
-# I already included this statically..
-target_link_libraries(starcry "${V8_DIR}/lib/libv8_libplatform.a")
-if (STATIC)
-  target_link_libraries(starcry "${V8_DIR}/lib/libv8_libsampler.a")
-endif()
-target_link_libraries(starcry "${V8_DIR}/lib/libv8_base.a")
-target_link_libraries(starcry "${V8_DIR}/lib/libv8_libbase.a")
-target_link_libraries(starcry "${V8_DIR}/lib/libv8_nosnapshot.a")
+#message(STATUS "${V8_DIR}/lib/libv8_base.a")
+#target_link_libraries(starcry "${V8_DIR}/lib/libv8_libbase.a")
 
 if (STATIC)
+    target_link_libraries(starcry ${ALLEGRO_LIBRARIES})
     target_link_libraries(starcry -lX11)
     target_link_libraries(starcry -lXcursor)
     target_link_libraries(starcry -ljpeg)
@@ -168,7 +165,6 @@ if (STATIC)
     endif()
     #END
     #-lX11 -ltiff -ljpeg -lpng -llapack -lGLU -lGL -ldc1394  -L -lXext -pthread
-    target_link_libraries(starcry ${ALLEGRO_LIBRARIES})
 else()
     target_link_libraries(starcry ${ALLEGRO_LIBRARIES})
 endif()
@@ -243,7 +239,7 @@ target_link_libraries(starcry_tests -licui18n)
 target_link_libraries(starcry_tests -licuuc)
 target_link_libraries(starcry_tests "${V8_DIR}/lib/libv8_libplatform.a")
 target_link_libraries(starcry_tests "${V8_DIR}/lib/libv8_base.a")
-target_link_libraries(starcry_tests "${V8_DIR}/lib/libv8_libbase.a")
+#target_link_libraries(starcry_tests "${V8_DIR}/lib/libv8_libbase.a")
 target_link_libraries(starcry_tests "${V8_DIR}/lib/libv8_nosnapshot.a")
 target_link_libraries(starcry_tests -ldl)
 
@@ -260,3 +256,4 @@ add_test(NAME starcry COMMAND starcry_tests --unittests)
 #)
 #add_dependencies(starcry_ubuntu build_ubuntu)
 #
+
