@@ -3,15 +3,31 @@
 Building Starcry with Docker
 ============================
 
-A docker image is currently available for Ubuntu >= 15.
+Docker images are currently available for compiling on:
 
-Simply install docker, pull in the image XYZ and issue the build like this:
+- Ubuntu 16.04 (rayburgemeestre/sc_build_ubuntu:16.04).
+  Please note that executables compiled with this version will also run on Ubuntu 15.10 for example.
+- CentOS 7 (rayburgemeestre/sc_build_centos:7)
 
-..
+It's possible to pull these docker images and build like this:
+Simply install docker, pull in the image XYZ, go to the project folder root, and issue the build like this:
 
-    docker run -i -t -v $PWD:/projects/starcry sc_build_ubuntu:16.04 sh -c "cmake -DSTATIC=1 -DLIB_PREFIX_DIR=/usr/local/src/starcry . ;  make -j8 starcry"
+.. highlight:: bash
+::
 
-Inside the docker image all dependencies have been precompiled in ``/usr/local/src/starcry``., so you don't have to setup all the prerequisites.
+    docker run -i -t -v $PWD:/projects/starcry sc_build_ubuntu:16.04 sh -c \
+      "cmake -DSTATIC=1 -DLIB_PREFIX_DIR=/usr/local/src/starcry . ;  make -j8 starcry"
+
+Inside the docker image all dependencies have been prepared in ``/usr/local/src/starcry``., so you don't have to setup all the prerequisites. CMake just needs to know (inside the docker container) where to expect all the libraries. Note that a `git submodule update --init --recursive` is not needed outside the docker environment if you use this to compile starcry.
+
+There are also a few helper scripts in the project folder root:
+
+.. highlight:: bash
+::
+
+    build_docker_centos7.sh make -j8 starcry
+    build_docker_ubuntu1604.sh make -j8 starcry
+
 
 Building on Ubuntu or CentOS from scratch
 =========================================
