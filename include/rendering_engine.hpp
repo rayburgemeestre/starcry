@@ -13,6 +13,7 @@
 #include <allegro5/allegro_image.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
+#include "fonts/monaco.h"
 
 #include <cstring>
 #include <cmath>
@@ -119,7 +120,7 @@ public:
 
         // debug font
         if (!font) {
-            font = al_load_ttf_font("Monaco_Linux-Powerline.ttf", 14, 0);
+            font = al_load_ttf_font_f(initialize_monaco_font(), "Monaco_Linux-Powerline.ttf", 14, 0);
             if (!font){
                 fprintf(stderr, "Could not load monaco ttf font.\n");
                 return;

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <data/shape.hpp>
 
+#include "fonts/monaco.h"
 #include "data/gradient.hpp"
 #include "color_blender.hpp"
 #include "primitives.h"
@@ -217,7 +218,7 @@ public:
         auto alignment = align == "center" ? ALLEGRO_ALIGN_CENTER : (align == "left" ? ALLEGRO_ALIGN_LEFT : ALLEGRO_ALIGN_RIGHT);
 
         if (!font_[index]) {
-            font_[index] = al_load_ttf_font("Monaco_Linux-Powerline.ttf", index, 0);
+            font_[index] = al_load_ttf_font_f(initialize_monaco_font(), "Monaco_Linux-Powerline.ttf", index, 0);
             if (!font_[index]){
                 fprintf(stderr, "Could not load monaco ttf font.\n");
                 return;
