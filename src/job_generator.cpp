@@ -202,7 +202,7 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
         },
         [=](next_frame) { // self (job_generator)
             call_print_exception(self, "next");
-            if (!self->state.use_stdin) {
+            if (!self->state.use_stdin || assistant->realtime) {
                 write_frame_fun();
             }
         },
