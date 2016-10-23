@@ -1,8 +1,9 @@
+/*
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 #pragma once
-
-#include <allegro5/allegro_memfile.h>
-
-ALLEGRO_FILE * initialize_monaco_font();
 
 static unsigned char Monaco_Linux_Powerline_ttf[] = {
   0x00, 0x01, 0x00, 0x00, 0x00, 0x13, 0x01, 0x00, 0x00, 0x04, 0x00, 0x30,

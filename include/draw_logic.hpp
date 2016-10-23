@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <data/shape.hpp>
 
-#include "fonts/monaco.h"
+#include "util/memory_font.h"
 #include "data/gradient.hpp"
 #include "color_blender.hpp"
 #include "primitives.h"
@@ -218,13 +218,13 @@ public:
         auto alignment = align == "center" ? ALLEGRO_ALIGN_CENTER : (align == "left" ? ALLEGRO_ALIGN_LEFT : ALLEGRO_ALIGN_RIGHT);
 
         if (!font_[index]) {
-            font_[index] = al_load_ttf_font_f(initialize_monaco_font(), "Monaco_Linux-Powerline.ttf", index, 0);
+            font_[index] = std::make_unique<memory_font>(memory_font::fonts::monaco, index, 0);
             if (!font_[index]){
                 fprintf(stderr, "Could not load monaco ttf font.\n");
                 return;
             }
         }
-        al_draw_text(font_[index], al_map_rgb(255, 255, 255), textX, textY - (index /*font height*/ / 2), alignment, text.c_str());
+        al_draw_text(font_[index]->font(), al_map_rgb(255, 255, 255), textX, textY - (index /*font height*/ / 2), alignment, text.c_str());
     }
 
     template <typename double_type>
@@ -563,7 +563,7 @@ private:
     double offset_y_;
     uint32_t width_;
     uint32_t height_;
-    std::vector<ALLEGRO_FONT *> font_;
+    std::vector<std::unique_ptr<memory_font>> font_;
 };
 
 }
