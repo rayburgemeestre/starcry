@@ -20,7 +20,7 @@ memory_font::memory_font(fonts font, int size, int flags)
             break;
         default:
             std::cerr << "memory_font invalid font" << std::endl;
-            std::terminate();
+            std::exit(1);
     }
 }
 
@@ -30,9 +30,11 @@ void memory_font::initialize(unsigned char * font_data, size_t font_data_len, co
     // Which will also assume it can free it, also returning the same memfile for each ALLEGRO_FILE causes segfaults.
     // Therefore apply caching only for the ALLEGRO_FILE's.
     allegro_file_ = std::unique_ptr<ALLEGRO_FILE, decltype(&al_fclose)>(al_open_memfile(static_cast<void *>(font_data),
-                                                                                        font_data_len * sizeof(char),
-                                                                                        "r"),
-                                                                        &al_fclose);
+                                                                  font_data_len * sizeof(char),
+                                                                  "r"), [](ALLEGRO_FILE *) -> bool {
+                                                                            // al_fclose() is already called by the font
+                                                                            //  taking the ownership..
+                                                                        });
 
     allegro_font_ = std::unique_ptr<ALLEGRO_FONT, decltype(&al_destroy_font)>(al_load_ttf_font_f(allegro_file_.get(),
                                                                                                  font_filename,

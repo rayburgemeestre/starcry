@@ -70,8 +70,16 @@ From the commandline you can invoke the following command.
 .. highlight:: bash
 ::
 
-    starcry --webserver clock.js rtmp://localhost/flvplayback/video \
-            --no-video-output
+    starcry --stream clock.js
+
+The ``stream`` parameter is shorthand for the following command.
+
+.. highlight:: bash
+::
+
+    starcry --webserver \
+            --crtmpserver \
+            input/clock.js rtmp://localhost/flvplayback/video
 
 Starcry has an embedded RTMP server that will be used, and the webserver will provide an example HTML page where the stream can be viewed using JWplayer.
 Note that any rtmp server can be specified. Output will look like the following (screenshot).

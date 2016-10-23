@@ -91,16 +91,16 @@ target_link_libraries(starcry ${benchmarklib_LIBRARIES})
 #target_link_libraries(starcry ${crtmpserver_LIBRARIES})
 target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/crtmpserver/libcrtmpserver.a)
 
-target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/admin/libadmin.a)
-target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/appselector/libappselector.a)
+#target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/admin/libadmin.a)
+#target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/appselector/libappselector.a)
 #target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/flvplayback/libflvplayback.a)
-target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/proxypublish/libproxypublish.a)
-target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/samplefactory/libsamplefactory.a)
-target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/stresstest/libstresstest.a)
-target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/vptests/libvptests.a)
-
-
+#target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/proxypublish/libproxypublish.a)
+#target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/samplefactory/libsamplefactory.a)
+#target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/stresstest/libstresstest.a)
+#target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/vptests/libvptests.a)
+target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/appselector/libappselector.a)
 target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/applications/flvplayback/libflvplayback.a)
+
 target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/thelib/libthelib.a)
 target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/common/libcommon.a)
 target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/tinyxml/libtinyxml.a)
@@ -129,9 +129,7 @@ else()
 endif()
 target_link_libraries(starcry "${LIB_PREFIX_DIR}/libs/FastPFor/libFastPFor.a")
 target_link_libraries(starcry -lz) # NEEDED FOR CENTOS7u2, && Ubuntu it seems?
-if (EXISTS "/etc/centos-release")
-    target_link_libraries(starcry -llzma) # NEEDED FOR CENTOS7u2
-endif (EXISTS "/etc/centos-release")
+target_link_libraries(starcry -llzma)
 
 # This order works on my Ubuntu 15.10 box at home *and* box at work.
 
@@ -141,7 +139,8 @@ target_link_libraries(starcry -ldl)
 target_link_libraries(starcry "${V8_DIR}/lib/libv8_base.a")
 target_link_libraries(starcry -lv8_libbase)
 target_link_libraries(starcry "${V8_DIR}/lib/libv8_nosnapshot.a")
-target_link_libraries(starcry "${V8_DIR}/lib/libv8_libplatform.a")
+#target_link_libraries(starcry "${V8_DIR}/lib/libv8_libplatform.a")
+target_link_libraries(starcry -lv8_libplatform) # libv8_libplatform.a seems no longer available?
 target_link_libraries(starcry "${V8_DIR}/lib/libv8_libsampler.a")
 target_link_libraries(starcry -licui18n)
 target_link_libraries(starcry -licuuc)

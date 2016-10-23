@@ -5,6 +5,8 @@
  */
 #include <iostream>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 /**
 	* @file
 	* libavcodec API use example.
@@ -221,3 +223,4 @@ void ffmpeg_h264_encode::finalize()
     av_frame_free(&frame);
     printf("\n");
 }
+#pragma GCC diagnostic pop

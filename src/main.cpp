@@ -77,6 +77,26 @@ using std::stringstream;
 using std::shared_ptr;
 using std::make_shared;
 
+volatile bool starcry_running = true;
+
+class crtmpserver_wrapper
+{
+public:
+    crtmpserver_wrapper() :
+        crtmpserver_thread_([&]() {
+            int argc = 2;
+            const char *argv[] = { "starcry", "crtmpserver.lua" };
+            main__(argc, argv);
+        })
+    {
+    }
+    ~crtmpserver_wrapper() {
+        crtmpserver_thread_.join();
+    }
+private:
+    std::thread crtmpserver_thread_;
+};
+
 class main_program
 {
 private:
@@ -105,17 +125,6 @@ private:
 public:
     main_program(actor_system &system, int argc, char *argv[]) : system(system) {
 
-        std::thread start_crtmpserver_as_well( [&]() {
-            // just a test :-)
-            int argc = 2; 
-            const char *argv[] = { 
-                "starcry", 
-                "crtmpserver.lua" 
-            }; 
-            main__(argc, argv);
-            std::cout << "Goodbye !" << endl;
-        });
-
         settings conf;
         conf.load();
 
@@ -141,6 +150,8 @@ public:
             ("use-remote-renderer", po::value<string>(&remote_renderer_info), "use remote renderer on given \"host:port\"")
             ("use-remote-streamer", po::value<string>(&remote_streamer_info), "use remote streamer on given \"host:port\"")
             ("webserver", "start embedded webserver")
+            ("crtmpserver", "start embedded crtmpserver for rtmp streaming")
+            ("stream", "start embedded webserver, crtmpserver and stream to it on local host")
             ("stdin", "read from stdin and send this to job generator actor")
             ("dimensions,dim", po::value<string>(&dimensions), "specify canvas dimensions i.e. 1920x1080")
             ("script,s", po::value<string>(&script), "javascript file to use for processing")
@@ -248,10 +259,18 @@ public:
         bool use_stdin  = vm.count("stdin");
         size_t use_fps = 25;
         shared_ptr<webserver> ws;
-        if (vm.count("webserver")) {
+        if (vm.count("stream") || vm.count("webserver")) {
             ws = make_shared<webserver>();
         }
-
+        shared_ptr<crtmpserver_wrapper> cw;
+        if (vm.count("stream") || vm.count("crtmpserver")) {
+            cw = make_shared<crtmpserver_wrapper>();;
+        }
+        if (vm.count("stream")) {
+            if (output_file.substr(0, 4) != "rtmp") {
+                output_file.assign("rtmp://localhost/flvplayback/video");
+            }
+        }
 
         //auto jobstorage = system.spawn(job_storage);
         auto generator  = system.spawn<detached>(job_generator, script, canvas_w, canvas_h, use_stdin,
@@ -313,7 +332,7 @@ public:
         if (generator_info.running())
             s->send<message_priority::high>(generator, terminate_::value);
         s->await_all_other_actors_done();
-        start_crtmpserver_as_well.join();
+        starcry_running = false;
     }
 
     bool extract_host_port_string(string host_port_str, string *host_ptr, int *port_ptr)

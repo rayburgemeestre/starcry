@@ -1,3 +1,6 @@
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 /*
  * Copyright (c) 2003 Fabrice Bellard
  *
@@ -496,9 +499,9 @@ void ffmpeg_flv_stream::write_video_frame(std::vector<uint32_t> &pixels, AVForma
 
 void ffmpeg_flv_stream::close_video(AVFormatContext *oc, AVStream *st)
 {
-    avcodec_close(st->codec);
-    av_free(src_picture.data[0]);
-    av_free(dst_picture.data[0]);
+    //avcodec_close(st->codec);
+    //av_free(src_picture.data[0]);
+    //av_free(dst_picture.data[0]);
     av_free(frame);
 }
 
@@ -613,3 +616,5 @@ void ffmpeg_flv_stream::finalize() {
 
     return;
 }
+
+#pragma GCC diagnostic pop
