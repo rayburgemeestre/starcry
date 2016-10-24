@@ -67,8 +67,11 @@ find_package( Threads )
 # whole program optimizations screws things over
 #add_definitions(-O3 -fwhole-program -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic)
 #add_definitions(-O0 -g -Wall -funsigned-char -std=c++14)
-set (COMPILE_FLAGS "-O3 -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic -mssse3")
-#set (COMPILE_FLAGS "-O0 -g -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic")
+if (NOT DEBUG)
+    set (COMPILE_FLAGS "-O3 -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic -mssse3")
+else()
+    set (COMPILE_FLAGS "-O0 -g -fno-inline -Wall -funsigned-char -std=c++14 -fno-omit-frame-pointer -pedantic")
+endif()
 add_definitions(${COMPILE_FLAGS})
 
 include_directories("./include/" "${V8_DIR}/include" "${V8_DIR}/../" "${V8_INCLUDE_DIR}" "${LIB_PREFIX_DIR}/libs/allegro5/include/" "${LIB_PREFIX_DIR}/libs/crow/include" "${LIB_PREFIX_DIR}/libs/FastPFor/")

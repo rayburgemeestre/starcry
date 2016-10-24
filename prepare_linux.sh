@@ -34,7 +34,8 @@ if [[ $STEP_INITIALIZE == true ]]; then
 if [[ $UBUNTU15 == true ]]; then
 #BEGIN: UBUNTU15_initialize
 sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev \
-                        pkg-config libssl-dev curl
+                        pkg-config libssl-dev curl \
+                        liblzma-dev
 #END
 elif [[ $CENTOS7 == true ]]; then
     yum install -y which  # I can get rid of the which usage in this script, but I like where I can plug in the compiler in all the scripts as well
