@@ -44,18 +44,28 @@ RUN bash prepare_centos7.sh crtmpserver 2>&1 | tee -a /tmp/install.log
 # (it has some errors with the 6.2 compiler.)
 RUN yum remove -y gcc-c++
 
-RUN bash prepare_centos7.sh v8 2>&1 | tee -a /tmp/install.log
-RUN bash prepare_centos7.sh allegro 2>&1 | tee -a /tmp/install.log
-RUN bash prepare_centos7.sh caf 2>&1 | tee -a /tmp/install.log
-RUN bash prepare_centos7.sh boost 2>&1 | tee -a /tmp/install.log
-RUN bash prepare_centos7.sh benchmarklib 2>&1 | tee -a /tmp/install.log
-RUN bash prepare_centos7.sh fastpfor 2>&1 | tee -a /tmp/install.log
-RUN bash prepare_centos7.sh ffmpeg 2>&1 | tee -a /tmp/install.log
-# One of ffmpeg's dependencies pulled this package in again..
-RUN yum remove -y gcc-c++
+#RUN bash prepare_centos7.sh v8 2>&1 | tee -a /tmp/install.log
+#RUN bash prepare_centos7.sh allegro 2>&1 | tee -a /tmp/install.log
+#RUN bash prepare_centos7.sh caf 2>&1 | tee -a /tmp/install.log
+#RUN bash prepare_centos7.sh boost 2>&1 | tee -a /tmp/install.log
+#RUN bash prepare_centos7.sh benchmarklib 2>&1 | tee -a /tmp/install.log
+#RUN bash prepare_centos7.sh fastpfor 2>&1 | tee -a /tmp/install.log
+#RUN bash prepare_centos7.sh ffmpeg 2>&1 | tee -a /tmp/install.log
+## One of ffmpeg's dependencies pulled this package in again..
+#RUN yum remove -y gcc-c++
+#
+## Just a bit of cleanup for now, to make the image smaller. (better make clean's are possible..)
+#RUN rm -rf /usr/local/src/sourceInstallations && \
+#    rm -rf /usr/local/src/starcry/boost_1_61_0.tar.bz2 && \
+#    (cd /usr/local/src/starcry/boost_1_61_0/; ls -1 | egrep -v "^boost$|^stage$" |xargs -n 1 rm -rf) && \
+#    (cd /usr/local/src/starcry/libs/v8pp/v8; ls -1 | egrep -v "^include$|^lib$" | xargs -n 1 rm -rf) && \
+#    find /usr/local/src/starcry/ -name '*.o' | xargs -n 10 rm -rf && \
+#    rm -rf /usr/local/src/starcry/tmp
 
-# Just a bit of cleanup for now, to make the image smaller. (better make clean's are possible..)
-RUN rm -rf /usr/local/src/sourceInstallations && \
+# let's go for the one shot build
+RUN bash prepare_centos7.sh 2>&1 | tee /tmp/install.log && \
+    yum remove -y gcc-c++ && \
+    rm -rf /usr/local/src/sourceInstallations && \
     rm -rf /usr/local/src/starcry/boost_1_61_0.tar.bz2 && \
     (cd /usr/local/src/starcry/boost_1_61_0/; ls -1 | egrep -v "^boost$|^stage$" |xargs -n 1 rm -rf) && \
     (cd /usr/local/src/starcry/libs/v8pp/v8; ls -1 | egrep -v "^include$|^lib$" | xargs -n 1 rm -rf) && \
