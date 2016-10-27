@@ -34,6 +34,7 @@ void memory_font::initialize(unsigned char * font_data, size_t font_data_len, co
                                                                   "r"), [](ALLEGRO_FILE *) -> bool {
                                                                             // al_fclose() is already called by the font
                                                                             //  taking the ownership..
+                                                                            return true;
                                                                         });
 
     allegro_font_ = std::unique_ptr<ALLEGRO_FONT, decltype(&al_destroy_font)>(al_load_ttf_font_f(allegro_file_.get(),

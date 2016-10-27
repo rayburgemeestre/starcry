@@ -419,6 +419,7 @@ static void fill_yuv_image(std::vector<uint32_t> &pixels, AVPicture *pict, int f
     AVCodecContext c;
     c.width = width;
     c.height = height;
+    c.pix_fmt = AV_PIX_FMT_YUV420P;
 
     //transfer_pixels2(get_pixels(), width, height, pict);
     transfer_pixels_avpicture(pixels, &c, pict);
@@ -474,14 +475,20 @@ void ffmpeg_flv_stream::write_video_frame(std::vector<uint32_t> &pixels, AVForma
         av_init_packet(&pkt);
 
         /* encode the image */
-        ret = avcodec_encode_video2(c, &pkt, frame, &got_packet);
+        //ret = avcodec_encode_video2(c, &pkt, frame, &got_packet);
+        ret = avcodec_send_frame(c, frame);
         if (ret < 0) {
             fprintf(stderr, "Error encoding video frame: %d\n", (ret));
             exit(1);
         }
+        ret = avcodec_receive_packet(c, &pkt);
+        if (ret < 0) {
+            fprintf(stderr, "Error encoding video frame (2): %d\n", (ret));
+            exit(1);
+        }
         /* If size is zero, it means the image was buffered. */
 
-        if (!ret && got_packet && pkt.size) {
+        if (!ret && /* got_packet && */ pkt.size) {
             pkt.stream_index = st->index;
 
             /* Write the compressed frame to the media file. */
@@ -489,6 +496,8 @@ void ffmpeg_flv_stream::write_video_frame(std::vector<uint32_t> &pixels, AVForma
         } else {
             ret = 0;
         }
+        // The following line may not be needed, added just in case.
+        av_free(pkt.data);
     }
     if (ret != 0) {
         fprintf(stderr, "Error while writing video frame: %d\n", (ret));

@@ -43,28 +43,30 @@ inline void transfer_pixels(std::vector<uint32_t> &pixels, AVCodecContext * c, T
     ALLEGRO_COLOR color{0};
 	/* Y, Cb and Cr */
 	size_t index = 0;
-	for(int y=0;y<c->height;y++) {
-		for(int x=0;x<c->width;x++) {
-			uint32_t &_gp_pixel(pixels[index++]);
+    for(int y=0;y<c->height;y++) {
+        for(int x=0;x<c->width;x++) {
+            uint32_t &_gp_pixel(pixels[index++]);
             _AL_MAP_RGBA(color, (_gp_pixel & 0x00FF0000) >> 16,
                          (_gp_pixel & 0x0000FF00) >>  8,
                          (_gp_pixel & 0x000000FF) >>  0,
                          (_gp_pixel & 0xFF000000) >> 24);
-			float R = color.r * 255;
-			float G = color.g * 255;
-			float B = color.b * 255;
+            uint8_t R = static_cast<uint8_t>(color.r * 255);
+            uint8_t G = static_cast<uint8_t>(color.g * 255);
+            uint8_t B = static_cast<uint8_t>(color.b * 255);
 
-			float Y = (0.257 * R) + (0.504 * G) + (0.098 * B) + 16;
-			float Cb = (-0.148 * R) - (0.291 * G) + (0.439 * B) + 128;
-			float Cr = (0.439 * R) - (0.368 * G) - (0.071 * B) + 128;
+            // TODO: This RGBA -> CMYK conversion makes stuff considerably slower, perhaps investigate
+            // how to use RGBA directly with the ffmpeg video..
+            uint8_t Y  = static_cast<uint8_t>((0.257 * R) + (0.504 * G) + (0.098 * B) + 16);
+            uint8_t Cb = static_cast<uint8_t>((-0.148 * R) - (0.291 * G) + (0.439 * B) + 128);
+            uint8_t Cr = static_cast<uint8_t>((0.439 * R) - (0.368 * G) - (0.071 * B) + 128);
 
-			frame->data[0][y * frame->linesize[0] + x] = Y;
-			if ((y % 2) == 0 && (x % 2) == 0) {
-				frame->data[1][(y/2) * frame->linesize[1] + (x/2)] = Cb;
-				frame->data[2][(y/2) * frame->linesize[2] + (x/2)] = Cr;
-			}
-		}
-	}
+            frame->data[0][y * frame->linesize[0] + x] = Y;
+            if ((y % 2) == 0 && (x % 2) == 0) {
+                frame->data[1][(y/2) * frame->linesize[1] + (x/2)] = Cb;
+                frame->data[2][(y/2) * frame->linesize[2] + (x/2)] = Cr;
+            }
+        }
+    }
 }
 void transfer_pixels(std::vector<uint32_t> &pixels, AVCodecContext * c, AVFrame *frame); // used by this file
 void transfer_pixels(std::vector<uint32_t> &pixels, AVCodecContext * c, AVPicture *frame); //used by stream version

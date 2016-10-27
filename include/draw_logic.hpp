@@ -139,7 +139,6 @@ public:
      */
     draw_logic() {
         font_.reserve(1024);
-        for (size_t i=0; i<1024; i++) font_[i] = nullptr;
     }
 
     /**

@@ -3,6 +3,14 @@
 Building Starcry with Docker
 ============================
 
+Prerequisites
+-------------
+
+- git (apt-get install git)
+- docker (f.i. https://docs.docker.com/engine/installation/linux/ubuntulinux/)
+- lzma (apt-get install lzma, dependency of starcry after compilation)
+- Ubuntu 16 verified: libxcursor1 libjpeg8 libgl1  libxrandr2 libxinerama1 libxi6
+
 Docker images are currently available for compiling on:
 
 - Ubuntu 16.04 (rayburgemeestre/sc_build_ubuntu:16.04).
@@ -15,6 +23,12 @@ Simply install docker, pull in the image XYZ, go to the project folder root, and
 .. highlight:: bash
 ::
 
+    git clone https://bitbucket.org/rayburgemeestre/starcry
+    cd starcry
+
+    bash build_docker_ubuntu1604.sh make -j8 starcry
+
+    # The above script basically executes the following docker command
     docker run -i -t -v $PWD:/projects/starcry sc_build_ubuntu:16.04 sh -c \
       "cmake -DSTATIC=1 -DLIB_PREFIX_DIR=/usr/local/src/starcry . ;  make -j8 starcry"
 
