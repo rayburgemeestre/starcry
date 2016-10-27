@@ -191,10 +191,10 @@ behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_
         [=](ready, size_t worker_num, struct data::job j) {
             self->send<message_priority::high>(*self->state.generator, job_processed::value);
             self->state.last_job_for_worker[worker_num] = j.job_number;
-            self->state.outstanding_jobs--;
             self->state.job_sequence++;
         },
         [=](streamer_ready) {
+            self->state.outstanding_jobs--;
             send_jobs_to_streamer(self);
         },
         [=](show_stats) {
