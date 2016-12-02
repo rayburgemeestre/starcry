@@ -10,7 +10,7 @@
 #include "rendering_engine_wrapper.h"
 #include "data/job.hpp"
 
-class ALLEGRO_BITMAP;
+struct ALLEGRO_BITMAP;
 
 struct worker_data
 {

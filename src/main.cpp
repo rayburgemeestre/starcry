@@ -350,7 +350,8 @@ public:
     }
 
     //spawn_actor_local_or_remote("streamer", "use-remote-streamer", "127.0.0.1:11111")
-    actor spawn_actor_local_or_remote(auto * actor_behavior,
+    template <typename T>
+    actor spawn_actor_local_or_remote(T * actor_behavior,
                                       string actor_name,
                                       string cli_flag_param,
                                       string cli_flag_value

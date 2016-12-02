@@ -29,7 +29,6 @@ private:
     AVFormatContext *oc;
     AVStream *audio_st, *video_st;
     AVCodec *audio_codec, *video_codec;
-    double audio_pts, video_pts;
     int ret;
 
     bool audio = false;
@@ -39,8 +38,8 @@ private:
     int frame_count;
 
     std::unique_ptr<AbstractTimer> timer;
-    int64_t currentframe = 0;
     size_t fps_;
+    size_t bitrate_;
 
 
 public:

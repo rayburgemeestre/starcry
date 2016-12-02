@@ -7,6 +7,8 @@ var fps           = 25;
 var max_frames    = -1;
 var canvas_w      = 1920;
 var canvas_h      = 1080;
+var scale         = 1;
+var bitrate       = 100000;
 
 var clock_max_radius = Math.min(canvas_w, canvas_h) / 2.0 - 50.;
 var circles = [], second = 0, minute = 1, hour = 2;

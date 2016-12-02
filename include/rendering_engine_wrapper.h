@@ -11,11 +11,11 @@
 
 struct rendering_engine_wrapper_class_data;
 
-class ALLEGRO_BITMAP;
+struct ALLEGRO_BITMAP;
 
 namespace data {
-    class color;
-    class shape;
+    struct color;
+    struct shape;
 }
 
 class rendering_engine_wrapper

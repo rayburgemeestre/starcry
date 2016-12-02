@@ -16,18 +16,11 @@ allegro5_window::allegro5_window(actor_system &system, event_based_actor *self, 
     if (!tmp) {
         std::cerr << "Error spawning remote actor: " << system_.render(tmp.error()) << endl;
     }
-    client_ = std::move(std::make_unique<caf::actor>(*tmp));
+    client_ = std::make_unique<caf::actor>(*tmp);
 }
 
-//allegro5_window::allegro5_window(allegro5_window &&other)
-//    : system_(other.system_),
-//      client_(std::move(other.client_)),
-//      self_(std::move(other.self_)),
-//      port_(std::move(other.port_))
-//{
-//}
-
 volatile bool frame_in_transit = false;
+
 void allegro5_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels)
 {
     // TODO: is a volatile bool enough in this case?

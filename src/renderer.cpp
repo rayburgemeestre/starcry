@@ -164,7 +164,7 @@ behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_
                     return self->spawn(worker, host, port, worker_num++);
                 };
                 auto tmp = actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin());
-                self->state.pool = std::move(std::make_unique<actor>(tmp));
+                self->state.pool = std::make_unique<actor>(tmp);
             }
             else {
                 aout(self) << "renderer started, num workers in text file = " << self->state.workers_vec.size() << endl;
@@ -180,7 +180,7 @@ behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_
                 };
                 auto num_workers = self->state.workers_vec.size();
                 auto tmp = actor_pool::make(self->context(), num_workers, worker_factory, actor_pool::round_robin());
-                self->state.pool = std::move(std::make_unique<actor>(tmp));
+                self->state.pool = std::make_unique<actor>(tmp);
             }
             self->link_to(*self->state.pool);
         },

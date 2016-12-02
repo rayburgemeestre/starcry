@@ -29,8 +29,8 @@ private:
     AVCodec *codec;
     AVCodecContext *c= NULL;
     size_t frameNumber = 0;
-    size_t fps = 25;
-    int ret, x, y, got_output;
+    size_t fps_ = 25;
+    int ret, got_output;
     FILE *f;
     AVFrame *frame;
     AVPacket pkt;

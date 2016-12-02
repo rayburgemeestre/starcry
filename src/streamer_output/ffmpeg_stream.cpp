@@ -52,8 +52,9 @@ static int16_t *samples;
 static int audio_input_frame_size;
 
 ffmpeg_flv_stream::ffmpeg_flv_stream(std::string url, size_t bitrate, size_t fps, uint32_t canvas_w, uint32_t canvas_h)
-    : url_(url), width_(canvas_w), height_(canvas_h), fps_(fps)
+    : url_(url), width_(canvas_w), height_(canvas_h), fps_(fps), bitrate_(bitrate)
 {
+    std::cout << "ffmpeg_flv_stream using bitrate " << bitrate_ << " and fps of " << fps_ << std::endl;
 #ifdef WIN32
     std::unique_ptr<AbstractTimer> t = TimerFactory::factory(TimerFactory::Type::WindowsHRTimerImpl);
 #else
@@ -169,16 +170,10 @@ AVStream *ffmpeg_flv_stream::add_stream(AVFormatContext *oc, AVCodec **codec, en
         case AVMEDIA_TYPE_VIDEO:
             c->codec_id = codec_id;
 
-            //c->bit_rate = 200000;
-            c->bit_rate = 100000;
-            //c->bit_rate = 4000;
+            c->bit_rate = bitrate_;
             /* Resolution must be a multiple of two. */
             c->width    = width_;
             c->height   = height_;
-            //c->width    = 1280;
-            //c->height   = 720;
-            //c->width    = 100;
-            //c->height   = 100;
             /* timebase: This is the fundamental unit of time (in seconds) in terms
                 * of which frame timestamps are represented. For fixed-fps content,
                 * timebase should be 1/framerate and timestamp increments should be
@@ -471,7 +466,6 @@ void ffmpeg_flv_stream::write_video_frame(std::vector<uint32_t> &pixels, AVForma
         ret = av_interleaved_write_frame(oc, &pkt);
     } else {
         AVPacket pkt = { 0 };
-        int got_packet;
         av_init_packet(&pkt);
 
         /* encode the image */
