@@ -7,7 +7,7 @@ Prerequisites
 -------------
 
 - git (apt-get install git)
-- docker (f.i. https://docs.docker.com/engine/installation/linux/ubuntulinux/)
+- docker (f.i. https://docs.docker.com/engine/installation/linux/ubuntulinux/ or https://docs.docker.com/engine/installation/linux/centos/)
 - lzma (apt-get install lzma, dependency of starcry after compilation)
 - Ubuntu 16 verified: libxcursor1 libjpeg8 libgl1  libxrandr2 libxinerama1 libxi6
 
