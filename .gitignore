@@ -4,3 +4,6 @@ CMakeFiles
 gtest-1.7.0
 gmock-1.7.0
 boost_1_61_0
+codebrowser/**
+docs/_build/**
+docs/build_instructions/**
