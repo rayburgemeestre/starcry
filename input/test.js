@@ -6,11 +6,11 @@
 const fps           = 25;
 const max_frames    = 10 * fps; // seconds
 const realtime      = false;
-const seconds       = 0;
 const begin         = +new Date();
 const canvas_w      = 1920;
 const canvas_h      = 1080;
 const scale         = 5;
+let seconds         = 0;
 
 function next() {
     seconds = current_frame;
