@@ -30,7 +30,5 @@ function next() {
 
     add_circle(new circle(new pos(0, 0, 0), 350, 50, tmp)); 
     add_circle(new circle(new pos(0, 0, 0), current_frame, current_frame * 2., grad)); 
-
-    write_frame();
 }
 

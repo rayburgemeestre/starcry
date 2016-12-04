@@ -12,5 +12,4 @@ var canvas_h      = 2160;
 
 function next() {
     set_background_color(new color(current_frame / max_frames, 0, 0, 1));
-    write_frame();
 }
