@@ -110,6 +110,7 @@ target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/
 target_link_libraries(starcry ${LIB_PREFIX_DIR}/libs/crtmpserver/builders/cmake/lua/liblua.a)
 target_link_libraries(starcry -lssl)
 target_link_libraries(starcry -lcrypto)
+target_link_libraries(starcry -lstdc++fs)
 #/usr/lib/x86_64-linux-gnu/libcrypto.so
 #/usr/lib/x86_64-linux-gnu/libz.a
 #/lib/x86_64-linux-gnu/libdl.so.2

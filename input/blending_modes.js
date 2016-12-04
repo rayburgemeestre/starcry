@@ -10,7 +10,7 @@ var canvas_w                = 1920;
 var canvas_h                = 1080;
 var scale                   = 1;
 
-include("./input/blending_modes_array.js");
+include("blending_modes_array.js");
 
 function next() {
     seconds = current_frame;

@@ -68,6 +68,8 @@ Available global functions
 +--------+--------------------------------------------------------------+
 | void   | close_ ()                                                    |
 +--------+--------------------------------------------------------------+
+| void   | include_ (string include_file)                               |
++--------+--------------------------------------------------------------+
 
 .. _version:
 
@@ -252,6 +254,27 @@ This function will stop reading from stdin, write out the video's last frame (ca
 ::
 
     close();
+
+.. _include:
+
+include()
+""""""""
+
++----------------+--------------------------------------------------------------+
+| Description    | Include another javascript file.                             |
++----------------+--------------------------------------------------------------+
+| Return type    | void                                                         |
++----------------+--------------------------------------------------------------+
+
+Specify the javascript file relative to the main javascript file. Invoking ``starcry`` like ``starcry input/foo.js`` where
+``foo.js`` includes ``libs/bar.js``, the file is expected to be in ``input/libs/bar.js``.
+
+.. highlight:: javascript
+
+::
+
+    include('/my/absolute/path/libs/foobar.js'); // absolute syntax
+    include('./libs/foobar.js'); // relative syntax
 
 
 Available classes

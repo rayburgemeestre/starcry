@@ -12,6 +12,9 @@
 #include <memory>
 #include <mutex>
 #include <sstream>
+#include <experimental/filesystem>
+
+namespace fs = std::experimental::filesystem;
 
 /**
  * Header only wrapper around v8pp which provides a simple interface for calling functions,
@@ -146,16 +149,21 @@ inline void v8_wrapper::add_include_fun() {
 
             // load_file loads the file with this name into a string,
             // I imagine you can write a function to do this :)
-            std::ifstream stream(*str);
+            std::string file(*str);
+            fs::path p = filename_;
+            p.remove_filename();
+            p.append(file);
+
+            std::ifstream stream(p);
             if (!stream) {
-                throw std::runtime_error("could not locate file " + std::string(*str));
+                throw std::runtime_error("could not locate file " + std::string(p.c_str()));
             }
             std::istreambuf_iterator<char> begin(stream), end;
             std::string js_file(begin, end);
 
             if(js_file.length() > 0) {
                 v8::Handle<v8::String> source = v8::String::NewFromUtf8(context->isolate(), js_file.c_str());
-                auto script_origin = v8::String::NewFromUtf8(context->isolate(), std::string(*str).c_str());
+                auto script_origin = v8::String::NewFromUtf8(context->isolate(), p.c_str());
                 v8::Handle<v8::Script> script = v8::Script::Compile(source, script_origin);
                 return script->Run();
             }
