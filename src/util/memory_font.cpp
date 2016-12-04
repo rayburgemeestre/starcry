@@ -44,3 +44,8 @@ void memory_font::initialize(unsigned char * font_data, size_t font_data_len, co
                                                                               &al_destroy_font);
 
 }
+
+const ALLEGRO_FONT * memory_font::font() const
+{
+    return allegro_font_.get();
+}

@@ -18,7 +18,7 @@ public:
 
     memory_font(fonts font, int size, int flags = 0);
 
-    const ALLEGRO_FONT * font() const { return allegro_font_.get(); }
+    const ALLEGRO_FONT * font() const;
 
 private:
     void initialize(unsigned char * font_data, size_t font_data_len, const char * font_filename);

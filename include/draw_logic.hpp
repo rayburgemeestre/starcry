@@ -139,6 +139,7 @@ public:
      */
     draw_logic() {
         font_.reserve(1024);
+        for (size_t i=0; i<1024; i++) { font_.push_back(nullptr); }
     }
 
     /**
@@ -216,7 +217,11 @@ public:
         size_t index = textsize * scale_;
         auto alignment = align == "center" ? ALLEGRO_ALIGN_CENTER : (align == "left" ? ALLEGRO_ALIGN_LEFT : ALLEGRO_ALIGN_RIGHT);
 
-        if (!font_[index]) {
+        if (index >= font_.size()) {
+            std::cout << "Cannot read out of font_ bounds with index " << index << "  due to : " << font_.size() << '\n';
+            std::exit(1);
+        }
+        if (font_[index] == nullptr) {
             font_[index] = std::make_unique<memory_font>(memory_font::fonts::monaco, index, 0);
             if (!font_[index]){
                 fprintf(stderr, "Could not load monaco ttf font.\n");
