@@ -81,6 +81,8 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
         context->add_fun("add_circle", &add_circle);
         context->add_fun("add_line", &add_line);
 
+        context->add_include_fun();
+
         istreambuf_iterator<char> begin(stream), end;
         context->run("var current_frame = 0;");
         context->run(std::string(begin, end));

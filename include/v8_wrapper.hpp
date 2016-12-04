@@ -38,6 +38,8 @@ public:
     template <typename T>
     inline void add_class(T func);
 
+    inline void add_include_fun();
+
     void rethrow_as_runtime_error(v8::Isolate *isolate, v8::TryCatch &try_catch);
 
     v8pp::context * context;
@@ -136,6 +138,32 @@ inline void v8_wrapper::add_class(T func) {
     func(*context);
 }
 
+inline void v8_wrapper::add_include_fun() {
+    v8::HandleScope scope(context->isolate());
+    context->set("include", v8pp::wrap_function(context->isolate(), "include", [=](const v8::FunctionCallbackInfo<v8::Value>& args) -> v8::Handle<v8::Value> {
+        for (int i = 0; i < args.Length(); i++) {
+            v8::String::Utf8Value str(args[i]);
+
+            // load_file loads the file with this name into a string,
+            // I imagine you can write a function to do this :)
+            std::ifstream stream(*str);
+            if (!stream) {
+                throw std::runtime_error("could not locate file " + std::string(*str));
+            }
+            std::istreambuf_iterator<char> begin(stream), end;
+            std::string js_file(begin, end);
+
+            if(js_file.length() > 0) {
+                v8::Handle<v8::String> source = v8::String::NewFromUtf8(context->isolate(), js_file.c_str());
+                auto script_origin = v8::String::NewFromUtf8(context->isolate(), std::string(*str).c_str());
+                v8::Handle<v8::Script> script = v8::Script::Compile(source, script_origin);
+                return script->Run();
+            }
+        }
+        return v8::Undefined(context->isolate());
+    }));
+}
+
 v8_wrapper::~v8_wrapper() {
     delete(context);
     v8::V8::Dispose();
@@ -149,9 +177,12 @@ void v8_wrapper::rethrow_as_runtime_error(v8::Isolate *isolate, v8::TryCatch &tr
     v8::Handle<v8::Message> const & message( try_catch.Message() );
     if (!message.IsEmpty()) {
         int linenum = message->GetLineNumber();
-        //cout << *v8::String::Utf8Value(message->GetScriptResourceName()) << ':'
+        auto script_resource = [=]() -> std::string {
+            v8::String::Utf8Value val(message->GetScriptResourceName());
+            return val.length() ? *val : filename_;
+        }();
         ss << "" << msg << '\n'
-        << "[file: " << filename_ << ", line: " << std::dec << linenum << ".]\n"
+           << "[file: " << script_resource << ", line: " << std::dec << linenum << ".]\n"
         << *v8::String::Utf8Value(message->GetSourceLine()) << '\n';
         int start = message->GetStartColumn();
         int end   = message->GetEndColumn();
