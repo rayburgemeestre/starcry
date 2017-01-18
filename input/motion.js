@@ -117,26 +117,25 @@ function already_collided(a, b)
 
 function collide_balls()
 {
-    function check(a, b) {
-        if (a == b) return;
-        if (!circles_collide(a.circle_, b.circle_) || already_collided(a, b))
-            return;
-        const a_center = a.circle_.as_vec2d();
-        const b_center = b.circle_.as_vec2d();
-        // excerpt from http://www.gamasutra.com/view/feature/3015/pool_hall_lessons_fast_accurate_.php?page=3
-        // got mine from http://wonderfl.net/c/rp7P
-        var normal = unit_vector(subtract_vector(a_center, b_center));
-        var ta = dot_product(a.velocity, normal);
-        var tb = dot_product(b.velocity, normal);
-        var optimized_p = (2.0 * (ta - tb)) / 2.0;
-        a.velocity = subtract_vector(a.velocity, multiply_vector(normal, optimized_p));
-        b.velocity = add_vector(b.velocity, multiply_vector(normal, optimized_p));
-        a.last_collide = b;
-        b.last_collide = a;
+    for (let a of balls) {
+        for (let b of balls) {
+            if (a == b) return;
+            if (!circles_collide(a.circle_, b.circle_) || already_collided(a, b))
+                return;
+            const a_center = a.circle_.as_vec2d();
+            const b_center = b.circle_.as_vec2d();
+            // excerpt from http://www.gamasutra.com/view/feature/3015/pool_hall_lessons_fast_accurate_.php?page=3
+            // got mine from http://wonderfl.net/c/rp7P
+            var normal = unit_vector(subtract_vector(a_center, b_center));
+            var ta = dot_product(a.velocity, normal);
+            var tb = dot_product(b.velocity, normal);
+            var optimized_p = (2.0 * (ta - tb)) / 2.0;
+            a.velocity = subtract_vector(a.velocity, multiply_vector(normal, optimized_p));
+            b.velocity = add_vector(b.velocity, multiply_vector(normal, optimized_p));
+            a.last_collide = b;
+            b.last_collide = a;
+        }
     }
-    for (let a of balls)
-        for (let b of balls)
-            check(a, b);
 }
 
 function next()
@@ -147,5 +146,5 @@ function next()
             d.move();
     }
     for (let d of balls)
-        d.draw();
+       d.draw();
 }
