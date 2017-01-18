@@ -175,8 +175,10 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
                 job.job_number = self->state.current_job++;
                 job.chunk = counter;
                 if (rendering_enabled) {
-                    self->send(*self->state.renderer_ptr, add_job::value, job); // test
+                    self->send(*self->state.renderer_ptr, add_job::value, job);
                     self->state.jobs_queued_for_renderer++;
+                } else {
+                    self->send(self, next_frame::value);
                 }
                 counter++;
             }
