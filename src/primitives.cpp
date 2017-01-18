@@ -7,6 +7,23 @@
 #include "v8pp/function.hpp"
 #include "v8pp/class.hpp"
 
+
+v8::Local<v8::Value> circle::as_vec2d() {
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
+    std::string newvecfunc = "vector2d";
+    v8::Handle<v8::Value> value = global->Get(v8::String::NewFromUtf8(isolate, newvecfunc.c_str(), v8::String::kNormalString, newvecfunc.length()));
+	v8::Local<v8::Value> result;
+    if (!value->IsFunction()) {
+        return result;
+    }
+    v8::Handle<v8::Function> func = v8::Handle<v8::Function>::Cast(value);
+    v8::Handle<v8::Value> args[2];
+    args[0] = v8::Number::New(isolate, get_x());
+    args[1] = v8::Number::New(isolate, get_y());
+    return func->CallAsConstructor(isolate->GetCurrentContext(), 2, args).ToLocalChecked();
+}
+
 void shape::add_to_context(v8pp::context &context)
 {
     v8pp::class_<shape> shape_class(context.isolate());
@@ -15,7 +32,8 @@ void shape::add_to_context(v8pp::context &context)
         .set("x", v8pp::property(&shape::get_x, &shape::set_x))
         .set("y", v8pp::property(&shape::get_y, &shape::set_y))
         .set("z", v8pp::property(&shape::get_z, &shape::set_z))
-        .set("blending_type", v8pp::property(&shape::get_blending_type, &shape::set_blending_type));
+        .set("blending_type", v8pp::property(&shape::get_blending_type, &shape::set_blending_type))
+        ;
     context.set("shape", shape_class);
 
 //    using data::blending_type;
@@ -65,6 +83,8 @@ void circle::add_to_context(v8pp::context &context)
     circle_class
         .ctor<pos, double, double, gradient>() // TODO: try point or something
         .set("radius", v8pp::property(&circle::get_radius, &circle::set_radius))
+        .set("radius_size", v8pp::property(&circle::get_radiussize, &circle::set_radiussize))
+        .set("as_vec2d", &circle::as_vec2d)
         .inherit<shape>();
     context.set("circle", circle_class);
 }

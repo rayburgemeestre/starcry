@@ -159,6 +159,7 @@ struct circle : shape
     void set_radiussize(double r);
     gradient get_gradient() const;
     void set_gradient(gradient c);
+    v8::Local<v8::Value> as_vec2d();
 
     static void add_to_context(v8pp::context &ctx);
 };

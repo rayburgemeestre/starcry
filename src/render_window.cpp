@@ -21,6 +21,8 @@ struct data::pixel_data2 data_;
 uint32_t width_             = 0;
 uint32_t height_            = 0;
 
+auto last_received = std::chrono::high_resolution_clock::now();
+
 behavior render_loop(event_based_actor* self) {
     if (!al_init()) {
         fprintf(stderr, "Failed to initialize allegro!\n");
@@ -41,7 +43,7 @@ behavior render_loop(event_based_actor* self) {
         return {};
     }
     return {
-        [=](render) {
+        [=, &last_received](render) {
             al_clear_to_color(al_map_rgb_f(0, 0, 0));
             rendering_engine_wrapper re;
             if (data_.pixels.size()) {
@@ -67,13 +69,19 @@ behavior render_loop(event_based_actor* self) {
             }
             al_flip_display();
             using namespace std::literals;
-            //std::this_thread::sleep_for(0.2s);
+
+            auto current_time = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double, std::milli> idle = current_time - last_received;
+            if (idle.count() > 500.) {
+                std::this_thread::sleep_for(0.5s);
+            }
             self->send(self, render::value);
         },
-        [=](uint32_t width, uint32_t height, std::vector<uint32_t> &pixels) {
+        [=, &last_received](uint32_t width, uint32_t height, std::vector<uint32_t> &pixels) {
             std::swap(width_, width);
             std::swap(height_, height);
             std::swap(data_.pixels, pixels);
+            last_received = std::chrono::high_resolution_clock::now();
         }
     };
 }
