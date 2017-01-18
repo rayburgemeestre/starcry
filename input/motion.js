@@ -56,9 +56,6 @@ class simple_shape
         this.velocity = new vector2d(1, 0);
         this.velocity.x = Math.random();
         this.velocity.rotate(Math.random() * 360);
-        //this.velocity.y = 1.0 - this.velocity.x;
-        //this.velocity.x -= 0.5;
-        //this.velocity.y -= 0.5;
 
         this.gradient_ = new gradient();
         this.gradient_.add(0.0, new color(1, 1, 1, 1))
@@ -119,9 +116,9 @@ function collide_balls()
 {
     for (let a of balls) {
         for (let b of balls) {
-            if (a == b) return;
+            if (a == b) continue;
             if (!circles_collide(a.circle_, b.circle_) || already_collided(a, b))
-                return;
+                continue;
             const a_center = a.circle_.as_vec2d();
             const b_center = b.circle_.as_vec2d();
             // excerpt from http://www.gamasutra.com/view/feature/3015/pool_hall_lessons_fast_accurate_.php?page=3
@@ -146,5 +143,5 @@ function next()
             d.move();
     }
     for (let d of balls)
-       d.draw();
+        d.draw();
 }
