@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <experimental/optional>
 #include <vector>
 #include "data/gradient.hpp" // TODO: get rid of this dependency
 #include <v8.h>
@@ -151,6 +152,8 @@ struct circle : shape
     double radius_;
     double radiussize_;
     gradient gradient_;
+    bool assigned_ = false;
+    v8::Persistent<v8::Value, v8::CopyablePersistentTraits<v8::Value>> vec2d_;
 
     explicit circle(pos p, double radius, double radiussize, gradient grad, int bt = data::blending_type::normal);
     double get_radius() const;

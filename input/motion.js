@@ -6,14 +6,14 @@
 include('lib/vectors.js')
 
 const fps = 25;
-const max_frames = -1;
-const canvas_w = 320;
-const canvas_h = 280;
+const max_frames = 250;
+const canvas_w = 1920;
+const canvas_h = 1080;
 const scale = 1;
 
-const resolution = 1;
-const speed = 10;
-const num_balls = 20;
+const resolution = 0.5;
+const speed = 1;
+const num_balls = 3000;
 const ball_radius = 5.;
 
 let balls = [];
@@ -41,11 +41,11 @@ class projection
     }
     wrap_position(position)
     {
-        while (position.x < 0) position.x += this.w;
-        while (position.y < 0) position.y += this.h;
-        while (position.x > this.w) position.x -= this.w;
-        while (position.y > this.h) position.y -= this.h;
-        return this.translate(new vector2d(position.x, position.y));
+        while (position.x < -this.half_w) position.x += this.w;
+        while (position.y < -this.half_h) position.y += this.h;
+        while (position.x > this.half_w) position.x -= this.w;
+        while (position.y > this.half_h) position.y -= this.h;
+        return new vector2d(position.x, position.y);
     }
 }
 
@@ -61,6 +61,26 @@ class simple_shape
         this.gradient_.add(0.0, new color(1, 1, 1, 1))
         this.gradient_.add(0.9, new color(1, 1, 1, 1));
         this.gradient_.add(1.0, new color(0, 1, 0, 0));
+    }
+}
+
+// testing..
+class local_circle
+{
+    constructor(pos, radius, radius_size, gradient, bt)
+    {
+        this.blending_type = bt ? bt : blending_type.normal;
+        this.pos = pos;
+        this.pos_vec = new vector2d(pos.x, pos.y);
+        this.radius = radius;
+        this.radius_size = radius_size;
+        this.gradient = gradient;
+        this.blending_type = blending_type;
+    }
+    as_vec2d() {
+        this.pos_vec.x = this.pos.x;
+        this.pos_vec.y = this.pos.y;
+        return this.pos_vec;
     }
 }
 
@@ -114,34 +134,37 @@ function already_collided(a, b)
 
 function collide_balls()
 {
-    for (let a of balls) {
-        for (let b of balls) {
-            if (a == b) continue;
-            if (!circles_collide(a.circle_, b.circle_) || already_collided(a, b))
+    for (let i=0; i<balls.length; i++) {
+        for (let j=i+1; j<balls.length; j++) {
+            if (i == j) continue;
+            if (!circles_collide(balls[i].circle_, balls[j].circle_) || already_collided(balls[i], balls[j]))
                 continue;
-            const a_center = a.circle_.as_vec2d();
-            const b_center = b.circle_.as_vec2d();
-            // excerpt from http://www.gamasutra.com/view/feature/3015/pool_hall_lessons_fast_accurate_.php?page=3
+            const a_center = balls[i].circle_.as_vec2d();
+            const b_center = balls[j].circle_.as_vec2d();
+            // excerpt from http://www.gamasutrballs[i].com/view/feature/3015/pool_hall_lessons_fast_accurate_.php?page=3
             // got mine from http://wonderfl.net/c/rp7P
             var normal = unit_vector(subtract_vector(a_center, b_center));
-            var ta = dot_product(a.velocity, normal);
-            var tb = dot_product(b.velocity, normal);
+            var ta = dot_product(balls[i].velocity, normal);
+            var tb = dot_product(balls[j].velocity, normal);
             var optimized_p = (2.0 * (ta - tb)) / 2.0;
-            a.velocity = subtract_vector(a.velocity, multiply_vector(normal, optimized_p));
-            b.velocity = add_vector(b.velocity, multiply_vector(normal, optimized_p));
-            a.last_collide = b;
-            b.last_collide = a;
+            balls[i].velocity = subtract_vector(balls[i].velocity, multiply_vector(normal, optimized_p));
+            balls[j].velocity = add_vector(balls[j].velocity, multiply_vector(normal, optimized_p));
+            balls[i].last_collide = balls[j];
+            balls[j].last_collide = balls[i];
         }
     }
 }
 
 function next()
 {
-    for (let i=0; i<speed; i++) {
-        collide_balls();
-        for (let d of balls)
-            d.move();
+    set_background_color(new color(0, 0, 0, 255))
+        for (let d of balls) {
+            d.move();;
+            for (let i=0; i<speed; i++) {
+                collide_balls();
+        }
     }
-    for (let d of balls)
+    for (let d of balls) {
         d.draw();
+    }
 }

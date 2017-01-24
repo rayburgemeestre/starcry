@@ -24,6 +24,28 @@ var vector2d = class
         return degrees * pi / 180.0;
     }
 }
+/* is even slower..
+var vector2d = function (x, y) {
+    this.x = x;
+    this.y = y;
+    
+    return {
+        rotate : function (degrees)
+        {
+            const radian = this.degrees_to_radian(degrees);
+            const sine = Math.sin(radian);
+            const cosine = Math.cos(radian);
+            this.x = this.x * cosine - this.y * sine;
+            this.y = this.x * sine + this.y * cosine;
+        },
+        degrees_to_radian : function (degrees)
+        {
+            const pi = 3.14159265358979323846;
+            return degrees * pi / 180.0;
+        }
+    };
+};
+*/
 
 function add_vector(a, b)
 {
@@ -32,7 +54,9 @@ function add_vector(a, b)
 
 function subtract_vector(a, b)
 {
-    return new vector2d(a.x - b.x, a.y - b.y);
+    //return a; // 130
+    //return [a.x - b.x, a.y - b.y]; // 100
+    return new vector2d(a.x - b.x, a.y - b.y); // 60
 }
 
 function divide_vector(v, d)
