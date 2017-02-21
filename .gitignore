@@ -7,3 +7,4 @@ boost_1_61_0
 codebrowser/**
 docs/_build/**
 docs/build_instructions/**
+.idea
