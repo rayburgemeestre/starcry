@@ -133,7 +133,7 @@ else()
 endif()
 target_link_libraries(starcry "${LIB_PREFIX_DIR}/libs/FastPFor/libFastPFor.a")
 target_link_libraries(starcry -lz) # NEEDED FOR CENTOS7u2, && Ubuntu it seems?
-target_link_libraries(starcry -llzma)
+#target_link_libraries(starcry -llzma)
 
 # This order works on my Ubuntu 15.10 box at home *and* box at work.
 
