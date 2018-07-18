@@ -9,7 +9,7 @@
 	url = https://github.com/liballeg/allegro5.git
 [submodule "libs/v8pp"]
 	path = libs/v8pp
-	url = https://github.com/pmed/v8pp
+	url = https://github.com/rayburgemeestre/v8pp
 [submodule "libs/cereal"]
 	path = libs/cereal
 	url = https://github.com/USCiLab/cereal
