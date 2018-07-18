@@ -64,7 +64,7 @@ T v8_wrapper::run(std::string const& source)
 {
     v8::Isolate* isolate = context->isolate();
     v8::HandleScope scope(isolate);
-    v8::TryCatch try_catch;
+    v8::TryCatch try_catch(isolate);
     try_catch.SetVerbose(false);
     try_catch.SetCaptureMessage(true);
     v8::Handle<v8::Value> result = context->run_script(source);
@@ -79,7 +79,7 @@ void v8_wrapper::run<void>(std::string const& source)
 {
     v8::Isolate* isolate = context->isolate();
     v8::HandleScope scope(isolate);
-    v8::TryCatch try_catch;
+    v8::TryCatch try_catch(isolate);
     try_catch.SetVerbose(false);
     try_catch.SetCaptureMessage(true);
     context->run_script(source);
@@ -93,7 +93,7 @@ void v8_wrapper::call(std::string const& function_name)
 {
     v8::Isolate* isolate = context->isolate();
     v8::HandleScope scope(isolate);
-    v8::TryCatch try_catch;
+    v8::TryCatch try_catch(isolate);
     try_catch.SetVerbose(false);
     try_catch.SetCaptureMessage(true);
 
@@ -113,7 +113,7 @@ void v8_wrapper::call(std::string const& function_name, T param)
 {
     v8::Isolate* isolate = context->isolate();
     v8::HandleScope scope(isolate);
-    v8::TryCatch try_catch;
+    v8::TryCatch try_catch(isolate);
     try_catch.SetVerbose(false);
     try_catch.SetCaptureMessage(true);
 
