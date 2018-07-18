@@ -140,15 +140,15 @@ target_link_libraries(starcry -lz) # NEEDED FOR CENTOS7u2, && Ubuntu it seems?
 target_link_libraries(starcry -ldl)
 
 
-target_link_libraries(starcry "${V8_DIR}/lib/libv8_base.a")
+target_link_libraries(starcry "${V8_DIR}/lib/libv8_libbase.a")
 target_link_libraries(starcry -lv8_libbase)
-target_link_libraries(starcry "${V8_DIR}/lib/libv8_nosnapshot.a")
+#target_link_libraries(starcry "${V8_DIR}/lib/libv8_nosnapshot.a")
 #target_link_libraries(starcry "${V8_DIR}/lib/libv8_libplatform.a")
-target_link_libraries(starcry -lv8_libplatform) # libv8_libplatform.a seems no longer available?
-target_link_libraries(starcry "${V8_DIR}/lib/libv8_libsampler.a")
-target_link_libraries(starcry -licui18n)
-target_link_libraries(starcry -licuuc)
-#message(STATUS "${V8_DIR}/lib/libv8_base.a")
+#target_link_libraries(starcry -lv8_libplatform) # libv8_libplatform.a seems no longer available?
+#target_link_libraries(starcry "${V8_DIR}/lib/libv8_libsampler.a")
+target_link_libraries(starcry "${LIB_PREFIX_DIR}/libs/v8pp/v8/out/x64.release/obj/third_party/icu/libicuuc.a")
+target_link_libraries(starcry "${LIB_PREFIX_DIR}/libs/v8pp/v8/out/x64.release/obj/third_party/icu/libicui18n.a")
+#message(STATUS "${V8_DIR}/lib/libv8_libbase.a")
 #target_link_libraries(starcry "${V8_DIR}/lib/libv8_libbase.a")
 
 if (STATIC)
@@ -173,7 +173,7 @@ else()
 endif()
 
 # This order works on my Ubuntu 15.10 box at work only
-#target_link_libraries(starcry "${V8_DIR}/lib/libv8_base.a")
+#target_link_libraries(starcry "${V8_DIR}/lib/libv8_libbase.a")
 #target_link_libraries(starcry "${V8_DIR}/lib/libv8_libbase.a")
 #target_link_libraries(starcry "${V8_DIR}/lib/libv8_libplatform.a")
 #target_link_libraries(starcry "${V8_DIR}/lib/libv8_nosnapshot.a")
@@ -240,10 +240,10 @@ target_link_libraries(starcry_tests ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(starcry_tests -lv8)
 target_link_libraries(starcry_tests -licui18n)
 target_link_libraries(starcry_tests -licuuc)
-target_link_libraries(starcry_tests "${V8_DIR}/lib/libv8_libplatform.a")
-target_link_libraries(starcry_tests "${V8_DIR}/lib/libv8_base.a")
+#target_link_libraries(starcry_tests "${V8_DIR}/lib/libv8_libplatform.a")
+target_link_libraries(starcry_tests "${V8_DIR}/lib/libv8_libbase.a")
 #target_link_libraries(starcry_tests "${V8_DIR}/lib/libv8_libbase.a")
-target_link_libraries(starcry_tests "${V8_DIR}/lib/libv8_nosnapshot.a")
+#target_link_libraries(starcry_tests "${V8_DIR}/lib/libv8_nosnapshot.a")
 target_link_libraries(starcry_tests -ldl)
 
 add_test(NAME starcry COMMAND starcry_tests --unittests)
