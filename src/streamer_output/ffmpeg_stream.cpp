@@ -200,7 +200,7 @@ AVStream *ffmpeg_flv_stream::add_stream(AVFormatContext *oc, AVCodec **codec, en
 
     /* Some formats want stream headers to be separate. */
     if (oc->oformat->flags & AVFMT_GLOBALHEADER)
-        c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+        c->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
     return st;
 }
@@ -232,7 +232,7 @@ void ffmpeg_flv_stream::open_audio(AVFormatContext *oc, AVCodec *codec, AVStream
     /* increment frequency by 110 Hz per second */
     tincr2 = 2 * M_PI * 110.0 / c->sample_rate / c->sample_rate;
 
-    if (c->codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE)
+    if (c->codec->capabilities & CODEC_CAP_VARIABLE_FRAME_SIZE)
         audio_input_frame_size = 10000;
     else
         audio_input_frame_size = c->frame_size;
@@ -453,8 +453,8 @@ void ffmpeg_flv_stream::write_video_frame(std::vector<uint32_t> &pixels, AVForma
     }
 //g    }
 
-    /*if (oc->oformat->flags & AVFMT_RAWPICTURE) {
-        / * Raw video case - directly store the picture in the packet * /
+    if (oc->oformat->flags & AVFMT_RAWPICTURE) {
+        /* Raw video case - directly store the picture in the packet */
         AVPacket pkt;
         av_init_packet(&pkt);
 
@@ -464,7 +464,7 @@ void ffmpeg_flv_stream::write_video_frame(std::vector<uint32_t> &pixels, AVForma
         pkt.size          = sizeof(AVPicture);
 
         ret = av_interleaved_write_frame(oc, &pkt);
-    } else { */
+    } else {
         AVPacket pkt = { 0 };
         av_init_packet(&pkt);
 
@@ -492,7 +492,7 @@ void ffmpeg_flv_stream::write_video_frame(std::vector<uint32_t> &pixels, AVForma
         }
         // The following line may not be needed, added just in case.
         av_free(pkt.data);
-    /*}*/
+    }
     if (ret != 0) {
         fprintf(stderr, "Error while writing video frame: %d\n", (ret));
         exit(1);
@@ -579,17 +579,11 @@ void ffmpeg_flv_stream::add_frame(std::vector<uint32_t> &pixels) {
     // Make sure to write enough audio frames until the audio timer lines up
     if (audio)
         while (true) {
-           // double audio_pts = (audio_st) ? (double)audio_st->pts.val * audio_st->time_base.num / audio_st->time_base.den : 0.0;
-           // double video_pts = (video_st) ? (double)video_st->pts.val * video_st->time_base.num / video_st->time_base.den : 0.0;
+            double audio_pts = (audio_st) ? (double)audio_st->pts.val * audio_st->time_base.num / audio_st->time_base.den : 0.0;
+            double video_pts = (video_st) ? (double)video_st->pts.val * video_st->time_base.num / video_st->time_base.den : 0.0;
 
-	    if (av_compare_ts(video_st->next_pts,
-				    video_st->enc->time_base,
-				    audio_st->next_pts,
-				    audio_st->enc->time_base) <= 0) {
-					    break;
-				    }
-            //if (audio_pts >= video_pts)
-            //    break;
+            if (audio_pts >= video_pts)
+                break;
 
             //std::cout << "+A";
             write_audio_frame(oc, audio_st);
