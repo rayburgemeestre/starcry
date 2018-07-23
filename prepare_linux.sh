@@ -135,6 +135,7 @@ if [[ $STEP_CAF == true ]]; then
 #BEGIN: caf_build
 cd libs/caf
 gx=$(which g++)
+gx=$(which clang++-6.0)
 ./configure --with-gcc=$gx --build-static \
     --no-examples \
     --no-unit-tests \
@@ -157,6 +158,7 @@ tar -xvf boost_1_61_0.tar.bz2
 cd boost_1_61_0
 mkdir target
 gx=$(which g++)
+gx=$(which clang++-6.0)
 CXX=$gx ./bootstrap.sh --prefix=/usr/local/src/starcry/boost_1_61_0/target/
 ./b2 --prefix=/usr/local/src/starcry/boost_1_61_0/target/
 cd ..
@@ -172,6 +174,7 @@ if [[ $STEP_BENCHMARKLIB == true ]]; then
 
 #BEGIN: benchmarklib_build
 gx=$(which g++)
+gx=$(which clang++-6.0)
 cd libs/benchmarklib
 rm CMakeCache.txt
 # Note: if this export CXX doesn't work, manually fix in CMakeCache (path of c++ / g++)
@@ -192,6 +195,7 @@ if [[ $STEP_FFMPEG == true ]]; then
 # TODO move in separate block for documentation :-)
 if [[ $UBUNTU15 == true ]]; then
 	sudo apt-get install -y yasm
+	sudo apt-get install -y nasm # apparently x264 switched to this
 else
     yum install -y autoconf automake cmake freetype-devel gcc gcc-c++ git libtool make mercurial nasm pkgconfig zlib-devel
     git clone --depth 1 git://github.com/yasm/yasm.git && \
@@ -210,6 +214,12 @@ cd tmp
 # clone x264, build, install
 git clone git://git.videolan.org/x264.git
 cd x264
+git checkout 2451a7282463f68e532f2eee090a70ab139bb3e7 # parent of 71ed44c7312438fac7c5c5301e45522e57127db4, which is where they dropped support for:
+#libavcodec/libx264.c:282:9: error: 'x264_bit_depth' undeclared (first use in this function); did you mean 'x264_picture_t'?
+#     if (x264_bit_depth > 8)
+#                  ^~~~~~~~~~~~~~
+
+
 ./configure --enable-static --enable-shared
 make -j 8
 sudo make install
@@ -218,7 +228,9 @@ cd ../
 # clone ffmpeg, build, install
 git clone git://source.ffmpeg.org/ffmpeg.git
 cd ffmpeg
+git checkout 71052d85c16bd65fa1e3e01d9040f9a3925efd7a # or my muxing code won't work, they've modified the example since fba1592f35501bff0f28d7885f4128dfc7b82777
 gx=$(which g++)
+gx=$(which clang++-6.0)
 ./configure --cxx=$gx --enable-shared --disable-swresample --enable-libx264 --enable-gpl
 make -j 4
 sudo make install
