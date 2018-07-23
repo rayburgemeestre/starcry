@@ -7,6 +7,9 @@ fi
 
 echo preparing $ARCH
 
+set -ex
+set -o pipefail
+
 # steps
 typeset STEP="$1"
 typeset STEP_INITIALIZE=false
