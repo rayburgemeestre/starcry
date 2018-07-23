@@ -14,6 +14,12 @@ WORKDIR /usr/local/src/starcry/
 
 RUN git submodule update --init --recursive
 
+RUN echo deb http://apt.llvm.org/artful/ llvm-toolchain-artful-6.0 main >> /etc/apt/sources.list && \
+    echo deb-src http://apt.llvm.org/artful/ llvm-toolchain-artful-6.0 main >> /etc/apt/sources.list && \
+    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+    apt update -y &&
+    apt-get install -y clang-6.0 lldb-6.0 lld-6.0
+
 RUN bash prepare_ubuntu15.sh initialize 2>&1 | tee /tmp/install.log
 RUN bash prepare_ubuntu15.sh crtmpserver 2>&1 | tee -a /tmp/install.log
 RUN bash prepare_ubuntu15.sh v8 2>&1 | tee -a /tmp/install.log
