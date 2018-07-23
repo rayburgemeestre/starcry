@@ -104,7 +104,8 @@ if [[ $STEP_CRTMPSERVER == true ]]; then
 #apt-get install -y libssl-dev
 #BEGIN: crtmpserver_build
 cd libs/crtmpserver/builders/cmake/
-COMPILE_STATIC=1 cmake .
+gx=$(which clang++-6.0)
+CXX=$gx CXXFLAGS="-Wno-reserved-user-defined-literal -Wno-varargs" LDFLAGS="-fPIC" COMPILE_STATIC=1 cmake .
 make -j8
 cd ../../../../
 #END
