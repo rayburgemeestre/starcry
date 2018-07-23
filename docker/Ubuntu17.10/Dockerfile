@@ -2,7 +2,7 @@ FROM ubuntu:17.10
 
 MAINTAINER Ray Burgemeestre
 
-RUN apt-get update && apt-get -y install g++ git cmake sudo
+RUN apt-get update && apt-get -y install g++ git cmake sudo wget
 
 RUN g++ -v
 
@@ -16,8 +16,8 @@ RUN git submodule update --init --recursive
 
 RUN echo deb http://apt.llvm.org/artful/ llvm-toolchain-artful-6.0 main >> /etc/apt/sources.list && \
     echo deb-src http://apt.llvm.org/artful/ llvm-toolchain-artful-6.0 main >> /etc/apt/sources.list && \
-    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
-    apt update -y &&
+    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - ; \
+    apt update -y && \
     apt-get install -y clang-6.0 lldb-6.0 lld-6.0
 
 RUN bash prepare_ubuntu15.sh initialize 2>&1 | tee /tmp/install.log

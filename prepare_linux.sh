@@ -180,7 +180,7 @@ if [[ $STEP_BENCHMARKLIB == true ]]; then
 gx=$(which g++)
 gx=$(which clang++-6.0)
 cd libs/benchmarklib
-rm CMakeCache.txt
+if [[ -f CMakeCache.txt ]]; then rm CMakeCache.txt; fi
 # Note: if this export CXX doesn't work, manually fix in CMakeCache (path of c++ / g++)
 export CXX=$gx
 echo $CXX
