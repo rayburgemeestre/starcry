@@ -89,6 +89,9 @@ cd libs/v8pp
 ./build-v8.sh
 sudo cp -prv ./v8/lib/lib* /usr/local/lib
 sudo ldconfig
+# whatever, above shit isn't working anymore, the .a file is a thin archive and more bullshit
+# let's create one ourselves that contains all the .o files
+ar rvs v8.a $(find ./libs/v8pp/v8/out/x64.release/obj -name '*.o')
 
 cd ../../
 #END
