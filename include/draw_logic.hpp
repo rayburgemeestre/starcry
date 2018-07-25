@@ -282,8 +282,8 @@ public:
             case data::blending_type::difference:
                 blend_pixel<double_type, difference>(absX, absY, bg, clr);
                 break;
-            case data::blending_type::negation:
-                blend_pixel<double_type, negation>(absX, absY, bg, clr);
+            case data::blending_type::negation_:
+                blend_pixel<double_type, negation_>(absX, absY, bg, clr);
                 break;
             case data::blending_type::screen:
                 blend_pixel<double_type, screen>(absX, absY, bg, clr);
