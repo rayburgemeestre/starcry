@@ -43,7 +43,7 @@ behavior render_loop(event_based_actor* self) {
         return {};
     }
     return {
-        [=, &last_received](render) {
+        [=](render) {
             al_clear_to_color(al_map_rgb_f(0, 0, 0));
             rendering_engine_wrapper re;
             if (data_.pixels.size()) {
@@ -77,7 +77,7 @@ behavior render_loop(event_based_actor* self) {
             }
             self->send(self, render::value);
         },
-        [=, &last_received](uint32_t width, uint32_t height, std::vector<uint32_t> &pixels) {
+        [=](uint32_t width, uint32_t height, std::vector<uint32_t> &pixels) {
             std::swap(width_, width);
             std::swap(height_, height);
             std::swap(data_.pixels, pixels);

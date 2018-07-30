@@ -18,7 +18,7 @@
 	url = https://github.com/rayburgemeestre/crow
 [submodule "libs/FastPFor"]
 	path = libs/FastPFor
-	url = https://github.com/lemire/FastPFor
+	url = https://github.com/rayburgemeestre/FastPFor
 [submodule "libs/crtmpserver"]
 	path = libs/crtmpserver
 	url = https://github.com/rayburgemeestre/crtmpserver
