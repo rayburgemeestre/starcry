@@ -20,18 +20,22 @@ RUN echo deb http://apt.llvm.org/artful/ llvm-toolchain-artful-6.0 main >> /etc/
     apt update -y && \
     apt-get install -y clang-6.0 lldb-6.0 lld-6.0
 
-RUN bash prepare_ubuntu15.sh initialize 2>&1 | tee /tmp/install.log
-RUN bash prepare_ubuntu15.sh crtmpserver 2>&1 | tee -a /tmp/install.log
-RUN bash prepare_ubuntu15.sh v8 2>&1 | tee -a /tmp/install.log
-RUN bash prepare_ubuntu15.sh allegro 2>&1 | tee -a /tmp/install.log
-RUN bash prepare_ubuntu15.sh caf 2>&1 | tee -a /tmp/install.log
-RUN bash prepare_ubuntu15.sh boost 2>&1 | tee -a /tmp/install.log
-RUN bash prepare_ubuntu15.sh benchmarklib 2>&1 | tee -a /tmp/install.log
-RUN bash prepare_ubuntu15.sh fastpfor 2>&1 | tee -a /tmp/install.log
-RUN bash prepare_ubuntu15.sh ffmpeg 2>&1 | tee -a /tmp/install.log
+#RUN bash prepare_ubuntu15.sh initialize
+#RUN bash prepare_ubuntu15.sh crtmpserver
+#RUN bash prepare_ubuntu15.sh v8
+#RUN bash prepare_ubuntu15.sh allegro
+#RUN bash prepare_ubuntu15.sh caf
+#RUN bash prepare_ubuntu15.sh boost
+#RUN bash prepare_ubuntu15.sh benchmarklib
+#RUN bash prepare_ubuntu15.sh fastpfor
+#RUN bash prepare_ubuntu15.sh ffmpeg
 
-# let's switch back to all at once..
-#RUN bash prepare_ubuntu15.sh 2>&1 | tee /tmp/install.log
+# Use below to run all at once
+RUN /bin/bash -c "set -euxo pipefail; bash prepare_ubuntu15.sh 2>&1 | tee /tmp/install.log"
+
+# Use below as sanity check if image is correct
+# TODO: is it using clang now or what??
+RUN /bin/bash -c "set -euxo pipefail; cmake -DSTATIC=1 -DLIB_PREFIX_DIR=/usr/local/src/starcry . && make -j 8 starcry"
 
 WORKDIR /projects/starcry
 

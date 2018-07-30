@@ -1,7 +1,11 @@
 typeset ARCH=
-if [[ $UBUNTU15 == true ]]; then
+
+if [[ $(lsb_release -a | grep -i Ubuntu) ]]; then
+    UBUNTU15=true
     ARCH=UBUNTU15
-elif [[ $CENTOS7 == true ]]; then
+#elif [[ $CENTOS7 == true ]]; then
+else
+    CENTOS7=true
     ARCH=CENTOS7
 fi
 
@@ -59,6 +63,7 @@ sudo apt-get install -y freeglut3-dev libgl1-mesa-dev libglu1-mesa-dev mesa-comm
                      libxcursor-dev libavfilter-dev
 sudo apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev \
 			libxrandr-dev libxinerama-dev libxi-dev
+sudo apt-get install -y libgtk2.0-dev # Ubuntu 17.10
 #END
 elif [[ $CENTOS7 == true ]]; then
 #BEGIN: CENTOS7_allegro5_packages
@@ -87,27 +92,29 @@ if [[ $STEP_V8 == true ]]; then
 cd libs/v8pp
 
 ./build-v8.sh
-sudo cp -prv ./v8/lib/lib* /usr/local/lib
-sudo ldconfig
+#sudo cp -prv ./v8/lib/lib* /usr/local/lib
+#sudo ldconfig
 # whatever, above shit isn't working anymore, the .a file is a thin archive and more bullshit
 # let's create one ourselves that contains all the .o files
-ar rvs v8.a $(find ./libs/v8pp/v8/out/x64.release/obj -name '*.o')
+(cd ../../; rm -rf v8.a; ar rvs v8.a $(cat v8-include.txt |xargs -n 1 -I{} find {} -name '*.o'))
 
 cd ../../
 #END
 # gave errors, but maybe thats "normal"
 
-if [[ $(find ./libs/v8pp/v8/lib/ -name '*.a'|wc -l) -lt 3 ]]; then
-    echo FAILED
-    exit 1
-fi
+#if [[ $(find ./libs/v8pp/v8/lib/ -name '*.a'|wc -l) -lt 3 ]]; then
+#    echo FAILED
+#    exit 1
+#fi
 
 fi # STEP v8
+
 if [[ $STEP_CRTMPSERVER == true ]]; then
 
 # crtmpserver is also difficult to build...
 
-#apt-get install -y libssl-dev
+apt-get install -y libssl-dev
+
 #BEGIN: crtmpserver_build
 cd libs/crtmpserver/builders/cmake/
 gx=$(which clang++-6.0)
@@ -208,7 +215,7 @@ else
     git clone --depth 1 git://github.com/yasm/yasm.git && \
         cd yasm && \
         autoreconf -fiv && \
-        ./configure && \
+        CXX=$(which clang++-6.0) ./configure && \
         make && \
         make install && \
         make distclean && cd ..
