@@ -1,4 +1,15 @@
+set -o errexit
+set -o pipefail
+set -o nounset
+set -o xtrace
+
+# NOTE use update-alternatives to configure for example clang++-7, etc.
+
 typeset ARCH=
+typeset UBUNTU15=
+typeset CENTOS7=
+
+apt install -y lsb-release || true
 
 if [[ $(lsb_release -a | grep -i Ubuntu) ]]; then
     UBUNTU15=true
@@ -11,11 +22,8 @@ fi
 
 echo preparing $ARCH
 
-set -ex
-set -o pipefail
-
 # steps
-typeset STEP="$1"
+typeset STEP="${1:-}"
 typeset STEP_INITIALIZE=false
 typeset STEP_V8=false
 typeset STEP_CRTMPSERVER=false
@@ -39,10 +47,12 @@ if [[ $STEP == "" ]] || [[ $STEP == "fastpfor" ]]; then STEP_FASTPFOR=true; fi
 if [[ $STEP_INITIALIZE == true ]]; then
 
 if [[ $UBUNTU15 == true ]]; then
+#sudo apt-get remove libssl-dev -y
 #BEGIN: UBUNTU15_initialize
 sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev \
-                        pkg-config libssl-dev curl \
+                        pkg-config libssl1.0-dev curl \
                         liblzma-dev
+# NOTE libssl-dev  was fine on Ubuntu 15, but on Ubuntu 18 the default is 1.1.0 which conflicts with crtmpserver
 #END
 elif [[ $CENTOS7 == true ]]; then
     yum install -y which  # I can get rid of the which usage in this script, but I like where I can plug in the compiler in all the scripts as well
@@ -113,14 +123,35 @@ if [[ $STEP_CRTMPSERVER == true ]]; then
 
 # crtmpserver is also difficult to build...
 
-apt-get install -y libssl-dev
+#sudo apt-get remove -y libssl-dev
+sudo apt-get install -y libssl1.0-dev
 
+rm -rf libs/crtmpserver/builders/cmake/CMakeCache.txt
 #BEGIN: crtmpserver_build
-cd libs/crtmpserver/builders/cmake/
-gx=$(which clang++-6.0)
-CXX=$gx CXXFLAGS="-Wno-reserved-user-defined-literal -Wno-varargs" LDFLAGS="-fPIC" COMPILE_STATIC=1 cmake .
+
+# OLD
+#cd libs/crtmpserver/builders/cmake/
+#gx=$(which c++)
+#gx=$(which clang++-7) # seems like for now, build with g++ is broken
+## for clang++-7 use:
+#CXX=$gx CXXFLAGS="-Wno-reserved-user-defined-literal -Wno-deprecated-declarations -Wno-varargs" LDFLAGS="-fPIC" COMPILE_STATIC=1 cmake .
+#make -j8
+#cd ../../../../
+
+# NEW
+cd libs/
+#mv crtmpserver crtmpserver_bak
+#git clone https://github.com/shiretu/crtmpserver
+cd crtmpserver/builders/cmake/
+make clean || true
+rm -rf CMakeCache.txt
+gx=$(which c++)
+gx=$(which clang++-7) # seems like for now, build with g++ is broken
+# for clang++-7 use:
+CXX=$gx CXXFLAGS="-Wno-reserved-user-defined-literal -Wno-deprecated-declarations -Wno-varargs" LDFLAGS="-fPIC" COMPILE_STATIC=1 cmake .
 make -j8
 cd ../../../../
+
 #END
 
 fi # if [[ $STEP_CRTMPSERVER == true ]]; then
@@ -148,8 +179,7 @@ if [[ $STEP_CAF == true ]]; then
 
 #BEGIN: caf_build
 cd libs/caf
-gx=$(which g++)
-gx=$(which clang++-6.0)
+gx=$(which c++)
 ./configure --with-gcc=$gx --build-static \
     --no-examples \
     --no-unit-tests \
@@ -171,8 +201,7 @@ wget -c "http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_
 tar -xvf boost_1_61_0.tar.bz2
 cd boost_1_61_0
 mkdir target
-gx=$(which g++)
-gx=$(which clang++-6.0)
+gx=$(which c++)
 CXX=$gx ./bootstrap.sh --prefix=/usr/local/src/starcry/boost_1_61_0/target/
 ./b2 --prefix=/usr/local/src/starcry/boost_1_61_0/target/
 cd ..
@@ -187,8 +216,7 @@ fi # if [[ $STEP_BOOST == true ]]; then
 if [[ $STEP_BENCHMARKLIB == true ]]; then
 
 #BEGIN: benchmarklib_build
-gx=$(which g++)
-gx=$(which clang++-6.0)
+gx=$(which c++)
 cd libs/benchmarklib
 if [[ -f CMakeCache.txt ]]; then rm CMakeCache.txt; fi
 # Note: if this export CXX doesn't work, manually fix in CMakeCache (path of c++ / g++)
@@ -215,7 +243,7 @@ else
     git clone --depth 1 git://github.com/yasm/yasm.git && \
         cd yasm && \
         autoreconf -fiv && \
-        CXX=$(which clang++-6.0) ./configure && \
+        CXX=$(which c++) ./configure && \
         make && \
         make install && \
         make distclean && cd ..
@@ -244,8 +272,7 @@ git clone git://source.ffmpeg.org/ffmpeg.git
 cd ffmpeg
 #git checkout 71052d85c16bd65fa1e3e01d9040f9a3925efd7a # or my muxing code won't work, they've modified the example since fba1592f35501bff0f28d7885f4128dfc7b82777
 git checkout n3.1
-gx=$(which g++)
-gx=$(which clang++-6.0)
+gx=$(which c++)
 ./configure --cxx=$gx --enable-shared --disable-swresample --enable-libx264 --enable-gpl
 make -j 4
 sudo make install
