@@ -49,8 +49,16 @@ if [[ $STEP_INITIALIZE == true ]]; then
 if [[ $UBUNTU15 == true ]]; then
 #sudo apt-get remove libssl-dev -y
 #BEGIN: UBUNTU15_initialize
+
+if [[ $(lsb_release -a | grep -i bionic ) ]]; then
+    sudo apt-get install libssl1.0-dev 
+else
+    # xenial, artful can just install libbsl-dev
+    sudo apt-get install libssl-dev 
+fi
+
 sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev \
-                        pkg-config libssl1.0-dev curl \
+                        pkg-config curl \
                         liblzma-dev
 # NOTE libssl-dev  was fine on Ubuntu 15, but on Ubuntu 18 the default is 1.1.0 which conflicts with crtmpserver
 #END
@@ -124,7 +132,12 @@ if [[ $STEP_CRTMPSERVER == true ]]; then
 # crtmpserver is also difficult to build...
 
 #sudo apt-get remove -y libssl-dev
-sudo apt-get install -y libssl1.0-dev
+if [[ $(lsb_release -a | grep -i bionic ) ]]; then
+    sudo apt-get install libssl1.0-dev 
+else
+    # xenial, artful can just install libbsl-dev
+    sudo apt-get install libssl-dev 
+fi
 
 rm -rf libs/crtmpserver/builders/cmake/CMakeCache.txt
 #BEGIN: crtmpserver_build
