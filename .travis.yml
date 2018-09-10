@@ -8,12 +8,17 @@ before_install:
   - sudo apt-get install -y gnupg2
   - echo deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main | sudo tee -a /etc/apt/sources.list
   - echo deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main | sudo tee -a /etc/apt/sources.list
-#- echo deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main | sudo tee -a /etc/apt/sources.list
-#- echo deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main | sudo tee -a /etc/apt/sources.list
-  - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+# For when bionic becomes available, right now travis supports only xenial:
+# - echo deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main | sudo tee -a /etc/apt/sources.list
+# - echo deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main | sudo tee -a /etc/apt/sources.list
+  - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
   - sudo apt update -y
   - sudo apt-get install -y clang-7 lldb-7 lld-7
   - set -euxo pipefail; bash prepare_linux.sh
 
-script: cmake -DSTATIC=1 -DLIB_PREFIX_DIR=/usr/local/src/starcry . && make -j $(nproc)
+script: bash build_docker_ubuntu1804.sh bash make.sh
 
+after_script:
+  - ldd starcry
+  - ./starcry --help
+  - ./starcry input/test.js
