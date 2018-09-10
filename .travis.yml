@@ -15,8 +15,13 @@ dist: bionic
 #  - sudo apt update -y
 #  - sudo apt-get install -y clang-7 lldb-7 lld-7
 #  - set -euxo pipefail; bash prepare_linux.sh
+#
+before_install:
+  - sudo apt update -y
+  - sudo apt install -y libpng16-16
 
-script: bash build_docker_ubuntu1804.sh bash make.sh
+script:
+  - bash build_docker_ubuntu1804.sh bash make.sh
 
 after_script:
   - ldd starcry
