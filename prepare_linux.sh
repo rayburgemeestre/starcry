@@ -251,14 +251,14 @@ if [[ $STEP_FFMPEG == true ]]; then
 # TODO move in separate block for documentation :-)
 if [[ $UBUNTU15 == true ]]; then
 	if [[ $(lsb_release -a | grep -i xenial ) ]]; then
-		(curl -O https://www.nasm.us/pub/nasm/releasebuilds/2.13.01/nasm-2.13.01.tar.gz
-		 tar xzvf nasm-2.13.01.tar.gz 
-		 cd nasm-2.13.01
-		 ./configure --prefix=/opt/nasm
-		 make
-		 sudo make install
-		 export PATH=/opt/nasm/bin/:$PATH
-		 cd ..)
+		wget https://www.nasm.us/pub/nasm/releasebuilds/2.13.01/nasm-2.13.01.tar.gz
+		tar xzvf nasm-2.13.01.tar.gz 
+		cd nasm-2.13.01
+		./configure --prefix=/opt/nasm
+		make
+		sudo make install
+		export PATH=/opt/nasm/bin/:$PATH
+		cd ..
 	else
 		sudo apt-get install -y yasm
 		sudo apt-get install -y nasm # apparently x264 switched to this
