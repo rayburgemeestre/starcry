@@ -39,10 +39,6 @@ RUN echo deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main >> /etc/ap
 # Use below to run all at once
 RUN /bin/bash -c "set -euxo pipefail; bash prepare_linux.sh 2>&1 | tee /tmp/install.log"
 
-# Use below as sanity check if image is correct
-# TODO: is it using clang now or what??
-#RUN /bin/bash -c "set -euxo pipefail; cmake -DSTATIC=1 -DLIB_PREFIX_DIR=/usr/local/src/starcry . && make -j 8 starcry"
-
 WORKDIR /projects/starcry
 
 CMD "/bin/bash"

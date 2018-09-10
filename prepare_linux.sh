@@ -51,10 +51,10 @@ if [[ $UBUNTU15 == true ]]; then
 #BEGIN: UBUNTU15_initialize
 
 if [[ $(lsb_release -a | grep -i bionic ) ]]; then
-    sudo apt-get install libssl1.0-dev 
+    sudo apt-get install libssl1.0-dev -y
 else
     # xenial, artful can just install libbsl-dev
-    sudo apt-get install libssl-dev 
+    sudo apt-get install libssl-dev -y
 fi
 
 sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev \
@@ -133,10 +133,10 @@ if [[ $STEP_CRTMPSERVER == true ]]; then
 
 #sudo apt-get remove -y libssl-dev
 if [[ $(lsb_release -a | grep -i bionic ) ]]; then
-    sudo apt-get install libssl1.0-dev 
+    sudo apt-get install libssl1.0-dev -y
 else
     # xenial, artful can just install libbsl-dev
-    sudo apt-get install libssl-dev 
+    sudo apt-get install libssl-dev -y
 fi
 
 rm -rf libs/crtmpserver/builders/cmake/CMakeCache.txt
