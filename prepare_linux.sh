@@ -52,8 +52,9 @@ if [[ $UBUNTU15 == true ]]; then
 
 if [[ $(lsb_release -a | grep -i bionic ) ]]; then
     sudo apt-get install libssl1.0-dev -y
-else
-    # xenial, artful can just install libbsl-dev
+elif [[ $(lsb_release -a | grep -i xenial ) ]]; then
+    sudo apt-get install libssl-dev -y
+elif [[ $(lsb_release -a | grep -i artful ) ]]; then
     sudo apt-get install libssl-dev -y
 fi
 
@@ -249,8 +250,19 @@ if [[ $STEP_FFMPEG == true ]]; then
 
 # TODO move in separate block for documentation :-)
 if [[ $UBUNTU15 == true ]]; then
-	sudo apt-get install -y yasm
-	sudo apt-get install -y nasm # apparently x264 switched to this
+	if [[ $(lsb_release -a | grep -i xenial ) ]]; then
+		(curl -O https://www.nasm.us/pub/nasm/releasebuilds/2.13.01/nasm-2.13.01.tar.gz
+		 tar xzvf nasm-2.13.01.tar.gz 
+		 cd nasm-2.13.01
+		 ./configure --prefix=/opt/nasm
+		 make
+		 sudo make install
+		 export PATH=/opt/nasm/bin/:$PATH
+		 cd ..)
+	else
+		sudo apt-get install -y yasm
+		sudo apt-get install -y nasm # apparently x264 switched to this
+	fi
 else
     yum install -y autoconf automake cmake freetype-devel gcc gcc-c++ git libtool make mercurial nasm pkgconfig zlib-devel
     git clone --depth 1 git://github.com/yasm/yasm.git && \
