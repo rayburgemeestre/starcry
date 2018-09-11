@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#include <experimental/optional>
+#include <optional>
 #include <vector>
 #include "data/gradient.hpp" // TODO: get rid of this dependency
 #include <v8.h>

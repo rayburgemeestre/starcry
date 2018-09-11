@@ -61,6 +61,11 @@ fi
 sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev \
                         pkg-config curl \
                         liblzma-dev
+
+update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-7 40
+
+update-alternatives --install /usr/bin/cc cc /usr/bin/clang-7 40
+
 # NOTE libssl-dev  was fine on Ubuntu 15, but on Ubuntu 18 the default is 1.1.0 which conflicts with crtmpserver
 #END
 elif [[ $CENTOS7 == true ]]; then
@@ -208,24 +213,25 @@ fi #if [[ $STEP_CAF == true ]]; then
 
 if [[ $STEP_BOOST == true ]]; then
 
-mkdir -p /usr/local/src/starcry/boost_1_61_0/
+mkdir -p /usr/local/src/starcry/boost_1_68_0/
+
 
 #BEGIN: boost_build
-wget -c "http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_0.tar.bz2"
-tar -xvf boost_1_61_0.tar.bz2
-cd boost_1_61_0
+wget -c "https://dl.bintray.com/boostorg/release/1.68.0/source/boost_1_68_0.tar.bz2"
+tar -xvf boost_1_68_0.tar.bz2
+cd boost_1_68_0
 mkdir target
 gx=$(which c++)
-CXX=$gx ./bootstrap.sh --prefix=/usr/local/src/starcry/boost_1_61_0/target/
-./b2 --prefix=/usr/local/src/starcry/boost_1_61_0/target/
+CXX=$gx ./bootstrap.sh --prefix=/usr/local/src/starcry/boost_1_68_0/target/
+./b2 --prefix=/usr/local/src/starcry/boost_1_68_0/target/
 cd ..
 #END
 
 fi # if [[ $STEP_BOOST == true ]]; then
 
 # no idea why, but boost doesn't use the target prefix.. it's actually here:
-# /usr/local/src/starcry/boost_1_61_0/
-# /usr/local/src/starcry/boost_1_61_0/stage/lib/
+# /usr/local/src/starcry/boost_1_68_0/
+# /usr/local/src/starcry/boost_1_68_0/stage/lib/
 
 if [[ $STEP_BENCHMARKLIB == true ]]; then
 
@@ -236,7 +242,7 @@ if [[ -f CMakeCache.txt ]]; then rm CMakeCache.txt; fi
 # Note: if this export CXX doesn't work, manually fix in CMakeCache (path of c++ / g++)
 export CXX=$gx
 echo $CXX
-cmake -DSTATIC=1 -DBOOST_ROOT=/usr/local/src/starcry/boost_1_61_0/ .
+cmake -DSTATIC=1 -DBOOST_ROOT=/usr/local/src/starcry/boost_1_68_0/ .
 make -j 8
 sudo make install
 cd ../../

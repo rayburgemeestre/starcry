@@ -6,6 +6,7 @@
 #pragma once
 
 #include <algorithm>
+#include <string>
 
 #include "data/gradient.hpp"
 
