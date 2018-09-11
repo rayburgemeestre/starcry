@@ -22,7 +22,9 @@ RUN echo deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main | tee -a /
     echo deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main |tee -a /etc/apt/sources.list && \
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - ; \
     apt update -y && \
-    apt-get install -y clang-7 lldb-7 lld-7
+    apt-get install -y clang-7 lldb-7 lld-7 && \
+    apt-get install -y libc++-7-dev libc++-7-dev
+
 
 # while developing I maintain this copy
 #COPY prepare_linux.sh /etc/prepare_linux.sh
