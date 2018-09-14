@@ -65,6 +65,7 @@ find_package( Threads )
 #add_definitions(-O0 -g -Wall -funsigned-char -std=c++14)
 if (NOT DEBUG)
     #set (COMPILE_FLAGS "-static-libgcc -static-libstdc++ -Wl,--as-needed -Wl,-static-libgcc -Wl,-static-libstdc++ -O3 -Wall -funsigned-char -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3")
+    # -stdlib=libc++  is clang specific
     set (COMPILE_FLAGS "-O3 -Wall -funsigned-char -stdlib=libc++ -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3")
 else()
     set (COMPILE_FLAGS "-O0 -g -fno-inline -Wall -funsigned-char -std=c++17 -fno-omit-frame-pointer -pedantic")
@@ -107,7 +108,8 @@ endforeach(crtmpserver_lib)
 #target_link_libraries(starcry -static -lstdc++fs)
 target_link_libraries(starcry -lssl)
 target_link_libraries(starcry -lcrypto)
-target_link_libraries(starcry -lstdc++fs)
+
+
 
 target_link_libraries(starcry ${Boost_LIBRARIES})
 target_link_libraries(starcry ${CMAKE_THREAD_LIBS_INIT})
@@ -177,6 +179,11 @@ target_link_libraries(starcry "${LIB_PREFIX_DIR}/v8.a")
 #target_link_libraries(starcry "${LIB_PREFIX_DIR}/libs/v8pp/v8/out/x64.release/obj/third_party/icu/libicui18n.a")
 #message(STATUS "${V8_DIR}/lib/libv8_libbase.a")
 #target_link_libraries(starcry "${V8_DIR}/lib/libv8_libbase.a")
+
+# GCC? target_link_libraries(starcry -lstdc++fs)
+# CLANG?
+ target_link_libraries(starcry -lc++experimental)
+target_link_libraries(starcry /usr/lib/llvm-7/lib/libc++fs.a)
 
 #if (STATIC)
     target_link_libraries(starcry ${ALLEGRO_LIBRARIES})

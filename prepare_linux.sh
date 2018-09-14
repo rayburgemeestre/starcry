@@ -66,6 +66,14 @@ update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-7 40
 
 update-alternatives --install /usr/bin/cc cc /usr/bin/clang-7 40
 
+update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-7 40
+
+update-alternatives --install /usr/bin/clang clang /usr/bin/clang-7 40
+
+update-alternatives --install /usr/bin/ld ld /usr/bin/ld.lld-7 40
+
+
+
 # NOTE libssl-dev  was fine on Ubuntu 15, but on Ubuntu 18 the default is 1.1.0 which conflicts with crtmpserver
 #END
 elif [[ $CENTOS7 == true ]]; then
@@ -198,13 +206,19 @@ if [[ $STEP_CAF == true ]]; then
 
 #BEGIN: caf_build
 cd libs/caf
-gx=$(which c++)
-./configure --with-gcc=$gx --build-static \
+rm -rf build
+gx=$(which clang++) # afaik c++ is not ok here..
+#./configure --with-gcc=$gx --build-static \
+
+./configure --with-clang=$gx --build-static-only \
     --no-examples \
     --no-unit-tests \
     --no-benchmarks \
-    --no-tools
-make -j 8
+    --no-tools \
+	--no-python # \
+	#--no-auto-libc++ \
+	#--no-compiler-check
+CMAKE_CXX_FLAGS="-std=c++17 -stdlib=libc++" make -j 8
 sudo make install
 cd ../../
 #END
@@ -222,8 +236,9 @@ tar -xvf boost_1_68_0.tar.bz2
 cd boost_1_68_0
 mkdir target
 gx=$(which c++)
-CXX=$gx ./bootstrap.sh --prefix=/usr/local/src/starcry/boost_1_68_0/target/
-./b2 --prefix=/usr/local/src/starcry/boost_1_68_0/target/
+CXX=$gx ./bootstrap.sh --prefix=/usr/local/src/starcry/boost_1_68_0/target/ --with-toolset=clang
+./b2 clean
+./b2 --prefix=/usr/local/src/starcry/boost_1_68_0/target/ toolset=clang cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++"
 cd ..
 #END
 
