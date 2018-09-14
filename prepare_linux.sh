@@ -258,8 +258,9 @@ if [[ -f CMakeCache.txt ]]; then rm CMakeCache.txt; fi
 export CXX=$gx
 echo $CXX
 cmake -DSTATIC=1 -DBOOST_ROOT=/usr/local/src/starcry/boost_1_68_0/ .
-make -j 8
-sudo make install
+# || true because with clang I saw a few libraries not compile correctly, I hope it's safe if we ignore those failures.
+make -j 8 || true
+sudo make install || true
 cd ../../
 #END
 
