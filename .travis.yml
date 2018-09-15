@@ -1,7 +1,8 @@
 language: c++
 
 sudo: required
-dist: bionic
+#dist: bionic
+dist: xenial
 
 #before_install:
 #  - git submodule update --init --recursive
@@ -21,7 +22,7 @@ before_install:
   - sudo apt install -y libpng16-16
 
 script:
-  - bash build_docker_ubuntu1804.sh bash make.sh
+  - bash build_docker_ubuntu1604.sh bash make.sh
 
 after_script:
   - ldd starcry
