@@ -67,6 +67,7 @@ foreach (comp ${CAF_FIND_COMPONENTS})
       endif ()
       find_library(CAF_LIBRARY_${UPPERCOMP}
                    NAMES
+                     "libcaf_${comp}_static.a"
                      "caf_${comp}"
                    HINTS
                      ${library_hints}
