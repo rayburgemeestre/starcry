@@ -19,7 +19,7 @@ dist: xenial
 #
 before_install:
   - sudo apt update -y
-  - sudo apt install -y libpng16-16
+  - sudo apt install -y libpng16-16 libglu1-mesa libomp5
 
 script:
   - bash build_docker_ubuntu1604.sh bash make.sh
