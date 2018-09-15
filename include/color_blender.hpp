@@ -276,7 +276,7 @@ struct difference
         );
     }
 };
-struct negation
+struct negation_
 {
     inline const color blend(const color &basecolor, const color &blendcolor) const {
         return color(

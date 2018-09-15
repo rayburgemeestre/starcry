@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/rayburgemeestre/starcry.svg?branch=master)](https://travis-ci.org/rayburgemeestre/starcry)
+
 This is a new version of Starcry which was originally a rendering engine with a desktop UI (see screenshot).
 It aimed to be the *Photoshop for Video*, albeit vector-based.
 The first version was already quite advanced with features including Motion blur, Textures, Gradients, Polygons, Lines, Circles, Ellipses, Rectangles.
@@ -23,10 +25,7 @@ For now visit http://cppse.nl/docs/developer\_manual.html for manually building.
 In the near future docker can be used for building without having to worry about all the dependencies.
 
 <!--
-
 ## Misc - Notes on static compiling
 
 yum install libicu-devel mesa-libGLU-devel
-
 -->
-

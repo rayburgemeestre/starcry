@@ -5,11 +5,11 @@
  */
 #pragma once
 
-#include <experimental/optional>
+#include <optional>
 #include <vector>
 #include "data/gradient.hpp" // TODO: get rid of this dependency
 #include <v8.h>
-#include <data/shape.hpp>
+#include "data/shape.hpp"
 
 namespace v8pp {
     class context;

@@ -20,6 +20,7 @@
 #include <iostream>
 #include <sstream>
 #include <mutex>
+#include <functional>
 using namespace std;
 
 static std::mutex m;
