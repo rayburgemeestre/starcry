@@ -1,28 +1,14 @@
 language: c++
 
 sudo: required
-#dist: bionic
 dist: xenial
 
-#before_install:
-#  - git submodule update --init --recursive
-#  - sudo apt-get install -y gnupg2
-#  - echo deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main | sudo tee -a /etc/apt/sources.list
-#  - echo deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main | sudo tee -a /etc/apt/sources.list
-## For when bionic becomes available, right now travis supports only xenial:
-## - echo deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main | sudo tee -a /etc/apt/sources.list
-## - echo deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main | sudo tee -a /etc/apt/sources.list
-#  - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-#  - sudo apt update -y
-#  - sudo apt-get install -y clang-7 lldb-7 lld-7
-#  - set -euxo pipefail; bash prepare_linux.sh
-#
 before_install:
   - sudo apt update -y
   - sudo apt install -y libpng16-16 libglu1-mesa libomp5
 
 script:
-  - bash build_docker_ubuntu1604.sh bash make.sh
+  - make starcry_ubuntu1604
 
 after_script:
   - ldd starcry
