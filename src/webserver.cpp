@@ -21,6 +21,11 @@ struct content_type_fixer
             res.set_header("Content-Type", "text/javascript");
         else
             res.set_header("Content-Type", "text/html");
+
+        if (req.url.find(".ts") != std::string::npos) {
+            res.set_header("Content-Type", "video/mp2t");
+        }
+        res.set_header("Access-Control-Allow-Origin", "*");
     }
 };
 
