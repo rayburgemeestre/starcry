@@ -173,7 +173,8 @@ inline void v8_wrapper::add_include_fun() {
 }
 
 v8_wrapper::~v8_wrapper() {
-    delete(context);
+    // context' ownership is probably taken over by someone else.
+    //delete(context);
     v8::V8::Dispose();
     v8::V8::ShutdownPlatform();
 }

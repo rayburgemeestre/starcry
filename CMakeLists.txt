@@ -66,9 +66,10 @@ find_package( Threads )
 if (NOT DEBUG)
     #set (COMPILE_FLAGS "-static-libgcc -static-libstdc++ -Wl,--as-needed -Wl,-static-libgcc -Wl,-static-libstdc++ -O3 -Wall -funsigned-char -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3")
     # -stdlib=libc++  is clang specific
-    set (COMPILE_FLAGS "-O3 -Wall -funsigned-char -stdlib=libc++ -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3")
+    set (COMPILE_FLAGS "-O3 -Wall -funsigned-char -stdlib=libc++ -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3 -Wl,--strip-all -flto")
+    #set (COMPILE_FLAGS "-Os -fdata-sections -ffunction-sections -Wall -funsigned-char -stdlib=libc++ -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3 -Wl,--strip-all -flto -Wl,--gc-sections")
 else()
-    set (COMPILE_FLAGS "-O0 -g -fno-inline -Wall -funsigned-char -std=c++17 -fno-omit-frame-pointer -pedantic")
+    set (COMPILE_FLAGS "-O0 -g -fno-inline -Wall -stdlib=libc++  -funsigned-char -std=c++17 -fno-omit-frame-pointer -pedantic")
 endif()
 add_definitions(${COMPILE_FLAGS})
 

@@ -52,6 +52,17 @@ if [[ $UBUNTU15 == true ]]; then
 
 if [[ $(lsb_release -a | grep -i bionic ) ]]; then
     sudo apt-get install libssl1.0-dev -y
+
+
+    #clang
+    apt-get install -y gnupg2
+    echo deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main >> /etc/apt/sources.list && \
+    echo deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main >> /etc/apt/sources.list && \
+    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - ; \
+    apt update -y && \
+    apt-get install -y clang-7 lldb-7 lld-7 && \
+    apt-get install -y libc++-7-dev libc++-7-dev
+
 elif [[ $(lsb_release -a | grep -i xenial ) ]]; then
     sudo apt-get install libssl-dev -y
 elif [[ $(lsb_release -a | grep -i artful ) ]]; then
@@ -231,10 +242,13 @@ mkdir -p /usr/local/src/starcry/boost_1_68_0/
 
 
 #BEGIN: boost_build
-wget -c "https://dl.bintray.com/boostorg/release/1.68.0/source/boost_1_68_0.tar.bz2"
-tar -xvf boost_1_68_0.tar.bz2
+if ! [[ -d boost_1_68_0 ]]; then
+    wget -c "https://dl.bintray.com/boostorg/release/1.68.0/source/boost_1_68_0.tar.bz2"
+    tar -xvf boost_1_68_0.tar.bz2
+fi
 cd boost_1_68_0
-mkdir target
+mkdir -p target
+
 gx=$(which c++)
 CXX=$gx ./bootstrap.sh --prefix=/usr/local/src/starcry/boost_1_68_0/target/ --with-toolset=clang
 ./b2 clean
@@ -301,7 +315,9 @@ mkdir -p tmp
 cd tmp
 
 # clone x264, build, install
-git clone git://git.videolan.org/x264.git
+if ! [[ -d x264 ]]; then
+    git clone git://git.videolan.org/x264.git
+fi
 cd x264
 git checkout 2451a7282463f68e532f2eee090a70ab139bb3e7 # parent of 71ed44c7312438fac7c5c5301e45522e57127db4, which is where they dropped support for:
 #libavcodec/libx264.c:282:9: error: 'x264_bit_depth' undeclared (first use in this function); did you mean 'x264_picture_t'?
@@ -315,7 +331,9 @@ sudo make install
 cd ../
 
 # clone ffmpeg, build, install
-git clone git://source.ffmpeg.org/ffmpeg.git
+if ! [[ -d ffmpeg ]]; then
+    git clone git://source.ffmpeg.org/ffmpeg.git
+fi
 cd ffmpeg
 #git checkout 71052d85c16bd65fa1e3e01d9040f9a3925efd7a # or my muxing code won't work, they've modified the example since fba1592f35501bff0f28d7885f4128dfc7b82777
 git checkout n3.1

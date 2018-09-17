@@ -4,6 +4,10 @@ SHELL:=/bin/bash
 starcry_ubuntu1804:
 	bash build_docker_ubuntu1804.sh "mkdir -p build && cd build && cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ .. && make -j $$(nproc)" && cp -prv build/starcry .
 
+.PHONY: debug
+debug:
+	bash build_docker_ubuntu1804.sh "mkdir -p build && cd build && cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ -DDEBUG=on .. && make -j $$(nproc)" && cp -prv build/starcry .
+
 .PHONY: starcry_ubuntu1604
 starcry_ubuntu1604:
 	bash build_docker_ubuntu1604.sh "mkdir -p build && cd build && cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ .. && make -j $$(nproc)" && cp -prv build/starcry .
@@ -18,8 +22,10 @@ local:
 
 .PHONY: starcry
 clean:
+	bash build_docker_ubuntu1804.sh "cd build && make clean"
 	rm -rf CMakeCache.txt
 	rm -rf build/CMakeCache.txt
+	rm -rf out
 
 .PHONY: docker1804
 docker1804:
@@ -46,3 +52,15 @@ docker1604publish:
 docker1804publish:
 	docker tag sc_build_ubuntu:18.04 rayburgemeestre/sc_build_ubuntu:18.04
 	docker push rayburgemeestre/sc_build_ubuntu:18.04
+
+.PHONY: dockerize
+dockerize:
+	bash build_docker_ubuntu1804.sh "make dockerize_run"
+	cd out && docker build . -t rayburgemeestre/starcry && docker push rayburgemeestre/starcry
+
+.PHONY: dockerize_run
+dockerize_run:
+	apt install python-pip rsync -y
+	pip install dockerize
+	strip --strip-debug /projects/starcry/starcry
+	dockerize --verbose --debug -n -o out /projects/starcry/starcry
