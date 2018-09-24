@@ -1,0 +1,19 @@
+<script type="text/javascript" src="/scripts/jwplayer.js"></script>
+
+<script type="text/javascript">
+function f68jwpl() {
+    jwplayer("myElement").setup({
+    //    file: "rtmp://cppse.nl/app/flv:/video",
+    // works with python file: "rtmp://cppse.nl/appflv:video",
+        file: "rtmp://localhost/flvplayback/flv:video",
+        autostart: true,
+        width: 1920 / 2,
+        height: 1080 / 2
+    });
+};
+</script>
+
+<div id="myElement" class="playerElement">Loading the player...</div>
+
+<img src="http://cdn.cppse.nl/does-not-exist.jpg" onerror="f68jwpl()" width=1 height=1 />
+
