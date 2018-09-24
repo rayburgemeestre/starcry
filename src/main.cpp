@@ -108,7 +108,7 @@ private:
     size_t num_workers            = 8; // number of workers for rendering
     string worker_ports;
     string dimensions;
-    string output_file            = "output.h264";
+    string output_file            = "";
     uint32_t settings_            = 0;
     po::options_description desc  = string("Allowed options");
     string script                 = "test.js";
@@ -151,7 +151,8 @@ public:
             ("use-remote-streamer", po::value<string>(&remote_streamer_info), "use remote streamer on given \"host:port\"")
             ("webserver", "start embedded webserver")
             ("crtmpserver", "start embedded crtmpserver for rtmp streaming")
-            ("stream", "start embedded webserver, crtmpserver and stream to it on local host")
+            ("stream,stream-hls", "start embedded webserver, and stream hls to webroot")
+            ("stream-rtmp", "start embedded webserver, crtmpserver and stream flv to it on local host (deprecated)")
             ("stdin", "read from stdin and send this to job generator actor")
             ("dimensions,dim", po::value<string>(&dimensions), "specify canvas dimensions i.e. 1920x1080")
             ("script,s", po::value<string>(&script), "javascript file to use for processing")
@@ -258,19 +259,29 @@ public:
         }
         bool use_stdin  = vm.count("stdin");
         size_t use_fps = 25;
+        std::string stream_mode = "";
         shared_ptr<webserver> ws;
-        if (vm.count("stream") || vm.count("webserver")) {
+        if (vm.count("stream") || vm.count("stream-rtmp") || vm.count("stream-hls") || vm.count("webserver")) {
             ws = make_shared<webserver>();
         }
         shared_ptr<crtmpserver_wrapper> cw;
-        if (vm.count("stream") || vm.count("crtmpserver")) {
+        if (vm.count("stream-rtmp") || vm.count("crtmpserver")) {
             cw = make_shared<crtmpserver_wrapper>();;
         }
-        if (vm.count("stream")) {
+        if (vm.count("stream") || vm.count("stream-hls")) {
+            stream_mode = "hls";
+            if (output_file.empty()) {
+                output_file.assign("webroot/stream/stream.m3u8");
+            }
+        }
+        if (vm.count("stream-rtmp")) {
+            stream_mode = "rtmp";
             if (output_file.substr(0, 4) != "rtmp") {
                 output_file.assign("rtmp://localhost/flvplayback/video");
             }
         }
+        if (output_file.empty())
+            output_file = "output.h264";
 
         //auto jobstorage = system.spawn(job_storage);
         auto generator  = system.spawn<detached>(job_generator, script, canvas_w, canvas_h, use_stdin,
@@ -290,7 +301,7 @@ public:
 //                const auto &use_stdin_ = std::get<1>(tpl);
                 use_stdin = use_stdin_;
                 use_fps   = use_fps_;
-                s->send(streamer_, initialize::value, int(conf.user.gui_port), string(output_file), bitrate, use_fps, output_settings);
+                s->send(streamer_, initialize::value, int(conf.user.gui_port), string(output_file), bitrate, use_fps, output_settings, stream_mode);
             },
             [=](error &err) {
                 std::exit(2);

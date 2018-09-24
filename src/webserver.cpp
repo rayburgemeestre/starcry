@@ -79,7 +79,7 @@ void start_webserver()
         return s;
     });
 
-    crow::logger::setLogLevel(crow::LogLevel::DEBUG);
+    crow::logger::setLogLevel(crow::LogLevel::WARNING);
 
     app.port(18080)
         .multithreaded()

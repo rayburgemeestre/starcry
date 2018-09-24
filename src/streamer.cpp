@@ -10,6 +10,7 @@
 #include "data/pixels.hpp"
 #include "streamer_output/ffmpeg_encode.h"
 #include "streamer_output/ffmpeg_stream.h"
+#include "streamer_output/ffmpeg_stream_hls.h"
 #include "streamer_output/allegro5_window.h"
 #include "util/compress_vector.h"
 #include "util/remote_actors.h"
@@ -70,8 +71,10 @@ bool process_buffer(stateful_actor<streamer_data> *self, const actor &renderer, 
     //     << pixels_all.size() << endl; // debug
     if (self->state.ffmpeg)
         self->state.ffmpeg->add_frame(pixels_all);
-    if (self->state.ffmpeg_stream)
-        self->state.ffmpeg_stream->add_frame(pixels_all);
+    if (self->state.ffmpeg_stream_flv)
+        self->state.ffmpeg_stream_flv->add_frame(pixels_all);
+    if (self->state.ffmpeg_stream_hls)
+        self->state.ffmpeg_stream_hls->add_frame(pixels_all);
     if (self->state.allegro5)
         self->state.allegro5->add_frame(canvas_w, canvas_h, pixels_all);
 
@@ -80,8 +83,10 @@ bool process_buffer(stateful_actor<streamer_data> *self, const actor &renderer, 
     if (self->state.last_frame_streamed && *self->state.last_frame_streamed == frame_number) {
         if (self->state.ffmpeg)
             self->state.ffmpeg->finalize();
-        if (self->state.ffmpeg_stream)
-            self->state.ffmpeg_stream->finalize();
+        if (self->state.ffmpeg_stream_flv)
+            self->state.ffmpeg_stream_flv->finalize();
+        if (self->state.ffmpeg_stream_hls)
+            self->state.ffmpeg_stream_hls->finalize();
         if (self->state.allegro5)
             self->state.allegro5->finalize();
         aout(self) << "streamer completed frames: " << self->state.current_frame << ", with FPS: "
@@ -101,12 +106,13 @@ behavior streamer(stateful_actor<streamer_data>* self, std::optional<size_t> por
     self->state.fps_counter->setDescription("fps");
     self->state.fps_counter->startHistogramAtZero(true);
     return {
-        [=](initialize, int render_window_at, string output_file, size_t bitrate, size_t fps, uint32_t settings) {
+        [=](initialize, int render_window_at, string output_file, size_t bitrate, size_t fps, uint32_t settings, std::string stream_mode) {
             self->state.render_window_at = render_window_at;
             self->state.output_file = output_file;
             self->state.settings = settings;
             self->state.bitrate = bitrate;
             self->state.fps = fps;
+            self->state.stream_mode = stream_mode;
         },
         [=](render_frame, struct data::job &job, data::pixel_data2 pixeldat, const caf::actor &renderer) {
             if (job.compress) {
@@ -117,15 +123,25 @@ behavior streamer(stateful_actor<streamer_data>* self, std::optional<size_t> por
             if (job.last_frame)
                 self->state.last_frame_streamed = std::make_optional(job.frame_number);
 
-            if (self->state.output_file.substr(0, 4) == "rtmp") {
-                if (!self->state.ffmpeg_stream && bitset<32>(self->state.settings).test(0)) {
-                    self->state.ffmpeg_stream = make_shared<ffmpeg_flv_stream>(self->state.output_file,
-                                                                               self->state.bitrate,
-                                                                               self->state.fps,
-                                                                               job.canvas_w,
-                                                                               job.canvas_h);
+            if (self->state.stream_mode == "hls") {
+                if (!self->state.ffmpeg_stream_hls && bitset<32>(self->state.settings).test(0)) {
+                    self->state.ffmpeg_stream_hls = make_shared<ffmpeg_hls_stream>(self->state.output_file,
+                                                                                   self->state.bitrate,
+                                                                                   self->state.fps,
+                                                                                   job.canvas_w,
+                                                                                   job.canvas_h);
                 }
-            } else {
+            }
+            else if (self->state.stream_mode == "rtmp") {
+                if (!self->state.ffmpeg_stream_flv && bitset<32>(self->state.settings).test(0)) {
+                    self->state.ffmpeg_stream_flv = make_shared<ffmpeg_flv_stream>(self->state.output_file,
+                                                                                   self->state.bitrate,
+                                                                                   self->state.fps,
+                                                                                   job.canvas_w,
+                                                                                   job.canvas_h);
+                }
+            }
+            else {
                 if (!self->state.ffmpeg && bitset<32>(self->state.settings).test(0)) {
                     self->state.ffmpeg = make_shared<ffmpeg_h264_encode>(self->state.output_file,
                                                                          self->state.bitrate,

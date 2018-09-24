@@ -130,6 +130,18 @@ target_link_libraries(starcry ${CMAKE_THREAD_LIBS_INIT})
     target_link_libraries(starcry "${LIB_PREFIX_DIR}/tmp/ffmpeg/./libavformat/libavformat.a")
     target_link_libraries(starcry "${LIB_PREFIX_DIR}/tmp/ffmpeg/./libavcodec/libavcodec.a")
     target_link_libraries(starcry "${LIB_PREFIX_DIR}/tmp/ffmpeg/./libavutil/libavutil.a")
+    target_link_libraries(starcry "${LIB_PREFIX_DIR}/tmp/ffmpeg/./libavfilter/libavfilter.a")
+
+    # these could be needed building locally
+    #
+    #    target_link_libraries(starcry "/usr/lib/x86_64-linux-gnu/libxcb-shm.a")
+    #    target_link_libraries(starcry "/usr/lib/x86_64-linux-gnu/libxcb-shape.a")
+    #    target_link_libraries(starcry "/usr/lib/x86_64-linux-gnu/libxcb-xfixes.a")
+    #    target_link_libraries(starcry "/usr/lib/x86_64-linux-gnu/libpostproc.a")
+    #    target_link_libraries(starcry "/usr/lib/x86_64-linux-gnu/libXext.a")
+    #    target_link_libraries(starcry "/usr/lib/x86_64-linux-gnu/libXv.a")
+
+
     #    target_link_libraries(starcry -lva)
     #    target_link_libraries(starcry -lva-drm)
     #target_link_libraries(starcry -lva-x11)

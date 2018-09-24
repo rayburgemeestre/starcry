@@ -39,15 +39,17 @@ function initialize()
     circles[minute].blending_type = type;
     circles[hour].blending_type = type;
 
-    for (let i=1; i<12; i++) {
-        const s = ((clock_max_radius / 12) * i);
-        circles.push(new circle(new pos(0, 0, 0), s, 2.0, lightgrey_gradient));
-    }
+    // for (let i=1; i<12; i++) {
+    //     const s = ((clock_max_radius / 12) * i);
+    //     circles.push(new circle(new pos(0, 0, 0), s, 2.0, lightgrey_gradient));
+    // }
+
     circles.push(new circle(new pos(0, 0, 0), clock_max_radius, 15.0, grey_gradient));
 }
 
 function next() {
     const d = new Date();
+    d.setUTCHours(d.getUTCHours() + 2); // fix timezone issue
     const m_hour = d.getHours() % 12;
     const m_min = d.getMinutes();
     const m_sec = d.getSeconds();
@@ -55,12 +57,10 @@ function next() {
     const rad_sec = ((m_sec * 1000) + (m_ms)) / 1000 / 60;
     const rad_min = ((m_min * 60 * 1000) + (m_sec * 1000) + (m_ms)) / (60 * 1000) / 60;
     const rad_hour = (((m_hour * 60 * 60 * 1000) + (m_min * 60 * 1000) + (m_sec * 1000) + (m_ms)) / (60 * 60 * 1000) / 12);
-    const second_radius = Math.max((1.0 - rad_sec) * 5, 2.0);
-    
+
     circles[hour].radius = rad_hour * clock_max_radius;
     circles[minute].radius = rad_min * clock_max_radius;
     circles[second].radius = rad_sec * clock_max_radius;
-    circles[second].radius_size = second_radius;
 
     set_background_color(new color(0, 0, 0, 1));
 
@@ -68,7 +68,7 @@ function next() {
         add_circle(circles[i]);
     }
     for (let i=1; i<=12; i++) {
-        add_text(((clock_max_radius / 12) * i), 0, 0, 10, '' + i, 'center');
+        add_text(((clock_max_radius / 12) * i), 0, 0, 20, '' + i, 'center');
     }
-    add_text(0, 30 - canvas_h /2, 0, 30, 'Time ' + new Date(), 'center');
+    add_text(0, 30 - canvas_h /2, 0, 30, 'Time ' + d.toISOString().replace(/T|Z/g, ' '), 'center');
 }

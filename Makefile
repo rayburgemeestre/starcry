@@ -18,7 +18,7 @@ prepare_local:
 
 .PHONY: local
 local:
-	mkdir -p build && cd build && cmake .. && make -j $$(nproc)
+	mkdir -p build && cd build && cmake -DLIB_PREFIX_DIR=/home/trigen/projects/starcry -DDEBUG=1 .. && make -j $$(nproc)
 
 .PHONY: starcry
 clean:
