@@ -14,4 +14,4 @@ after_script:
   - ldd starcry
   - ./starcry --help
   - ./starcry input/test.js
-  - make dockerize
+  - make dockerize_ubuntu1604

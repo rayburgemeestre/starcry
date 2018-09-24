@@ -69,7 +69,7 @@ if (NOT DEBUG)
     set (COMPILE_FLAGS "-O3 -Wall -funsigned-char -stdlib=libc++ -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3 -Wl,--strip-all -flto")
     #set (COMPILE_FLAGS "-Os -fdata-sections -ffunction-sections -Wall -funsigned-char -stdlib=libc++ -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3 -Wl,--strip-all -flto -Wl,--gc-sections")
 else()
-    set (COMPILE_FLAGS "-O0 -g -fno-inline -Wall -stdlib=libc++  -funsigned-char -std=c++17 -fno-omit-frame-pointer -pedantic")
+    set (COMPILE_FLAGS "-O0 -g -fno-inline -Wall -stdlib=libc++  -funsigned-char -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3 ")
 endif()
 add_definitions(${COMPILE_FLAGS})
 
