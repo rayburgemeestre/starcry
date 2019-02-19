@@ -22,3 +22,6 @@
 [submodule "libs/crtmpserver"]
 	path = libs/crtmpserver
 	url = https://github.com/rayburgemeestre/crtmpserver
+[submodule "libs/framer"]
+	path = libs/framer
+	url = https://github.com/rayburgemeestre/framer
