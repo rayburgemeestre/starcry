@@ -66,10 +66,10 @@ find_package( Threads )
 if (NOT DEBUG)
     #set (COMPILE_FLAGS "-static-libgcc -static-libstdc++ -Wl,--as-needed -Wl,-static-libgcc -Wl,-static-libstdc++ -O3 -Wall -funsigned-char -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3")
     # -stdlib=libc++  is clang specific
-    set (COMPILE_FLAGS "-O3 -Wall -funsigned-char -stdlib=libc++ -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3 -Wl,--strip-all -flto")
+    set (COMPILE_FLAGS "-O3 -Wall -funsigned-char -stdlib=libc++ -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3 -Wl,--strip-all -flto -Wno-reserved-user-defined-literal")
     #set (COMPILE_FLAGS "-Os -fdata-sections -ffunction-sections -Wall -funsigned-char -stdlib=libc++ -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3 -Wl,--strip-all -flto -Wl,--gc-sections")
 else()
-    set (COMPILE_FLAGS "-O0 -g -fno-inline -Wall -stdlib=libc++  -funsigned-char -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3 ")
+    set (COMPILE_FLAGS "-O0 -g -fno-inline -Wall -stdlib=libc++  -funsigned-char -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3 -Wno-reserved-user-defined-literal")
 endif()
 add_definitions(${COMPILE_FLAGS})
 
@@ -81,6 +81,7 @@ include_directories(
 	"${LIB_PREFIX_DIR}/libs/allegro5/include/"
 	"${LIB_PREFIX_DIR}/libs/crow/include"
 	"${LIB_PREFIX_DIR}/libs/FastPFor/"
+	"${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
 	"${BENCHMARKLIB_INCLUDE_DIR}"
 )
 #if (EXISTS "/etc/centos-release")
@@ -171,6 +172,7 @@ target_link_libraries(starcry -llzma)
 
 target_link_libraries(starcry -ldl)
 
+target_link_libraries(starcry -lswresample -lm -lz)
 
 #target_link_libraries(starcry "${V8_DIR}/lib/libv8_libbase.a")
 #target_link_libraries(starcry -lv8_libbase)

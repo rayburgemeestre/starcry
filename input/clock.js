@@ -10,7 +10,7 @@ const max_frames    = -1;
 const canvas_w      = 1920;
 const canvas_h      = 1080;
 const scale         = 1;
-const bitrate       = 100000;
+const bitrate       = 1000000;
 
 const clock_max_radius = Math.min(canvas_w, canvas_h) / 2.0 - 50.;
 const circles = [], second = 0, minute = 1, hour = 2;
@@ -23,16 +23,25 @@ function generate_gradient(r, g, b)
     grad.add(1.0, new color(r, g, b, 0));
     return grad;
 }
+function generate_wide_gradient(r, g, b)
+{
+    const grad = new gradient();
+    grad.add(0.0, new color(r, g, b, 1))
+    grad.add(0.05, new color(r, g, b, 0.4));
+    grad.add(1.0, new color(r, g, b, 0));
+    return grad;
+}
 const yellow_gradient = generate_gradient(1, 1, 0);
 const lightgrey_gradient = generate_gradient(0.1, 0.1, 0.1);
 const grey_gradient = generate_gradient(0.2, 0.2, 0.2);
-const blue_gradient = generate_gradient(0, 0, 1);
+const blue_gradient = generate_wide_gradient(0, 0, 1);
 
 function initialize()
 {
-    circles.push(new circle(new pos(0, 0, 0), 0, 2., yellow_gradient));
-    circles.push(new circle(new pos(0, 0, 0), 0, 5.0, blue_gradient));
-    circles.push(new circle(new pos(0, 0, 0), 0, 10.0, blue_gradient));
+    //circles.push(new circle(new pos(0, 0, 0), 0, 30., yellow_gradient));
+    circles.push(new circle(new pos(0, 0, 0), 0, 1.5, yellow_gradient));
+    circles.push(new circle(new pos(0, 0, 0), 0, 45.0, blue_gradient));
+    circles.push(new circle(new pos(0, 0, 0), 0, 80.0, blue_gradient));
 
     const type = blending_type.screen;
     circles[second].blending_type = type;
@@ -44,12 +53,12 @@ function initialize()
     //     circles.push(new circle(new pos(0, 0, 0), s, 2.0, lightgrey_gradient));
     // }
 
-    circles.push(new circle(new pos(0, 0, 0), clock_max_radius, 15.0, grey_gradient));
+    // circles.push(new circle(new pos(0, 0, 0), clock_max_radius, 2.0, grey_gradient));
 }
 
 function next() {
     const d = new Date();
-    d.setUTCHours(d.getUTCHours() + 2); // fix timezone issue
+    d.setUTCHours(d.getUTCHours() + 0); // fix timezone issue
     const m_hour = d.getHours() % 12;
     const m_min = d.getMinutes();
     const m_sec = d.getSeconds();
@@ -62,13 +71,16 @@ function next() {
     circles[minute].radius = rad_min * clock_max_radius;
     circles[second].radius = rad_sec * clock_max_radius;
 
-    set_background_color(new color(0, 0, 0, 1));
+    //set_background_color(new color(0, 0, 0, 1));
+    set_background_color(new color(0.5, 0, 0, 1));
 
     for (let i=circles.length - 1; i>=0; i--) {
         add_circle(circles[i]);
     }
+    add_text(0, 0, 0, 20, '0', 'center');
     for (let i=1; i<=12; i++) {
         add_text(((clock_max_radius / 12) * i), 0, 0, 20, '' + i, 'center');
+        add_text(((clock_max_radius / 12) * i), 30, 0, 20, '' + (5 * i), 'center');
     }
     add_text(0, 30 - canvas_h /2, 0, 30, 'Time ' + d.toISOString().replace(/T|Z/g, ' '), 'center');
 }

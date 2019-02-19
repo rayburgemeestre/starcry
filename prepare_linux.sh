@@ -338,7 +338,8 @@ cd ffmpeg
 #git checkout 71052d85c16bd65fa1e3e01d9040f9a3925efd7a # or my muxing code won't work, they've modified the example since fba1592f35501bff0f28d7885f4128dfc7b82777
 git checkout n3.1
 gx=$(which c++)
-./configure --cxx=$gx --enable-shared --disable-swresample --enable-libx264 --enable-gpl
+#./configure --cxx=$gx --enable-shared --disable-swresample --enable-libx264 --enable-gpl
+./configure --cxx=$gx --enable-shared --enable-libx264 --enable-gpl
 make -j 4
 sudo make install
 cd ../

@@ -38,10 +38,8 @@ struct rendered_job
     }
 };
 
-class ffmpeg_h264_encode;
+class frame_streamer;
 class allegro5_window;
-class ffmpeg_flv_stream;
-class ffmpeg_hls_stream;
 
 struct streamer_data
 {
@@ -57,9 +55,7 @@ struct streamer_data
     size_t current_frame = 0;
     std::optional<size_t> last_frame_streamed;
     std::set<rendered_job> rendered_jobs_set;
-    std::shared_ptr<ffmpeg_h264_encode> ffmpeg;
-    std::shared_ptr<ffmpeg_flv_stream> ffmpeg_stream_flv;
-    std::shared_ptr<ffmpeg_hls_stream> ffmpeg_stream_hls;
+    std::shared_ptr<frame_streamer> framer;
     std::shared_ptr<allegro5_window> allegro5;
 };
 

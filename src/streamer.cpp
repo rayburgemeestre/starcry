@@ -8,13 +8,11 @@
 #include "benchmark.h"
 #include "data/job.hpp"
 #include "data/pixels.hpp"
-#include "streamer_output/ffmpeg_encode.h"
-#include "streamer_output/ffmpeg_stream.h"
-#include "streamer_output/ffmpeg_stream_hls.h"
 #include "streamer_output/allegro5_window.h"
 #include "util/compress_vector.h"
 #include "util/remote_actors.h"
 #include "caf/io/all.hpp"
+#include "framer.hpp"
 #include <bitset>
 
 // public
@@ -69,24 +67,16 @@ bool process_buffer(stateful_actor<streamer_data> *self, const actor &renderer, 
     }
     //cout << "streamer completed frame: " << self->state.current_frame << " number of pixels equal to: "
     //     << pixels_all.size() << endl; // debug
-    if (self->state.ffmpeg)
-        self->state.ffmpeg->add_frame(pixels_all);
-    if (self->state.ffmpeg_stream_flv)
-        self->state.ffmpeg_stream_flv->add_frame(pixels_all);
-    if (self->state.ffmpeg_stream_hls)
-        self->state.ffmpeg_stream_hls->add_frame(pixels_all);
+    if (self->state.framer)
+        self->state.framer->add_frame(pixels_all);
     if (self->state.allegro5)
         self->state.allegro5->add_frame(canvas_w, canvas_h, pixels_all);
 
     self->state.fps_counter->measure();
     self->send(renderer, streamer_ready::value);
     if (self->state.last_frame_streamed && *self->state.last_frame_streamed == frame_number) {
-        if (self->state.ffmpeg)
-            self->state.ffmpeg->finalize();
-        if (self->state.ffmpeg_stream_flv)
-            self->state.ffmpeg_stream_flv->finalize();
-        if (self->state.ffmpeg_stream_hls)
-            self->state.ffmpeg_stream_hls->finalize();
+        if (self->state.framer)
+            self->state.framer->finalize();
         if (self->state.allegro5)
             self->state.allegro5->finalize();
         aout(self) << "streamer completed frames: " << self->state.current_frame << ", with FPS: "
@@ -124,30 +114,36 @@ behavior streamer(stateful_actor<streamer_data>* self, std::optional<size_t> por
                 self->state.last_frame_streamed = std::make_optional(job.frame_number);
 
             if (self->state.stream_mode == "hls") {
-                if (!self->state.ffmpeg_stream_hls && bitset<32>(self->state.settings).test(0)) {
-                    self->state.ffmpeg_stream_hls = make_shared<ffmpeg_hls_stream>(self->state.output_file,
-                                                                                   self->state.bitrate,
-                                                                                   self->state.fps,
-                                                                                   job.canvas_w,
-                                                                                   job.canvas_h);
+                if (!self->state.framer && bitset<32>(self->state.settings).test(0)) {
+                    self->state.framer = make_shared<frame_streamer>(self->state.output_file,
+                                                                     self->state.bitrate,
+                                                                     self->state.fps,
+                                                                     job.canvas_w,
+                                                                     job.canvas_h,
+                                                                     frame_streamer::stream_mode::HLS);
+                    self->state.framer->run();
                 }
             }
             else if (self->state.stream_mode == "rtmp") {
-                if (!self->state.ffmpeg_stream_flv && bitset<32>(self->state.settings).test(0)) {
-                    self->state.ffmpeg_stream_flv = make_shared<ffmpeg_flv_stream>(self->state.output_file,
-                                                                                   self->state.bitrate,
-                                                                                   self->state.fps,
-                                                                                   job.canvas_w,
-                                                                                   job.canvas_h);
+                if (!self->state.framer && bitset<32>(self->state.settings).test(0)) {
+                    self->state.framer = make_shared<frame_streamer>(self->state.output_file,
+                                                                     self->state.bitrate,
+                                                                     self->state.fps,
+                                                                     job.canvas_w,
+                                                                     job.canvas_h,
+                                                                     frame_streamer::stream_mode::RTMP);
+                    self->state.framer->run();
                 }
             }
             else {
-                if (!self->state.ffmpeg && bitset<32>(self->state.settings).test(0)) {
-                    self->state.ffmpeg = make_shared<ffmpeg_h264_encode>(self->state.output_file,
-                                                                         self->state.bitrate,
-                                                                         self->state.fps,
-                                                                         job.canvas_w,
-                                                                         job.canvas_h);
+                if (!self->state.framer && bitset<32>(self->state.settings).test(0)) {
+                    self->state.framer = make_shared<frame_streamer>(self->state.output_file,
+                                                                     self->state.bitrate,
+                                                                     self->state.fps,
+                                                                     job.canvas_w,
+                                                                     job.canvas_h,
+                                                                     frame_streamer::stream_mode::FILE);
+                    self->state.framer->run();
                 }
             }
             if (!self->state.allegro5 && bitset<32>(self->state.settings).test(1)) {

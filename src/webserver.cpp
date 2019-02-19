@@ -74,7 +74,7 @@ void start_webserver()
         ifstream ifile("webroot/"s + folder + "/" + file, ios::binary);
         string s( (istreambuf_iterator<char>(ifile)),
                   (istreambuf_iterator<char>()) );
-        cout << "read = " << s.size() << " & " << s.length() << endl;
+        // cout << "read = " << s.size() << " & " << s.length() << endl;
         //cout << "console = " << s.data() << endl;
         return s;
     });
