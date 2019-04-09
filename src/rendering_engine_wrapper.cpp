@@ -23,9 +23,9 @@ void rendering_engine_wrapper::initialize()
     data->engine.initialize();
 }
 
-void rendering_engine_wrapper::render(image bmp, data::color &bg_color, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, double scale)
+void rendering_engine_wrapper::render(image bmp, data::color &bg_color, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, uint32_t width, uint32_t height, double scale)
 {
-    return data->engine.render(bmp, bg_color, shapes, offset_x, offset_y, canvas_w, canvas_h, scale);
+    return data->engine.render(bmp, bg_color, shapes, offset_x, offset_y, canvas_w, canvas_h, width, height, scale);
 }
 
 std::vector<uint32_t> rendering_engine_wrapper::serialize_bitmap2(image bitmap, uint32_t width, uint32_t height)

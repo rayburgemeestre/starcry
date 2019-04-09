@@ -54,8 +54,9 @@ bool process_buffer(stateful_actor<streamer_data> *self, const actor &renderer, 
     uint32_t canvas_h = j.canvas_h;
     auto & rendered_jobs = self->state.rendered_jobs_set;
 
-    if (!all_frame_chunks_present(rendered_jobs, frame_number, num_chunks))
+    if (!all_frame_chunks_present(rendered_jobs, frame_number, num_chunks)) {
         return false;
+    }
 
     // we split the image horizontally so we can just concat all pixels here
     vector<uint32_t> pixels_all;
@@ -73,7 +74,7 @@ bool process_buffer(stateful_actor<streamer_data> *self, const actor &renderer, 
         self->state.allegro5->add_frame(canvas_w, canvas_h, pixels_all);
 
     self->state.fps_counter->measure();
-    self->send(renderer, streamer_ready::value);
+    self->send(renderer, streamer_ready::value, num_chunks);
     if (self->state.last_frame_streamed && *self->state.last_frame_streamed == frame_number) {
         if (self->state.framer)
             self->state.framer->finalize();

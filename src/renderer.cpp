@@ -52,6 +52,7 @@ behavior create_worker_behavior(T self,
             if (output_each_frame) {
                 aout(self) << "processing: frame " << j.frame_number << " chunk " << j.chunk << " offsets "
                            << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num
+                           << " dimensions " << j.width << "x" << j.height
                            << " mailbox=" << self->mailbox().count() /* << " - " << self->mailbox().counter()*/ << endl;
             }
 
@@ -71,8 +72,8 @@ behavior create_worker_behavior(T self,
             // render + serialize + compress
             auto timer = TimerFactory::factory(TimerFactory::Type::BoostTimerImpl);
             timer->start();
-            self->state.engine.render(self->state.bitmap, j.background_color, j.shapes,j.offset_x, j.offset_y,
-                                      j.width, j.height, j.scale);
+            self->state.engine.render(self->state.bitmap, j.background_color, j.shapes, j.offset_x, j.offset_y,
+                                      j.canvas_w, j.canvas_h, j.width, j.height, j.scale);
             data::pixel_data2 dat;
             dat.pixels = self->state.engine.serialize_bitmap2(self->state.bitmap, j.width, j.height);
 
@@ -193,8 +194,8 @@ behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_
             self->state.last_job_for_worker[worker_num] = j.job_number;
             self->state.job_sequence++;
         },
-        [=](streamer_ready) {
-            self->state.outstanding_jobs--;
+        [=](streamer_ready, size_t num_chunks) {
+            self->state.outstanding_jobs -= num_chunks;
             send_jobs_to_streamer(self);
         },
         [=](show_stats) {

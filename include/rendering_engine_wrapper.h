@@ -27,7 +27,7 @@ public:
 
     using image = ALLEGRO_BITMAP *;
     using shapes_t = std::vector<data::shape>;
-    void render(image bmp, data::color &bg_color, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, double scale);
+    void render(image bmp, data::color &bg_color, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, uint32_t width, uint32_t height, double scale);
 
     std::vector<uint32_t> serialize_bitmap2(image bitmap, uint32_t width, uint32_t height);
     image unserialize_bitmap2(std::vector<uint32_t> &pixels, uint32_t width, uint32_t height);

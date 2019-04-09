@@ -105,7 +105,7 @@ public:
     }
 
     template <typename image, typename shapes_t>
-    void render(image bmp, data::color &bg_color, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, double scale) {
+    void render(image bmp, data::color &bg_color, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, uint32_t width, uint32_t height, double scale) {
         std::unique_lock<std::mutex> lock(m);
         auto old_bmp = al_get_target_bitmap();
         al_set_target_bitmap(bmp);
@@ -129,8 +129,8 @@ public:
         }
 
         draw_logic_.scale(scale);
-        draw_logic_.width(canvas_w);
-        draw_logic_.height(canvas_h);
+        draw_logic_.width(width);
+        draw_logic_.height(height);
         draw_logic_.center(canvas_w / 2, canvas_h / 2);
         draw_logic_.offset(offset_x, offset_y);
         for (auto shape : shapes) {
@@ -141,9 +141,16 @@ public:
             else if (shape.type == data::shape_type::text)
                 draw_logic_.render_text<double>(shape.x, shape.y, shape.text_size, shape.text, shape.align);
         }
-        //for (uint32_t y = 0; y < height; y++) al_put_pixel(0, y, al_map_rgba(0, 255, 0, 255));
-        //for (uint32_t x = 0; x < width; x++)  al_put_pixel(x, 0, al_map_rgba(255, 0, 0, 255));
-        //al_draw_text(font, al_map_rgb(255, 255, 255), 10, 10, ALLEGRO_ALIGN_LEFT, label.c_str());
+        if (false) { // TODO: debug chunks flag
+            for (uint32_t y = 0; y < canvas_h; y++) al_put_pixel(0, y, al_map_rgba(0, 255, 0, 255));
+            for (uint32_t x = 0; x < canvas_w; x++)  al_put_pixel(x, 0, al_map_rgba(255, 0, 0, 255));
+            stringstream ss;
+            ss << "chunk - " << offset_x << ", " << offset_y << endl;
+            draw_logic_.scale(1);
+            draw_logic_.offset(0, 0);
+            draw_logic_.center(width / 2, height / 2);
+            draw_logic_.render_text<double>(0, 0, 14, ss.str().c_str(), "left");
+        }
     }
 
 
