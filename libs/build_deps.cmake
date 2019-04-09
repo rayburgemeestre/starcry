@@ -46,3 +46,40 @@ endforeach(crtmpserver_lib)
 set(CRTMPSERVER_STATIC_LIBRARIES ${CRTMPSERVER_STATIC_LIBRARIES}
 	CACHE PATH "Crtmpserver static libraries")
 
+
+if((NOT FRAMER_INCLUDE_DIR) OR (NOT EXISTS ${FRAMER_INCLUDE_DIR}))
+    message("Unable to find framer (ffmpeg + x264), cloning...")
+    execute_process(COMMAND git submodule update --init -- libs/framer
+                    WORKING_DIRECTORY ${LIB_PREFIX_DIR})
+    set(FRAMER_INCLUDE_DIR ${LIB_PREFIX_DIR}/libs/framer
+        CACHE PATH "Framer include path")
+else()
+    message("Framer is ready")
+endif()
+
+set(FRAMER_STATIC_LIBRARIES "")
+foreach(framer_lib lib/libavformat.a
+                   lib/libavfilter.a
+                   lib/libavcodec.a
+                   lib/libswscale.a
+                   lib/libx264.a
+                   lib/libswresample.a
+                   lib/libpostproc.a
+                   lib/libavutil.a
+                   lib/libavdevice.a)
+	set(FRAMER_CMAKE_BUILD_DIR ${LIB_PREFIX_DIR}/libs/framer/
+		CACHE PATH "Crtmpserver cmake build path")
+
+	if((NOT FRAMER_CMAKE_BUILD_DIR) OR (NOT EXISTS "${FRAMER_CMAKE_BUILD_DIR}/${framer_lib}"))
+		execute_process(COMMAND make libs
+		                WORKING_DIRECTORY ${FRAMER_INCLUDE_DIR})
+		execute_process(COMMAND make example
+		                WORKING_DIRECTORY ${FRAMER_INCLUDE_DIR})
+	endif()
+
+	set(FRAMER_STATIC_LIBRARIES "${FRAMER_STATIC_LIBRARIES};${FRAMER_CMAKE_BUILD_DIR}/${framer_lib}")
+    message("Framer is ready: ${FRAMER_STATIC_LIBRARIES}")
+
+endforeach(framer_lib)
+set(FRAMER_STATIC_LIBRARIES ${FRAMER_STATIC_LIBRARIES}
+	CACHE PATH "Crtmpserver static libraries")
