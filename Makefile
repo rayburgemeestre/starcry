@@ -12,6 +12,11 @@ debug:
 starcry_ubuntu1604:
 	bash build_docker_ubuntu1604.sh "mkdir -p build && cd build && cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ .. && make -j $$(nproc)" && cp -prv build/starcry .
 
+.PHONY: shell
+shell:
+	xhost +
+	docker run -i --privileged -t -v $$PWD:/projects/starcry -v $$HOME:/home/trigen -e DISPLAY=$DISPLAY -v /etc/passwd:/etc/passwd -v /etc/shadow:/etc/shadow -v /etc/sudoers:/etc/sudoers -v /tmp/.X11-unix:/tmp/.X11-unix -u 1144 rayburgemeestre/sc_build_ubuntu:16.04 /bin/bash
+
 .PHONY: prepare_local
 prepare_local:
 	bash prepare_linux.sh
