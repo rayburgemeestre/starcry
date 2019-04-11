@@ -106,8 +106,22 @@ void circle::add_to_context(v8pp::context &context)
         .set("radius", v8pp::property(&circle::get_radius, &circle::set_radius))
         .set("radius_size", v8pp::property(&circle::get_radiussize, &circle::set_radiussize))
         .set("as_vec2d", &circle::as_vec2d)
+        .set("contains", &circle::contains)
+        .set("intersects", &circle::intersects)
         .inherit<shape>();
     context.set("circle", circle_class);
+}
+
+void rectangle::add_to_context(v8pp::context &context)
+{
+    v8pp::class_<rectangle> rectangle_class(context.isolate());
+    rectangle_class
+        .ctor<pos, double, double, gradient>() // TODO: try point or something
+        .set("width", v8pp::property(&rectangle::get_width, &rectangle::set_width))
+        .set("height", v8pp::property(&rectangle::get_height, &rectangle::set_height))
+        .set("contains", &rectangle::contains)
+        .inherit<shape>();
+    context.set("rectangle", rectangle_class);
 }
 
 void line::add_to_context(v8pp::context &context)

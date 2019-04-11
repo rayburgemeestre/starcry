@@ -4,50 +4,21 @@
  file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 include('lib/vectors.js')
+include('lib/quadtree.js')
+include('lib/collisions.js')
+include('lib/projection.js')
 
 const fps = 25;
 const max_frames = 0;
-const canvas_w = 1920 / 3;
+const canvas_w = 1920 / 4;
 const canvas_h = 1080 / 4;
 const scale = 1;
 
-const resolution = 0.5;
-const speed = 1;
-const num_balls = 30;
-const ball_radius = 10.;
+const resolution = 0.1;
+const num_balls = 200;
+const ball_radius = 5.;
 
 let balls = [];
-
-class projection
-{
-    constructor(canvas_w, canvas_h) {
-        this.w = canvas_w;
-        this.h = canvas_h;
-        this.half_w = canvas_w / 2;
-        this.half_h = canvas_h / 2;
-    }
-    random_position() {
-        return this.translate(new vector2d(
-            Math.random() * this.w,
-            Math.random() * this.h
-        ));
-    }
-    translate(position) {
-        // translate from centered (0,0 == middle of canvas) to top left oriented (0,0 == top left).
-        return new vector2d(
-            position.x - this.half_w,
-            position.y - this.half_h
-        );
-    }
-    wrap_position(position)
-    {
-        while (position.x < -this.half_w) position.x += this.w;
-        while (position.y < -this.half_h) position.y += this.h;
-        while (position.x > this.half_w) position.x -= this.w;
-        while (position.y > this.half_h) position.y -= this.h;
-        return new vector2d(position.x, position.y);
-    }
-}
 
 class simple_shape
 {
@@ -74,6 +45,7 @@ class ball extends simple_shape
         const rand = this.view.random_position();
         this.circle_.x = rand.x;
         this.circle_.y = rand.y;
+        this.last_collide = -1;
     }
     move() {
         this.circle_.x += this.velocity.x / resolution;
@@ -94,44 +66,8 @@ class ball extends simple_shape
 function initialize()
 {
     let view = new projection(canvas_w, canvas_h);
-    for (let i=0; i<num_balls; i++)
+    for (let i=0; i<num_balls; i++) {
         balls.push(new ball(view));
-}
-
-function circles_collide(a, b)
-{
-    const radius_sum = a.radius_size + b.radius_size;
-    const a_center = a.as_vec2d();
-    const b_center = b.as_vec2d();
-    const distance = subtract_vector(a_center, b_center);
-    return dot_product(distance, distance) <= radius_sum * radius_sum;
-}
-
-function already_collided(a, b)
-{
-    return (a.last_collide && a.last_collide === b && b.last_collide && b.last_collide === a);
-}
-
-function collide_balls()
-{
-    for (let i=0; i<balls.length; i++) {
-        for (let j=i+1; j<balls.length; j++) {
-            if (i === j) continue;
-            if (!circles_collide(balls[i].circle_, balls[j].circle_) || already_collided(balls[i], balls[j]))
-                continue;
-            const a_center = balls[i].circle_.as_vec2d();
-            const b_center = balls[j].circle_.as_vec2d();
-            // excerpt from http://www.gamasutrballs[i].com/view/feature/3015/pool_hall_lessons_fast_accurate_.php?page=3
-            // got mine from http://wonderfl.net/c/rp7P
-            const normal = unit_vector(subtract_vector(a_center, b_center));
-            const ta = dot_product(balls[i].velocity, normal);
-            const tb = dot_product(balls[j].velocity, normal);
-            const optimized_p = (2.0 * (ta - tb)) / 2.0;
-            balls[i].velocity = subtract_vector(balls[i].velocity, multiply_vector(normal, optimized_p));
-            balls[j].velocity = add_vector(balls[j].velocity, multiply_vector(normal, optimized_p));
-            balls[i].last_collide = balls[j];
-            balls[j].last_collide = balls[i];
-        }
     }
 }
 
@@ -139,12 +75,48 @@ function next()
 {
     set_background_color(new color(0, 0, 0, 255));
 
-    for (let d of balls) {
-        d.move();
-        for (let i=0; i<speed; i++) {
-            collide_balls();
+    let boundary = new rectangle(new pos(-1 * canvas_w/2.0, -1 * canvas_h/2.0, 0), canvas_w, canvas_h, new gradient());
+    let quadtree1 = new quadtree(boundary, 1);
+
+    for (let i=0; i<balls.length; i++) {
+        balls[i].move();
+        quadtree1.insert(new point(balls[i].circle_, i));
+    }
+
+    for (let ball1index=0; ball1index<balls.length; ball1index++) {
+        let ball1 = balls[ball1index];
+        let ball1shape = ball1.circle_;
+        let others = quadtree1.query(new circle(new pos(ball1shape.x, ball1shape.y, 0), ball1shape.radius, ball1shape.radius_size, new gradient()));
+        for (let j=0; j<others.length; j++) {
+            let ball2index = others[j].userdata;
+            let ball2 = balls[ball2index];
+            let ball2shape = ball2.circle_;
+
+            if (ball2index <= ball1index) {
+                continue;
+            }
+            // Following is handled by the quad tree directly now..
+            //if (!circles_collide(ball1shape, ball2shape)) {
+            //    continue;
+            //}
+            let already_collided = ball2.last_collide == ball1index || ball1.last_collide == ball2index;
+            if (already_collided) {
+                continue;
+            }
+            // Excerpt from http://www.gamasutrballs[i].com/view/feature/3015/pool_hall_lessons_fast_accurate_.php?page=3
+            // (got mine from http://wonderfl.net/c/rp7P)
+            const normal = unit_vector(subtract_vector(ball1shape.as_vec2d(), ball2shape.as_vec2d()));
+            const ta = dot_product(ball1.velocity, normal);
+            const tb = dot_product(ball2.velocity, normal);
+            const optimized_p = (2.0 * (ta - tb)) / 2.0;
+
+            ball1.velocity = subtract_vector(ball1.velocity, multiply_vector(normal, optimized_p));
+            ball2.velocity = add_vector(ball2.velocity, multiply_vector(normal, optimized_p));
+            ball1.last_collide = ball2index;
+            ball2.last_collide = ball1index;
         }
     }
+
     for (let d of balls) {
         d.draw();
     }

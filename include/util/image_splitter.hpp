@@ -7,6 +7,8 @@
 
 #include <vector>
 
+namespace util {
+
 template <typename T>
 class rectangle {
 private:
@@ -66,4 +68,6 @@ std::ostream& operator<<(std::ostream& ost, const rectangle<T>& ls)
 {
     ost << "(" << ls.x() << "x" << ls.y()  << ", " << ls.x2() << "x" << ls.y2() << ")";
     return ost;
+}
+
 }

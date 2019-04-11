@@ -147,6 +147,8 @@ public:
     static void add_to_context(v8pp::context &ctx);
 };
 
+class rectangle;
+
 struct circle : shape
 {
     double radius_;
@@ -162,7 +164,28 @@ struct circle : shape
     void set_radiussize(double r);
     gradient get_gradient() const;
     void set_gradient(gradient c);
+    bool contains(const shape &point);
+    bool intersects(const rectangle &range);
     v8::Local<v8::Value> as_vec2d();
+
+    static void add_to_context(v8pp::context &ctx);
+};
+
+struct rectangle : shape
+{
+    double width_;
+    double height_;
+
+    gradient gradient_;
+
+    explicit rectangle(pos p, double width, double height, gradient grad, int bt = data::blending_type::normal);
+    double get_width() const;
+    void set_width(double w);
+    double get_height() const;
+    void set_height(double h);
+    gradient get_gradient() const;
+    void set_gradient(gradient c);
+    bool contains(const shape &point);
 
     static void add_to_context(v8pp::context &ctx);
 };

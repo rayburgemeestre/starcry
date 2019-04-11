@@ -67,6 +67,7 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
 
         context->add_class(shape::add_to_context);
         context->add_class(circle::add_to_context);
+        context->add_class(rectangle::add_to_context);
         context->add_class(line::add_to_context);
         context->add_class(color::add_to_context);
         context->add_class(pos::add_to_context);
@@ -80,6 +81,7 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
         context->add_fun("set_background_color", &set_background_color);
         context->add_fun("add_circle", &add_circle);
         context->add_fun("add_line", &add_line);
+        // TODO: context->add_fun("add_rectangle", &add_rectangle);
 
         context->add_include_fun();
 
@@ -162,10 +164,10 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
             self->state.has_max_jobs_queued_for_renderer =
                 (self->state.jobs_queued_for_renderer >= self->state.max_jobs_queued_for_renderer);
 
-            ImageSplitter<uint32_t> imagesplitter{self->state.canvas_w, self->state.canvas_h};
+            util::ImageSplitter<uint32_t> imagesplitter{self->state.canvas_w, self->state.canvas_h};
             // We always split horizontal, so we simply can concat the pixels later
             const auto rectangles = imagesplitter.split(self->state.num_chunks,
-                                                        ImageSplitter<uint32_t>::Mode::SplitHorizontal);
+                                                        util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
             job.frame_number = assistant->current_frame;
             for (size_t i=0, counter=1; i<rectangles.size(); i++) {
                 job.width = rectangles[i].width();
