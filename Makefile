@@ -1,5 +1,22 @@
 SHELL:=/bin/bash
 
+ubuntu1804:
+	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-ubuntu:18.04 sh -c "make impl"
+	# cp -prv build/starcry .
+
+impl:
+	sudo apt-get update
+	sudo apt install -y lsb-release software-properties-common
+	#
+	sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5CE16B7B
+	sudo add-apt-repository "deb https://cppse.nl/repo/ $$(lsb_release -cs) main"
+	sudo apt-get install ffmpeg v8pp crtmpserver allegro5 caf benchmarklib fastpfor
+	#
+	mkdir -p build
+	pushd build && \
+	cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ .. && \
+	make -j $$(nproc)
+
 .PHONY: starcry_ubuntu1804
 starcry_ubuntu1804:
 	bash build_docker_ubuntu1804.sh "mkdir -p build && cd build && cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ .. && make -j $$(nproc)" && cp -prv build/starcry .
