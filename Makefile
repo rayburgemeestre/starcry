@@ -1,10 +1,22 @@
 SHELL:=/bin/bash
 
+fast-docker-build:
+	# build starcry with tailored image so we can invoke the make command straight away
+	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make core"
+
+docker:
+	# build docker container specific for building starcry
+	docker build -t rayburgemeestre/build-starcry-ubuntu:18.04 -f Dockerfile .
+
 ubuntu1804:
+	# build from a more generic ubuntu image
 	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-ubuntu:18.04 sh -c "make impl"
-	# cp -prv build/starcry .
 
 impl:
+	make deps
+	make core
+
+deps:
 	sudo apt-get update
 	sudo apt install -y lsb-release software-properties-common
 
@@ -24,6 +36,7 @@ impl:
 	sudo apt-get install -y libgtk2.0-dev
 	sudo apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev
 
+core:
 	# switch to clang compiler
 	update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-7 40
 	update-alternatives --install /usr/bin/cc cc /usr/bin/clang-7 40
@@ -35,82 +48,36 @@ impl:
 	CXX=$(which c++) cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ .. && \
 	make -j $$(nproc)
 
-.PHONY: starcry_ubuntu1804
-starcry_ubuntu1804:
-	bash build_docker_ubuntu1804.sh "mkdir -p build && cd build && cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ .. && make -j $$(nproc)" && cp -prv build/starcry .
-
-.PHONY: debug
-debug:
-	bash build_docker_ubuntu1804.sh "mkdir -p build && cd build && cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ -DDEBUG=on .. && make -j $$(nproc)" && cp -prv build/starcry .
-
-.PHONY: starcry_ubuntu1604
-starcry_ubuntu1604:
-	bash build_docker_ubuntu1604.sh "mkdir -p build && cd build && cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ .. && make -j $$(nproc)" && cp -prv build/starcry .
-
 .PHONY: build-shell
 build-shell:
 	docker run -i --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-ubuntu:18.04 /bin/bash
 
+.PHONY: build-shell2
+build-shell2:
+	docker run -i --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 /bin/bash
+
 .PHONY: shell
 shell:
 	xhost +
-	docker run -i --privileged -t -v $$PWD:/projects/starcry -v $$HOME:/home/trigen -e DISPLAY=$DISPLAY -v /etc/passwd:/etc/passwd -v /etc/shadow:/etc/shadow -v /etc/sudoers:/etc/sudoers -v /tmp/.X11-unix:/tmp/.X11-unix -u 1144 rayburgemeestre/sc_build_ubuntu:16.04 /bin/bash
-
-.PHONY: prepare_local
-prepare_local:
-	bash prepare_linux.sh
-
-.PHONY: local
-local:
-	mkdir -p build && cd build && cmake -DLIB_PREFIX_DIR=/home/trigen/projects/starcry -DDEBUG=1 .. && make -j $$(nproc)
+	docker run -i --privileged -t -v $$PWD:/projects/starcry -v $$HOME:/home/trigen -e DISPLAY=$DISPLAY -v /etc/passwd:/etc/passwd -v /etc/shadow:/etc/shadow -v /etc/sudoers:/etc/sudoers -v /tmp/.X11-unix:/tmp/.X11-unix -u 1144 rayburgemeestre/build-starcry-ubuntu:18.04 /bin/bash
 
 .PHONY: starcry
 clean:
-	bash build_docker_ubuntu1804.sh "cd build && make clean"
+	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "cd build && make clean"
 	rm -rf CMakeCache.txt
 	rm -rf build/CMakeCache.txt
 	rm -rf out
 
-.PHONY: docker1804
-docker1804:
-	cd docker && bash build_Ubuntu18.04.sh
-
-.PHONY: docker1804nocache
-docker1804nocache:
-	cd docker && bash build_Ubuntu18.04.sh --no-cache
-
-.PHONY: docker1604
-docker1604:
-	cd docker && bash build_Ubuntu16.04.sh
-
-.PHONY: docker1604nocache
-docker1604nocache:
-	cd docker && bash build_Ubuntu16.04.sh --no-cache
-
-.PHONY: docker1604publish
-docker1604publish:
-	docker tag sc_build_ubuntu:16.04 rayburgemeestre/sc_build_ubuntu:16.04
-	docker push rayburgemeestre/sc_build_ubuntu:16.04
-
-.PHONY: docker1804publish
-docker1804publish:
-	docker tag sc_build_ubuntu:18.04 rayburgemeestre/sc_build_ubuntu:18.04
-	docker push rayburgemeestre/sc_build_ubuntu:18.04
-
-#.PHONY: dockerize_ubuntu1604
-#dockerize:
-#	bash build_docker_ubuntu1604.sh "make dockerize_run"
-#	cd out && docker build . -t rayburgemeestre/starcry:16.04 && docker push rayburgemeestre/starcry:16.04
-
 .PHONY: dockerize
 dockerize:
-	bash build_docker_ubuntu1804.sh "make dockerize_run"
-	cd out && docker build . -t rayburgemeestre/starcry:latest && docker push rayburgemeestre/starcry:latest
+	docker run -i --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 /bin/sh -c "make dockerize_run"
+	cd out && docker build . -t rayburgemeestre/starcry:latest
+	#docker push rayburgemeestre/starcry:latest
 
 .PHONY: dockerize_run
 dockerize_run:
 	apt update
 	apt install python-pip rsync -y
 	pip install dockerize
-	strip --strip-debug /projects/starcry/starcry
-	dockerize --verbose --debug -n -o out /projects/starcry/starcry
+	strip --strip-debug starcry
+	dockerize --verbose --debug -n -o out starcry
