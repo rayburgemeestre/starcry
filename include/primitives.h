@@ -147,7 +147,7 @@ public:
     static void add_to_context(v8pp::context &ctx);
 };
 
-class rectangle;
+struct rectangle;
 
 struct circle : shape
 {
