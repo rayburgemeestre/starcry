@@ -70,7 +70,7 @@ clean:
 
 .PHONY: dockerize
 dockerize:
-	docker run -i --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 /bin/sh -c "make dockerize_run"
+	docker run $$FLAGS --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 /bin/sh -c "make dockerize_run"
 	cd out && docker build . -t rayburgemeestre/starcry:latest
 	#docker push rayburgemeestre/starcry:latest
 
