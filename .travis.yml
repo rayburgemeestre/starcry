@@ -1,17 +1,17 @@
 language: c++
 
 sudo: required
-dist: xenial
+dist: bionic
 
 before_install:
   - sudo apt update -y
   - sudo apt install -y libpng16-16 libglu1-mesa libomp5
 
 script:
-  - make starcry_ubuntu1604
+  - make
 
 after_script:
   - ldd starcry
   - ./starcry --help
   - ./starcry input/test.js
-  - make dockerize_ubuntu1604
+  - echo temporary disabled-- make dockerize_ubuntu1604
