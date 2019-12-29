@@ -11,7 +11,7 @@ script:
   - make
 
 after_script:
-  - ldd starcry
-  - ./starcry --help
-  - ./starcry input/test.js
-  - echo temporary disabled-- make dockerize_ubuntu1604
+  - ldd ./build/starcry
+  - ./build/starcry --help
+  - ./build/starcry input/test.js
+  - make dockerize

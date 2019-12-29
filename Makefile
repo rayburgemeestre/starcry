@@ -79,5 +79,5 @@ dockerize_run:
 	apt update
 	apt install python-pip rsync -y
 	pip install dockerize
-	strip --strip-debug starcry
-	dockerize --verbose --debug -n -o out starcry
+	strip --strip-debug $$PWD/build/starcry
+	dockerize --verbose --debug -n -o out $$PWD/build/starcry
