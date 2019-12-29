@@ -42,6 +42,7 @@ foreach (comp ${CAF_FIND_COMPONENTS})
               /usr/include
               /usr/local/include
               /opt/local/include
+              /opt/cppse/build/caf/include
               /sw/include
               ${CMAKE_INSTALL_PREFIX}/include)
   mark_as_advanced(CAF_INCLUDE_DIR_${UPPERCOMP})
@@ -74,6 +75,7 @@ foreach (comp ${CAF_FIND_COMPONENTS})
                      /usr/lib
                      /usr/local/lib
                      /opt/local/lib
+                     /opt/cppse/build/caf/lib
                      /sw/lib
                      ${CMAKE_INSTALL_PREFIX}/lib)
       mark_as_advanced(CAF_LIBRARY_${UPPERCOMP})

@@ -7,14 +7,32 @@ ubuntu1804:
 impl:
 	sudo apt-get update
 	sudo apt install -y lsb-release software-properties-common
-	#
+
 	sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5CE16B7B
 	sudo add-apt-repository "deb https://cppse.nl/repo/ $$(lsb_release -cs) main"
-	sudo apt-get install ffmpeg v8pp crtmpserver allegro5 caf benchmarklib fastpfor
-	#
+	sudo apt-get install ffmpeg=1.0 v8pp crtmpserver allegro5 caf benchmarklib fastpfor boost
+
+	# dependencies runtime
+	sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev \
+				pkg-config curl \
+				liblzma-dev
+	sudo apt-get install -y libssl1.0-dev
+	sudo apt-get install -y freeglut3-dev libgl1-mesa-dev libglu1-mesa-dev mesa-common-dev \
+			        libxcursor-dev libavfilter-dev
+	sudo apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev \
+				libxrandr-dev libxinerama-dev libxi-dev
+	sudo apt-get install -y libgtk2.0-dev
+	sudo apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev
+
+	# switch to clang compiler
+	update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-7 40
+	update-alternatives --install /usr/bin/cc cc /usr/bin/clang-7 40
+	update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-7 40
+	update-alternatives --install /usr/bin/clang clang /usr/bin/clang-7 40
+	update-alternatives --install /usr/bin/ld ld /usr/bin/ld.lld-7 40
 	mkdir -p build
 	pushd build && \
-	cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ .. && \
+	CXX=$(which c++) cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ .. && \
 	make -j $$(nproc)
 
 .PHONY: starcry_ubuntu1804
@@ -28,6 +46,10 @@ debug:
 .PHONY: starcry_ubuntu1604
 starcry_ubuntu1604:
 	bash build_docker_ubuntu1604.sh "mkdir -p build && cd build && cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ .. && make -j $$(nproc)" && cp -prv build/starcry .
+
+.PHONY: build-shell
+build-shell:
+	docker run -i --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-ubuntu:18.04 /bin/bash
 
 .PHONY: shell
 shell:

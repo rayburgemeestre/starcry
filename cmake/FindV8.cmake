@@ -16,6 +16,7 @@ FIND_PATH(V8_INCLUDE_DIR v8.h
     /opt/local/include # DarwinPorts
     /opt/csw/include # Blastwave
     /opt/include
+    /opt/cppse/build/v8pp/include/v8
     /usr/freeware/include
     /devel
 )

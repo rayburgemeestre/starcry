@@ -8,11 +8,11 @@
 // #define DEBUGMODE
 
 #include "util/scope_exit.hpp"
+#define ASSERT(x)
 #include "allegro5/allegro.h"
-//#include "allegro5/debug.h"
-#include <allegro5/allegro_image.h>
-#include <allegro5/allegro_font.h>
-#include <allegro5/allegro_ttf.h>
+#include "allegro5/allegro_image.h"
+#include "allegro5/allegro_font.h"
+#include "allegro5/allegro_ttf.h"
 #include "util/memory_font.h"
 
 #include <cstring>
