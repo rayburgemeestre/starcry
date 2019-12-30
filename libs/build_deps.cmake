@@ -1,5 +1,4 @@
 if((NOT BENCHMARKLIB_STATIC_LIBRARY) OR (NOT EXISTS ${BENCHMARKLIB_STATIC_LIBRARY}))
-    message("Unable to find benchmarklib, cloning...")
     execute_process(COMMAND git submodule update --init -- libs/benchmarklib
                     WORKING_DIRECTORY ${LIB_PREFIX_DIR})
     set(BENCHMARKLIB_INCLUDE_DIR ${LIB_PREFIX_DIR}/libs/benchmarklib
@@ -13,7 +12,6 @@ else()
 endif()
 
 if((NOT CRTMPSERVER_INCLUDE_DIR) OR (NOT EXISTS ${CRTMPSERVER_INCLUDE_DIR}))
-    message("Unable to find crtmpserver, cloning...")
     execute_process(COMMAND git submodule update --init -- libs/crtmpserver
                     WORKING_DIRECTORY ${LIB_PREFIX_DIR})
     set(CRTMPSERVER_INCLUDE_DIR ${LIB_PREFIX_DIR}/libs/crtmpserver
@@ -40,7 +38,6 @@ foreach(crtmpserver_lib crtmpserver/libcrtmpserver.a
 	endif()
 
 	set(CRTMPSERVER_STATIC_LIBRARIES "${CRTMPSERVER_STATIC_LIBRARIES};${CRTMPSERVER_CMAKE_BUILD_DIR}/${crtmpserver_lib}")
-	message("Crtmpserver is ready: ${CRTMPSERVER_STATIC_LIBRARIES}")
 
 endforeach(crtmpserver_lib)
 set(CRTMPSERVER_STATIC_LIBRARIES ${CRTMPSERVER_STATIC_LIBRARIES}
@@ -48,7 +45,6 @@ set(CRTMPSERVER_STATIC_LIBRARIES ${CRTMPSERVER_STATIC_LIBRARIES}
 
 
 if((NOT FRAMER_INCLUDE_DIR) OR (NOT EXISTS ${FRAMER_INCLUDE_DIR}))
-    message("Unable to find framer (ffmpeg + x264), cloning...")
     execute_process(COMMAND git submodule update --init -- libs/framer
                     WORKING_DIRECTORY ${LIB_PREFIX_DIR})
     set(FRAMER_INCLUDE_DIR ${LIB_PREFIX_DIR}/libs/framer
@@ -78,7 +74,6 @@ foreach(framer_lib lib/libavformat.a
 	endif()
 
 	set(FRAMER_STATIC_LIBRARIES "${FRAMER_STATIC_LIBRARIES};${FRAMER_CMAKE_BUILD_DIR}/${framer_lib}")
-    message("Framer is ready: ${FRAMER_STATIC_LIBRARIES}")
 
 endforeach(framer_lib)
 set(FRAMER_STATIC_LIBRARIES ${FRAMER_STATIC_LIBRARIES}
