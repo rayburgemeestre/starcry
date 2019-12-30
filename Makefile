@@ -38,11 +38,11 @@ deps:
 
 core:
 	# switch to clang compiler
-	update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-7 40
-	update-alternatives --install /usr/bin/cc cc /usr/bin/clang-7 40
-	update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-7 40
-	update-alternatives --install /usr/bin/clang clang /usr/bin/clang-7 40
-	update-alternatives --install /usr/bin/ld ld /usr/bin/ld.lld-7 40
+	update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-9 40
+	update-alternatives --install /usr/bin/cc cc /usr/bin/clang-9 40
+	update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-9 40
+	update-alternatives --install /usr/bin/clang clang /usr/bin/clang-9 40
+	update-alternatives --install /usr/bin/ld ld /usr/bin/ld.lld-9 40
 	mkdir -p build
 	pushd build && \
 	CXX=$(which c++) cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ .. && \

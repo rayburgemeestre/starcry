@@ -1,6 +1,7 @@
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.16.2)
 project(starcry VERSION 0.2 LANGUAGES CXX)
 include(libs/build_deps.cmake)
+include(CheckIPOSupported)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 set(Boost_USE_STATIC_LIBS ON)
@@ -18,10 +19,16 @@ if (OPENMP_FOUND)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
-if (NOT DEBUG)
-    add_definitions("-O3 -funsigned-char -Wall -stdlib=libc++ -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3 -Wno-reserved-user-defined-literal")
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set (CLANG_FLAGS "-stdlib=libc++")
 else()
-    add_definitions("-O0 -g -fno-inline -Wall -stdlib=libc++ -funsigned-char -std=c++17 -fno-omit-frame-pointer -pedantic -mssse3 -Wno-reserved-user-defined-literal")
+    set (CLANG_FLAGS "-stdlib=libc++")
+endif()
+
+if (NOT DEBUG)
+    add_definitions("-std=c++17 -O3 -funsigned-char -Wall ${CLANG_FLAGS} -fno-omit-frame-pointer -pedantic -mssse3 -Wno-reserved-user-defined-literal")
+else()
+    add_definitions("-std=c++17 -O0 -g -fno-inline -Wall ${CLANG_FLAGS} -funsigned-char -fno-omit-frame-pointer -pedantic -mssse3 -Wno-reserved-user-defined-literal")
 endif()
 
 include_directories(
@@ -41,6 +48,14 @@ include_directories(
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "/opt/cppse/build/v8pp/include/v8pp/context.cpp")
 
 add_executable(starcry ${starcry_SOURCES})
+
+# Optional IPO. Do not use IPO if it's not supported by compiler.
+check_ipo_supported(RESULT result OUTPUT output)
+if(result)
+    set_property(TARGET starcry PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+    message(WARNING "IPO is not supported: ${output}")
+endif()
 
 #target_link_libraries(starcry -error-limit=0)
 target_link_libraries(starcry /opt/cppse/build/allegro5/lib/liballegro-static.a)
@@ -81,7 +96,10 @@ target_link_libraries(starcry -llzma)
 target_link_libraries(starcry -ldl)
 target_link_libraries(starcry -lswresample -lm -lz)
 target_link_libraries(starcry /opt/cppse/build/v8pp/lib/v8.a)
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 target_link_libraries(starcry -lc++experimental)
+else()
+endif()
 target_link_libraries(starcry -lstdc++)
 target_link_libraries(starcry -lstdc++fs)
 target_link_libraries(starcry /usr/lib/llvm-7/lib/libc++fs.a)
