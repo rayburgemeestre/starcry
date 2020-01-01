@@ -12,9 +12,9 @@
 #include <memory>
 #include <mutex>
 #include <sstream>
-#include <experimental/filesystem>
+#include <filesystem>
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 /**
  * Header only wrapper around v8pp which provides a simple interface for calling functions,

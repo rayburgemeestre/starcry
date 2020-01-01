@@ -157,7 +157,7 @@ struct circle : shape
     bool assigned_ = false;
     v8::Persistent<v8::Value, v8::CopyablePersistentTraits<v8::Value>> vec2d_;
 
-    explicit circle(pos p, double radius, double radiussize, gradient grad, int bt = data::blending_type::normal);
+    explicit circle(::pos p, double radius, double radiussize, gradient grad, int bt = data::blending_type::normal);
     double get_radius() const;
     void set_radius(double r);
     double get_radiussize() const;
@@ -178,7 +178,7 @@ struct rectangle : shape
 
     gradient gradient_;
 
-    explicit rectangle(pos p, double width, double height, gradient grad, int bt = data::blending_type::normal);
+    explicit rectangle(::pos p, double width, double height, gradient grad, int bt = data::blending_type::normal);
     double get_width() const;
     void set_width(double w);
     double get_height() const;
@@ -198,7 +198,7 @@ struct line : shape
     double size_;
     gradient gradient_;
 
-    explicit line(pos p, pos p2, double size, gradient grad, int bt = data::blending_type::normal);
+    explicit line(::pos p, ::pos p2, double size, gradient grad, int bt = data::blending_type::normal);
 
     double get_x2() const;
     double get_y2() const;

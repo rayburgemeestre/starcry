@@ -114,7 +114,7 @@ behavior render_window(event_based_actor* self, uint16_t port) {
     }
     std::cout << "publishing GUI on port: " << bound_port << endl;
 
-    settings conf;
+    ::settings conf;
     conf.user.gui_port = bound_port;
     conf.save();
 

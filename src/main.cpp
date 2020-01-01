@@ -125,7 +125,7 @@ private:
 public:
     main_program(actor_system &system, int argc, char *argv[]) : system(system) {
 
-        settings conf;
+        ::settings conf;
         conf.load();
 
         po::positional_options_description p;
@@ -384,7 +384,7 @@ public:
         } else {
             std::optional<size_t> no_port;
             cout << "spawning local " << actor_name << endl;
-            actor_ptr = system.spawn<priority_aware>(actor_behavior, no_port);
+            actor_ptr = system.spawn<caf::spawn_options::priority_aware_flag>(actor_behavior, no_port);
         }
         return *actor_ptr;
     }
@@ -395,7 +395,10 @@ int main(int argc, char *argv[]) {
     //cfg.scheduler_enable_profiling = true;
     //cfg.scheduler_profiling_ms_resolution = 100;
     //cfg.scheduler_profiling_output_file = "/projects/starcry/output_stats";
-    cfg.scheduler_max_throughput = 1000;
+
+    // cfg.scheduler_max_throughput = 1000;
+    // TODO: above no longer a valid option in caf 0.17.3?
+
     cfg.add_message_type<data::job>("data::job");
     cfg.add_message_type<data::pixel_data>("data::pixel_data");
     cfg.add_message_type<data::pixel_data2>("data::pixel_data2");
