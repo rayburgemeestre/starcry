@@ -78,7 +78,6 @@ Local<Array> gradient::get2(double index) {
     return handle_scope.Escape(array);
 }
 using namespace v8;
-#include <v8pp/class.hpp>
 #include <v8pp/convert.hpp>
 #include <sstream>
 Local<Value> gradient::get3(double index) {
@@ -88,10 +87,10 @@ Local<Value> gradient::get3(double index) {
     color c = get(index);
     std::stringstream ss;
     ss << "new color(" << c.get_r() << ", " << c.get_g() << ", " << c.get_b() << ", " << c.get_a() << ")";
-	v8::Local<v8::Script> script = v8::Script::Compile(v8pp::to_v8(isolate, ss.str()), v8pp::to_v8(isolate, ""));
+	v8::Local<v8::Script> script_ = v8::Script::Compile(isolate->GetCurrentContext(), v8pp::to_v8(isolate, ss.str())).ToLocalChecked();
 	v8::Local<v8::Value> result;
-	if (!script.IsEmpty()) {
-		result = script->Run();
+	if (!script_.IsEmpty()) {
+	  result = script_->Run(isolate->GetCurrentContext()).ToLocalChecked();
 	}
 	return scope.Escape(result);
 }

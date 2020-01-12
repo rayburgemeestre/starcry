@@ -2,7 +2,11 @@ SHELL:=/bin/bash
 
 fast-docker-build:
 	# build starcry with tailored image so we can invoke the make command straight away
-	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make core"
+	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make VERBOSE=1 core"
+
+pull:
+	docker pull rayburgemeestre/build-ubuntu:18.04
+	docker pull rayburgemeestre/build-starcry-ubuntu:18.04
 
 docker:
 	# build docker container specific for building starcry
@@ -22,7 +26,7 @@ deps:
 
 	sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5CE16B7B
 	sudo add-apt-repository "deb https://cppse.nl/repo/ $$(lsb_release -cs) main"
-	sudo apt-get install ffmpeg=1.0 v8pp crtmpserver allegro5 caf benchmarklib fastpfor boost
+	sudo apt-get install ffmpeg=1.1 v8pp=1.1 crtmpserver=1.1 allegro5=1.1 caf=1.1 benchmarklib=1.1 fastpfor=1.1 boost=1.1
 
 	# dependencies runtime
 	sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev \
@@ -45,8 +49,9 @@ core:
 	update-alternatives --install /usr/bin/ld ld /usr/bin/ld.lld-9 40
 	mkdir -p build
 	pushd build && \
-	CXX=$(which c++) cmake -DLIB_PREFIX_DIR=/usr/local/src/starcry/ .. && \
-	make -j $$(nproc)
+	CXX=$(which c++) cmake .. && \
+	make VERBOSE=1 -j $$(nproc)
+	# CXX=$(which c++) cmake -DDEBUG=on .. && ..
 
 .PHONY: build-shell
 build-shell:

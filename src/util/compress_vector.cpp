@@ -4,7 +4,9 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #include "util/compress_vector.h"
+#include "headers/codecs.h"
 #include "headers/codecfactory.h"
+#include "headers/fastpfor.h"
 #include "headers/deltautil.h"
 
 using namespace FastPForLib;

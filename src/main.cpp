@@ -403,7 +403,7 @@ int main(int argc, char *argv[]) {
     cfg.add_message_type<data::pixel_data>("data::pixel_data");
     cfg.add_message_type<data::pixel_data2>("data::pixel_data2");
     cfg.add_message_type<vector<uint32_t>>("vector<uint32_t>");
-    cfg.add_message_type<vector<pair<string, int>>>("workers_vec");
+    cfg.add_message_type<std::vector<std::pair<std::string, int>>>("workers_vec");
     cfg.load<io::middleman>();
     actor_system system(cfg);
     //auto max_thoughput_per_run = 1000;
