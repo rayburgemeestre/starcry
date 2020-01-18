@@ -52,7 +52,8 @@ public:
 };
 
 v8_wrapper::v8_wrapper(std::string filename) : context(nullptr), platform(nullptr), filename_(filename) {
-    v8::V8::InitializeICU();
+    v8::V8::InitializeICUDefaultLocation("starcry");
+    v8::V8::InitializeExternalStartupData("starcry"); // TODO: comment this out?
     platform = std::unique_ptr<v8::Platform>(v8::platform::NewDefaultPlatform());
     v8::V8::InitializePlatform(platform.get());
     v8::V8::Initialize();

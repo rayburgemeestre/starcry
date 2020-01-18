@@ -53,6 +53,20 @@ core:
 	make VERBOSE=1 -j $$(nproc)
 	# CXX=$(which c++) cmake -DDEBUG=on .. && ..
 
+core_experimental:
+	# switch to clang compiler
+
+	update-alternatives --install /usr/bin/c++ c++ /home/trigen/projects/build-config/tmp/v8/third_party/llvm-build/Release+Asserts/bin/clang++ 40
+	update-alternatives --install /usr/bin/cc cc /home/trigen/projects/build-config/tmp/v8/third_party/llvm-build/Release+Asserts/bin/clang 40
+	update-alternatives --install /usr/bin/clang++ clang++ /home/trigen/projects/build-config/tmp/v8/third_party/llvm-build/Release+Asserts/bin/clang++ 40
+	update-alternatives --install /usr/bin/clang clang /home/trigen/projects/build-config/tmp/v8/third_party/llvm-build/Release+Asserts/bin/clang 40
+	update-alternatives --install /usr/bin/ld ld /home/trigen/projects/build-config/tmp/v8/third_party/llvm-build/Release+Asserts/bin/ld.lld 40
+	mkdir -p build
+	pushd build && \
+	CXX=/home/trigen/projects/build-config/tmp/v8/third_party/llvm-build/Release+Asserts/bin/clang++ cmake .. && \
+	CXX=/home/trigen/projects/build-config/tmp/v8/third_party/llvm-build/Release+Asserts/bin/clang++ make VERBOSE=1 -j $$(nproc)
+	# CXX=$(which c++) cmake -DDEBUG=on .. && ..
+
 .PHONY: build-shell
 build-shell:
 	docker run -i --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-ubuntu:18.04 /bin/bash
