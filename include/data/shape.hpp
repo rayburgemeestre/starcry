@@ -79,16 +79,15 @@ namespace data{
         proc & x.type_;
     }
 
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, data::blending_type& x) {
-  return f(caf::meta::type_name("data::blending_type"), x.type_);
-}
+    template <class Inspector>
+    typename Inspector::result_type inspect(Inspector& f, data::blending_type& x) {
+        return f(caf::meta::type_name("data::blending_type"), x.type_);
+    }
 
-//template <typename T>
-struct shape
-{
-  double x;
-  double y;
+    struct shape
+    {
+        double x;
+        double y;
         double z;
         double x2;
         double y2;
@@ -133,9 +132,9 @@ struct shape
                                 sizeof(shape));
     }
 
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, data::shape& x) {
-  return f(caf::meta::type_name("data::shape"), x.x,
+    template <class Inspector>
+    typename Inspector::result_type inspect(Inspector& f, data::shape& x) {
+        return f(caf::meta::type_name("data::shape"), x.x,
            x.y,
            x.z,
            x.x2,
@@ -152,7 +151,5 @@ typename Inspector::result_type inspect(Inspector& f, data::shape& x) {
            x.align,
            x.gradient_,
            x.blending_);
-
-  }
-
+    }
 }

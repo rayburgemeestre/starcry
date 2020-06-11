@@ -1,4 +1,3 @@
-#cmake_minimum_required(VERSION 3.15.3)
 cmake_minimum_required(VERSION 3.10.2)
 project(starcry VERSION 0.2 LANGUAGES CXX)
 include(CheckIPOSupported)
@@ -20,58 +19,18 @@ if (OPENMP_FOUND)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    #set (CLANG_FLAGS "-I/home/trigen/projects/build-config/tmp/v8/buildtools/third_party/libc++/trunk/include/ -stdlib=libc++")
-    # don't use this for the time being..
+    # don't use libc++ v8's third party libc++ with unstable abi doesn't bode well with caf
     #set (CLANG_FLAGS "-stdlib=libc++")
-    #set (CLANG_FLAGS "")
+    set(CMAKE_EXE_LINKER_FLAGS "-Wl,--no-rosegment")
 else()
-    #set (CLANG_FLAGS "-I/home/trigen/projects/build-config/tmp/v8/buildtools/third_party/libc++/trunk/include/ -stdlib=libc++")
-    #set (CLANG_FLAGS "-stdlib=libc++")
+    #set (CLANG_FLAGS "")
 endif()
 
 if (NOT DEBUG)
-    #add_definitions("-std=c++17 -O3 -funsigned-char -Wall ${CLANG_FLAGS} -fno-omit-frame-pointer -pedantic -mssse3 -Wno-reserved-user-defined-literal")
+    add_definitions("-std=c++17 -O3 -funsigned-char -Wall -stdlib=libstdc++ -fno-omit-frame-pointer -pedantic -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
 else()
-    #add_definitions("-std=c++17 -O0 -g -fno-inline -Wall ${CLANG_FLAGS} -funsigned-char -fno-omit-frame-pointer -pedantic -mssse3 -Wno-reserved-user-defined-literal")
+    add_definitions("-std=c++17 -O0 -g -DV8_COMPRESS_POINTERS")  # --no-rosegment is important for being able to let valgrind/callgrind read symbols
 endif()
-#add_definitions("-std=c++17 -O0 -g ${CLANG_FLAGS} -D_LIBCPP_ABI_UNSTABLE=1 -D_LIBCPP_ABI_VERSION=1")
-#add_definitions("-std=c++17 -O0 -g ${CLANG_FLAGS} ")
-#add_definitions("-std=c++17 -O0 -g -D_GLIBCXX_USE_CXX11_ABI=0 -stdlib=libstdc++")
-
-# works
-#add_definitions("-std=c++17 -O0 -g -stdlib=libstdc++ -DV8_COMPRESS_POINTERS")
-# now with optimiz
-#add_definitions("-std=c++17 -O3 -funsigned-char -Wall -stdlib=libstdc++ -fno-omit-frame-pointer -pedantic -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
-#
-#add_definitions("-std=c++17 -O0 -g -funsigned-char -Wall -stdlib=libstdc++ -fno-omit-frame-pointer -pedantic -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
-#add_definitions("-std=c++17 -O0 -g -funsigned-char -Wall -fno-omit-frame-pointer -pedantic -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS -Wl,-z,notext")
-
-
-
-#add_definitions("-std=c++17 -O0 -g -DV8_COMPRESS_POINTERS")  # --no-rosegment is important for being able to let valgrind/callgrind read symbols
-add_definitions("-std=c++17 -O3 -funsigned-char -Wall -stdlib=libstdc++ -fno-omit-frame-pointer -pedantic -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
-set(CMAKE_EXE_LINKER_FLAGS "-Wl,--no-rosegment")
-
-
-
-
-##add_definitions("-std=c++17 -O0 -g ${CLANG_FLAGS} -D_LIBCPP_ABI_UNSTABLE= -D_LIBCPP_ABI_VERSION=1")
-#add_definitions("-std=c++17 -O0 -g ${CLANG_FLAGS}")
-
-#add_definitions("-std=c++17 -O0 -g -stdlib=libc++")
-#this compioled the hello world correctly
-#cd /home/trigen/projects/build-config/caf/actor-framework/build/examples && /usr/bin/c++   -I/home/trigen/projects/build-config/caf/actor-framework/libcaf_opencl -I/home/trigen/projects/build-config/caf/actor-framework/libcaf_core -I/home/trigen/projects/build-config/caf/actor-framework/libcaf_io -I/home/trigen/projects/build-config/caf/actor-framework/libcaf_test -I/home/trigen/projects/build-config/caf/actor-framework/libcaf_openssl -I/home/trigen/projects/build-config/caf/actor-framework/build/libcaf_core  -std=c++11 -Wextra -Wall -pedantic -ftemplate-depth=512 -ftemplate-backtrace-limit=0 -Wno-missing-field-initializers -pthread -fPIC -DGLIBCXX_USE_CXX11_ABI=1 -D_GLIBCXX_USE_CXX11_ABI=1 -O2 -g -DNDEBUG   -o CMakeFiles/hello_world.dir/hello_world.cpp.o -c /home/trigen/projects/build-config/caf/actor-framework/examples/hello_world.cpp
-# replicate attempt
-#add_definitions("-std=c++17 -Wextra -Wall -pedantic -ftemplate-depth=512 -ftemplate-backtrace-limit=0 -Wno-missing-field-initializers -pthread -fPIC -DGLIBCXX_USE_CXX11_ABI=1 -D_GLIBCXX_USE_CXX11_ABI=1 -O2 -g -DNDEBUG")
-#
-# the linking bit
-#/usr/bin/c++  -std=c++11 -Wextra -Wall -pedantic -ftemplate-depth=512 -ftemplate-backtrace-limit=0 -Wno-missing-field-initializers -pthread -fPIC -DGLIBCXX_USE_CXX11_ABI=1 -D_GLIBCXX_USE_CXX11_ABI=1 -O2 -g -DNDEBUG  -rdynamic CMakeFiles/hello_world.dir/hello_world.cpp.o  -o ../bin/hello_world  ../lib/libcaf_core_static.a ../lib/libcaf_io_static.a ../lib/libcaf_openssl_static.a ../lib/libcaf_io_static.a ../lib/libcaf_core_static.a -lssl -lcrypto
-# turns out the fucker doesn't use libc++ ???? even though the output says so
-
-
-
-#directly from caf.
-#-std=c++11 -Wextra -Wall -pedantic -ftemplate-depth=512 -ftemplate-backtrace-limit=0 -stdlib=libc++ -pthread -fPIC -DGLIBCXX_USE_CXX11_ABI=1 -D_GLIBCXX_USE_CXX11_ABI=1 -O2 -g -DNDEBUG
 
 include_directories(
     "./include/"
@@ -87,12 +46,10 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
 )
 
-link_directories("/usr/lib/llvm-10/lib/")
-
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "/opt/cppse/build/v8pp/include/v8pp/context.cpp")
-# (below) useful for testing v8 only
+# (below) useful for testing v8 hello world in main.cpp
 #file(GLOB_RECURSE starcry_SOURCES "src/main.cpp" "/opt/cppse/build/v8pp/include/v8pp/context.cpp")
-# (below) useful for testing caf only
+# (below) useful for testing caf hello world in main.cpp
 #file(GLOB_RECURSE starcry_SOURCES "src/main.cpp")
 
 add_executable(starcry ${starcry_SOURCES})
@@ -155,8 +112,7 @@ target_link_libraries(starcry -lswresample -lm -lz)
 target_link_libraries(starcry -lssl)
 target_link_libraries(starcry -lcrypto)
 
-# allegro
-# target_link_libraries(starcry ${ALLEGRO_LIBRARIES})
+# X11 stuff (allegro)
 target_link_libraries(starcry -lX11)
 target_link_libraries(starcry -lXcursor)
 target_link_libraries(starcry -ljpeg)
@@ -167,56 +123,13 @@ target_link_libraries(starcry -lfreetype)
 target_link_libraries(starcry -lXrandr)
 target_link_libraries(starcry -lXinerama)
 target_link_libraries(starcry -lXi)
-target_link_libraries(starcry /opt/cppse/build/fastpfor/lib/libFastPFor.a)
 
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libv8_monolith.a)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/v8.a)
+# fastpfor
+target_link_libraries(starcry /opt/cppse/build/fastpfor/lib/libFastPFor.a)
 
 # v8
 target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libv8_monolith.a)
 target_link_libraries(starcry -ldl)
 target_link_libraries(starcry /usr/lib/gcc/x86_64-linux-gnu/8/libstdc++fs.a)
-
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libv8_monolith.a)
-# NO: target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libc++.so)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/v8.a)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libv8_libbase.so)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libv8_libplatform.so)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libicuuc.so)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libicui18n.so)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libv8.so)
-#target_link_libraries(starcry /usr/lib/llvm-9/lib/libc++.a)
-#target_link_libraries(starcry /usr/lib/llvm-9/lib/libc++abi.so.1.0)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/v8.a)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libc++.so)
-#target_link_libraries(starcry /home/trigen/projects/build-config/v8pp/v8/build/linux/debian_sid_amd64-sysroot/usr/lib/gcc/x86_64-linux-gnu/6/libstdc++fs.a)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libv8_libplatform.so)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libv8_libbase.so)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libicuuc.so)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libicui18n.so)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libv8.so)
-#target_link_libraries(starcry /usr/lib/llvm-9/lib/libc++.a)
-#target_link_libraries(starcry /usr/lib/llvm-9/lib/libc++abi.so.1.0)
-#target_link_libraries(starcry /home/trigen/projects/starcry/libstdc++fs.a)
-#target_link_libraries(starcry -lstdc++fs)
-
-# caf?
-#target_link_libraries(starcry /usr/lib/llvm-9/lib/libc++.a)
-#target_link_libraries(starcry /usr/lib/llvm-9/lib/libc++.so.1)
-#target_link_libraries(starcry /usr/lib/llvm-9/lib/libc++abi.so.1.0)
-#target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libc++.so)
-#target_link_libraries(starcry -lc++)
-#target_link_libraries(starcry -lc++abi)
-#target_link_libraries(starcry /usr/lib/llvm-9/lib/libc++abi.so.1.0)
-#target_link_libraries(starcry /usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.a)
-
-#/usr/lib/x86_64-linux-gnu/liblldb-9.so
-#/usr/lib/x86_64-linux-gnu/libLLVM-9.so
-#/usr/lib/gcc/x86_64-linux-gnu/7/libstdc++.so
-#/usr/lib/llvm-9/lib/libLLVM.so
-#/usr/lib/llvm-9/lib/libLLVM-9.0.0.so
-#/usr/lib/llvm-9/lib/LLVMPolly.so
-#/usr/lib/llvm-9/lib/libLLVM-9.so
-#/usr/lib/llvm-9/lib/python2.7/site-packages/lldb/_lldb.so
 
 install (TARGETS starcry DESTINATION bin)

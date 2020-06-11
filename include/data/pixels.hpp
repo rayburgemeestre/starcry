@@ -33,20 +33,20 @@ namespace data {
         proc & x.pixels;
     }
 
-  template <class Inspector>
-  typename Inspector::result_type inspect(Inspector& f, data::pixel_data& x) {
-    return f(meta::type_name("data::pixel_data"), x.pixels);
-  }
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, data::pixel_data2& x) {
-  return f(meta::type_name("data::pixel_data2"), x.pixels);
-}
+    template <class Inspector>
+    typename Inspector::result_type inspect(Inspector& f, data::pixel_data& x) {
+        return f(meta::type_name("data::pixel_data"), x.pixels);
+    }
 
+    template <class Inspector>
+    typename Inspector::result_type inspect(Inspector& f, data::pixel_data2& x) {
+        return f(meta::type_name("data::pixel_data2"), x.pixels);
+    }
 }
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, ALLEGRO_COLOR& x) {
-  return f(meta::type_name("ALLEGRO_COLOR"), x.a, x.b, x.g, x.r);
+    return f(meta::type_name("ALLEGRO_COLOR"), x.a, x.b, x.g, x.r);
 }
 
 template <class Processor>

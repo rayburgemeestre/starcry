@@ -12,19 +12,6 @@
 v8::Local<v8::Value> circle::as_vec2d() {
     v8::Isolate* isolate = v8::Isolate::GetCurrent();
     v8::EscapableHandleScope handle_scope(isolate);
-    //
-//    if (assigned_) {
-//        v8::Local<v8::Value> tmp = v8::Local<v8::Value>::New(isolate, vec2d_);
-//        v8::Local<v8::Object> object = tmp.As<v8::Object>();
-//        static std::string x = "x";
-//        auto x_str = v8::String::NewFromUtf8(isolate, x.c_str(), v8::String::kNormalString, x.length());
-//        object->Set(x_str, v8::Number::New(isolate, get_x()));
-//        static std::string y = "y";
-//        auto y_str = v8::String::NewFromUtf8(isolate, y.c_str(), v8::String::kNormalString, y.length());
-//        object->Set(y_str, v8::Number::New(isolate, get_y()));
-//        return handle_scope.Escape(tmp);
-//    }
-    //
     v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
     std::string newvecfunc = "vector2d";
     v8::Local<v8::Value> value = global->Get(isolate->GetCurrentContext(), v8::String::NewFromUtf8(isolate, newvecfunc.c_str(), v8::NewStringType::kNormal, newvecfunc.length()).ToLocalChecked()).ToLocalChecked();
@@ -37,11 +24,6 @@ v8::Local<v8::Value> circle::as_vec2d() {
     args[0] = v8::Number::New(isolate, get_x());
     args[1] = v8::Number::New(isolate, get_y());
     v8::Local<v8::Value> val = func->CallAsConstructor(isolate->GetCurrentContext(), 2, args).ToLocalChecked();
-    //
-//    v8::Persistent<v8::Value, v8::CopyablePersistentTraits<v8::Value>> persistent(isolate, val);
-//    vec2d_ = persistent;
-//    assigned_ = true;
-    //
     return handle_scope.Escape(val);
 }
 
@@ -56,12 +38,6 @@ void shape::add_to_context(v8pp::context &context)
         .set("blending_type", v8pp::property(&shape::get_blending_type, &shape::set_blending_type))
         ;
     context.set("shape", shape_class);
-
-//    using data::blending_type;
-//    v8pp::class_<data::blending_type> blending_type_enum_class(context.isolate());
-//    blending_type_enum_class
-//        .ctor<data::blending_type>();
-//    context.set("blending_type", blending_type_enum_class);
 
     v8pp::module consts(context.isolate());
     consts

@@ -7,7 +7,6 @@
 
 #include <algorithm>
 #include <cstring>
-
 #include <caf/meta/type_name.hpp>
 
 namespace data{

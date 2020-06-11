@@ -52,7 +52,6 @@ public:
 };
 
 v8_wrapper::v8_wrapper(std::string filename) : context(nullptr), platform(nullptr), filename_(filename) {
-  //v8::V8::InitializeICU();
   v8::V8::InitializeExternalStartupData("starcry");
 #if V8_MAJOR_VERSION >= 7
   platform = v8::platform::NewDefaultPlatform();
@@ -61,7 +60,6 @@ v8_wrapper::v8_wrapper(std::string filename) : context(nullptr), platform(nullpt
 #endif
   v8::V8::InitializePlatform(platform.get());
   v8::V8::Initialize();
-
   context = new v8pp::context(); // Making it unique_ptr breaks it!
 }
 
@@ -151,11 +149,6 @@ inline void v8_wrapper::add_include_fun() {
     v8::HandleScope scope(context->isolate());
     context->set("include", v8pp::wrap_function(context->isolate(), "include", [=](const v8::FunctionCallbackInfo<v8::Value>& args) -> v8::Handle<v8::Value> {
         for (int i = 0; i < args.Length(); i++) {
-          // V1? auto str = args[i]->ToString(context->isolate()->GetCurrentContext()).ToLocalChecked();
-          // V2
-          // std::string const str = v8pp::from_v8<std::string>(isolate, ex->ToString(isolate->GetCurrentContext()).ToLocalChecked());
-          // auto isolate = context->isolate();
-          // v8::Local<v8::Context> context(isolate->GetCurrentContext());
           std::string const str = v8pp::from_v8<std::string>(context->isolate(), args[0]->ToString(context->isolate()->GetCurrentContext()).ToLocalChecked());
 
           // load_file loads the file with this name into a string,

@@ -42,5 +42,3 @@ CAF_ADD_ATOM(starcry, add_job)
   CAF_ADD_ATOM(starcry, terminate_)
   CAF_ADD_ATOM(starcry, write_frame)
 CAF_END_TYPE_ID_BLOCK(starcry)
-
-
