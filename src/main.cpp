@@ -66,13 +66,13 @@ private:
   // settings
   int worker_port = 0;
   size_t num_chunks = 1;   // number of chunks to split image size_to
-  size_t num_workers = 8;  // number of workers for rendering
+  size_t num_workers = 1;  // number of workers for rendering
   string worker_ports;
   string dimensions;
   string output_file = "";
   uint32_t settings_ = 0;
   po::options_description desc = string("Allowed options");
-  string script = "test.js";
+  string script = "input/test.js";
   bool compress = false;
   bool rendering_enabled = true;
   string renderer_host;

@@ -4,8 +4,7 @@
  file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 const fps           = 25;
-//const max_frames    = 10 * fps; // seconds
-const max_frames    = -1;
+const max_frames    = 10 * fps; // seconds
 const realtime      = false;
 const begin         = +new Date();
 const canvas_w      = 1920;
