@@ -2,7 +2,15 @@ SHELL:=/bin/bash
 
 fast-docker-build:
 	# build starcry with tailored image so we can invoke the make command straight away
-	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make VERBOSE=1 core"
+	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make core"
+
+debug:
+	# build starcry with tailored image so we can invoke the make command straight away
+	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make core_debug"
+
+profile:
+	valgrind --tool=callgrind ./starcry --no-rendering input/motion.js
+	ls -althrst | tail -n 1
 
 pull:
 	docker pull rayburgemeestre/build-ubuntu:18.04
@@ -40,18 +48,28 @@ deps:
 	sudo apt-get install -y libgtk2.0-dev
 	sudo apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev
 
-core:
+prepare:
 	# switch to clang compiler
 	update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-10 50
 	update-alternatives --install /usr/bin/cc cc /usr/bin/clang-10 50
 	update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-10 50
 	update-alternatives --install /usr/bin/clang clang /usr/bin/clang-10 50
 	update-alternatives --install /usr/bin/ld ld /usr/bin/ld.lld-10 50
+
+	# prepare build dir
 	mkdir -p build
+
+core:
+	make prepare
 	pushd build && \
 	CXX=$(which c++) cmake .. && \
 	make VERBOSE=1 -j $$(nproc)
-	# CXX=$(which c++) cmake -DDEBUG=on .. && ..
+
+core_debug:
+	make prepare
+	pushd build && \
+	CXX=$(which c++) cmake -DDEBUG=on .. && \
+	make VERBOSE=1 -j $$(nproc)
 
 core_experimental:
 	# switch to clang compiler
@@ -86,6 +104,7 @@ clean:
 	rm -rf CMakeCache.txt
 	rm -rf build/CMakeCache.txt
 	rm -rf out
+	rm callgrind.out.*
 
 .PHONY: dockerize
 dockerize:
