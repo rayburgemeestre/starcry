@@ -11,7 +11,9 @@
 <script>
   var video = document.getElementById('video');
   if(Hls.isSupported()) {
-    var hls = new Hls();
+    config = {};
+    config.debug = true;
+    var hls = new Hls(config);
     hls.loadSource('/stream/stream.m3u8');
     hls.attachMedia(video);
     hls.on(Hls.Events.MANIFEST_PARSED,function() {

@@ -67,7 +67,8 @@ core:
 	make prepare
 	pushd build && \
 	CXX=$(which c++) cmake .. && \
-	make VERBOSE=1 -j $$(nproc)
+	make -j $$(nproc) && \
+	strip --strip-debug starcry
 
 core_debug:
 	make prepare
@@ -111,7 +112,8 @@ clean:
 	rm -rf CMakeCache.txt
 	rm -rf build/CMakeCache.txt
 	rm -rf out
-	rm callgrind.out.*
+	rm -f callgrind.out.*
+	rm -f webroot/stream/stream.m3u8*
 
 .PHONY: dockerize
 dockerize:
