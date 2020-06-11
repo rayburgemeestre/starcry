@@ -4,6 +4,8 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include "common.h"
+#include "atom_types.h"
 #include "actors/streamer.h"
 #include "benchmark.h"
 #include "data/job.hpp"
@@ -14,25 +16,6 @@
 #include "caf/io/all.hpp"
 #include "framer.hpp"
 #include <bitset>
-
-// public
-using start            = atom_constant<atom("start     ")>;
-using render_frame     = atom_constant<atom("render_fra")>;
-using show_stats       = atom_constant<atom("show_stats")>;
-using need_frames      = atom_constant<atom("need_frame")>;
-using debug            = atom_constant<atom("debug     ")>;
-using initialize       = atom_constant<atom("initialize")>;
-using checkpoint       = atom_constant<atom("checkpoint")>;
-using terminate_       = atom_constant<atom("terminate ")>;
-
-// external
-using del_job          = atom_constant<atom("del_job   ")>;
-using stop_rendering   = atom_constant<atom("stop_rende")>;
-using streamer_ready   = atom_constant<atom("streamer_r")>;
-
-// internal
-using ready            = atom_constant<atom("ready     ")>;
-using recheck_test     = atom_constant<atom("recheck_te")>;
 
 using namespace std;
 
@@ -74,7 +57,7 @@ bool process_buffer(stateful_actor<streamer_data> *self, const actor &renderer, 
         self->state.allegro5->add_frame(canvas_w, canvas_h, pixels_all);
 
     self->state.fps_counter->measure();
-    self->send(renderer, streamer_ready::value, num_chunks);
+    self->send(renderer, streamer_ready_v, num_chunks);
     if (self->state.last_frame_streamed && *self->state.last_frame_streamed == frame_number) {
         if (self->state.framer)
             self->state.framer->finalize();

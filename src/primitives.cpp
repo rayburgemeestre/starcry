@@ -27,7 +27,7 @@ v8::Local<v8::Value> circle::as_vec2d() {
     //
     v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
     std::string newvecfunc = "vector2d";
-    v8::Handle<v8::Value> value = global->Get(v8::String::NewFromUtf8(isolate, newvecfunc.c_str(), v8::String::kNormalString, newvecfunc.length()));
+    v8::Local<v8::Value> value = global->Get(isolate->GetCurrentContext(), v8::String::NewFromUtf8(isolate, newvecfunc.c_str(), v8::NewStringType::kNormal, newvecfunc.length()).ToLocalChecked()).ToLocalChecked();
     if (!value->IsFunction()) {
         v8::Local<v8::Value> result;
         return handle_scope.Escape(result);

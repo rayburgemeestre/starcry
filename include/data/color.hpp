@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <cstring>
 
+#include <caf/meta/type_name.hpp>
+
 namespace data{
 
     struct color
@@ -31,5 +33,10 @@ namespace data{
         proc & x.b;
         proc & x.a;
     }
+
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, data::color& x) {
+  return f(caf::meta::type_name("data::color"), x.r, x.g, x.b, x.a);
+}
 
 }

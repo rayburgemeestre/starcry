@@ -4,14 +4,13 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include "common.h"
+#include "atom_types.h"
 #include "scripting.h"
 #include "actors/job_generator.h"
 #include "util/assistant.h"
 
 using namespace std;
-
-using output_line = atom_constant<atom("output_lin")>;
-using write_frame = atom_constant<atom("write_fram")>;
 
 double get_version() {
     return 0.1;
@@ -65,7 +64,7 @@ void add_text(double x, double y, double z, double textsize, string text, string
 }
 
 void output(string s) {
-    assistant->job_generator->send(assistant->job_generator, output_line::value, s);
+    assistant->job_generator->send(assistant->job_generator, output_line_v, s);
 }
 
 void write_frame_fun() {
@@ -82,7 +81,7 @@ void write_frame_fun_impl(bool last_frame) {
     if (!assistant->the_job.last_frame) {
         assistant->the_job.last_frame = last_frame || (assistant->max_frames && assistant->max_frames == assistant->current_frame);
     }
-    assistant->job_generator->send(assistant->job_generator, write_frame::value, assistant->the_job);
+    assistant->job_generator->send(assistant->job_generator, write_frame_v, assistant->the_job);
     assistant->the_job.shapes.clear();
 }
 

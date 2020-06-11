@@ -58,7 +58,7 @@ function initialize()
 
 function next() {
     const d = new Date();
-    d.setUTCHours(d.getUTCHours() + 0); // fix timezone issue
+    d.setUTCHours(d.getUTCHours() + 2); // fix timezone issue
     const m_hour = d.getHours() % 12;
     const m_min = d.getMinutes();
     const m_sec = d.getSeconds();

@@ -4,6 +4,8 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include "common.h"
+#include "atom_types.h"
 #include "actors/renderer.h"
 #include "data/job.hpp"
 #include "data/pixels.hpp"
@@ -13,23 +15,7 @@
 #include "caf/io/all.hpp"
 #include "allegro5/allegro5.h"
 
-// public
-using start                = atom_constant<atom("start     ")>;
-using show_stats           = atom_constant<atom("show_stats")>;
-using debug                = atom_constant<atom("debug     ")>;
-using terminate_           = atom_constant<atom("terminate ")>;
-using add_job              = atom_constant<atom("add_job   ")>;
-
-// external
-using get_job              = atom_constant<atom("get_job   ")>;
-using job_processed        = atom_constant<atom("job_proces")>;
-
-// internal
-using ready                = atom_constant<atom("ready     ")>;
-using streamer_ready       = atom_constant<atom("streamer_r")>;
-using render_frame         = atom_constant<atom("render_fra")>;
-using process_job          = atom_constant<atom("process_jo")>;
-using initialize           = atom_constant<atom("initialize")>;
+using namespace caf;
 
 template <typename T>
 behavior create_worker_behavior(T self,
@@ -42,7 +28,7 @@ behavior create_worker_behavior(T self,
     return {
         [=](get_job, const data::job &j, const caf::actor &renderer, const caf::actor &streamer) {
             self->state.job_queue.insert(j);
-            self->send(self, process_job::value, renderer, streamer);
+            self->send(self, process_job_v, renderer, streamer);
         },
         [=](process_job, const caf::actor &renderer, const caf::actor &streamer) {
             auto jobmin = self->state.job_queue.cbegin();
@@ -94,8 +80,8 @@ behavior create_worker_behavior(T self,
 
             auto &r = (self->state.renderer_ptr) ? *self->state.renderer_ptr : renderer;
             auto &s = (self->state.streamer_ptr) ? *self->state.streamer_ptr : streamer;
-            self->send(r, ready::value, self->state.worker_num, j);
-            self->send(s, render_frame::value, j, dat, renderer);
+            self->send(r, ready_v, self->state.worker_num, j);
+            self->send(s, render_frame_v, j, dat, renderer);
         }
     };
 }
@@ -127,7 +113,7 @@ void send_jobs_to_streamer(caf::stateful_actor<renderer_data> *self)
             break;
         }
         auto j = * self->state.job_queue.cbegin();
-        self->send<message_priority::high>(*self->state.pool, get_job::value, j, self, *self->state.streamer);
+        self->send<message_priority::high>(*self->state.pool, get_job_v, j, self, *self->state.streamer);
         self->state.outstanding_jobs++;
         self->state.job_queue.erase(j);
     }
@@ -190,7 +176,7 @@ behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_
             send_jobs_to_streamer(self);
         },
         [=](ready, size_t worker_num, struct data::job j) {
-            self->send<message_priority::high>(*self->state.generator, job_processed::value);
+            self->send<message_priority::high>(*self->state.generator, job_processed_v);
             self->state.last_job_for_worker[worker_num] = j.job_number;
             self->state.job_sequence++;
         },
@@ -208,7 +194,7 @@ behavior renderer(caf::stateful_actor<renderer_data> * self, std::optional<size_
             //aout(self) << "renderer at job: " << self->state.job_sequence << ", with jobs/sec: "
             //           << (1000.0 / self->state.jps_counter->mean())
             //           << " +/- " << self->state.jps_counter->stderr() << endl;
-            self->send<message_priority::high>(*self->state.streamer, show_stats::value, ss.str());
+            self->send<message_priority::high>(*self->state.streamer, show_stats_v, ss.str());
         },
         [=](terminate_) {
             self->state.pool.release();

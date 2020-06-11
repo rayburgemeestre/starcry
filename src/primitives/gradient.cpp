@@ -71,10 +71,10 @@ Local<Array> gradient::get2(double index) {
         return Local<Array>();
 
     color c = get(index);
-    array->Set(0, Number::New(isolate, c.get_r()));
-    array->Set(1, Number::New(isolate, c.get_g()));
-    array->Set(2, Number::New(isolate, c.get_b()));
-    array->Set(3, Number::New(isolate, c.get_a()));
+    array->Set(isolate->GetCurrentContext(), 0, Number::New(isolate, c.get_r()));
+    array->Set(isolate->GetCurrentContext(), 1, Number::New(isolate, c.get_g()));
+    array->Set(isolate->GetCurrentContext(), 2, Number::New(isolate, c.get_b()));
+    array->Set(isolate->GetCurrentContext(), 3, Number::New(isolate, c.get_a()));
     return handle_scope.Escape(array);
 }
 using namespace v8;

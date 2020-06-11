@@ -10,8 +10,8 @@ include('lib/projection.js')
 
 const fps = 25;
 const max_frames = 0;
-const canvas_w = 1920 / 4;
-const canvas_h = 1080 / 4;
+const canvas_w = 1920 / 2;
+const canvas_h = 1080 / 2;
 const scale = 1;
 
 const resolution = 0.1;

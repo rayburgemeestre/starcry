@@ -6,6 +6,7 @@
 #pragma once
 
 #include <algorithm>
+#include <caf/meta/type_name.hpp>
 
 #include "data/color.hpp"
 
@@ -56,4 +57,8 @@ namespace data{
         proc & x.colors;
     }
 
+  template <class Inspector>
+  typename Inspector::result_type inspect(Inspector& f, data::gradient& x) {
+    return f(caf::meta::type_name("data::gradient"), x.colors);
+  }
 }

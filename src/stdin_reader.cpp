@@ -4,14 +4,9 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include "common.h"
+#include "atom_types.h"
 #include "actors/stdin_reader.h"
-
-using start            = atom_constant<atom("start     ")>;
-using input_line       = atom_constant<atom("input_line")>;
-using read_stdin       = atom_constant<atom("read_stdin")>;
-using no_more_input    = atom_constant<atom("no_more_in")>;
-using debug            = atom_constant<atom("debug     ")>;
-using checkpoint       = atom_constant<atom("checkpoint")>;
 
 using namespace std;
 
@@ -19,29 +14,29 @@ behavior stdin_reader(stateful_actor<stdin_reader_data> *self, const caf::actor 
     self->link_to(job_generator);
     return {
         [=](start) {
-            self->send(self, read_stdin::value);
+            self->send(self, read_stdin_v);
         },
         [=](read_stdin) {
             string line;
             while (self->state.lines_send < self->state.max_lines_send){
                 if (!getline(cin, line)) {
                     aout(self) << "stdin_reader: EOF" << endl;
-                    self->send(job_generator, no_more_input::value);
+                    self->send(job_generator, no_more_input_v);
                     return;
                 }
-                self->send(job_generator, input_line::value, line);
+                self->send(job_generator, input_line_v, line);
                 self->state.lines_send++;
             }
-            self->send(job_generator, checkpoint::value, self);
+            self->send(job_generator, checkpoint_v, self);
         },
         [=](checkpoint, size_t lines_received, bool paused_) {
             self->state.max_lines_send = lines_received + self->state.max_outgoing_lines;
             self->state.paused = paused_;
             if (self->state.paused) {
-                self->delayed_send(job_generator, std::chrono::milliseconds(1), checkpoint::value, self);
+                self->delayed_send(job_generator, std::chrono::milliseconds(1), checkpoint_v, self);
             } else {
                 // continue reading..
-                self->delayed_send(self, std::chrono::milliseconds(1), read_stdin::value);
+                self->delayed_send(self, std::chrono::milliseconds(1), read_stdin_v);
             }
         },
         [=](debug) {

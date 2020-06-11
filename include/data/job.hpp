@@ -59,5 +59,26 @@ namespace data {
         proc & x.bitrate;
         proc & x.compress;
     }
+
+    template <class Inspector>
+    typename Inspector::result_type inspect(Inspector& f, data::job& x) {
+      return f(meta::type_name("data::job"), x.width,
+               x.height,
+               x.offset_x,
+               x.offset_y,
+               x.canvas_w,
+               x.canvas_h,
+               x.job_number,
+               x.frame_number,
+               x.rendered,
+               x.last_frame,
+               x.chunk,
+               x.num_chunks,
+               x.background_color,
+               x.shapes,
+               x.scale,
+               x.bitrate,
+               x.compress);
+    }
 }
 

@@ -3,10 +3,12 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-#include <util/compress_vector.h>
 #include "common.h"
-#include "streamer_output/allegro5_window.h"
+#include "atom_types.h"
 #include "caf/io/all.hpp"
+
+#include "util/compress_vector.h"
+#include "streamer_output/allegro5_window.h"
 
 allegro5_window::allegro5_window(actor_system &system, event_based_actor *self, int port)
     : self_(self), system_(system), client_(nullptr), port_(port)

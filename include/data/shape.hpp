@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <string>
 
+#include <caf/meta/type_name.hpp>
+
 #include "data/gradient.hpp"
 
 namespace data{
@@ -77,11 +79,16 @@ namespace data{
         proc & x.type_;
     }
 
-    //template <typename T>
-    struct shape
-    {
-        double x;
-        double y;
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, data::blending_type& x) {
+  return f(caf::meta::type_name("data::blending_type"), x.type_);
+}
+
+//template <typename T>
+struct shape
+{
+  double x;
+  double y;
         double z;
         double x2;
         double y2;
@@ -125,5 +132,27 @@ namespace data{
                                 reinterpret_cast<const void *>(&rhs),
                                 sizeof(shape));
     }
+
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, data::shape& x) {
+  return f(caf::meta::type_name("data::shape"), x.x,
+           x.y,
+           x.z,
+           x.x2,
+           x.y2,
+           x.z2,
+           x.type,
+           x.r,
+           x.g,
+           x.b,
+           x.radius,
+           x.text_size,
+           x.radius_size,
+           x.text,
+           x.align,
+           x.gradient_,
+           x.blending_);
+
+  }
 
 }

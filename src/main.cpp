@@ -1,3 +1,243 @@
+#if 1 == 2
+#include "caf/all.hpp"
+
+using namespace caf;
+
+CAF_BEGIN_TYPE_ID_BLOCK(test, first_custom_type_id)
+CAF_ADD_ATOM(test, test)
+CAF_END_TYPE_ID_BLOCK(test)
+
+behavior bar_actor(event_based_actor* self) {
+  return {
+    [=](test) {
+      std::cout << "test1" << std::endl;
+    },
+    [=](uint32_t value) {
+      std::cout << "test2: " << value << std::endl;
+    }
+  };
+}
+
+behavior foo_actor(event_based_actor* self) {
+  auto bar = self->spawn(bar_actor);
+  bar->add_link(self);
+  self->link_to(bar);
+  self->send(bar, test_v); // segfaults
+
+  return {
+    [=](uint32_t width) {
+      self->send(bar, test_v); // hangs (when by itself)
+      self->send(bar, width);  // segfaults
+    },
+  };
+}
+
+void caf_main(actor_system& system) {
+  scoped_actor s{system};
+  auto foo = system.spawn(foo_actor);
+  s->send(foo, uint32_t(123));
+  s->await_all_other_actors_done();
+}
+
+// creates a main function for us that calls our caf_main
+CAF_MAIN(caf::id_block::test)
+#elif 2 == 1
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "v8/libplatform/libplatform.h"
+#include "v8/v8.h"
+
+int main(int argc, char* argv[]) {
+  // Initialize V8.
+  v8::V8::InitializeICUDefaultLocation(argv[0]);
+  v8::V8::InitializeExternalStartupData(argv[0]);
+  std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
+  v8::V8::InitializePlatform(platform.get());
+  v8::V8::Initialize();
+
+  // Create a new Isolate and make it the current one.
+  v8::Isolate::CreateParams create_params;
+  create_params.array_buffer_allocator =
+      v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+  v8::Isolate* isolate = v8::Isolate::New(create_params);
+  {
+    v8::Isolate::Scope isolate_scope(isolate);
+
+    // Create a stack-allocated handle scope.
+    v8::HandleScope handle_scope(isolate);
+
+    // Create a new context.
+    v8::Local<v8::Context> context = v8::Context::New(isolate);
+
+    // Enter the context for compiling and running the hello world script.
+    v8::Context::Scope context_scope(context);
+
+    {
+      // Create a string containing the JavaScript source code.
+      v8::Local<v8::String> source =
+          v8::String::NewFromUtf8(isolate, "'Hello' + ', World!'",
+                                  v8::NewStringType::kNormal)
+              .ToLocalChecked();
+
+      // Compile the source code.
+      v8::Local<v8::Script> script =
+          v8::Script::Compile(context, source).ToLocalChecked();
+
+      // Run the script to get the result.
+      v8::Local<v8::Value> result = script->Run(context).ToLocalChecked();
+
+      // Convert the result to an UTF8 string and print it.
+      v8::String::Utf8Value utf8(isolate, result);
+      printf("%s\n", *utf8);
+    }
+
+    {
+      // Use the JavaScript API to generate a WebAssembly module.
+      //
+      // |bytes| contains the binary format for the following module:
+      //
+      //     (func (export "add") (param i32 i32) (result i32)
+      //       get_local 0
+      //       get_local 1
+      //       i32.add)
+      //
+      const char* csource = R"(
+        let bytes = new Uint8Array([
+          0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x07, 0x01,
+          0x60, 0x02, 0x7f, 0x7f, 0x01, 0x7f, 0x03, 0x02, 0x01, 0x00, 0x07,
+          0x07, 0x01, 0x03, 0x61, 0x64, 0x64, 0x00, 0x00, 0x0a, 0x09, 0x01,
+          0x07, 0x00, 0x20, 0x00, 0x20, 0x01, 0x6a, 0x0b
+        ]);
+        let module = new WebAssembly.Module(bytes);
+        let instance = new WebAssembly.Instance(module);
+        instance.exports.add(3, 4);
+      )";
+
+      // Create a string containing the JavaScript source code.
+      v8::Local<v8::String> source =
+          v8::String::NewFromUtf8(isolate, csource, v8::NewStringType::kNormal)
+              .ToLocalChecked();
+
+      // Compile the source code.
+      v8::Local<v8::Script> script =
+          v8::Script::Compile(context, source).ToLocalChecked();
+
+      // Run the script to get the result.
+      v8::Local<v8::Value> result = script->Run(context).ToLocalChecked();
+
+      // Convert the result to a uint32 and print it.
+      uint32_t number = result->Uint32Value(context).ToChecked();
+      printf("3 + 4 = %u\n", number);
+    }
+  }
+
+  // Dispose the isolate and tear down V8.
+  isolate->Dispose();
+  v8::V8::Dispose();
+  v8::V8::ShutdownPlatform();
+  delete create_params.array_buffer_allocator;
+  return 0;
+}
+
+#elif 1 == 2
+//# minimal v8 ex
+
+// workaround by Ray
+#include "v8/libplatform/libplatform.h"
+#include "v8/v8.h"
+#include <v8pp/context.hpp>
+#include <iostream>
+
+int main(int argc, char *argv[]) {
+  std::cout << " I'm on line" << __LINE__ << std::endl;
+  // Initialize V8.
+  v8::V8::InitializeICUDefaultLocation(argv[0]);
+  std::cout << " I'm on line" << __LINE__ << std::endl;
+  v8::V8::InitializeExternalStartupData(argv[0]);
+  std::cout << " I'm on line" << __LINE__ << std::endl;
+  std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
+  std::cout << " I'm on line" << __LINE__ << std::endl;
+  v8::V8::InitializePlatform(platform.get());
+  std::cout << " I'm on line" << __LINE__ << std::endl;
+  v8::V8::Initialize();
+  std::cout << " I'm on line" << __LINE__ << std::endl;
+
+  v8pp::context context;
+  //context.set_lib_path("path/to/plugins/lib");
+  std::cout << " I'm on line" << __LINE__ << std::endl;
+  // script can now use require() function. An application
+  // that uses v8pp::context must link against v8pp library.
+  v8::HandleScope scope(context.isolate());
+  std::cout << " I'm on line" << __LINE__ << std::endl;
+  auto res = context.run_file("some_file.js");
+  v8::String::Utf8Value str(context.isolate(), res);
+  std::cout << std::string(*str) << std::endl;
+  std::cout << " I'm on line" << __LINE__ << std::endl;
+}
+
+
+#elif 1 == 3
+//# minimal caf example
+
+#include <string>
+#include <iostream>
+
+#include "caf/all.hpp"
+
+/*
+namespace std{
+	inline namespace __1 {
+		bad_function_call::~bad_function_call() _NOEXCEPT {}
+		const char * bad_function_call::what() const _NOEXCEPT {}
+	}
+}
+*/
+
+using std::endl;
+using std::string;
+
+using namespace caf;
+
+behavior mirror(event_based_actor* self) {
+  // return the (initial) actor behavior
+  return {
+    // a handler for messages containing a single string
+    // that replies with a string
+    [=](const string& what) -> string {
+      // prints "Hello World!" via aout (thread-safe cout wrapper)
+      aout(self) << what << endl;
+      // reply "!dlroW olleH"
+      return string(what.rbegin(), what.rend());
+    }
+  };
+}
+
+void hello_world(event_based_actor* self, const actor& buddy) {
+  // send "Hello World!" to our buddy ...
+  self->request(buddy, std::chrono::seconds(10), "Hello World!").then(
+    // ... wait up to 10s for a response ...
+    [=](const string& what) {
+      // ... and print it
+      aout(self) << what << endl;
+    }
+  );
+}
+
+void caf_main(actor_system& system) {
+  // create a new actor that calls 'mirror()'
+  auto mirror_actor = system.spawn(mirror);
+  // create another actor that calls 'hello_world(mirror_actor)';
+  system.spawn(hello_world, mirror_actor);
+  // system will wait until both actors are destroyed before leaving main
+}
+
+// creates a main function for us that calls our caf_main
+CAF_MAIN()
+
+#else
 /*
   This Source Code Form is subject to the terms of the Mozilla Public
   License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -32,6 +272,7 @@ int main(int argc, char *argv[])
 #include <iostream>
 
 #include "common.h"
+#include "atom_types.h"
 #include "actors/job_generator.h"
 #include "actors/renderer.h"
 #include "actors/streamer.h"
@@ -49,12 +290,12 @@ int main(int argc, char *argv[])
 #include <boost/program_options/parsers.hpp>
 #include <regex>
 #include <bitset>
+//
+// workaround by Ray
+#include "v8/libplatform/libplatform.h"
+#include "v8/v8.h"
+#include <v8pp/context.hpp>
 
-using start         = atom_constant<atom("start     ")>;
-using show_stats    = atom_constant<atom("show_stats")>;
-using debug         = atom_constant<atom("debug     ")>;
-using terminate_    = atom_constant<atom("terminate ")>;
-using initialize    = atom_constant<atom("initialize")>;
 
 //#include "caf/io/max_msg_size.hpp"
 //caf::io::max_msg_size(std::numeric_limits<uint32_t>::max());
@@ -113,6 +354,7 @@ private:
     po::options_description desc  = string("Allowed options");
     string script                 = "test.js";
     bool compress                 = false;
+    bool javascript_enabled       = true;
     bool rendering_enabled        = true;
     string renderer_host;
     string streamer_host;
@@ -124,6 +366,55 @@ private:
 
 public:
     main_program(actor_system &system, int argc, char *argv[]) : system(system) {
+//        // Initialize V8.
+//        v8::V8::InitializeICUDefaultLocation(argv[0]);
+//        v8::V8::InitializeExternalStartupData(argv[0]);
+//        std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
+//        v8::V8::InitializePlatform(platform.get());
+//        v8::V8::Initialize();
+//
+//        v8pp::context context;
+//        //context.set_lib_path("path/to/plugins/lib");
+//        // script can now use require() function. An application
+//        // that uses v8pp::context must link against v8pp library.
+//        v8::HandleScope scope(context.isolate());
+//        auto res = context.run_file("some_file.js");
+//
+//        v8::String::Utf8Value str(context.isolate(), res);
+//        std::cout << std::string(*str) << std::endl;
+//
+////        std::exit(0);
+
+//#include "v8.h"
+//#include "libplatform/libplatform.h"
+
+/* TEST PROGRAM THAT CAN TEST IF POINTER COMPRESSION CAUSES CRASH SEE */
+/* https://bugs.chromium.org/p/v8/issues/detail?id=10041 */
+/* detection fucking works great, now let's comment it out for now...
+        std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
+        v8::V8::InitializePlatform(platform.get());
+        v8::V8::Initialize();
+
+        v8::Isolate::CreateParams create_params;
+        create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+        v8::Isolate *isolate = v8::Isolate::New(create_params);
+        v8::Locker locker(isolate);
+        v8::Isolate::Scope isolate_scope(isolate);
+        v8::HandleScope handle_scope(isolate);
+
+        v8::Local<v8::Context> ctx = v8::Context::New(isolate);
+        v8::Context::Scope context_scope(ctx);
+
+        v8::Local<v8::Array> arr = v8::Array::New(isolate, 3);
+        arr->Set(ctx, 0, v8::Integer::New(isolate, 42));
+        arr->Set(ctx, 1, v8::Integer::New(isolate, 84));
+        arr->Set(ctx, 2, v8::Integer::New(isolate, 126));
+
+        arr->IsString(); // <- segmentation fault
+        std::exit(0);
+        */
+
+
 
         ::settings conf;
         conf.load();
@@ -295,25 +586,25 @@ public:
         auto output_settings = uint32_t(streamer_settings.to_ulong());
         auto stdin_reader_ = system.spawn(stdin_reader, generator);
 
-        s->request(generator, infinite, initialize::value).receive(
+        s->request(generator, infinite, initialize_v).receive(
             [&](size_t bitrate, bool use_stdin_, size_t use_fps_) {
 //                const auto &bitrate = std::get<0>(tpl);
 //                const auto &use_stdin_ = std::get<1>(tpl);
                 use_stdin = use_stdin_;
                 use_fps   = use_fps_;
-                s->send(streamer_, initialize::value, int(conf.user.gui_port), string(output_file), bitrate, use_fps, output_settings, stream_mode);
+                s->send(streamer_, initialize_v, int(conf.user.gui_port), string(output_file), bitrate, use_fps, output_settings, stream_mode);
             },
             [=](error &err) {
                 std::exit(2);
             }
         );
-        s->send(renderer_, initialize::value, streamer_, generator, workers_vec, streamer_host, streamer_port);
+        s->send(renderer_, initialize_v, streamer_, generator, workers_vec, streamer_host, streamer_port);
 
-        s->send(generator, start::value, max_jobs_queued_for_renderer, num_chunks, renderer_);
-        s->send(renderer_, start::value, use_remote_workers ? workers_vec.size() : num_workers);
+        s->send(generator, start_v, max_jobs_queued_for_renderer, num_chunks, renderer_);
+        s->send(renderer_, start_v, use_remote_workers ? workers_vec.size() : num_workers);
 
         if (use_stdin) {
-            s->send(stdin_reader_, start::value);
+            s->send(stdin_reader_, start_v);
         }
 
         // TODO: if no rendering, no video, ! generator_info.running().. -> terminate all
@@ -327,21 +618,21 @@ public:
         while (streamer_info.running()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(2000));
             if (rendering_enabled) {
-                s->send<message_priority::high>(renderer_, show_stats::value);
+                s->send<message_priority::high>(renderer_, show_stats_v);
             } else {
-                s->send<message_priority::high>(generator, show_stats::value);
+                s->send<message_priority::high>(generator, show_stats_v);
             }
-//        s->send<message_priority::high>(streamer_, debug::value);
-//        s->send<message_priority::high>(generator, debug::value);
-//        s->send<message_priority::high>(renderer_, debug::value);
+//        s->send<message_priority::high>(streamer_, debug_v);
+//        s->send<message_priority::high>(generator, debug_v);
+//        s->send<message_priority::high>(renderer_, debug_v);
 //        if (use_stdin) {
-//            s->send<message_priority::high>(stdin_reader_, debug::value);
+//            s->send<message_priority::high>(stdin_reader_, debug_v);
 //        }
         }
         if (renderer_info.running())
-            s->send<message_priority::high>(renderer_, terminate_::value);
+            s->send<message_priority::high>(renderer_, terminate__v);
         if (generator_info.running())
-            s->send<message_priority::high>(generator, terminate_::value);
+            s->send<message_priority::high>(generator, terminate__v);
         s->await_all_other_actors_done();
         starcry_running = false;
     }
@@ -391,25 +682,14 @@ public:
 };
 
 int main(int argc, char *argv[]) {
+    caf::exec_main_init_meta_objects<caf::id_block::starcry, io::middleman>();
+    caf::core::init_global_meta_objects();
     actor_system_config cfg;
-    //cfg.scheduler_enable_profiling = true;
-    //cfg.scheduler_profiling_ms_resolution = 100;
-    //cfg.scheduler_profiling_output_file = "/projects/starcry/output_stats";
-
-    // cfg.scheduler_max_throughput = 1000;
-    // TODO: above no longer a valid option in caf 0.17.3?
-
-    cfg.add_message_type<data::job>("data::job");
-    cfg.add_message_type<data::pixel_data>("data::pixel_data");
-    cfg.add_message_type<data::pixel_data2>("data::pixel_data2");
-    cfg.add_message_type<vector<uint32_t>>("vector<uint32_t>");
-    cfg.add_message_type<std::vector<std::pair<std::string, int>>>("workers_vec");
     cfg.load<io::middleman>();
     actor_system system(cfg);
-    //auto max_thoughput_per_run = 1000;
-    //set_scheduler(std::thread::hardware_concurrency(), max_thoughput_per_run);
     main_program prog{system, argc, argv};
     return 0;
 }
 
+#endif
 #endif

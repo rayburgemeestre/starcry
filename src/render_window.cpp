@@ -3,6 +3,9 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
+#include "common.h"
+#include "atom_types.h"
 #include "actors/render_window.h"
 #include "data/job.hpp"
 #include "data/pixels.hpp"
@@ -14,7 +17,7 @@
 #include <allegro5/allegro_image.h>
 #include <util/compress_vector.h>
 
-using render                = atom_constant<atom("render    ")>;
+
 ALLEGRO_DISPLAY *display    = NULL;
 struct data::pixel_data2 data_;
 
@@ -75,7 +78,7 @@ behavior render_loop(event_based_actor* self) {
             if (idle.count() > 500.) {
                 std::this_thread::sleep_for(0.5s);
             }
-            self->send(self, render::value);
+            self->send(self, render_v);
         },
         [=](uint32_t width, uint32_t height, std::vector<uint32_t> &pixels) {
             std::swap(width_, width);
@@ -121,7 +124,7 @@ behavior render_window(event_based_actor* self, uint16_t port) {
     auto renderloop = self->spawn(render_loop);
     self->link_to(renderloop);
     data::pixel_data2 data;
-    self->send(renderloop, render::value);
+    self->send(renderloop, render_v);
 
     return {
         [=](uint32_t width, uint32_t height, std::vector<uint32_t> &pixels) -> message {

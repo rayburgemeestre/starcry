@@ -52,12 +52,17 @@ public:
 };
 
 v8_wrapper::v8_wrapper(std::string filename) : context(nullptr), platform(nullptr), filename_(filename) {
-    v8::V8::InitializeICUDefaultLocation("starcry");
-    v8::V8::InitializeExternalStartupData("starcry"); // TODO: comment this out?
-    platform = std::unique_ptr<v8::Platform>(v8::platform::NewDefaultPlatform());
-    v8::V8::InitializePlatform(platform.get());
-    v8::V8::Initialize();
-    context = new v8pp::context(); // Making it unique_ptr breaks it!
+  //v8::V8::InitializeICU();
+  v8::V8::InitializeExternalStartupData("starcry");
+#if V8_MAJOR_VERSION >= 7
+  platform = v8::platform::NewDefaultPlatform();
+#else
+  platform = v8::platform::CreateDefaultPlatform();
+#endif
+  v8::V8::InitializePlatform(platform.get());
+  v8::V8::Initialize();
+
+  context = new v8pp::context(); // Making it unique_ptr breaks it!
 }
 
 template<typename T>
@@ -99,7 +104,7 @@ void v8_wrapper::call(std::string const& function_name)
     try_catch.SetCaptureMessage(true);
 
     v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
-    v8::Local<v8::Function> func = global->Get(v8::String::NewFromUtf8(isolate, function_name.c_str())).As<v8::Function>();
+    v8::Local<v8::Function> func = global->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, function_name.c_str())).ToLocalChecked().As<v8::Function>();
 
     func->Call(isolate->GetCurrentContext(), global, 0, {});
 
@@ -119,7 +124,7 @@ void v8_wrapper::call(std::string const& function_name, T param)
     try_catch.SetCaptureMessage(true);
 
     v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
-    v8::Local<v8::Function> func = global->Get(v8::String::NewFromUtf8(isolate, function_name.c_str())).As<v8::Function>();
+    v8::Local<v8::Function> func = global->Get(isolate->GetCurrentContext(), v8::String::NewFromUtf8(isolate, function_name.c_str()).ToLocalChecked()).ToLocalChecked().As<v8::Function>();
 
     v8::Handle<v8::Value> args[1];
     args[0] = v8pp::to_v8(isolate, param);
@@ -146,12 +151,17 @@ inline void v8_wrapper::add_include_fun() {
     v8::HandleScope scope(context->isolate());
     context->set("include", v8pp::wrap_function(context->isolate(), "include", [=](const v8::FunctionCallbackInfo<v8::Value>& args) -> v8::Handle<v8::Value> {
         for (int i = 0; i < args.Length(); i++) {
-          auto str = args[i]->ToString(context->isolate());
+          // V1? auto str = args[i]->ToString(context->isolate()->GetCurrentContext()).ToLocalChecked();
+          // V2
+          // std::string const str = v8pp::from_v8<std::string>(isolate, ex->ToString(isolate->GetCurrentContext()).ToLocalChecked());
+          // auto isolate = context->isolate();
+          // v8::Local<v8::Context> context(isolate->GetCurrentContext());
+          std::string const str = v8pp::from_v8<std::string>(context->isolate(), args[0]->ToString(context->isolate()->GetCurrentContext()).ToLocalChecked());
 
-            // load_file loads the file with this name into a string,
-            // I imagine you can write a function to do this :)
-            std::string file((const char *)*str->ToString(context->isolate()));
-            fs::path p = filename_;
+          // load_file loads the file with this name into a string,
+          // I imagine you can write a function to do this :)
+          std::string file(str.c_str());
+          fs::path p = filename_;
             p.remove_filename();
             p.append(file);
 
@@ -163,8 +173,8 @@ inline void v8_wrapper::add_include_fun() {
             std::string js_file(begin, end);
 
             if(js_file.length() > 0) {
-                v8::Handle<v8::String> source = v8::String::NewFromUtf8(context->isolate(), js_file.c_str());
-                auto script_origin = v8::String::NewFromUtf8(context->isolate(), p.c_str());
+                v8::Handle<v8::String> source = v8::String::NewFromUtf8(context->isolate(), js_file.c_str()).ToLocalChecked();
+                auto script_origin = v8::String::NewFromUtf8(context->isolate(), p.c_str()).ToLocalChecked();
                 v8::ScriptOrigin so(script_origin);
                 v8::Handle<v8::Script> script = v8::Script::Compile(context->isolate()->GetCurrentContext(), source, &so).ToLocalChecked();
                 return script->Run(context->isolate()->GetCurrentContext()).ToLocalChecked();
@@ -188,13 +198,13 @@ void v8_wrapper::rethrow_as_runtime_error(v8::Isolate *isolate, v8::TryCatch &tr
   auto ex = try_catch.Exception();
   v8::Local<v8::Context> context(isolate->GetCurrentContext());
 
-  std::string const msg = v8pp::from_v8<std::string>(isolate, ex->ToString(isolate));
+  std::string const msg = v8pp::from_v8<std::string>(isolate, ex->ToString(isolate->GetCurrentContext()).ToLocalChecked());
   std::stringstream ss;
   v8::Handle<v8::Message> const &message(try_catch.Message());
   if (!message.IsEmpty()) {
     int linenum = message->GetLineNumber(context).FromJust();
     auto script_resource = [=]() -> std::string {
-      const auto val = message->GetScriptResourceName()->ToString(isolate);
+      const auto val = message->GetScriptResourceName()->ToString(isolate->GetCurrentContext());
       v8::String::Utf8Value resource(isolate, message->GetScriptResourceName());
       return !val.IsEmpty() ? std::string(ToCString(resource)) : filename_;
     }();

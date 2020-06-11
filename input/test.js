@@ -4,7 +4,8 @@
  file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 const fps           = 25;
-const max_frames    = 10 * fps; // seconds
+//const max_frames    = 10 * fps; // seconds
+const max_frames    = -1;
 const realtime      = false;
 const begin         = +new Date();
 const canvas_w      = 1920;
@@ -17,7 +18,7 @@ function next() {
     const tmp = new gradient();
     tmp.add(0.0, new color(1, 0, 0, 1))
     tmp.add(1.0, new color(0, 1, 0, 0));
-    const test = new circle(new pos(0, 0, 0), seconds, 5.0, tmp);
+    const test = new circle(new pos(0, 0, 0), seconds % 250, 5.0, tmp);
     add_circle(test);
 }
 
