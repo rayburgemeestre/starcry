@@ -1,11 +1,16 @@
 cmake_minimum_required(VERSION 3.10.2)
 project(starcry VERSION 0.2 LANGUAGES CXX)
-include(CheckIPOSupported)
 
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
+set(CLANGFORMAT_EXECUTABLE clang-format-10)
 set(Boost_USE_STATIC_LIBS ON)
 set(BOOST_ROOT "/opt/cppse/build/boost/")
 set(V8_DIR "/opt/cppse/build/v8pp/include/v8/")
+
+include(CheckIPOSupported)
+include(ClangFormat)
+
 
 find_package(CAF REQUIRED core io)
 find_package(V8 REQUIRED)
@@ -133,3 +138,5 @@ target_link_libraries(starcry -ldl)
 target_link_libraries(starcry /usr/lib/gcc/x86_64-linux-gnu/8/libstdc++fs.a)
 
 install (TARGETS starcry DESTINATION bin)
+
+target_clangformat_setup(starcry)
