@@ -135,7 +135,7 @@ target_link_libraries(starcry /opt/cppse/build/fastpfor/lib/libFastPFor.a)
 # v8
 target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libv8_monolith.a)
 target_link_libraries(starcry -ldl)
-target_link_libraries(starcry /usr/lib/gcc/x86_64-linux-gnu/8/libstdc++fs.a)
+target_link_libraries(starcry /usr/lib/gcc/x86_64-linux-gnu/7/libstdc++fs.a)
 
 install (TARGETS starcry DESTINATION bin)
 

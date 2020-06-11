@@ -8,6 +8,10 @@ debug:
 	# build starcry with tailored image so we can invoke the make command straight away
 	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make core_debug"
 
+format:
+	# build starcry with tailored image so we can invoke the make command straight away
+	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make core_format"
+
 profile:
 	valgrind --tool=callgrind ./starcry --no-rendering input/motion.js
 	ls -althrst | tail -n 1
@@ -70,6 +74,9 @@ core_debug:
 	pushd build && \
 	CXX=$(which c++) cmake -DDEBUG=on .. && \
 	make VERBOSE=1 -j $$(nproc)
+
+core_format:
+	cmake --build build --target clangformat
 
 core_experimental:
 	# switch to clang compiler

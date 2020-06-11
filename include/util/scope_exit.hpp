@@ -6,17 +6,12 @@
 #pragma once
 
 template <typename T>
-class scope_exit
-{
+class scope_exit {
 private:
-    T func_;
+  T func_;
+
 public:
+  scope_exit(T f) : func_(f) {}
 
-    scope_exit(T f) : func_(f)
-    {
-    }
-
-    ~scope_exit() {
-        func_();
-    }
+  ~scope_exit() { func_(); }
 };

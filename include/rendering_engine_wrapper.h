@@ -5,32 +5,40 @@
  */
 #pragma once
 
-#include <vector>
-#include <memory>
 #include <cstdint>
+#include <memory>
+#include <vector>
 
 struct rendering_engine_wrapper_class_data;
 
 struct ALLEGRO_BITMAP;
 
 namespace data {
-    struct color;
-    struct shape;
-}
+struct color;
+struct shape;
+}  // namespace data
 
-class rendering_engine_wrapper
-{
+class rendering_engine_wrapper {
 public:
-    rendering_engine_wrapper();
+  rendering_engine_wrapper();
 
-    void initialize();
+  void initialize();
 
-    using image = ALLEGRO_BITMAP *;
-    using shapes_t = std::vector<data::shape>;
-    void render(image bmp, data::color &bg_color, shapes_t & shapes, uint32_t offset_x, uint32_t offset_y, uint32_t canvas_w, uint32_t canvas_h, uint32_t width, uint32_t height, double scale);
+  using image = ALLEGRO_BITMAP *;
+  using shapes_t = std::vector<data::shape>;
+  void render(image bmp,
+              data::color &bg_color,
+              shapes_t &shapes,
+              uint32_t offset_x,
+              uint32_t offset_y,
+              uint32_t canvas_w,
+              uint32_t canvas_h,
+              uint32_t width,
+              uint32_t height,
+              double scale);
 
-    std::vector<uint32_t> serialize_bitmap2(image bitmap, uint32_t width, uint32_t height);
-    image unserialize_bitmap2(std::vector<uint32_t> &pixels, uint32_t width, uint32_t height);
+  std::vector<uint32_t> serialize_bitmap2(image bitmap, uint32_t width, uint32_t height);
+  image unserialize_bitmap2(std::vector<uint32_t> &pixels, uint32_t width, uint32_t height);
 
-    std::shared_ptr<rendering_engine_wrapper_class_data> data;
+  std::shared_ptr<rendering_engine_wrapper_class_data> data;
 };

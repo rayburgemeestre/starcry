@@ -1,15 +1,15 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 extern "C" {
 #ifndef INT64_C
-#define INT64_C(c) (c ## LL)
-#define UINT64_C(c) (c ## ULL)
+#define INT64_C(c) (c##LL)
+#define UINT64_C(c) (c##ULL)
 #endif
-#include <libavutil/mathematics.h>
 #include <libavformat/avformat.h>
+#include <libavutil/mathematics.h>
 #include <libswscale/swscale.h>
 }
 
@@ -17,8 +17,7 @@ extern "C" {
 #include <vector>
 #include "benchmark.h"
 
-class ffmpeg_hls_stream
-{
+class ffmpeg_hls_stream {
 private:
   std::string url_ = "test.ts";
   uint32_t width_;
@@ -41,7 +40,6 @@ private:
   size_t fps_;
   size_t bitrate_;
 
-
 public:
   ffmpeg_hls_stream(std::string url, size_t bitrate, size_t fps, uint32_t canvas_w, uint32_t canvas_h);
   void add_frame(std::vector<uint32_t> &pixels);
@@ -54,4 +52,3 @@ protected:
   void write_video_frame(std::vector<uint32_t> &pixels, AVFormatContext *oc, AVStream *st);
   void close_video(AVFormatContext *oc, AVStream *st);
 };
-

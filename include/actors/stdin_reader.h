@@ -7,14 +7,13 @@
 
 #include "common.h"
 
-struct stdin_reader_data
-{
-    int max_num_lines_batch = 500;
-    int desired_max_mailbox_generator = 100;
-    size_t lines_send = 0;
-    size_t max_outgoing_lines = 100;
-    size_t max_lines_send = max_outgoing_lines;
-    bool paused = false;
+struct stdin_reader_data {
+  int max_num_lines_batch = 500;
+  int desired_max_mailbox_generator = 100;
+  size_t lines_send = 0;
+  size_t max_outgoing_lines = 100;
+  size_t max_lines_send = max_outgoing_lines;
+  bool paused = false;
 };
 
 /**

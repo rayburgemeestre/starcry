@@ -7,13 +7,11 @@
 
 #include <thread>
 
-class webserver
-{
+class webserver {
 public:
+  webserver();
 
-    webserver();
+  ~webserver();
 
-    ~webserver();
-
-    std::thread webserver_;
+  std::thread webserver_;
 };

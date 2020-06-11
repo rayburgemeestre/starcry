@@ -8,8 +8,8 @@
 #include "common.h"
 
 namespace caf {
-    class event_based_actor;
-    class actor_system;
-}
+class event_based_actor;
+class actor_system;
+}  // namespace caf
 
 behavior render_window(caf::event_based_actor* self, uint16_t port);

@@ -17,4 +17,3 @@ void close_fun();
 
 // deprecated
 void write_frame_fun_impl(bool last_frame);
-

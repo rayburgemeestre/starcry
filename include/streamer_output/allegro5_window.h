@@ -5,26 +5,25 @@
  */
 #pragma once
 
-#include <vector>
 #include <allegro5/color.h>
+#include <vector>
 
 namespace caf {
-    class event_based_actor;
-    class actor;
-    class actor_system;
-}
+class event_based_actor;
+class actor;
+class actor_system;
+}  // namespace caf
 
-class allegro5_window
-{
+class allegro5_window {
 public:
-    allegro5_window(actor_system &system, caf::event_based_actor* self, int port);
+  allegro5_window(actor_system &system, caf::event_based_actor *self, int port);
 
-    void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels);
-    void finalize();
+  void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels);
+  void finalize();
 
 private:
-    caf::event_based_actor *self_;
-    caf::actor_system &system_;
-    std::unique_ptr<caf::actor> client_;
-    uint32_t port_;
+  caf::event_based_actor *self_;
+  caf::actor_system &system_;
+  std::unique_ptr<caf::actor> client_;
+  uint32_t port_;
 };

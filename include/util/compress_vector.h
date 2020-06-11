@@ -6,21 +6,20 @@
 #pragma once
 
 #include <cstddef>
-#include <vector>
 #include <memory>
+#include <vector>
 
 namespace FastPForLib {
-    class IntegerCODEC;
+class IntegerCODEC;
 }
 
 template <typename T>
-class compress_vector
-{
+class compress_vector {
 private:
-    std::shared_ptr<FastPForLib::IntegerCODEC> codec_ptr;
+  std::shared_ptr<FastPForLib::IntegerCODEC> codec_ptr;
 
 public:
-    compress_vector();
-    void compress(std::vector<T> *input_ptr, double *compression_rate = nullptr);
-    void decompress(std::vector<T> *input_ptr, size_t target_vec_len);
+  compress_vector();
+  void compress(std::vector<T> *input_ptr, double *compression_rate = nullptr);
+  void decompress(std::vector<T> *input_ptr, size_t target_vec_len);
 };

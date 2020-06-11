@@ -18,15 +18,14 @@ struct job_generator_data;
  */
 class assistant_ {
 public:
-    assistant_(stateful_actor<job_generator_data> *job_gen);
+  assistant_(stateful_actor<job_generator_data> *job_gen);
 
-    data::job the_job;
-    stateful_actor<job_generator_data> *job_generator;
-    size_t max_frames;
-    bool realtime = false;
+  data::job the_job;
+  stateful_actor<job_generator_data> *job_generator;
+  size_t max_frames;
+  bool realtime = false;
 
-    size_t current_frame = 0;
+  size_t current_frame = 0;
 };
 
 extern std::unique_ptr<assistant_> assistant;
-

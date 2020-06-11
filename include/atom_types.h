@@ -6,18 +6,22 @@
 #pragma once
 
 #include <vector>
-#include "data/pixel_data.hpp"
+
+#include "common.h"
 #include "data/job.hpp"
+#include "data/pixel_data.hpp"
 #include "data/pixels.hpp"
 
+// clang-format off
 CAF_BEGIN_TYPE_ID_BLOCK(starcry, first_custom_type_id)
-  CAF_ADD_TYPE_ID(starcry, (std::vector<uint32_t>) )
-  CAF_ADD_TYPE_ID(starcry, (std::vector<std::pair<std::string, int>>) )
-  CAF_ADD_TYPE_ID(starcry, (data::job) )
-  CAF_ADD_TYPE_ID(starcry, (data::pixel_data) )
-  CAF_ADD_TYPE_ID(starcry, (data::pixel_data2) )
 
-CAF_ADD_ATOM(starcry, add_job)
+  CAF_ADD_TYPE_ID(starcry, (std::vector<uint32_t>))
+  CAF_ADD_TYPE_ID(starcry, (std::vector<std::pair<std::string, int>>))
+  CAF_ADD_TYPE_ID(starcry, (data::job))
+  CAF_ADD_TYPE_ID(starcry, (data::pixel_data))
+  CAF_ADD_TYPE_ID(starcry, (data::pixel_data2))
+
+  CAF_ADD_ATOM(starcry, add_job)
   CAF_ADD_ATOM(starcry, checkpoint)
   CAF_ADD_ATOM(starcry, debug)
   CAF_ADD_ATOM(starcry, del_job)
@@ -41,4 +45,6 @@ CAF_ADD_ATOM(starcry, add_job)
   CAF_ADD_ATOM(starcry, streamer_ready)
   CAF_ADD_ATOM(starcry, terminate_)
   CAF_ADD_ATOM(starcry, write_frame)
+
 CAF_END_TYPE_ID_BLOCK(starcry)
+// clang-format on
