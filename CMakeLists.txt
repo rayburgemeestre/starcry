@@ -30,7 +30,7 @@ else()
 endif()
 
 if (NOT DEBUG)
-    add_definitions("-std=c++17 -O3 -funsigned-char -Wall -stdlib=libstdc++ -fno-omit-frame-pointer -pedantic -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
+    add_definitions("-std=c++17 -O3 -funsigned-char -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
 else()
     add_definitions("-std=c++17 -O0 -g -DV8_COMPRESS_POINTERS")  # --no-rosegment is important for being able to let valgrind/callgrind read symbols
 endif()
@@ -66,6 +66,8 @@ add_executable(starcry ${starcry_SOURCES})
 #else()
 #    message(WARNING "IPO is not supported: ${output}")
 #endif()
+
+target_link_libraries(starcry -static-libgcc -static-libstdc++)
 
 # allegro 5
 target_link_libraries(starcry /opt/cppse/build/allegro5/lib/liballegro-static.a)
@@ -105,37 +107,53 @@ target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libavformat.a)
 target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libavcodec.a)
 target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libavutil.a)
 target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libavfilter.a)
-target_link_libraries(starcry -lXcursor)
-target_link_libraries(starcry -lXrender)
-target_link_libraries(starcry -lxcb)
-target_link_libraries(starcry /opt/cppse/build/x264/lib/libx264.a)
-target_link_libraries(starcry -lbz2)
-target_link_libraries(starcry -lz)
-target_link_libraries(starcry -llzma)
-target_link_libraries(starcry -ldl)
-target_link_libraries(starcry -lswresample -lm -lz)
-target_link_libraries(starcry -lssl)
-target_link_libraries(starcry -lcrypto)
 
-# X11 stuff (allegro)
-target_link_libraries(starcry -lX11)
-target_link_libraries(starcry -lXcursor)
-target_link_libraries(starcry -ljpeg)
-target_link_libraries(starcry -lpng)
-target_link_libraries(starcry -lGLU)
+# X11
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXinerama.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXi.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXrandr.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXext.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXrender.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXcursor.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXfixes.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libX11.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libxcb.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXau.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXdmcp.a)
+
+# x264
+target_link_libraries(starcry /opt/cppse/build/x264/lib/libx264.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libbz2.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libz.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/liblzma.a)
+
+target_link_libraries(starcry -ldl)
+
+# generic
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libssl.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libcrypto.a)
+
+# More allegro/X11 stuff
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libjpeg.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libpng16.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libGLU.a)
 target_link_libraries(starcry -lGL)
-target_link_libraries(starcry -lfreetype)
-target_link_libraries(starcry -lXrandr)
-target_link_libraries(starcry -lXinerama)
-target_link_libraries(starcry -lXi)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libfreetype.a)
 
 # fastpfor
 target_link_libraries(starcry /opt/cppse/build/fastpfor/lib/libFastPFor.a)
 
 # v8
 target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libv8_monolith.a)
-target_link_libraries(starcry -ldl)
 target_link_libraries(starcry /usr/lib/gcc/x86_64-linux-gnu/7/libstdc++fs.a)
+
+# failed experiment
+#target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/librt.a)
+#target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libm.a)
+#target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libc.a)
+#target_link_libraries(starcry -Wl,--whole-archive /usr/lib/x86_64-linux-gnu/libpthread.a -Wl,--no-whole-archive)
+#target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libmvec.a)
+#target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libpthread.a)
 
 install (TARGETS starcry DESTINATION bin)
 
