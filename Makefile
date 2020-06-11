@@ -126,8 +126,9 @@ dockerize_run:
 	apt update
 	apt install python-pip rsync -y
 	pip install dockerize
-	strip --strip-debug $$PWD/build/starcry
-	dockerize --verbose --debug -n -o out $$PWD/build/starcry
+	cp -prv $$PWD/build/starcry /starcry
+	strip --strip-debug /starcry
+	dockerize --verbose --debug -n -o out /starcry
 
 gui:
 	#docker run -it --privileged -v /etc/hosts:/etc/hosts -v $$HOME:$$HOME -u 1144 --workdir $$HOME -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix rayburgemeestre/build-starcry-ubuntu:18.04 /bin/bash

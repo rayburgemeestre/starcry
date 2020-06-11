@@ -6,11 +6,9 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set(CLANGFORMAT_EXECUTABLE clang-format-10)
 set(Boost_USE_STATIC_LIBS ON)
 set(BOOST_ROOT "/opt/cppse/build/boost/")
-set(V8_DIR "/opt/cppse/build/v8pp/include/v8/")
 
 include(CheckIPOSupported)
 include(ClangFormat)
-
 
 find_package(CAF REQUIRED core io)
 find_package(V8 REQUIRED)
@@ -39,7 +37,9 @@ endif()
 
 include_directories(
     "./include/"
-    "${V8_DIR}/include" "${V8_DIR}/../" "${V8_INCLUDE_DIR}"
+    "/opt/cppse/build/v8pp/include/"  # for v8pp
+    "/opt/cppse/build/v8pp/include/v8"  # for v8
+    "/opt/cppse/build/v8pp/include/v8/include" # for v8
     "/opt/cppse/build/benchmarklib/include/"
     "/opt/cppse/build/caf/include/"
     "/opt/cppse/build/allegro5/include/"

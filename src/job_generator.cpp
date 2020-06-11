@@ -42,7 +42,7 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
   context = make_shared<v8_wrapper>(filename);
   try {
     ifstream stream(filename.c_str());
-    if (!stream) {
+    if (!stream && filename != "-") {
       throw runtime_error("could not locate file " + filename);
     }
 
@@ -66,7 +66,7 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
 
     context->add_include_fun();
 
-    istreambuf_iterator<char> begin(stream), end;
+    istreambuf_iterator<char> begin(filename == "-" ? std::cin : stream), end;
     context->run("var current_frame = 0;");
     context->run(std::string(begin, end));
     if (context->run<bool>("typeof initialize != 'undefined'")) {

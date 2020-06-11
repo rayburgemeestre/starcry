@@ -119,16 +119,16 @@ public:
     try {
       po::notify(vm);
     } catch (po::error &ex) {
-      std::cout << "Error: " << ex.what() << std::endl;
-      std::cout << desc << std::endl;
+      std::cerr << "Error: " << ex.what() << std::endl;
+      std::cerr << desc << std::endl;
       std::exit(1);
     }
     rendering_enabled = !vm.count("no-rendering");
     if (vm.count("script")) {
-      cout << "Script: " << vm["script"].as<string>() << "\n";
+      cerr << "Script: " << vm["script"].as<string>() << "\n";
     }
     if (vm.count("help")) {
-      cout << desc << "\n";
+      cerr << desc << "\n";
       std::exit(1);
     }
     compress = vm.count("compress");
@@ -136,24 +136,24 @@ public:
     // determine outputs
     bitset<32> streamer_settings(settings_);
     if (!vm.count("no-video-output")) {
-      cout << "Enabling video output using ffmpeg.." << endl;
+      cerr << "Enabling video output using ffmpeg.." << endl;
       streamer_settings.set(streamer_ffmpeg, true);
     }
     if (vm.count("gui")) {
       auto client = system.middleman().remote_actor("127.0.0.1", conf.user.gui_port);
       if (!client) {
         if (0 != ::system((std::string(argv[0]) + " --spawn-gui &").c_str())) {
-          cout << "System call to --spawn-gui failed.." << endl;
+          cerr << "System call to --spawn-gui failed.." << endl;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         conf.load();
       }
-      cout << "Enabling video output to window on port " << conf.user.gui_port << ".." << endl;
+      cerr << "Enabling video output to window on port " << conf.user.gui_port << ".." << endl;
       streamer_settings.set(streamer_allegro5, true);
     }
     scoped_actor s{system};
     if (vm.count("spawn-gui")) {
-      cout << "launching render output window" << endl;
+      cerr << "launching render output window" << endl;
       auto w = system.spawn(render_window, conf.user.gui_port);
       s->await_all_other_actors_done();
       std::exit(0);
@@ -173,15 +173,15 @@ public:
           cerr << "erroneous line in servers text: " << line << endl;
           continue;
         }
-        cout << "found server: " << line.substr(0, pos) << " and port: " << atoi(line.substr(pos + 1).c_str()) << endl;
+        cerr << "found server: " << line.substr(0, pos) << " and port: " << atoi(line.substr(pos + 1).c_str()) << endl;
         workers_vec.push_back(make_pair(line.substr(0, pos), atoi(line.substr(pos + 1).c_str())));
       }
     }
 
-    if (use_remote_workers) cout << "use_remote_workers=true" << endl;
-    if (worker_port) cout << "worker_port=" << worker_port << endl;
-    if (num_chunks) cout << "num_chunks=" << num_chunks << endl;
-    if (num_workers) cout << "num_workers=" << num_workers << endl;
+    if (use_remote_workers) cerr << "use_remote_workers=true" << endl;
+    if (worker_port) cerr << "worker_port=" << worker_port << endl;
+    if (num_chunks) cerr << "num_chunks=" << num_chunks << endl;
+    if (num_workers) cerr << "num_workers=" << num_workers << endl;
 
     extract_host_port_string(remote_renderer_info, &renderer_host, &renderer_port);
     extract_host_port_string(remote_streamer_info, &streamer_host, &streamer_port);
@@ -233,6 +233,7 @@ public:
       if (output_file.empty()) {
         output_file.assign("webroot/stream/stream.m3u8");
       }
+      std::cerr << "Stream URL: http://localhost:18080/" << std::endl;
     }
     if (vm.count("stream-rtmp")) {
       stream_mode = "rtmp";
@@ -329,15 +330,15 @@ public:
         cerr << "parameter for --" << cli_flag_param << " is invalid, please specify <host>:<port>, "
              << "i.e. 127.0.0.1:11111." << endl;
       }
-      cout << "using remote " << actor_name << " at: " << host << ":" << port << endl;
+      cerr << "using remote " << actor_name << " at: " << host << ":" << port << endl;
       auto p = system.middleman().remote_actor(host, port);
       if (!p) {
-        cout << "connecting to " << actor_name << " failed: " << system.render(p.error()) << endl;
+        cerr << "connecting to " << actor_name << " failed: " << system.render(p.error()) << endl;
       }
       actor_ptr = *p;
     } else {
       std::optional<size_t> no_port;
-      cout << "spawning local " << actor_name << endl;
+      cerr << "spawning local " << actor_name << endl;
       actor_ptr = system.spawn<caf::spawn_options::priority_aware_flag>(actor_behavior, no_port);
     }
     return *actor_ptr;
