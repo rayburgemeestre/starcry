@@ -30,7 +30,7 @@ else()
 endif()
 
 if (NOT DEBUG)
-    add_definitions("-std=c++17 -O3 -funsigned-char -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
+    add_definitions("-std=c++17 -O3 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
 else()
     add_definitions("-std=c++17 -O0 -g -DV8_COMPRESS_POINTERS")  # --no-rosegment is important for being able to let valgrind/callgrind read symbols
 endif()
@@ -81,20 +81,11 @@ target_link_libraries(starcry /opt/cppse/build/allegro5/lib/liballegro_primitive
 # benchmarklib
 target_link_libraries(starcry /opt/cppse/build/benchmarklib/lib/libbenchmarklib.a)
 
-# crtmpserver
-target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libcrtmpserver.a)
-target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libappselector.a)
-target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libflvplayback.a)
-target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libthelib.a)
-target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libcommon.a)
-target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libtinyxml.a)
-target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/liblua.a)
-
 # boost
 target_link_libraries(starcry ${Boost_LIBRARIES})
 
 # pthreads
-target_link_libraries(starcry ${CMAKE_THREAD_LIBS_INIT})
+#target_link_libraries(starcry ${CMAKE_THREAD_LIBS_INIT})
 
 # caf
 target_link_libraries(starcry /opt/cppse/build/caf/lib/libcaf_io.a)
@@ -129,10 +120,6 @@ target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/liblzma.a)
 
 target_link_libraries(starcry -ldl)
 
-# generic
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libssl.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libcrypto.a)
-
 # More allegro/X11 stuff
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libjpeg.a)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libpng16.a)
@@ -147,11 +134,27 @@ target_link_libraries(starcry /opt/cppse/build/fastpfor/lib/libFastPFor.a)
 target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libv8_monolith.a)
 target_link_libraries(starcry /usr/lib/gcc/x86_64-linux-gnu/7/libstdc++fs.a)
 
-# failed experiment
+# generic
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libssl.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libcrypto.a)
+
+# crtmpserver
+target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libcrtmpserver.a)
+target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libappselector.a)
+target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libflvplayback.a)
+target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libthelib.a)
+target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libcommon.a)
+target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libtinyxml.a)
+target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/liblua.a)
+
+
+# trying to include more statically will eventually result in
+# starcry: symbol lookup error: starcry: undefined symbol: pthread_create
+# at runtime..
 #target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/librt.a)
 #target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libm.a)
-#target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libc.a)
 #target_link_libraries(starcry -Wl,--whole-archive /usr/lib/x86_64-linux-gnu/libpthread.a -Wl,--no-whole-archive)
+#target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libc.a)
 #target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libmvec.a)
 #target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libpthread.a)
 
