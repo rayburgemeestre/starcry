@@ -102,7 +102,7 @@ void v8_wrapper::call(std::string const& function_name) {
                                      .ToLocalChecked()
                                      .As<v8::Function>();
 
-  func->Call(isolate->GetCurrentContext(), global, 0, {});
+  (void)func->Call(isolate->GetCurrentContext(), global, 0, {});
 
   if (try_catch.HasCaught()) {
     rethrow_as_runtime_error(isolate, try_catch);
@@ -127,7 +127,7 @@ void v8_wrapper::call(std::string const& function_name, T param) {
 
   v8::Handle<v8::Value> args[1];
   args[0] = v8pp::to_v8(isolate, param);
-  func->Call(isolate->GetCurrentContext(), global, 1, args);
+  (void)func->Call(isolate->GetCurrentContext(), global, 1, args);
 
   if (try_catch.HasCaught()) {
     rethrow_as_runtime_error(isolate, try_catch);

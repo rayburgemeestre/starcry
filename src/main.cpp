@@ -1,8 +1,23 @@
 #include <bitset>
 #include <iostream>
 
-#include <bitset>
-#include <boost/program_options/option.hpp>
+/**
+ * This warning is driving me crazy,
+ *
+ * In file included from /home/trigen/projects/starcry/src/main.cpp:6:
+ * In file included from /opt/cppse/build/boost/include/boost/program_options/options_description.hpp:16:
+ * In file included from /opt/cppse/build/boost/include/boost/shared_ptr.hpp:17:
+ * In file included from /opt/cppse/build/boost/include/boost/smart_ptr/shared_ptr.hpp:28:
+ * In file included from /opt/cppse/build/boost/include/boost/smart_ptr/detail/shared_count.hpp:29:
+ * In file included from /opt/cppse/build/boost/include/boost/smart_ptr/detail/sp_counted_base.hpp:45:
+ *
+ * /opt/cppse/build/boost/include/boost/smart_ptr/detail/sp_counted_base_clang.hpp:29:9: warning: '_Atomic' is a C11 extension [-Wc11-extensions]
+ */
+#ifdef __clang__
+#  pragma clang diagnostic ignored "-Wc11-extensions"
+#endif // __clang__
+
+
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
@@ -15,15 +30,10 @@
 #include "atom_types.h"
 #include "caf/io/middleman.hpp"
 #include "common.h"
-#include "data/job.hpp"
 #include "data/pixels.hpp"
 #include "util/actor_info.hpp"
 #include "util/settings.hpp"
 #include "webserver.h"
-
-#include <v8pp/context.hpp>
-#include "v8/libplatform/libplatform.h"
-#include "v8/v8.h"
 
 namespace po = ::boost::program_options;
 

@@ -72,10 +72,10 @@ Local<Array> gradient::get2(double index) {
   if (array.IsEmpty()) return Local<Array>();
 
   color c = get(index);
-  array->Set(isolate->GetCurrentContext(), 0, Number::New(isolate, c.get_r()));
-  array->Set(isolate->GetCurrentContext(), 1, Number::New(isolate, c.get_g()));
-  array->Set(isolate->GetCurrentContext(), 2, Number::New(isolate, c.get_b()));
-  array->Set(isolate->GetCurrentContext(), 3, Number::New(isolate, c.get_a()));
+  auto _ = array->Set(isolate->GetCurrentContext(), 0, Number::New(isolate, c.get_r()));
+  _ = array->Set(isolate->GetCurrentContext(), 1, Number::New(isolate, c.get_g()));
+  _ = array->Set(isolate->GetCurrentContext(), 2, Number::New(isolate, c.get_b()));
+  _ = array->Set(isolate->GetCurrentContext(), 3, Number::New(isolate, c.get_a()));
   return handle_scope.Escape(array);
 }
 using namespace v8;

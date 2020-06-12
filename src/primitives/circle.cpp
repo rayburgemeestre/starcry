@@ -41,8 +41,8 @@ bool circle::contains(const shape &point) {
 }
 
 bool circle::intersects(const rectangle &range) {
-  const auto xDist = abs(range.get_x() - get_x());
-  const auto yDist = abs(range.get_y() - get_y());
+  const auto xDist = std::abs(range.get_x() - get_x());
+  const auto yDist = std::abs(range.get_y() - get_y());
 
   // radius of the circle
   const auto r = get_radius() + get_radiussize();
