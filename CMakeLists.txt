@@ -60,12 +60,14 @@ file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "/opt/cppse/build
 add_executable(starcry ${starcry_SOURCES})
 
 # Optional IPO. Do not use IPO if it's not supported by compiler.
-#check_ipo_supported(RESULT result OUTPUT output)
-#if(result)
-#    set_property(TARGET starcry PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-#else()
-#    message(WARNING "IPO is not supported: ${output}")
-#endif()
+if (NOT DEBUG)
+    check_ipo_supported(RESULT result OUTPUT output)
+    if(result)
+        set_property(TARGET starcry PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(WARNING "IPO is not supported: ${output}")
+    endif()
+endif()
 
 target_link_libraries(starcry -static-libgcc -static-libstdc++)
 

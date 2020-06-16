@@ -11,12 +11,12 @@
  * In file included from /opt/cppse/build/boost/include/boost/smart_ptr/detail/shared_count.hpp:29:
  * In file included from /opt/cppse/build/boost/include/boost/smart_ptr/detail/sp_counted_base.hpp:45:
  *
- * /opt/cppse/build/boost/include/boost/smart_ptr/detail/sp_counted_base_clang.hpp:29:9: warning: '_Atomic' is a C11 extension [-Wc11-extensions]
+ * /opt/cppse/build/boost/include/boost/smart_ptr/detail/sp_counted_base_clang.hpp:29:9: warning: '_Atomic' is a C11
+ * extension [-Wc11-extensions]
  */
 #ifdef __clang__
-#  pragma clang diagnostic ignored "-Wc11-extensions"
-#endif // __clang__
-
+#pragma clang diagnostic ignored "-Wc11-extensions"
+#endif  // __clang__
 
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/parsers.hpp>

@@ -2,11 +2,12 @@
 
 /**
  * Similar to the fix in main.cpp, crow.h was also pulling in boost::shared_ptr, via boost::date_time stuff.
- * /opt/cppse/build/boost/include/boost/smart_ptr/detail/sp_counted_base_clang.hpp:29:9: warning: '_Atomic' is a C11 extension [-Wc11-extensions]
+ * /opt/cppse/build/boost/include/boost/smart_ptr/detail/sp_counted_base_clang.hpp:29:9: warning: '_Atomic' is a C11
+ * extension [-Wc11-extensions]
  */
 #ifdef __clang__
-#  pragma clang diagnostic ignored "-Wc11-extensions"
-#endif // __clang__
+#pragma clang diagnostic ignored "-Wc11-extensions"
+#endif  // __clang__
 
 #include <fstream>
 #include <sstream>
