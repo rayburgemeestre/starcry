@@ -107,6 +107,7 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
         job.canvas_h = self->state.canvas_h;
         job.scale = context->run<double>("typeof scale != 'undefined' ? scale : 1.0");
         job.compress = compress;
+        job.save_image = false;
         assistant->max_frames = context->run<size_t>("typeof max_frames != 'undefined' ? max_frames : 250");
         assistant->realtime = context->run<bool>("typeof realtime != 'undefined' ? realtime : false");
         if (!self->state.use_stdin || assistant->realtime) {

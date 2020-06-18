@@ -34,6 +34,7 @@ struct renderer_data {
   std::optional<caf::actor> streamer;
   std::optional<caf::actor> generator;
   std::vector<std::pair<std::string, int>> workers_vec;
+  int64_t save_image = -1;
   std::map<int, size_t> last_job_for_worker;
   size_t outstanding_jobs = 0;
   size_t max_outstanding_jobs = 20;

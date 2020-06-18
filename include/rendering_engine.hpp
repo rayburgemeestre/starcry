@@ -166,7 +166,7 @@ public:
   void write_image(image bmp, std::string prefix) {
     std::unique_lock<std::mutex> lock(m);
     stringstream ss;
-    ss << "/tmp/" << prefix << ".bmp";
+    ss << prefix << ".bmp";
     bool ret = al_save_bitmap(ss.str().c_str(), bmp);
     if (!ret) throw std::runtime_error("rendering_engine::write_image al_save_bitmap() returned false");
   }

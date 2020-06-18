@@ -17,8 +17,7 @@
 
 using namespace caf;
 
-template <typename T>
-behavior create_worker_behavior(T self,
+behavior create_worker_behavior(caf::stateful_actor<worker_data> *self,
                                 const std::string &renderer_host,
                                 const int &renderer_port,
                                 const std::string &streamer_host,
@@ -67,6 +66,10 @@ behavior create_worker_behavior(T self,
                                       j.width,
                                       j.height,
                                       j.scale);
+            if (j.save_image) {
+              self->state.engine.write_image(self->state.bitmap, "output");
+            }
+
             data::pixel_data2 dat;
             dat.pixels = self->state.engine.serialize_bitmap2(self->state.bitmap, j.width, j.height);
 
@@ -140,12 +143,14 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
           const caf::actor &generator,
           const workers_vec_type &workers_vec,
           std::string streamer_host,
-          int streamer_port) {
+          int streamer_port,
+          int64_t save_image) {
         self->state.remote_streamer_host = streamer_host;
         self->state.remote_streamer_port = streamer_port;
         self->state.streamer = streamer;
         self->state.generator = generator;
         self->state.workers_vec = workers_vec;
+        self->state.save_image = save_image;
         self->state.engine.initialize();
         if (streamer_port) {
           connect_remote_worker(self->system(), "streamer", streamer_host, streamer_port, &self->state.streamer);
@@ -182,6 +187,15 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
         self->link_to(*self->state.pool);
       },
       [=](add_job, data::job j) {
+        // render still image
+        if (self->state.save_image == j.frame_number) {
+          j.frame_number = 0;
+          j.save_image = true;
+          j.last_frame = true;
+        } else if (self->state.save_image != -1) {
+          self->send<message_priority::high>(*self->state.generator, job_processed_v);
+          return;
+        }
         self->state.job_queue.insert(j);
         send_jobs_to_streamer(self);
       },

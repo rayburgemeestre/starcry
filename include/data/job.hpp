@@ -31,6 +31,7 @@ struct job {
   double scale;
   size_t bitrate;
   bool compress;
+  bool save_image;
 
   inline bool operator<(const job &other) const {
     return job_number < other.job_number;  // there can be no ties
@@ -60,6 +61,7 @@ void serialize(Processor &proc, data::job &x, const unsigned int) {
   proc &x.scale;
   proc &x.bitrate;
   proc &x.compress;
+  proc &x.save_image;
 }
 
 template <class Inspector>
@@ -81,6 +83,7 @@ typename Inspector::result_type inspect(Inspector &f, data::job &x) {
            x.shapes,
            x.scale,
            x.bitrate,
-           x.compress);
+           x.compress,
+           x.save_image);
 }
 }  // namespace data

@@ -36,4 +36,3 @@ function next() {
     add_circle(new circle(new pos(-700 + (logn   * (700*2)), 0,    0), 0, 100, create_gradient()));
     add_circle(new circle(new pos(-700 + (expf   * (700*2)), +300, 0), 0, 100, create_gradient()));
 }
-

@@ -92,6 +92,7 @@ private:
   string remote_renderer_info;
   string remote_streamer_info;
   size_t max_jobs_queued_for_renderer = 1;
+  int64_t save_image = -1;
 
 public:
   main_program(actor_system &system, int argc, char *argv[]) : system(system) {
@@ -113,6 +114,7 @@ public:
         "spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")(
         "no-video-output", "disable video output using ffmpeg")(
         "no-rendering", "disable rendering (useful for testing javascript performance)")(
+        "save-image", po::value<int64_t>(&save_image), "save image to disk")(
         "spawn-renderer", po::value<int>(&renderer_port), "spawn renderer on given port")(
         "spawn-streamer", po::value<int>(&streamer_port), "spawn streamer on given port")(
         "use-remote-renderer", po::value<string>(&remote_renderer_info), "use remote renderer on given \"host:port\"")(
@@ -280,8 +282,7 @@ public:
                       stream_mode);
             },
             [=](error &err) { std::exit(2); });
-    s->send(renderer_, initialize_v, streamer_, generator, workers_vec, streamer_host, streamer_port);
-
+    s->send(renderer_, initialize_v, streamer_, generator, workers_vec, streamer_host, streamer_port, save_image);
     s->send(generator, start_v, max_jobs_queued_for_renderer, num_chunks, renderer_);
     s->send(renderer_, start_v, use_remote_workers ? workers_vec.size() : num_workers);
 
