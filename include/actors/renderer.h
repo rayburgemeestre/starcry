@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <chrono>
 #include "common.h"
 
 #include "data/job.hpp"
@@ -24,6 +25,8 @@ struct worker_data {
   size_t window_current = 0;
   std::optional<actor> renderer_ptr;
   std::optional<actor> streamer_ptr;
+  std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<double, std::milli>> previous_time =
+      std::chrono::high_resolution_clock::now();
 };
 
 class MeasureInterval;

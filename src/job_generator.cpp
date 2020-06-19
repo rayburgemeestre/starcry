@@ -114,6 +114,15 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
           // we call into V8 ourselves to get frames
           call_print_exception(self, "next");
           write_frame_fun();
+
+          // TODO: I think there is a bug with this approach, but we need to fully initialize all the workers somehow
+          //          for (auto i = self->state.jobs_queued_for_renderer; i < self->state.max_jobs_queued_for_renderer;
+          //          i++) {
+          //            // self->delayed_send(self, std::chrono::milliseconds(8), next_frame_v);
+          //            // we call into V8 ourselves to get frames
+          //            call_print_exception(self, "next");
+          //            write_frame_fun();
+          //          }
         }
       },
       [=](input_line, string line) {  // by stdin_reader
@@ -135,9 +144,8 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
         self->state.has_max_jobs_queued_for_renderer =
             (self->state.jobs_queued_for_renderer >= self->state.max_jobs_queued_for_renderer);
         if (!self->state.use_stdin || assistant->realtime) {
-          if (!self->state.has_max_jobs_queued_for_renderer) {
+          for (auto i = self->state.jobs_queued_for_renderer; i < self->state.max_jobs_queued_for_renderer; i++) {
             self->delayed_send(self, std::chrono::milliseconds(8), next_frame_v);
-            // self->send<message_priority::high>(self, next_frame_v);
           }
         }
       },

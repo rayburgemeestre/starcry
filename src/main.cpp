@@ -283,8 +283,9 @@ public:
             },
             [=](error &err) { std::exit(2); });
     s->send(renderer_, initialize_v, streamer_, generator, workers_vec, streamer_host, streamer_port, save_image);
-    s->send(generator, start_v, max_jobs_queued_for_renderer, num_chunks, renderer_);
-    s->send(renderer_, start_v, use_remote_workers ? workers_vec.size() : num_workers);
+    auto number_of_workers = use_remote_workers ? workers_vec.size() : num_workers;
+    s->send(generator, start_v, std::max(max_jobs_queued_for_renderer, number_of_workers), num_chunks, renderer_);
+    s->send(renderer_, start_v, number_of_workers);
 
     if (use_stdin) {
       s->send(stdin_reader_, start_v);

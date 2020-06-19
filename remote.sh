@@ -1,4 +1,4 @@
-killall -9 starcry
+trap "killall -9 starcry" EXIT HUP INT QUIT TERM
 
 ./build/starcry -w 10000 &
 ./build/starcry -w 10001 &
@@ -11,9 +11,12 @@ killall -9 starcry
 
 sleep 2
 
+typeset script=input/bright.js
+typeset params=""
+#typeset params="--no-video"
 # TODO: debug (already fixed this once before my laptop got stolen)
-./build/starcry --no-video -r servers.txt -s input/motion.js --gui
+./build/starcry $params -r servers.txt -s $script --gui --compress true
 
 # TODO: above should be faster than
-#./build/starcry -s input/motion.js --gui -n 1 -c 1
+#./build/starcry $params -s $script --gui -n 1 -c 1 --compress true
 

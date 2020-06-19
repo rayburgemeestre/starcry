@@ -17,6 +17,10 @@ var scale         = 1;
 //var canvas_h      = 1000;
 //var scale         = 0.5;
 
+// canvas_w /= 4;
+// canvas_h /= 4;
+// scale /= 4;
+
 function angle(x, y, x2, y2)
 {
     var dx = x - x2,

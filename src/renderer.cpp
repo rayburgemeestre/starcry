@@ -25,6 +25,7 @@ behavior create_worker_behavior(caf::stateful_actor<worker_data> *self,
                                 bool output_each_frame = false) {
   connect_remote_worker(self->system(), "renderer", renderer_host, renderer_port, &self->state.renderer_ptr);
   connect_remote_worker(self->system(), "streamer", streamer_host, streamer_port, &self->state.streamer_ptr);
+  self->state.previous_time = std::chrono::high_resolution_clock::now();
   return {[=](get_job, const data::job &j, const caf::actor &renderer, const caf::actor &streamer) {
             self->state.job_queue.insert(j);
             self->send(self, process_job_v, renderer, streamer);
@@ -34,11 +35,14 @@ behavior create_worker_behavior(caf::stateful_actor<worker_data> *self,
             data::job j = *jobmin;  // copy
             self->state.job_queue.erase(*jobmin);
 
+            auto current_time = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double, std::milli> idle = current_time - self->state.previous_time;
+
             if (output_each_frame) {
-              aout(self) << "processing: frame " << j.frame_number << " chunk " << j.chunk << " offsets " << j.offset_x
-                         << "," << j.offset_y << " worker " << self->state.worker_num << " dimensions " << j.width
-                         << "x" << j.height
-                         << " mailbox=" << self->mailbox().count() /* << " - " << self->mailbox().counter()*/ << endl;
+              aout(self) << "processing[" << renderer_port << "]: frame " << j.frame_number << " chunk " << j.chunk
+                         << " offsets " << j.offset_x << "," << j.offset_y << " worker " << self->state.worker_num
+                         << " dimensions " << j.width << "x" << j.height << " mailbox=" << self->mailbox().count()
+                         << " wasted idle = " << idle.count() << endl;
             }
 
             // make sure our bitmap is of the correct size.
@@ -90,8 +94,12 @@ behavior create_worker_behavior(caf::stateful_actor<worker_data> *self,
 
             auto &r = (self->state.renderer_ptr) ? *self->state.renderer_ptr : renderer;
             auto &s = (self->state.streamer_ptr) ? *self->state.streamer_ptr : streamer;
-            self->send(r, ready_v, self->state.worker_num, j);
+
+            // if the payload of the render frame etc., is high, I/O congestion may slow things down
+            self->send<message_priority::high>(r, ready_v, self->state.worker_num, j);
             self->send(s, render_frame_v, j, dat, renderer);
+
+            self->state.previous_time = std::chrono::high_resolution_clock::now();
           }};
 }
 
@@ -199,7 +207,7 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
         self->state.job_queue.insert(j);
         send_jobs_to_streamer(self);
       },
-      [=](ready, size_t worker_num, struct data::job j) {
+      [=](ready, size_t worker_num, struct data::job &j) {
         self->send<message_priority::high>(*self->state.generator, job_processed_v);
         self->state.last_job_for_worker[worker_num] = j.job_number;
         self->state.job_sequence++;
