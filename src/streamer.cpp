@@ -48,7 +48,7 @@ bool process_buffer(stateful_actor<streamer_data> *self, const actor &renderer, 
     rendered_jobs.erase(rendered_jobs.begin());
   }
   // cout << "streamer completed frame: " << self->state.current_frame << " number of pixels equal to: "
-  //     << pixels_all.size() << endl; // debug
+  //     << pixels_all.size() << " last = " << *self->state.last_frame_streamed << endl; // debug
   if (self->state.framer) self->state.framer->add_frame(pixels_all);
   if (self->state.allegro5) self->state.allegro5->add_frame(canvas_w, canvas_h, pixels_all);
 
@@ -86,7 +86,7 @@ behavior streamer(stateful_actor<streamer_data> *self, std::optional<size_t> por
             self->state.fps = fps;
             self->state.stream_mode = stream_mode;
           },
-          [=](render_frame, struct data::job &job, data::pixel_data2 pixeldat, const caf::actor &renderer) {
+          [=](render_frame, struct data::job job, data::pixel_data2 pixeldat, const caf::actor &renderer) {
             if (job.compress) {
               compress_vector<uint32_t> cv;
               cv.decompress(&pixeldat.pixels, job.width * job.height);

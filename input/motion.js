@@ -8,8 +8,8 @@ include('lib/quadtree.js')
 include('lib/collisions.js')
 include('lib/projection.js')
 
-const fps = 25;
-const max_frames = 0;
+const fps = 60;
+const max_frames = 2 * fps;
 const canvas_w = 1920 / 2;
 const canvas_h = 1080 / 2;
 const scale = 1;

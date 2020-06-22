@@ -11,7 +11,7 @@ trap "killall -9 starcry" EXIT HUP INT QUIT TERM
 
 sleep 2
 
-typeset script=input/bright.js
+typeset script="$1"
 typeset params=""
 #typeset params="--no-video"
 # TODO: debug (already fixed this once before my laptop got stolen)

@@ -111,18 +111,11 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
         assistant->max_frames = context->run<size_t>("typeof max_frames != 'undefined' ? max_frames : 250");
         assistant->realtime = context->run<bool>("typeof realtime != 'undefined' ? realtime : false");
         if (!self->state.use_stdin || assistant->realtime) {
-          // we call into V8 ourselves to get frames
-          call_print_exception(self, "next");
-          write_frame_fun();
-
-          // TODO: I think there is a bug with this approach, but we need to fully initialize all the workers somehow
-          //          for (auto i = self->state.jobs_queued_for_renderer; i < self->state.max_jobs_queued_for_renderer;
-          //          i++) {
-          //            // self->delayed_send(self, std::chrono::milliseconds(8), next_frame_v);
-          //            // we call into V8 ourselves to get frames
-          //            call_print_exception(self, "next");
-          //            write_frame_fun();
-          //          }
+          for (int i=0; i<self->state.max_jobs_queued_for_renderer; i++) {
+            // we call into V8 ourselves to get frames
+            call_print_exception(self, "next");
+            write_frame_fun();
+          }
         }
       },
       [=](input_line, string line) {  // by stdin_reader
@@ -144,12 +137,12 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
         self->state.has_max_jobs_queued_for_renderer =
             (self->state.jobs_queued_for_renderer >= self->state.max_jobs_queued_for_renderer);
         if (!self->state.use_stdin || assistant->realtime) {
-          for (auto i = self->state.jobs_queued_for_renderer; i < self->state.max_jobs_queued_for_renderer; i++) {
+          if (!self->state.has_max_jobs_queued_for_renderer) {
             self->delayed_send(self, std::chrono::milliseconds(8), next_frame_v);
           }
         }
       },
-      [=](write_frame, data::job &job) {  // from scripting (V8)
+      [=](write_frame, data::job job) {  // from scripting (V8)
         self->state.has_max_jobs_queued_for_renderer =
             (self->state.jobs_queued_for_renderer >= self->state.max_jobs_queued_for_renderer);
 
@@ -164,6 +157,7 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
           job.offset_x = rectangles[i].x();
           job.offset_y = rectangles[i].y();
           job.job_number = self->state.current_job++;
+          job.scale = context->run<double>("typeof scale != 'undefined' ? scale : 1.0");
           job.chunk = counter;
           if (rendering_enabled) {
             self->send(*self->state.renderer_ptr, add_job_v, job);
