@@ -14,6 +14,7 @@ namespace data {
 
 struct job {
   // if you modify these fields, you need to update announce or the added fields won't be transferred..
+  bool same_host;
   uint32_t width;
   uint32_t height;
   uint32_t offset_x;
@@ -44,6 +45,7 @@ inline bool operator==(const job &lhs, const job &rhs) {
 
 template <class Processor>
 void serialize(Processor &proc, data::job &x, const unsigned int) {
+  proc &x.same_host;
   proc &x.width;
   proc &x.height;
   proc &x.offset_x;
@@ -67,6 +69,7 @@ void serialize(Processor &proc, data::job &x, const unsigned int) {
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector &f, data::job &x) {
   return f(caf::meta::type_name("data::job"),
+           x.same_host,
            x.width,
            x.height,
            x.offset_x,

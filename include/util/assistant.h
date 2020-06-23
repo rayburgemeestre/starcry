@@ -4,11 +4,14 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include <memory>
+
 #include "common.h"
 
 struct job_generator_data;
 
 #include "data/job.hpp"
+#include "job_cache.h"
 
 /**
  * Small helper class to job_generator which needs to be global, so some global functions
@@ -21,11 +24,13 @@ public:
   assistant_(stateful_actor<job_generator_data> *job_gen);
 
   data::job the_job;
+  data::job the_previous_job;
   stateful_actor<job_generator_data> *job_generator;
   size_t max_frames;
   bool realtime = false;
 
   size_t current_frame = 0;
+  std::unique_ptr<job_cache> cache;
 };
 
 extern std::unique_ptr<assistant_> assistant;

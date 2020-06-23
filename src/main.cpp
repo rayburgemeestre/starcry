@@ -29,6 +29,7 @@
 #include "actors/streamer.h"
 #include "atom_types.h"
 #include "caf/io/middleman.hpp"
+#include "caf/logger.hpp"
 #include "common.h"
 #include "data/pixels.hpp"
 #include "util/actor_info.hpp"
@@ -71,7 +72,6 @@ private:
 
 class main_program {
 private:
-  actor_system &system;
   po::variables_map vm;
   // settings
   int worker_port = 0;
@@ -95,7 +95,7 @@ private:
   int64_t save_image = -1;
 
 public:
-  main_program(actor_system &system, int argc, char *argv[]) : system(system) {
+  main_program(int argc, char *argv[]) {
     ::settings conf;
     conf.load();
 
@@ -125,7 +125,8 @@ public:
         "stdin", "read from stdin and send this to job generator actor")(
         "dimensions,dim", po::value<string>(&dimensions), "specify canvas dimensions i.e. 1920x1080")(
         "script,s", po::value<string>(&script), "javascript file to use for processing")(
-        "compress", po::value<bool>(&compress), "compress and decompress frames to reduce I/O");
+        "compress", po::value<bool>(&compress), "compress and decompress frames to reduce I/O")(
+        "trace", "enable tracing (this requires CAF to be compiled with the appropriate flags)");
 
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
     try {
@@ -135,6 +136,26 @@ public:
       std::cerr << desc << std::endl;
       std::exit(1);
     }
+
+    caf::exec_main_init_meta_objects<caf::id_block::starcry, io::middleman>();
+    caf::core::init_global_meta_objects();
+    actor_system_config cfg;
+    cfg.load<io::middleman>();
+
+    if (vm.count("trace")) {
+      cfg.set("logger.file-name", "actor_log_[PID]_[TIMESTAMP]_[NODE].log");
+      cfg.set("logger.file-format", "%r %c %p %a %t %C %M %F:%L %m%n");
+      cfg.set("logger.file-verbosity", "trace");
+      cfg.set("logger.console", "colored");
+      cfg.set("logger.console-format", "%m");
+      cfg.set("logger.console-verbosity", "debug");
+    } else {
+      cfg.set("logger.file-verbosity", "quiet");
+      cfg.set("logger.console-verbosity", "quiet");
+    }
+
+    actor_system system(cfg);
+
     rendering_enabled = !vm.count("no-rendering");
     if (vm.count("script")) {
       cerr << "Script: " << vm["script"].as<string>() << "\n";
@@ -195,8 +216,8 @@ public:
     if (num_chunks) cerr << "num_chunks=" << num_chunks << endl;
     if (num_workers) cerr << "num_workers=" << num_workers << endl;
 
-    extract_host_port_string(remote_renderer_info, &renderer_host, &renderer_port);
-    extract_host_port_string(remote_streamer_info, &streamer_host, &streamer_port);
+    extract_host_port_string(system, remote_renderer_info, &renderer_host, &renderer_port);
+    extract_host_port_string(system, remote_streamer_info, &streamer_host, &streamer_port);
     if (use_remote_workers && worker_port) {
       auto w = system.spawn(remote_worker, worker_port, renderer_host, renderer_port, streamer_host, streamer_port);
       s->await_all_other_actors_done();
@@ -259,11 +280,11 @@ public:
     auto generator =
         system.spawn<detached>(job_generator, script, canvas_w, canvas_h, use_stdin, rendering_enabled, compress);
     // generator links to job storage
-    actor streamer_ =
-        spawn_actor_local_or_remote(streamer, string("streamer"), string("use-remote-streamer"), remote_streamer_info);
+    actor streamer_ = spawn_actor_local_or_remote(
+        system, streamer, string("streamer"), string("use-remote-streamer"), remote_streamer_info);
 
-    actor renderer_ =
-        spawn_actor_local_or_remote(renderer, string("renderer"), string("use-remote-renderer"), remote_renderer_info);
+    actor renderer_ = spawn_actor_local_or_remote(
+        system, renderer, string("renderer"), string("use-remote-renderer"), remote_renderer_info);
     auto output_settings = uint32_t(streamer_settings.to_ulong());
     auto stdin_reader_ = system.spawn(stdin_reader, generator);
 
@@ -303,12 +324,14 @@ public:
       } else {
         s->send<message_priority::high>(generator, show_stats_v);
       }
-      // s->send<message_priority::high>(streamer_, debug_v);
-      // s->send<message_priority::high>(generator, debug_v);
-      // s->send<message_priority::high>(renderer_, debug_v);
-      // if (use_stdin) {
-      //     s->send<message_priority::high>(stdin_reader_, debug_v);
-      // }
+      /*
+      s->send<message_priority::high>(streamer_, debug_v);
+      s->send<message_priority::high>(generator, debug_v);
+      s->send<message_priority::high>(renderer_, debug_v);
+      if (use_stdin) {
+        s->send<message_priority::high>(stdin_reader_, debug_v);
+      }
+       */
     }
     if (renderer_info.running()) s->send<message_priority::high>(renderer_, terminate__v);
     if (generator_info.running()) s->send<message_priority::high>(generator, terminate__v);
@@ -316,7 +339,7 @@ public:
     starcry_running = false;
   }
 
-  bool extract_host_port_string(string host_port_str, string *host_ptr, int *port_ptr) {
+  bool extract_host_port_string(caf::actor_system &system, string host_port_str, string *host_ptr, int *port_ptr) {
     string &host = *host_ptr;
     int &port = *port_ptr;
 
@@ -330,15 +353,13 @@ public:
   }
 
   template <typename T>
-  actor spawn_actor_local_or_remote(T *actor_behavior,
-                                    string actor_name,
-                                    string cli_flag_param,
-                                    string cli_flag_value) {
+  actor spawn_actor_local_or_remote(
+      caf::actor_system &system, T *actor_behavior, string actor_name, string cli_flag_param, string cli_flag_value) {
     std::optional<actor> actor_ptr;
     if (vm.count(cli_flag_param)) {
       string host;
       int port = 0;
-      if (!extract_host_port_string(cli_flag_value, &host, &port)) {
+      if (!extract_host_port_string(system, cli_flag_value, &host, &port)) {
         cerr << "parameter for --" << cli_flag_param << " is invalid, please specify <host>:<port>, "
              << "i.e. 127.0.0.1:11111." << endl;
       }
@@ -358,11 +379,6 @@ public:
 };
 
 int main(int argc, char *argv[]) {
-  caf::exec_main_init_meta_objects<caf::id_block::starcry, io::middleman>();
-  caf::core::init_global_meta_objects();
-  actor_system_config cfg;
-  cfg.load<io::middleman>();
-  actor_system system(cfg);
-  main_program prog{system, argc, argv};
+  main_program prog{argc, argv};
   return 0;
 }

@@ -9,9 +9,9 @@ include('lib/collisions.js')
 include('lib/projection.js')
 
 const fps = 60;
-const max_frames = 2 * fps;
-const canvas_w = 1920 / 2;
-const canvas_h = 1080 / 2;
+const max_frames = 10 * fps;
+const canvas_w = 1920;
+const canvas_h = 1080;
 const scale = 1;
 
 const resolution = 0.1;
@@ -25,22 +25,27 @@ class simple_shape
     constructor()
     {
         this.velocity = new vector2d(1, 0);
-        this.velocity.x = Math.random();
-        this.velocity.rotate(Math.random() * 360);
+        this.velocity.x = rand();
+        this.velocity.rotate(rand() * 360);
 
         this.gradient_ = new gradient();
         this.gradient_.add(0.0, new color(1, 1, 1, 1))
         this.gradient_.add(0.9, new color(1, 1, 1, 1));
         this.gradient_.add(1.0, new color(0, 1, 0, 0));
+
+        this.red_gradient_ = new gradient();
+        this.red_gradient_.add(0.0, new color(1, 0, 0, 1))
+        this.red_gradient_.add(0.9, new color(1, 0, 0, 1));
+        this.red_gradient_.add(1.0, new color(0, 1, 0, 0));
     }
 }
 
 class ball extends simple_shape
 {
-    constructor(view) {
+    constructor(view, is_red_ball) {
         super();
         this.view = view;
-        this.circle_ = new circle(new pos(0, 0, 0), 0, ball_radius, this.gradient_);
+        this.circle_ = new circle(new pos(0, 0, 0), 0, ball_radius, is_red_ball ? this.red_gradient_ : this.gradient_);
         this.circle_.blending_type = blending_type.add;
         const rand = this.view.random_position();
         this.circle_.x = rand.x;
@@ -67,7 +72,7 @@ function initialize()
 {
     let view = new projection(canvas_w, canvas_h);
     for (let i=0; i<num_balls; i++) {
-        balls.push(new ball(view));
+        balls.push(new ball(view, i == 0));
     }
 }
 

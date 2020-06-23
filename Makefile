@@ -2,15 +2,15 @@ SHELL:=/bin/bash
 
 fast-docker-build:
 	# build starcry with tailored image so we can invoke the make command straight away
-	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make core"
+	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core"
 
 debug:
 	# build starcry with tailored image so we can invoke the make command straight away
-	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make core_debug"
+	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core_debug"
 
 format:
 	# build starcry with tailored image so we can invoke the make command straight away
-	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make core_format"
+	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core_format"
 
 profile:
 	valgrind --tool=callgrind ./starcry --no-rendering input/motion.js
@@ -30,6 +30,7 @@ ubuntu1804:
 
 impl:
 	make deps
+	make prepare
 	make core
 
 deps:
@@ -64,17 +65,15 @@ prepare:
 	mkdir -p build
 
 core:
-	make prepare
 	pushd build && \
 	CXX=$(which c++) cmake .. && \
-	make -j $$(nproc) && \
+	make -j $$(nproc) starcry && \
 	strip --strip-debug starcry
 
 core_debug:
-	make prepare
 	pushd build && \
 	CXX=$(which c++) cmake -DDEBUG=on .. && \
-	make VERBOSE=1 -j $$(nproc)
+	make VERBOSE=1 -j $$(nproc) starcry
 
 core_format:
 	cmake --build build --target clangformat
@@ -113,6 +112,7 @@ clean:
 	rm -rf build/CMakeCache.txt
 	rm -rf out
 	rm -f callgrind.out.*
+	rm actor_log*.log
 	rm -f webroot/stream/stream.m3u8*
 
 .PHONY: dockerize

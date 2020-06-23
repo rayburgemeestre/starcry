@@ -12,6 +12,7 @@
 #include "benchmark.h"
 #include "common.h"
 #include "data/job.hpp"
+#include "job_cache.h"
 #include "primitives.h"
 #include "scripting.h"
 #include "util/assistant.h"
@@ -62,6 +63,7 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
     context->add_fun("set_background_color", &set_background_color);
     context->add_fun("add_circle", &add_circle);
     context->add_fun("add_line", &add_line);
+    context->add_fun("rand", &rand_fun);
     // TODO: context->add_fun("add_rectangle", &add_rectangle);
 
     context->add_include_fun();
@@ -111,9 +113,15 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
         assistant->max_frames = context->run<size_t>("typeof max_frames != 'undefined' ? max_frames : 250");
         assistant->realtime = context->run<bool>("typeof realtime != 'undefined' ? realtime : false");
         if (!self->state.use_stdin || assistant->realtime) {
-          for (int i=0; i<self->state.max_jobs_queued_for_renderer; i++) {
+          for (int i = 0; i < self->state.max_jobs_queued_for_renderer; i++) {
             // we call into V8 ourselves to get frames
+            // for (int i=0; i<600; i++) {
+            //  assistant->the_job.shapes.clear();
+            assistant->the_previous_job = assistant->the_job;
             call_print_exception(self, "next");
+            // assistant->the_job.shapes[0] = assistant->the_previous_job.shapes[0];
+            // assistant->the_job.shapes[0].reset( assistant->the_previous_job.shapes[0] );
+            // }
             write_frame_fun();
           }
         }
@@ -143,6 +151,8 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
         }
       },
       [=](write_frame, data::job job) {  // from scripting (V8)
+        job.shapes = assistant->cache->retrieve(job);
+
         self->state.has_max_jobs_queued_for_renderer =
             (self->state.jobs_queued_for_renderer >= self->state.max_jobs_queued_for_renderer);
 
@@ -160,6 +170,7 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
           job.scale = context->run<double>("typeof scale != 'undefined' ? scale : 1.0");
           job.chunk = counter;
           if (rendering_enabled) {
+            assistant->cache->take(job);
             self->send(*self->state.renderer_ptr, add_job_v, job);
             self->state.jobs_queued_for_renderer++;
           } else {
@@ -191,6 +202,10 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
       },
       [=](next_frame) {  // self (job_generator)
         call_print_exception(self, "next");
+        // restore the state test
+        // if (assistant->the_previous_job.shapes.size() > 0)
+        //  assistant->the_job.shapes[0] = assistant->the_previous_job.shapes[0];
+        assistant->the_previous_job = assistant->the_job;
         if (!self->state.use_stdin || assistant->realtime) {
           write_frame_fun();
         }
@@ -211,7 +226,8 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
   };
 }
 
-assistant_::assistant_(stateful_actor<job_generator_data> *job_gen) : job_generator(job_gen) {}
+assistant_::assistant_(stateful_actor<job_generator_data> *job_gen)
+    : job_generator(job_gen), cache(std::make_unique<job_cache>()) {}
 
 void call_print_exception(event_based_actor *self, string fn) {
   try {

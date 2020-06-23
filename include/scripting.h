@@ -14,6 +14,7 @@ void add_text(double x, double y, double z, double textsize, std::string text, s
 void output(std::string s);
 void write_frame_fun();
 void close_fun();
+double rand_fun();
 
 // deprecated
 void write_frame_fun_impl(bool last_frame);

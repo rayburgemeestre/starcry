@@ -14,6 +14,7 @@
 #include "data/pixels.hpp"
 #include "framer.hpp"
 #include "streamer_output/allegro5_window.h"
+#include "util/assistant.h"
 #include "util/compress_vector.h"
 #include "util/remote_actors.h"
 
@@ -28,11 +29,14 @@ bool all_frame_chunks_present(set<rendered_job> &rendered_jobs_set, size_t frame
   return false;
 }
 
-bool process_buffer(stateful_actor<streamer_data> *self, const actor &renderer, size_t frame_num, const data::job &j) {
+bool process_buffer(stateful_actor<streamer_data> *self,
+                    const actor &renderer,
+                    size_t frame_num,
+                    const data::job &job) {
   size_t frame_number = frame_num;
-  size_t num_chunks = j.num_chunks;
-  size_t canvas_w = j.canvas_w;
-  uint32_t canvas_h = j.canvas_h;
+  size_t num_chunks = job.num_chunks;
+  size_t canvas_w = job.canvas_w;
+  uint32_t canvas_h = job.canvas_h;
   auto &rendered_jobs = self->state.rendered_jobs_set;
 
   if (!all_frame_chunks_present(rendered_jobs, frame_number, num_chunks)) {
@@ -86,7 +90,11 @@ behavior streamer(stateful_actor<streamer_data> *self, std::optional<size_t> por
             self->state.fps = fps;
             self->state.stream_mode = stream_mode;
           },
-          [=](render_frame, struct data::job job, data::pixel_data2 pixeldat, const caf::actor &renderer) {
+          [=](render_frame, const data::job job, data::pixel_data2 &pixeldat, const caf::actor &renderer) {
+            if (pixeldat.pixels.empty()) {
+              pixeldat.pixels = assistant->cache->retrieve(pixeldat);
+            }
+
             if (job.compress) {
               compress_vector<uint32_t> cv;
               cv.decompress(&pixeldat.pixels, job.width * job.height);

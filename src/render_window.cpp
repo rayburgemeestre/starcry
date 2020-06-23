@@ -84,7 +84,7 @@ behavior render_loop(event_based_actor* self) {
             }
             self->send(self, render_v);
           },
-          [=](uint32_t width, uint32_t height, std::vector<uint32_t>& pixels) {
+          [=](render_preview_frame, uint32_t width, uint32_t height, std::vector<uint32_t>& pixels) {
             std::swap(width_, width);
             std::swap(height_, height);
             std::swap(data_.pixels, pixels);
@@ -124,13 +124,12 @@ behavior render_window(event_based_actor* self, uint16_t port) {
 
   auto renderloop = self->spawn(render_loop);
   self->link_to(renderloop);
-  data::pixel_data2 data;
   self->send(renderloop, render_v);
 
-  return {[=](uint32_t width, uint32_t height, std::vector<uint32_t>& pixels) -> message {
+  return {[=](render_preview_frame, uint32_t width, uint32_t height, std::vector<uint32_t>& pixels) -> message {
             compress_vector<uint32_t> cv;
             cv.decompress(&pixels, width * height);
-            self->send(renderloop, width, height, pixels);
+            self->send(renderloop, render_preview_frame_v, width, height, pixels);
             return make_message();
           },
           [=](std::string ping) -> message { return make_message("pong"); }};

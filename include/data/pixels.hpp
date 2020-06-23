@@ -25,6 +25,7 @@ void serialize(Processor& proc, struct data::pixel_data& x, const unsigned int) 
 }
 
 struct pixel_data2 {
+  size_t job_number;
   std::vector<uint32_t> pixels;
 };
 

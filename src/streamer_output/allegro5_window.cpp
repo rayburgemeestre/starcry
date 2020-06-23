@@ -30,7 +30,7 @@ void allegro5_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vecto
     double compression_rate = 0;
     // auto pixels_copy = pixels;
     cv.compress(&pixels, &compression_rate);
-    self_->request(*client_, infinite, canvas_w, canvas_h, pixels)
+    self_->request(*client_, infinite, render_preview_frame_v, canvas_w, canvas_h, pixels)
         .then([]() { frame_in_transit = false; }, [](error &e) { frame_in_transit = false; });
   }
 }

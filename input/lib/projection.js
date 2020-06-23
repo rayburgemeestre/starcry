@@ -14,8 +14,8 @@ class projection
     }
     random_position() {
         return this.translate(new vector2d(
-            Math.random() * this.w,
-            Math.random() * this.h
+            rand() * this.w,
+            rand() * this.h
         ));
     }
     translate(position) {
