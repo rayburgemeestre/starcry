@@ -11,6 +11,7 @@ const canvas_w      = 1920;
 const canvas_h      = 1080;
 const scale         = 1;
 const bitrate       = 1000000;
+const realtime      = true;
 
 const clock_max_radius = Math.min(canvas_w, canvas_h) / 2.0 - 50.;
 const circles = [], second = 0, minute = 1, hour = 2;

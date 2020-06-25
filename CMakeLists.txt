@@ -46,6 +46,7 @@ include_directories(
     "/opt/cppse/build/boost/include/"
     "/opt/cppse/build/ffmpeg/include/"
     "/opt/cppse/build/fastpfor/include/"
+    "/opt/cppse/build/sfml/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/crow/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/cereal/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
@@ -149,6 +150,12 @@ target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libcommon.a)
 target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libtinyxml.a)
 target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/liblua.a)
 
+# SFML
+target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-system-s.a)
+target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-window-s.a)
+target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-graphics-s.a)
+# below can be made obsolete if we can get rid of some Joystick related stuff in libsfml-window-s.a
+target_link_libraries(starcry /lib/x86_64-linux-gnu/libudev.so)
 
 # trying to include more statically will eventually result in
 # starcry: symbol lookup error: starcry: undefined symbol: pthread_create

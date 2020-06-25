@@ -2,7 +2,7 @@ SHELL:=/bin/bash
 
 fast-docker-build:
 	# build starcry with tailored image so we can invoke the make command straight away
-	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core"
+	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core_"
 
 debug:
 	# build starcry with tailored image so we can invoke the make command straight away
@@ -31,7 +31,7 @@ ubuntu1804:
 impl:
 	make deps
 	make prepare
-	make core
+	make core_
 
 deps:
 	sudo apt-get update
@@ -52,6 +52,9 @@ deps:
 				libxrandr-dev libxinerama-dev libxi-dev
 	sudo apt-get install -y libgtk2.0-dev
 	sudo apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev
+	# sfml (system)
+	#sudo apt-get install -y libbz2-dev liblzma-dev libz-dev
+	#sudo pt-get install -y libsfml-dev
 
 prepare:
 	# switch to clang compiler

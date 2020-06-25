@@ -112,8 +112,8 @@ public:
         "num-workers,n", po::value<size_t>(&num_workers), "number of workers to use in render pool (default 8)")(
         "num-queue-worker,Q",
         po::value<int64_t>(&num_queue_per_worker),
-        "number of items workers prefer in their queue (default 1)")(
-        "gui", "open GUI window (writes state to $HOME/.starcry.conf)")(
+        "number of items workers prefer in their queue (default 1)")("gui", "render to allegro5 window")(
+        "preview", "open GUI preview window (writes state to $HOME/.starcry.conf)")(
         "spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")(
         "no-video-output", "disable video output using ffmpeg")(
         "no-rendering", "disable rendering (useful for testing javascript performance)")(
@@ -173,6 +173,10 @@ public:
       streamer_settings.set(streamer_ffmpeg, true);
     }
     if (vm.count("gui")) {
+      cerr << "Enabling video output to real-time window" << endl;
+      streamer_settings.set(streamer_sfml, true);
+    }
+    if (vm.count("preview")) {
       auto client = system.middleman().remote_actor("127.0.0.1", conf.user.gui_port);
       if (!client) {
         if (0 != ::system((std::string(argv[0]) + " --spawn-gui &").c_str())) {
@@ -181,7 +185,7 @@ public:
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         conf.load();
       }
-      cerr << "Enabling video output to window on port " << conf.user.gui_port << ".." << endl;
+      cerr << "Enabling video output to preview window on port " << conf.user.gui_port << ".." << endl;
       streamer_settings.set(streamer_allegro5, true);
     }
     scoped_actor s{system};

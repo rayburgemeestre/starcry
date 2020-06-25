@@ -4,7 +4,6 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "actors/render_window.h"
 #include "atom_types.h"
 #include "caf/io/all.hpp"
 #include "common.h"
@@ -47,7 +46,7 @@ behavior render_loop(event_based_actor* self) {
   return {[=](render) {
             al_clear_to_color(al_map_rgb_f(0, 0, 0));
             rendering_engine_wrapper re;
-            if (data_.pixels.size()) {
+            if (!data_.pixels.empty()) {
               auto bmp = re.unserialize_bitmap2(data_.pixels, width_, height_);
               al_draw_scaled_bitmap(bmp,
                                     0,

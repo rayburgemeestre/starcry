@@ -8,6 +8,7 @@
 
 constexpr static int streamer_ffmpeg = 0;
 constexpr static int streamer_allegro5 = 1;
+constexpr static int streamer_sfml = 2;
 
 class MeasureInterval;
 
@@ -29,9 +30,10 @@ struct rendered_job {
 
 class frame_streamer;
 class allegro5_window;
+class sfml_window;
 
 struct streamer_data {
-  int render_window_at;
+  int preview_window_port;
   std::string output_file;
   uint32_t settings;
   size_t bitrate;
@@ -45,6 +47,7 @@ struct streamer_data {
   std::set<rendered_job> rendered_jobs_set;
   std::shared_ptr<frame_streamer> framer;
   std::shared_ptr<allegro5_window> allegro5;
+  std::shared_ptr<sfml_window> sfml_window;
 };
 
 behavior streamer(stateful_actor<streamer_data> *self, std::optional<size_t> port);
