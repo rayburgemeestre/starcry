@@ -30,6 +30,7 @@ public:
   bool realtime = false;
 
   size_t current_frame = 0;
+  size_t current_job = 0;
   std::unique_ptr<job_cache> cache;
 };
 

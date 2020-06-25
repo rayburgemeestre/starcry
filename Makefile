@@ -64,7 +64,7 @@ prepare:
 	# prepare build dir
 	mkdir -p build
 
-core:
+core_:
 	pushd build && \
 	CXX=$(which c++) cmake .. && \
 	make -j $$(nproc) starcry && \
@@ -112,7 +112,7 @@ clean:
 	rm -rf build/CMakeCache.txt
 	rm -rf out
 	rm -f callgrind.out.*
-	rm actor_log*.log
+	rm -f actor_log*.log
 	rm -f webroot/stream/stream.m3u8*
 
 .PHONY: dockerize

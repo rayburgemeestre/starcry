@@ -90,10 +90,9 @@ behavior streamer(stateful_actor<streamer_data> *self, std::optional<size_t> por
             self->state.fps = fps;
             self->state.stream_mode = stream_mode;
           },
-          [=](render_frame, const data::job job, data::pixel_data2 &pixeldat, const caf::actor &renderer) {
-            if (pixeldat.pixels.empty()) {
-              pixeldat.pixels = assistant->cache->retrieve(pixeldat);
-            }
+          [=](render_frame, data::job job, data::pixel_data2 &pixeldat, const caf::actor &renderer) {
+            job.shapes = assistant->cache->retrieve(job);
+            pixeldat.pixels = assistant->cache->retrieve(pixeldat);
 
             if (job.compress) {
               compress_vector<uint32_t> cv;
@@ -106,7 +105,7 @@ behavior streamer(stateful_actor<streamer_data> *self, std::optional<size_t> por
               if (!self->state.framer && bitset<32>(self->state.settings).test(0)) {
                 self->state.framer = make_shared<frame_streamer>(self->state.output_file,
                                                                  self->state.bitrate,
-                                                                 self->state.fps,
+                                                                 1000,
                                                                  job.canvas_w,
                                                                  job.canvas_h,
                                                                  frame_streamer::stream_mode::HLS);
@@ -116,7 +115,7 @@ behavior streamer(stateful_actor<streamer_data> *self, std::optional<size_t> por
               if (!self->state.framer && bitset<32>(self->state.settings).test(0)) {
                 self->state.framer = make_shared<frame_streamer>(self->state.output_file,
                                                                  self->state.bitrate,
-                                                                 self->state.fps,
+                                                                 1000,
                                                                  job.canvas_w,
                                                                  job.canvas_h,
                                                                  frame_streamer::stream_mode::RTMP);

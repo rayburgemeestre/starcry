@@ -1,4 +1,5 @@
 #include <bitset>
+#include <experimental/filesystem>
 #include <iostream>
 
 /**
@@ -85,14 +86,13 @@ private:
   string script = "input/test.js";
   bool compress = false;
   bool rendering_enabled = true;
-  string renderer_host;
-  string streamer_host;
-  int renderer_port = 0;
-  int streamer_port = 0;
+  string renderer_host = "localhost";
+  int renderer_port = 10000;
   string remote_renderer_info;
   string remote_streamer_info;
   size_t max_jobs_queued_for_renderer = 1;
   int64_t save_image = -1;
+  int64_t num_queue_per_worker = 1;
 
 public:
   main_program(int argc, char *argv[]) {
@@ -106,19 +106,19 @@ public:
     desc.add_options()("help", "produce help message")(
         "output,o", po::value<string>(&output_file), "filename for video output (default output.h264)")(
         "remote,r", po::value<string>(&worker_ports), "use remote workers for rendering")(
-        "worker,w", po::value<int>(&worker_port), "start worker on specified port")(
-        "queue-max-frames", po::value<size_t>(&max_jobs_queued_for_renderer), "number of frames to queue")(
+        "worker,w", po::value<int>(&worker_port), "start worker with specific ID")(
+        "queue-max-frames,q", po::value<size_t>(&max_jobs_queued_for_renderer), "number of frames to queue")(
         "num-chunks,c", po::value<size_t>(&num_chunks), "number of jobs to split frame in (default 1)")(
         "num-workers,n", po::value<size_t>(&num_workers), "number of workers to use in render pool (default 8)")(
+        "num-queue-worker,Q",
+        po::value<int64_t>(&num_queue_per_worker),
+        "number of items workers prefer in their queue (default 1)")(
         "gui", "open GUI window (writes state to $HOME/.starcry.conf)")(
         "spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")(
         "no-video-output", "disable video output using ffmpeg")(
         "no-rendering", "disable rendering (useful for testing javascript performance)")(
         "save-image", po::value<int64_t>(&save_image), "save image to disk")(
-        "spawn-renderer", po::value<int>(&renderer_port), "spawn renderer on given port")(
-        "spawn-streamer", po::value<int>(&streamer_port), "spawn streamer on given port")(
-        "use-remote-renderer", po::value<string>(&remote_renderer_info), "use remote renderer on given \"host:port\"")(
-        "use-remote-streamer", po::value<string>(&remote_streamer_info), "use remote streamer on given \"host:port\"")(
+        "expose-renderer", po::value<int>(&renderer_port), "expose renderer on given port")(
         "webserver", "start embedded webserver")("crtmpserver", "start embedded crtmpserver for rtmp streaming")(
         "stream,stream-hls", "start embedded webserver, and stream hls to webroot")(
         "stream-rtmp", "start embedded webserver, crtmpserver and stream flv to it on local host (deprecated)")(
@@ -192,44 +192,14 @@ public:
       std::exit(0);
     }
 
-    bool use_remote_workers = vm.count("remote") || vm.count("worker");
-    vector<pair<string, int>> workers_vec;
-    if (use_remote_workers) {
-      ifstream infile(worker_ports);
-      string line;
-      while (getline(infile, line)) {
-        if (line[0] == ';' || line[0] == '#') continue;
-        size_t pos = line.find(":");
-        if (pos != string::npos) line[pos] = ' ';
-        pos = line.find(" ");
-        if (pos == string::npos) {
-          cerr << "erroneous line in servers text: " << line << endl;
-          continue;
-        }
-        cerr << "found server: " << line.substr(0, pos) << " and port: " << atoi(line.substr(pos + 1).c_str()) << endl;
-        workers_vec.push_back(make_pair(line.substr(0, pos), atoi(line.substr(pos + 1).c_str())));
-      }
-    }
-
-    if (use_remote_workers) cerr << "use_remote_workers=true" << endl;
     if (worker_port) cerr << "worker_port=" << worker_port << endl;
     if (num_chunks) cerr << "num_chunks=" << num_chunks << endl;
     if (num_workers) cerr << "num_workers=" << num_workers << endl;
 
-    extract_host_port_string(system, remote_renderer_info, &renderer_host, &renderer_port);
-    extract_host_port_string(system, remote_streamer_info, &streamer_host, &streamer_port);
-    if (use_remote_workers && worker_port) {
-      auto w = system.spawn(remote_worker, worker_port, renderer_host, renderer_port, streamer_host, streamer_port);
-      s->await_all_other_actors_done();
-      std::exit(0);
-    }
-    if (vm.count("spawn-renderer")) {
-      auto w = system.spawn(renderer, renderer_port);
-      s->await_all_other_actors_done();
-      std::exit(0);
-    }
-    if (vm.count("spawn-streamer")) {
-      auto w = system.spawn(streamer, streamer_port);
+    if (worker_port) {
+      // TODO: hardcoded
+      auto w = system.spawn(remote_worker, worker_port, "localhost", 10000, num_queue_per_worker);
+      s->send(w, start_v);
       s->await_all_other_actors_done();
       std::exit(0);
     }
@@ -265,6 +235,19 @@ public:
       stream_mode = "hls";
       if (output_file.empty()) {
         output_file.assign("webroot/stream/stream.m3u8");
+
+        // clean up left-over streaming artifacts
+        namespace fs = std::experimental::filesystem;
+        const fs::path stream_path{"webroot/stream"};
+        for (const auto &entry : fs::directory_iterator(stream_path)) {
+          const auto filename = entry.path().filename().string();
+          // non-experimental can do:
+          // if (entry.is_regular_file())...
+          if (filename.rfind("stream.m3u8", 0) == 0) {
+            std::cerr << "cleaning up old file: " << filename << std::endl;
+            fs::remove(entry.path());
+          }
+        }
       }
       std::cerr << "Stream URL: http://localhost:18080/" << std::endl;
     }
@@ -281,16 +264,16 @@ public:
         system.spawn<detached>(job_generator, script, canvas_w, canvas_h, use_stdin, rendering_enabled, compress);
     // generator links to job storage
     actor streamer_ = spawn_actor_local_or_remote(
-        system, streamer, string("streamer"), string("use-remote-streamer"), remote_streamer_info);
+        system, streamer, string("streamer"), string("use-remote-streamer"), remote_streamer_info, -1);
 
     actor renderer_ = spawn_actor_local_or_remote(
-        system, renderer, string("renderer"), string("use-remote-renderer"), remote_renderer_info);
+        system, renderer, string("renderer"), string("use-remote-renderer"), remote_renderer_info, renderer_port);
     auto output_settings = uint32_t(streamer_settings.to_ulong());
     auto stdin_reader_ = system.spawn(stdin_reader, generator);
 
     s->request(generator, infinite, initialize_v)
         .receive(
-            [&](size_t bitrate, bool use_stdin_, size_t use_fps_) {
+            [&](size_t bitrate, bool use_stdin_, size_t use_fps_, bool realtime_) {
               use_stdin = use_stdin_;
               use_fps = use_fps_;
               s->send(streamer_,
@@ -301,12 +284,11 @@ public:
                       use_fps,
                       output_settings,
                       stream_mode);
+              s->send(renderer_, initialize_v, streamer_, generator, save_image, realtime_);
             },
             [=](error &err) { std::exit(2); });
-    s->send(renderer_, initialize_v, streamer_, generator, workers_vec, streamer_host, streamer_port, save_image);
-    auto number_of_workers = use_remote_workers ? workers_vec.size() : num_workers;
-    s->send(generator, start_v, std::max(max_jobs_queued_for_renderer, number_of_workers), num_chunks, renderer_);
-    s->send(renderer_, start_v, number_of_workers);
+    s->send(renderer_, start_v, num_workers, num_queue_per_worker);
+    s->send(generator, start_v, std::max(max_jobs_queued_for_renderer, num_workers), num_chunks, renderer_);
 
     if (use_stdin) {
       s->send(stdin_reader_, start_v);
@@ -321,6 +303,7 @@ public:
       std::this_thread::sleep_for(std::chrono::milliseconds(2000));
       if (rendering_enabled) {
         s->send<message_priority::high>(renderer_, show_stats_v);
+        s->send<message_priority::high>(generator, show_stats_v);
       } else {
         s->send<message_priority::high>(generator, show_stats_v);
       }
@@ -353,8 +336,12 @@ public:
   }
 
   template <typename T>
-  actor spawn_actor_local_or_remote(
-      caf::actor_system &system, T *actor_behavior, string actor_name, string cli_flag_param, string cli_flag_value) {
+  actor spawn_actor_local_or_remote(caf::actor_system &system,
+                                    T *actor_behavior,
+                                    string actor_name,
+                                    string cli_flag_param,
+                                    string cli_flag_value,
+                                    int port) {
     std::optional<actor> actor_ptr;
     if (vm.count(cli_flag_param)) {
       string host;
@@ -370,9 +357,12 @@ public:
       }
       actor_ptr = *p;
     } else {
-      std::optional<size_t> no_port;
+      std::optional<size_t> the_port;
+      if (port != -1) {
+        the_port = std::optional<size_t>(port);
+      }
       cerr << "spawning local " << actor_name << endl;
-      actor_ptr = system.spawn<caf::spawn_options::priority_aware_flag>(actor_behavior, no_port);
+      actor_ptr = system.spawn<caf::spawn_options::priority_aware_flag>(actor_behavior, the_port);
     }
     return *actor_ptr;
   }

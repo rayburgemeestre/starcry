@@ -15,14 +15,15 @@ struct job_generator_data {
   size_t current_job = 0;
   size_t num_chunks = 0;
   size_t lines_received = 0;
-  size_t jobs_queued_for_renderer = 0;
-  size_t max_jobs_queued_for_renderer = 1;
+  int64_t jobs_queued_for_renderer = 0;
+  int64_t max_jobs_queued_for_renderer = 1;
   bool has_max_jobs_queued_for_renderer = false;
   std::optional<actor> renderer_ptr;
   std::shared_ptr<MeasureInterval> fps_counter;
   size_t bitrate = 0;
   bool use_stdin = false;
   size_t use_fps = 25;
+  bool realtime = false;
 };
 
 behavior job_generator(stateful_actor<job_generator_data> *self,

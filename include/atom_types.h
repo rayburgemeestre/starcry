@@ -46,6 +46,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(starcry, first_custom_type_id)
   CAF_ADD_ATOM(starcry, terminate_)
   CAF_ADD_ATOM(starcry, write_frame)
   CAF_ADD_ATOM(starcry, render_preview_frame)
+  CAF_ADD_ATOM(starcry, pull_job)
 
 CAF_END_TYPE_ID_BLOCK(starcry)
 // clang-format on

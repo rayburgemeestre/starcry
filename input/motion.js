@@ -3,6 +3,11 @@
  License, v. 2.0. If a copy of the MPL was not distributed with this
  file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
+// function rand() {
+//     return Math.random();
+// }
+
 include('lib/vectors.js')
 include('lib/quadtree.js')
 include('lib/collisions.js')
@@ -17,6 +22,7 @@ const scale = 1;
 const resolution = 0.1;
 const num_balls = 200;
 const ball_radius = 5.;
+const realtime = false;
 
 let balls = [];
 
@@ -125,4 +131,7 @@ function next()
     for (let d of balls) {
         d.draw();
     }
+
+    add_text(0, 0, 0, 20, 'Frame: ' + current_frame, 'center');
+    // add_text(0, 20, 0, 20, 'Rand: ' + rand(), 'center');
 }

@@ -84,7 +84,8 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
         self->state.bitrate = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");
         self->state.use_stdin = context->run<bool>("typeof stdin != 'undefined' ? stdin : false");
         self->state.use_fps = context->run<size_t>("typeof fps != 'undefined' ? fps : 25");
-        return make_message(self->state.bitrate, self->state.use_stdin, self->state.use_fps);
+        self->state.realtime = context->run<bool>("typeof realtime != 'undefined' ? realtime : false");
+        return make_message(self->state.bitrate, self->state.use_stdin, self->state.use_fps, self->state.realtime);
       },
       [=](start, size_t max_jobs_queued_for_renderer, size_t num_chunks, actor &renderer) {  // by main
         // further initialize state
@@ -118,6 +119,7 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
             // for (int i=0; i<600; i++) {
             //  assistant->the_job.shapes.clear();
             assistant->the_previous_job = assistant->the_job;
+            context->run("current_frame = " + to_string(assistant->current_frame) + ";");
             call_print_exception(self, "next");
             // assistant->the_job.shapes[0] = assistant->the_previous_job.shapes[0];
             // assistant->the_job.shapes[0].reset( assistant->the_previous_job.shapes[0] );
@@ -138,29 +140,25 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
         // communicate back to stdin_reader how many lines we have received, and whether we have enough
         // jobs delivered to renderer for now (meaning the stdin_reader can pause providing lines for us)
         auto &state = self->state;
+        self->state.has_max_jobs_queued_for_renderer =
+            (self->state.jobs_queued_for_renderer >= self->state.max_jobs_queued_for_renderer);
         self->send(sender, checkpoint_v, state.lines_received, state.has_max_jobs_queued_for_renderer);
       },
       [=](job_processed) {  // by renderer
         self->state.jobs_queued_for_renderer--;
-        self->state.has_max_jobs_queued_for_renderer =
-            (self->state.jobs_queued_for_renderer >= self->state.max_jobs_queued_for_renderer);
+
         if (!self->state.use_stdin || assistant->realtime) {
-          if (!self->state.has_max_jobs_queued_for_renderer) {
+          for (int64_t i = self->state.jobs_queued_for_renderer; i < self->state.max_jobs_queued_for_renderer; i++) {
+            self->state.jobs_queued_for_renderer++;
             self->delayed_send(self, std::chrono::milliseconds(8), next_frame_v);
           }
         }
       },
       [=](write_frame, data::job job) {  // from scripting (V8)
-        job.shapes = assistant->cache->retrieve(job);
-
-        self->state.has_max_jobs_queued_for_renderer =
-            (self->state.jobs_queued_for_renderer >= self->state.max_jobs_queued_for_renderer);
-
         util::ImageSplitter<uint32_t> imagesplitter{self->state.canvas_w, self->state.canvas_h};
         // We always split horizontal, so we simply can concat the pixels later
         const auto rectangles =
             imagesplitter.split(self->state.num_chunks, util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
-        job.frame_number = assistant->current_frame;
         for (size_t i = 0, counter = 1; i < rectangles.size(); i++) {
           job.width = rectangles[i].width();
           job.height = rectangles[i].height();
@@ -170,24 +168,18 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
           job.scale = context->run<double>("typeof scale != 'undefined' ? scale : 1.0");
           job.chunk = counter;
           if (rendering_enabled) {
-            assistant->cache->take(job);
             self->send(*self->state.renderer_ptr, add_job_v, job);
-            self->state.jobs_queued_for_renderer++;
           } else {
             self->send(self, next_frame_v);
           }
           counter++;
         }
-        assistant->current_frame++;
-        // in some cases a javascript may want manual control over incrementing the current frame.
-        // i.e., if you buffer multiple lines, and after X time manually output a frame..
-        context->run("current_frame = " + to_string(assistant->current_frame) + ";");
 
         self->state.fps_counter->measure();
         job.shapes.clear();
         if (job.last_frame) {
           aout(self) << "job_generator: there are no more jobs to be generated." << endl;
-          self->state.jobs_queued_for_renderer = numeric_limits<size_t>::max();
+          self->state.jobs_queued_for_renderer = numeric_limits<int64_t>::max();
           // self->become(nothing); don't do this, v8 might be calling into us still..
           if (!rendering_enabled) {
             // this actor shuts down the system in that case
@@ -200,7 +192,8 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
       [=](output_line, string line) {  // scripting (V8)
         aout(self) << line << endl;
       },
-      [=](next_frame) {  // self (job_generator)
+      [=](next_frame) {
+        context->run("current_frame = " + to_string(assistant->current_frame) + ";");
         call_print_exception(self, "next");
         // restore the state test
         // if (assistant->the_previous_job.shapes.size() > 0)
@@ -216,7 +209,7 @@ behavior job_generator(stateful_actor<job_generator_data> *self,
       },
       [=](show_stats) {  // main
         aout(self) << "generator at frame: " << assistant->current_frame
-                   << ", with frames/sec: " << (1000.0 / self->state.fps_counter->mean()) << " +/- "
+                   << ", with FPS: " << (1000.0 / self->state.fps_counter->mean()) << " +/- "
                    << self->state.fps_counter->stderr() << " mailbox: " << self->mailbox().count() << endl;
       },
       [=](terminate_) {  // main

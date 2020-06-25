@@ -71,8 +71,7 @@ function next() {
     circles[minute].radius = rad_min * clock_max_radius;
     circles[second].radius = rad_sec * clock_max_radius;
 
-    //set_background_color(new color(0, 0, 0, 1));
-    set_background_color(new color(0.5, 0, 0, 1));
+    set_background_color(new color(0, 0, 0, 1));
 
     for (let i=circles.length - 1; i>=0; i--) {
         add_circle(circles[i]);

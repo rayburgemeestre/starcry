@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "allegro5/color.h"
+#include "caf/all.hpp"
 
 namespace data {
 
