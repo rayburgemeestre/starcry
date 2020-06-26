@@ -93,6 +93,7 @@ private:
   size_t max_jobs_queued_for_renderer = 1;
   int64_t save_image = -1;
   int64_t num_queue_per_worker = 1;
+  bool to_files = false;
 
 public:
   main_program(int argc, char *argv[]) {
@@ -118,6 +119,7 @@ public:
         "no-video-output", "disable video output using ffmpeg")(
         "no-rendering", "disable rendering (useful for testing javascript performance)")(
         "save-image", po::value<int64_t>(&save_image), "save image to disk")(
+        "to-files", "instead of messaging frames, save files to disk")(
         "expose-renderer", po::value<int>(&renderer_port), "expose renderer on given port")(
         "webserver", "start embedded webserver")("crtmpserver", "start embedded crtmpserver for rtmp streaming")(
         "stream,stream-hls", "start embedded webserver, and stream hls to webroot")(
@@ -142,6 +144,8 @@ public:
     actor_system_config cfg;
     cfg.load<io::middleman>();
 
+    to_files = vm.count("to-files");
+
     if (vm.count("trace")) {
       cfg.set("logger.file-name", "actor_log_[PID]_[TIMESTAMP]_[NODE].log");
       cfg.set("logger.file-format", "%r %c %p %a %t %C %M %F:%L %m%n");
@@ -153,6 +157,8 @@ public:
       cfg.set("logger.file-verbosity", "quiet");
       cfg.set("logger.console-verbosity", "quiet");
     }
+
+    // cfg.set("middleman.max-consecutive-reads", 1000);
 
     actor_system system(cfg);
 
@@ -287,8 +293,9 @@ public:
                       bitrate,
                       use_fps,
                       output_settings,
-                      stream_mode);
-              s->send(renderer_, initialize_v, streamer_, generator, save_image, realtime_);
+                      stream_mode,
+                      to_files);
+              s->send(renderer_, initialize_v, streamer_, generator, save_image, realtime_, to_files);
             },
             [=](error &err) { std::exit(2); });
     s->send(renderer_, start_v, num_workers, num_queue_per_worker);

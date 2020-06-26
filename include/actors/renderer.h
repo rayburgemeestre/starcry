@@ -39,12 +39,14 @@ struct renderer_data {
   std::vector<std::pair<std::string, int>> workers_vec;
   int64_t save_image = -1;
   bool realtime = false;
+  bool to_files = false;
   std::set<data::job> job_queue;
   rendering_engine_wrapper engine;
   size_t job_sequence = 0;
   std::shared_ptr<MeasureInterval> jps_counter;
-  std::set<std::pair<caf::actor, bool>> waiting_for_job;
+  std::vector<std::pair<caf::actor, bool>> waiting_for_job;
   std::set<caf::actor> self_spawned_workers;
+  int64_t num_queue_per_worker = 1;
 };
 
 void fast_render_thread(caf::stateful_actor<worker_data> *self, bool output_each_frame);

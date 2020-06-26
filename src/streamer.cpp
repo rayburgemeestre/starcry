@@ -86,13 +86,15 @@ behavior streamer(stateful_actor<streamer_data> *self, std::optional<size_t> por
           size_t bitrate,
           size_t fps,
           uint32_t settings,
-          std::string stream_mode) {
+          std::string stream_mode,
+          bool to_files) {
         self->state.preview_window_port = preview_window_port;
         self->state.output_file = output_file;
         self->state.settings = settings;
         self->state.bitrate = bitrate;
         self->state.fps = fps;
         self->state.stream_mode = stream_mode;
+        self->state.to_files = to_files;
       },
       [=](render_frame, data::job job, data::pixel_data2 &pixeldat, const caf::actor &renderer) {
         job.shapes = assistant->cache->retrieve(job);

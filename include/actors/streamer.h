@@ -39,6 +39,7 @@ struct streamer_data {
   size_t bitrate;
   size_t fps;
   std::string stream_mode;
+  bool to_files = false;
   std::shared_ptr<MeasureInterval> fps_counter;
   size_t num_pixels = 0;
   size_t min_items_in_streamer_queue = 10;

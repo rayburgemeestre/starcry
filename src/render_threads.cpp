@@ -43,11 +43,11 @@ void render_threads::shutdown() {
   }
 }
 
-data::job render_threads::job(size_t worker_num) {
+std::pair<data::job, bool> render_threads::job(size_t worker_num) {
   const std::lock_guard<std::mutex> lock(jobs_mut);
-  auto job = *jobs[worker_num].cbegin();
-  jobs[worker_num].erase(job);
-  return job;
+  auto job_pair = *jobs[worker_num].cbegin();
+  jobs[worker_num].erase(job_pair);
+  return job_pair;
 }
 
 void render_threads::add_result(size_t worker_num, const data::job &job, const data::pixel_data2 &dat) {
@@ -64,7 +64,7 @@ void render_threads::for_each_and_clear(size_t worker_num,
   results[worker_num].clear();
 }
 
-void render_threads::add_job(size_t worker_num, const data::job &job) {
+void render_threads::add_job(size_t worker_num, const data::job &job, bool to_file) {
   const std::lock_guard<std::mutex> lock(jobs_mut);
-  jobs[worker_num].insert(job);
+  jobs[worker_num].insert(std::make_pair(job, to_file));
 }

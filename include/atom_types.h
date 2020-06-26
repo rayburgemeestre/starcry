@@ -46,6 +46,8 @@ CAF_BEGIN_TYPE_ID_BLOCK(starcry, first_custom_type_id)
   CAF_ADD_ATOM(starcry, terminate_)
   CAF_ADD_ATOM(starcry, write_frame)
   CAF_ADD_ATOM(starcry, render_preview_frame)
+  CAF_ADD_ATOM(starcry, register_worker)
+  CAF_ADD_ATOM(starcry, register_worker_ok)
   CAF_ADD_ATOM(starcry, pull_job)
 
 CAF_END_TYPE_ID_BLOCK(starcry)

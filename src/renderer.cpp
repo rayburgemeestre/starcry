@@ -28,14 +28,21 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
   self->state.jps_counter->setDescription("jps");
   self->state.jps_counter->startHistogramAtZero(true);
   return {
-      [=](initialize, const caf::actor &streamer, const caf::actor &generator, int64_t save_image, bool realtime) {
+      [=](initialize,
+          const caf::actor &streamer,
+          const caf::actor &generator,
+          int64_t save_image,
+          bool realtime,
+          bool to_files) {
         self->state.streamer = streamer;
         self->state.generator = generator;
         self->state.save_image = save_image;
         self->state.realtime = realtime;
+        self->state.to_files = to_files;
         self->state.engine.initialize();
       },
       [=](start, size_t num_workers, int64_t num_queue_per_worker) {
+        self->state.num_queue_per_worker = num_queue_per_worker;
         for (int worker_num = 0; worker_num < num_workers; worker_num++) {
           auto w = self->system().spawn(worker, self, size_t(worker_num), num_queue_per_worker);
           self->link_to(w);
@@ -44,6 +51,10 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
           // for some reason, the fact that the worker is linked does not result in it tearing down on user_shutdown
           self->state.self_spawned_workers.insert(w);
         }
+      },
+      [=](register_worker, caf::actor &sender, bool is_remote_worker) {
+        // TODO: add worker to allow list or something
+        self->send(sender, register_worker_ok_v, self->state.num_queue_per_worker);
       },
       [=](add_job, data::job job) {
         // // render still image
@@ -57,18 +68,26 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
         // }
         if (!self->state.waiting_for_job.empty()) {
           // forward to a waiting actor immediately
-          auto lucky_actor = *self->state.waiting_for_job.begin();
-          self->state.waiting_for_job.erase(lucky_actor);
+          auto lucky_actor = self->state.waiting_for_job.back();
+          self->state.waiting_for_job.pop_back();
           // unpack for remote worker
           if (lucky_actor.second) {
             job.shapes = assistant->cache->retrieve(job);
           }
-          self->send(lucky_actor.first, get_job_v, job, self, *self->state.streamer);
+          self->send<message_priority::high>(lucky_actor.first,
+                                             get_job_v,
+                                             job,
+                                             self,
+                                             *self->state.streamer,
+                                             self->state.to_files,
+                                             (int64_t)std::time(0));
         } else {
           self->state.job_queue.insert(job);
         }
       },
-      [=](pull_job, caf::actor &sender, bool is_remote_worker) {
+      [=](pull_job, caf::actor &sender, bool is_remote_worker, int64_t debug) {
+        int64_t debug2 = std::time(0);
+        // std::cout << "This pull job request was in transit for: " << (debug2 - debug) << std::endl;
         if (self->state.realtime) {
           // streamer is in charge of requesting frames
         } else {
@@ -76,7 +95,7 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
           self->send<message_priority::high>(*self->state.generator, job_processed_v);
         }
         if (self->state.job_queue.empty()) {
-          self->state.waiting_for_job.insert(std::make_pair(sender, is_remote_worker));
+          self->state.waiting_for_job.emplace_back(std::make_pair(sender, is_remote_worker));
           return;
         }
         auto job = *self->state.job_queue.cbegin();
@@ -84,7 +103,8 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
           job.shapes = assistant->cache->retrieve(job);
         }
         self->state.job_queue.erase(job);
-        self->send(sender, get_job_v, job, self, *self->state.streamer);
+        self->send<message_priority::high>(
+            sender, get_job_v, job, self, *self->state.streamer, self->state.to_files, (int64_t)std::time(0));
       },
       [=](render_frame, data::job job, data::pixel_data2 dat, bool is_remote_worker) {
         if (is_remote_worker) {
@@ -126,7 +146,9 @@ void fast_render_thread(caf::stateful_actor<worker_data> *self, bool output_each
       if (items == 0) {
         continue;  // nothing to do
       }
-      data::job job = threads.job(self->state.worker_num);
+      data::job job;
+      bool to_file = false;
+      std::tie(job, to_file) = threads.job(self->state.worker_num);
 
       auto current_time = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> idle = current_time - self->state.previous_time;
@@ -171,21 +193,28 @@ void fast_render_thread(caf::stateful_actor<worker_data> *self, bool output_each
 
       data::pixel_data2 dat;
       dat.job_number = job.job_number;
-      dat.pixels = self->state.engine.serialize_bitmap2(self->state.bitmap, job.width, job.height);
 
-      // compress the frame
-      std::stringstream ss;
-      if (job.compress) {
-        compress_vector<uint32_t> cv;
-        double compression_rate = 0;
-        cv.compress(&dat.pixels, &compression_rate);
-        // if (output_each_frame) {
-        //    ss << "compressed from 100% to " << compression_rate << "% ";
-        // }
-      }
+      if (to_file) {
+        char buf[512] = {0x00};
+        sprintf(buf, "frame_job_%05ld", dat.job_number);
+        self->state.engine.write_image(self->state.bitmap, buf);
+      } else {
+        dat.pixels = self->state.engine.serialize_bitmap2(self->state.bitmap, job.width, job.height);
 
-      if (!self->state.is_remote_worker) {
-        assistant->cache->take(dat);
+        // compress the frame
+        // std::stringstream ss;
+        if (job.compress) {
+          compress_vector<uint32_t> cv;
+          double compression_rate = 0;
+          cv.compress(&dat.pixels, &compression_rate);
+          // if (output_each_frame) {
+          //    ss << "compressed from 100% to " << compression_rate << "% ";
+          // }
+        }
+
+        if (!self->state.is_remote_worker) {
+          assistant->cache->take(dat);
+        }
       }
 
       threads.add_result(self->state.worker_num, job, dat);
@@ -204,7 +233,9 @@ behavior create_worker_behavior(caf::stateful_actor<worker_data> *self,
   self->state.is_remote_worker = i_am_remote_worker;
 
   return {
-      [=](start) {
+      [=](start) { self->send(*self->state.renderer_ptr, register_worker_v, self, self->state.is_remote_worker); },
+      [=](register_worker_ok, int64_t num_queue_per_worker_server_side) {
+        self->state.num_queue_per_worker = num_queue_per_worker_server_side;
         threads.run(self->state.worker_num,
                     std::make_unique<std::thread>([&]() { fast_render_thread(self, output_each_frame); }));
         self->send(self, pull_job_v);
@@ -219,13 +250,11 @@ behavior create_worker_behavior(caf::stateful_actor<worker_data> *self,
               *self->state.renderer_ptr, render_frame_v, job, dat, self->state.is_remote_worker);
         });
 
-        if (need > 0) {
-          // request new frame
-          for (int i = 0; i < need; i++) {
-            self->send<message_priority::high>(
-                *self->state.renderer_ptr, pull_job_v, self, self->state.is_remote_worker);
-            self->state.num_jobs_requested++;
-          }
+        // request new frame(s)
+        for (int i = 0; i < need; i++) {
+          self->send<message_priority::high>(
+              *self->state.renderer_ptr, pull_job_v, self, self->state.is_remote_worker, (int64_t)std::time(0));
+          self->state.num_jobs_requested++;
         }
 
         // loop
@@ -234,9 +263,16 @@ behavior create_worker_behavior(caf::stateful_actor<worker_data> *self,
         // below can be too agressive (generator cannot get through to renderer with new frames)
         // self->send(self, pull_job_v);
       },
-      [=](get_job, data::job job, const caf::actor &renderer, const caf::actor &streamer) {
+      [=](get_job,
+          data::job job,
+          const caf::actor &renderer,
+          const caf::actor &streamer,
+          bool to_files,
+          int64_t debug) {
+        // int64_t debug2 = std::time(0);
+        // std::cout << "This job was in transit for: " << (debug2 - debug) << std::endl;
         if (self->state.num_jobs_requested > 0) self->state.num_jobs_requested--;
-        threads.add_job(self->state.worker_num, job);
+        threads.add_job(self->state.worker_num, job, to_files);
       },
       [=](terminate_) {
         threads.shutdown();
