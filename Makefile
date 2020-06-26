@@ -52,9 +52,11 @@ deps:
 				libxrandr-dev libxinerama-dev libxi-dev
 	sudo apt-get install -y libgtk2.0-dev
 	sudo apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev
-	# sfml (system)
+	# sfml (system 2.4)
 	#sudo apt-get install -y libbz2-dev liblzma-dev libz-dev
 	#sudo pt-get install -y libsfml-dev
+	# sfml self-compiled (2.5)
+	sudo apt-get install -y libudev-dev libopenal-dev libflac-dev libvorbis-dev
 
 prepare:
 	# switch to clang compiler
