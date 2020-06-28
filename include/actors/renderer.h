@@ -9,11 +9,14 @@
 #include <chrono>
 #include <data/pixels.hpp>
 #include <mutex>
+#include <memory>
 
 #include "common.h"
 
 #include "data/job.hpp"
 #include "rendering_engine_wrapper.h"
+#include "render_server.h"
+#include "render_client.h"
 
 struct ALLEGRO_BITMAP;
 
@@ -21,12 +24,14 @@ struct worker_data {
   size_t worker_num = 0;
   ALLEGRO_BITMAP *bitmap = nullptr;
   rendering_engine_wrapper engine;
+  std::unique_ptr<render_client> client;
+  bool client_initialized = false;
   uint32_t width = 0;
   uint32_t height = 0;
   size_t num_jobs_requested = 0;
   int64_t num_queue_per_worker = 1;
   bool is_remote_worker = false;
-  std::optional<actor> renderer_ptr;
+  std::optional<actor> renderer_ptr = {};
   std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<double, std::milli>> previous_time =
       std::chrono::high_resolution_clock::now();
 };
@@ -45,8 +50,13 @@ struct renderer_data {
   size_t job_sequence = 0;
   std::shared_ptr<MeasureInterval> jps_counter;
   std::vector<std::pair<caf::actor, bool>> waiting_for_job;
+  std::vector<int> remote_waiting_for_job;
   std::set<caf::actor> self_spawned_workers;
   int64_t num_queue_per_worker = 1;
+  std::unique_ptr<std::thread> server_thread;
+
+  std::vector<std::tuple<data::job, data::pixel_data2, bool>> jobs_done;
+  std::mutex jobs_done_mut;
 };
 
 void fast_render_thread(caf::stateful_actor<worker_data> *self, bool output_each_frame);

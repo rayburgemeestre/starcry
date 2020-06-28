@@ -5,7 +5,8 @@
  */
 #pragma once
 
-#include <caf/meta/type_name.hpp>
+#include "caf/meta/type_name.hpp"
+#include "cereal/types/vector.hpp"
 
 #include "color.hpp"
 #include "shape.hpp"
@@ -28,7 +29,7 @@ struct job {
   size_t chunk;
   size_t num_chunks;
   data::color background_color;
-  std::vector<shape> shapes;
+  std::vector<data::shape> shapes;
   double scale;
   size_t bitrate;
   bool compress;
@@ -37,34 +38,38 @@ struct job {
   inline bool operator<(const job &other) const {
     return job_number < other.job_number;  // there can be no ties
   }
+
+  template <class Archive>
+  void serialize( Archive & ar )
+  {
+    ar(
+      same_host,
+      width,
+      height,
+      offset_x,
+      offset_y,
+      canvas_w,
+      canvas_h,
+      job_number,
+      frame_number,
+      rendered,
+      last_frame,
+      chunk,
+      num_chunks,
+      background_color,
+      shapes,
+      scale,
+      bitrate,
+      compress,
+      save_image
+    );
+  }
 };
 
 inline bool operator==(const job &lhs, const job &rhs) {
   return lhs.job_number == rhs.job_number;
 }
 
-template <class Processor>
-void serialize(Processor &proc, data::job &x, const unsigned int) {
-  proc &x.same_host;
-  proc &x.width;
-  proc &x.height;
-  proc &x.offset_x;
-  proc &x.offset_y;
-  proc &x.canvas_w;
-  proc &x.canvas_h;
-  proc &x.job_number;
-  proc &x.frame_number;
-  proc &x.rendered;
-  proc &x.last_frame;
-  proc &x.chunk;
-  proc &x.num_chunks;
-  proc &x.background_color;
-  proc &x.shapes;
-  proc &x.scale;
-  proc &x.bitrate;
-  proc &x.compress;
-  proc &x.save_image;
-}
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector &f, data::job &x) {

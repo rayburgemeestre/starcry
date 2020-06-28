@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <string>
 
+#include "cereal/types/string.hpp"
+
 #include <caf/meta/type_name.hpp>
 
 #include "data/gradient.hpp"
@@ -65,14 +67,14 @@ public:
 
   const int &type() { return type_; }
 
+  template <class Archive>
+  void serialize(Archive &ar) {
+    ar(type_);
+  }
+
 public:
   int type_;
 };
-
-template <class Processor>
-void serialize(Processor &proc, data::blending_type &x, const unsigned int) {
-  proc &x.type_;
-}
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector &f, data::blending_type &x) {
@@ -97,28 +99,32 @@ struct shape {
   std::string align;
   gradient gradient_;
   blending_type blending_;
+
+  template <class Archive>
+  void serialize( Archive & ar )
+  {
+    ar(
+    x,
+    y,
+    z,
+    x2,
+    y2,
+    z2,
+    type,
+    r,
+    g,
+    b,
+    radius,
+    text_size,
+    radius_size,
+    text,
+    align,
+    gradient_,
+    blending_
+    );
+  }
 };
 
-template <class Processor>
-void serialize(Processor &proc, data::shape &x, const unsigned int) {
-  proc &x.x;
-  proc &x.y;
-  proc &x.z;
-  proc &x.x2;
-  proc &x.y2;
-  proc &x.z2;
-  proc &x.type;
-  proc &x.r;
-  proc &x.g;
-  proc &x.b;
-  proc &x.radius;
-  proc &x.text_size;
-  proc &x.radius_size;
-  proc &x.text;
-  proc &x.align;
-  proc &x.gradient_;
-  proc &x.blending_;
-}
 
 inline bool operator==(const shape &lhs, const shape &rhs) {
   return 0 == std::memcmp(reinterpret_cast<const void *>(&lhs), reinterpret_cast<const void *>(&rhs), sizeof(shape));

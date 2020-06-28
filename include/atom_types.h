@@ -49,6 +49,8 @@ CAF_BEGIN_TYPE_ID_BLOCK(starcry, first_custom_type_id)
   CAF_ADD_ATOM(starcry, register_worker)
   CAF_ADD_ATOM(starcry, register_worker_ok)
   CAF_ADD_ATOM(starcry, pull_job)
+  CAF_ADD_ATOM(starcry, remote_pull_job)
+  CAF_ADD_ATOM(starcry, do_maintenance)
 
 CAF_END_TYPE_ID_BLOCK(starcry)
 // clang-format on

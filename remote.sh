@@ -3,7 +3,7 @@ trap "killall -9 starcry" EXIT HUP INT QUIT TERM
 typeset script="$1"
 typeset params=""
 
-./build/starcry $params  --expose-renderer 10000 -s $script -q 16 -Q 2 &
+./build/starcry $params -n 0 --expose-renderer 10000 -s $script -q 16 -Q 2 &
 
 sleep 2
 

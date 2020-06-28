@@ -9,6 +9,7 @@
 
 #include "allegro5/color.h"
 #include "caf/all.hpp"
+#include "cereal/types/vector.hpp"
 
 namespace data {
 
@@ -20,20 +21,18 @@ inline bool operator==(const pixel_data& lhs, const pixel_data& rhs) {
   return std::equal(lhs.pixels.begin(), lhs.pixels.end(), rhs.pixels.begin(), rhs.pixels.end());
 }
 
-template <class Processor>
-void serialize(Processor& proc, struct data::pixel_data& x, const unsigned int) {
-  proc& x.pixels;
-}
-
 struct pixel_data2 {
   size_t job_number;
   std::vector<uint32_t> pixels;
-};
 
-template <class Processor>
-void serialize(Processor& proc, struct data::pixel_data2& x, const unsigned int) {
-  proc& x.pixels;
-}
+  template <class Archive>
+  void serialize(Archive & ar) {
+    ar(
+      job_number,
+      pixels
+    );
+  }
+};
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, data::pixel_data& x) {
