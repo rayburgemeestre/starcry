@@ -27,7 +27,6 @@ inline bool operator==(const color &lhs, const color &rhs) {
   return 0 == std::memcmp(reinterpret_cast<const void *>(&lhs), reinterpret_cast<const void *>(&rhs), sizeof(color));
 }
 
-
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector &f, data::color &x) {
   return f(caf::meta::type_name("data::color"), x.r, x.g, x.b, x.a);

@@ -87,7 +87,7 @@ private:
   bool compress = false;
   bool rendering_enabled = true;
   string renderer_host = "localhost";
-  int renderer_port = 10000;
+  int renderer_port = -1;
   string remote_renderer_info;
   string remote_streamer_info;
   size_t max_jobs_queued_for_renderer = 1;

@@ -17,7 +17,7 @@
 
 class render_threads {
 public:
-  void run(size_t worker_num, std::unique_ptr<std::thread> thread);
+  void run(size_t worker_num, std::function<void()> &&func);
   bool keep_running(size_t worker_num);
   size_t num_queued(size_t worker_num);
   void shutdown();
@@ -28,7 +28,7 @@ public:
   void add_job(size_t worker_num, const data::job &job, bool to_file);
 
 private:
-  std::map<size_t, std::unique_ptr<std::thread>> threads;
+  std::map<size_t, std::thread *> threads;
   std::mutex threads_mut;
   std::map<size_t, bool> running;
   std::mutex running_mut;

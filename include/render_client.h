@@ -6,35 +6,34 @@
 
 #pragma once
 
-#include <vector>
 #include <functional>
 #include <string>
+#include <vector>
 
-#include <cstdio>
-#include <cstdlib>
-#include <unistd.h>
-#include <cerrno>
-#include <cstring>
 #include <netdb.h>
-#include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <cerrno>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include <arpa/inet.h>
 
-#include "util/socketbuffer.h"
 #include "data/job.hpp"
 #include "data/pixels.hpp"
+#include "util/socketbuffer.h"
 
-#define PORT "10000" // the port client will be connecting to
+#define PORT "10000"  // the port client will be connecting to
 
-#define MAXDATASIZE 100 // max number of bytes we can get at once
+#define MAXDATASIZE 51200  // max number of bytes we can get at once
 
 // get sockaddr, IPv4 or IPv6:
 extern void *get_in_addr(struct sockaddr *sa);
 
-class render_client
-{
+class render_client {
 private:
   int sockfd, numbytes;
   char buf[MAXDATASIZE];
@@ -42,17 +41,20 @@ private:
   int rv;
   char s[INET6_ADDRSTRLEN];
   socketbuffer buffer;
+  socketbuffer send_buffer;
   std::vector<std::pair<int, std::string>> messages;
-  std::function<void(int fd, int type, size_t len, const std::string& msg)> msg_callback;
+  std::function<void(int fd, int type, size_t len, const std::string &msg)> msg_callback;
 
 public:
   render_client();
   ~render_client();
 
-  void poll(std::function<void(int fd, int type, size_t len, const std::string& msg)> fn);
+  void set_message_fun(std::function<void(int fd, int type, size_t len, const std::string &msg)> fn);
+  bool poll();
   void process();
 
   void register_me();
   void pull_job(bool is_remote, int64_t timestamp);
   void send_frame(const data::job &job, const data::pixel_data2 &dat, bool is_remote);
+  int send_msg(int fd, int type, const char *data, int len_data);
 };

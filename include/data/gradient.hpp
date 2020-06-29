@@ -7,8 +7,8 @@
 
 #include <algorithm>
 #include <caf/meta/type_name.hpp>
-#include "cereal/types/vector.hpp"
 #include "cereal/types/tuple.hpp"
+#include "cereal/types/vector.hpp"
 
 #include "data/color.hpp"
 
@@ -49,7 +49,6 @@ struct gradient {
   void serialize(Archive &ar) {
     ar(colors);
   }
-
 };
 
 inline bool operator==(const gradient &lhs, const gradient &rhs) {

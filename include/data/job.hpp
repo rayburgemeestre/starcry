@@ -40,36 +40,32 @@ struct job {
   }
 
   template <class Archive>
-  void serialize( Archive & ar )
-  {
-    ar(
-      same_host,
-      width,
-      height,
-      offset_x,
-      offset_y,
-      canvas_w,
-      canvas_h,
-      job_number,
-      frame_number,
-      rendered,
-      last_frame,
-      chunk,
-      num_chunks,
-      background_color,
-      shapes,
-      scale,
-      bitrate,
-      compress,
-      save_image
-    );
+  void serialize(Archive &ar) {
+    ar(same_host,
+       width,
+       height,
+       offset_x,
+       offset_y,
+       canvas_w,
+       canvas_h,
+       job_number,
+       frame_number,
+       rendered,
+       last_frame,
+       chunk,
+       num_chunks,
+       background_color,
+       shapes,
+       scale,
+       bitrate,
+       compress,
+       save_image);
   }
 };
 
 inline bool operator==(const job &lhs, const job &rhs) {
   return lhs.job_number == rhs.job_number;
 }
-
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector &f, data::job &x) {

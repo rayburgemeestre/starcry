@@ -26,11 +26,8 @@ struct pixel_data2 {
   std::vector<uint32_t> pixels;
 
   template <class Archive>
-  void serialize(Archive & ar) {
-    ar(
-      job_number,
-      pixels
-    );
+  void serialize(Archive& ar) {
+    ar(job_number, pixels);
   }
 };
 

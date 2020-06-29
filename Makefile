@@ -11,6 +11,7 @@ debug:
 format:
 	# build starcry with tailored image so we can invoke the make command straight away
 	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core_format"
+	stat -c 'chown %u:%g . -R' CMakeLists.txt | sudo sh -
 
 profile:
 	valgrind --tool=callgrind ./starcry --no-rendering input/motion.js

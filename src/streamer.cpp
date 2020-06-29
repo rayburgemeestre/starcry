@@ -24,7 +24,9 @@ using namespace std;
 bool all_frame_chunks_present(set<rendered_job> &rendered_jobs_set, size_t frame_number, size_t num_chunks) {
   size_t num_chunks_for_frame_available = 0;
   for (const auto &job : rendered_jobs_set) {
-    if (job.frame_number != frame_number) return false;
+    if (job.frame_number != frame_number) {
+      return false;
+    }
     if (++num_chunks_for_frame_available == num_chunks) return true;
   }
   return false;

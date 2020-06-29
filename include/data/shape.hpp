@@ -101,30 +101,10 @@ struct shape {
   blending_type blending_;
 
   template <class Archive>
-  void serialize( Archive & ar )
-  {
-    ar(
-    x,
-    y,
-    z,
-    x2,
-    y2,
-    z2,
-    type,
-    r,
-    g,
-    b,
-    radius,
-    text_size,
-    radius_size,
-    text,
-    align,
-    gradient_,
-    blending_
-    );
+  void serialize(Archive &ar) {
+    ar(x, y, z, x2, y2, z2, type, r, g, b, radius, text_size, radius_size, text, align, gradient_, blending_);
   }
 };
-
 
 inline bool operator==(const shape &lhs, const shape &rhs) {
   return 0 == std::memcmp(reinterpret_cast<const void *>(&lhs), reinterpret_cast<const void *>(&rhs), sizeof(shape));

@@ -9,5 +9,3 @@
 int sendall(int s, char *buf, int *len);
 
 int recvtimeout(int s, char *buf, int len, int timeout);
-
-int send_msg(int fd, int type, const char *data, int len_data);

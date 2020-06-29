@@ -4,8 +4,8 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <thread>
 #include <sstream>
+#include <thread>
 
 #include "actors/renderer.h"
 #include "allegro5/allegro5.h"
@@ -15,18 +15,12 @@
 #include "common.h"
 #include "data/job.hpp"
 #include "data/pixels.hpp"
-#include "render_threads.h"
 #include "util/assistant.h"
 #include "util/compress_vector.h"
 #include "util/remote_actors.h"
-#include "util/socket_utils.h"
 
 #include "cereal/archives/binary.hpp"
 #include "cereal/archives/json.hpp"
-
-// TODO: move to renderer's state object?
-render_threads threads;
-std::unique_ptr<render_server> server = nullptr;
 
 behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t> port) {
   // remote workers will interact with the server for pulling workload, and pushing render frames back
@@ -53,19 +47,21 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
         self->state.engine.initialize();
       },
       [=](start, size_t num_workers, int64_t num_queue_per_worker) {
-
-        if (port) {
+        if (port > 0) {
+          std::cout << "starting server thread" << std::endl;
           self->state.server_thread = std::make_unique<std::thread>([&]() {
-            server = std::make_unique<render_server>();
-            server->run([&](int sockfd, int type, size_t len, const std::string &data) {
+            self->state.server = new render_server();
+            self->state.server->run([&](int sockfd, int type, size_t len, const std::string &data) {
               switch (type) {
-                case 10: // register_me
+                case 10:  // register_me
                 {
-                  send_msg(sockfd, type + 1, (const char *) &self->state.num_queue_per_worker,
-                           sizeof(self->state.num_queue_per_worker));
+                  self->state.server->send_msg(sockfd,
+                                               type + 1,
+                                               (const char *)&self->state.num_queue_per_worker,
+                                               sizeof(self->state.num_queue_per_worker));
                   break;
                 }
-                case 20: // pull_job
+                case 20:  // pull_job
                 {
                   const char *msg = data.c_str();
                   bool *p = (bool *)msg;
@@ -87,15 +83,7 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
                     job.shapes = assistant->cache->retrieve(job);
                   }
                   self->state.job_queue.erase(job);
-                  std::ostringstream os;
-                  {
-                    cereal::BinaryOutputArchive archive(os);
-                    archive(self->state.to_files);
-                    archive((int64_t) std::time(0));
-                    archive(job);
-                  }
-                  int len = os.str().length();
-                  send_msg(sockfd, type + 1, os.str().c_str(), len);
+                  self->state.server->send_job(sockfd, self->state.to_files, std::time(0), job);
                   break;
                 }
                 case 30: {
@@ -115,9 +103,8 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
               }
             });
           });
+          self->delayed_send(self, std::chrono::milliseconds(1), do_maintenance_v);
         }
-
-        self->delayed_send(self, std::chrono::milliseconds(1), do_maintenance_v);
 
         self->state.num_queue_per_worker = num_queue_per_worker;
         for (int worker_num = 0; worker_num < num_workers; worker_num++) {
@@ -133,7 +120,9 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
         decltype(self->state.jobs_done) copy;
         {
           const std::lock_guard<std::mutex> lock(self->state.jobs_done_mut);
-          std::swap(copy, self->state.jobs_done);
+          if (!self->state.jobs_done.empty()) {
+            std::swap(copy, self->state.jobs_done);
+          }
         }
         for (auto &frame_data : copy) {
           // same as render_frame_v
@@ -143,6 +132,9 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
           }
           self->send(*self->state.streamer, render_frame_v, std::get<0>(frame_data), std::get<1>(frame_data), self);
         }
+        if (self->state.server != nullptr) {
+          self->state.server->poll_and_send();
+        }
         self->delayed_send(self, std::chrono::milliseconds(1), do_maintenance_v);
       },
       [=](register_worker, caf::actor &sender, bool is_remote_worker) {
@@ -150,6 +142,11 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
         self->send(sender, register_worker_ok_v, self->state.num_queue_per_worker);
       },
       [=](add_job, data::job job) {
+        for (const auto &fd : self->state.remote_waiting_for_job) {
+          job.shapes = assistant->cache->retrieve(job);
+          self->state.server->send_job(fd, self->state.to_files, (int64_t)std::time(0), job);
+          return;
+        }
         // // render still image
         // if (self->state.save_image == job.frame_number) {
         //   job.frame_number = 0;
@@ -231,17 +228,160 @@ behavior renderer(caf::stateful_actor<renderer_data> *self, std::optional<size_t
       }};
 }
 
+behavior create_worker_behavior(caf::stateful_actor<worker_data> *self,
+                                const int64_t &num_queue_per_worker,
+                                bool output_each_frame,
+                                bool i_am_remote_worker) {
+  self->state.previous_time = std::chrono::high_resolution_clock::now();
+  self->state.num_queue_per_worker = num_queue_per_worker;
+  self->state.is_remote_worker = i_am_remote_worker;
+
+  return {
+      [=](start) {
+        if (!i_am_remote_worker) {
+          self->send(*self->state.renderer_ptr, register_worker_v, self, self->state.is_remote_worker);
+        } else {
+          self->state.client->set_message_fun([&](int sockfd, int type, size_t len, const std::string &data) {
+            switch (type) {
+              case 11:  // register_me response
+                if (len == sizeof(self->state.num_queue_per_worker)) {
+                  memcpy(&self->state.num_queue_per_worker, data.c_str(), sizeof(self->state.num_queue_per_worker));
+                  // now we can start the render thread
+                  self->state.threads.run(self->state.worker_num,
+                                          [=]() { fast_render_thread(self, output_each_frame); });
+                  self->state.client_initialized = true;
+                }
+                break;
+              case 21:  // pull_job answer
+              {
+                std::istringstream is(data);
+                cereal::BinaryInputArchive archive(is);
+                data::job job;
+                bool to_files = false;
+                int64_t the_time;
+                archive(to_files);
+                archive(the_time);
+                archive(job);
+                if (self->state.num_jobs_requested > 0) self->state.num_jobs_requested--;
+                self->state.threads.add_job(self->state.worker_num, job, to_files);
+              } break;
+            }
+          });
+          self->state.client->register_me();
+          self->send(self, remote_pull_job_v);
+        }
+      },
+      [=](remote_pull_job) {
+        bool ret = false;
+        ret = self->state.client->poll();
+
+        if (!self->state.client_initialized) {
+          self->delayed_send(self, std::chrono::milliseconds(1), remote_pull_job_v);
+          return;
+        }
+
+        int64_t need = self->state.num_queue_per_worker - self->state.threads.num_queued(self->state.worker_num);
+        need -= self->state.num_jobs_requested;
+
+        // send all frames that are done
+        self->state.threads.for_each_and_clear(self->state.worker_num,
+                                               [&](const data::job &job, const data::pixel_data2 &dat) {
+                                                 self->state.client->send_frame(job, dat, self->state.is_remote_worker);
+                                               });
+
+        // request new frame(s)
+        for (int i = 0; i < need; i++) {
+          self->state.client->pull_job(self->state.is_remote_worker, (int64_t)std::time(0));
+          self->state.num_jobs_requested++;
+        }
+
+        self->delayed_send(self, std::chrono::milliseconds(1), remote_pull_job_v);
+      },
+
+      [=](register_worker_ok, int64_t num_queue_per_worker_server_side) {
+        self->state.num_queue_per_worker = num_queue_per_worker_server_side;
+        self->state.threads.run(self->state.worker_num, [=]() { fast_render_thread(self, output_each_frame); });
+        self->send(self, pull_job_v);
+      },
+      [=](pull_job) {
+        size_t need = self->state.num_queue_per_worker - self->state.threads.num_queued(self->state.worker_num);
+        need -= self->state.num_jobs_requested;
+
+        // send all frames that are done
+        self->state.threads.for_each_and_clear(
+            self->state.worker_num, [&](const data::job &job, const data::pixel_data2 &dat) {
+              self->send<message_priority::high>(
+                  *self->state.renderer_ptr, render_frame_v, job, dat, self->state.is_remote_worker);
+            });
+
+        // request new frame(s)
+        for (int i = 0; i < need; i++) {
+          if (!self->state.is_remote_worker) {
+            self->send<message_priority::high>(
+                *self->state.renderer_ptr, pull_job_v, self, self->state.is_remote_worker, (int64_t)std::time(0));
+            self->state.num_jobs_requested++;
+          }
+        }
+
+        // loop
+        self->delayed_send(self, std::chrono::milliseconds(1), pull_job_v);
+
+        // below can be too agressive (generator cannot get through to renderer with new frames)
+        // self->send(self, pull_job_v);
+      },
+      [=](get_job,
+          data::job job,
+          const caf::actor &renderer,
+          const caf::actor &streamer,
+          bool to_files,
+          int64_t debug) {
+        // int64_t debug2 = std::time(0);
+        // std::cout << "This job was in transit for: " << (debug2 - debug) << std::endl;
+        if (self->state.num_jobs_requested > 0) self->state.num_jobs_requested--;
+        self->state.threads.add_job(self->state.worker_num, job, to_files);
+      },
+      [=](terminate_) {
+        self->state.threads.shutdown();
+        self->quit(exit_reason::user_shutdown);
+      },
+  };
+}
+
+// remote worker
+behavior remote_worker(caf::stateful_actor<worker_data> *self,
+                       size_t worker_num,
+                       const std::string &renderer_host,
+                       const int &renderer_port,
+                       const int64_t &num_queue_per_worker) {
+  self->state.worker_num = worker_num;
+  rendering_engine_wrapper engine;
+  engine.initialize();
+  self->state.client = std::make_unique<render_client>();
+  return create_worker_behavior(self, num_queue_per_worker, true, true);
+}
+
+// regular non-remote worker
+behavior worker(caf::stateful_actor<worker_data> *self,
+                caf::stateful_actor<renderer_data> *renderer,
+                size_t worker_num,
+                const int64_t &num_queue_per_worker) {
+  self->state.worker_num = worker_num;
+  self->state.renderer_ptr = static_cast<caf::actor>(renderer);
+  return create_worker_behavior(self, num_queue_per_worker, false, false);
+}
+
+// the busy thread doing the hard work
 void fast_render_thread(caf::stateful_actor<worker_data> *self, bool output_each_frame) {
   data::job job;
-  while (threads.keep_running(self->state.worker_num)) {
+  while (self->state.threads.keep_running(self->state.worker_num)) {
     {
-      const auto items = threads.num_queued(self->state.worker_num);
+      const auto items = self->state.threads.num_queued(self->state.worker_num);
       if (items == 0) {
         continue;  // nothing to do
       }
       data::job job;
       bool to_file = false;
-      std::tie(job, to_file) = threads.job(self->state.worker_num);
+      std::tie(job, to_file) = self->state.threads.job(self->state.worker_num);
 
       auto current_time = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> idle = current_time - self->state.previous_time;
@@ -310,148 +450,9 @@ void fast_render_thread(caf::stateful_actor<worker_data> *self, bool output_each
         }
       }
 
-      threads.add_result(self->state.worker_num, job, dat);
+      self->state.threads.add_result(self->state.worker_num, job, dat);
 
       self->state.previous_time = std::chrono::high_resolution_clock::now();
     }
   }
-}
-
-behavior create_worker_behavior(caf::stateful_actor<worker_data> *self,
-                                const int64_t &num_queue_per_worker,
-                                bool output_each_frame,
-                                bool i_am_remote_worker) {
-  self->state.previous_time = std::chrono::high_resolution_clock::now();
-  self->state.num_queue_per_worker = num_queue_per_worker;
-  self->state.is_remote_worker = i_am_remote_worker;
-
-  return {
-      [=](start) {
-        if (!i_am_remote_worker) {
-          self->send(*self->state.renderer_ptr, register_worker_v, self, self->state.is_remote_worker);
-        } else {
-          self->state.client->register_me();
-          self->send(self, remote_pull_job_v);
-        }
-        },
-      [=](remote_pull_job) {
-        self->state.client->poll([&](int sockfd, int type, size_t len, const std::string &data) {
-          switch (type) {
-            case 11: // register_me response
-              if (len == sizeof(self->state.num_queue_per_worker)) {
-                memcpy(&self->state.num_queue_per_worker, data.c_str(), sizeof(self->state.num_queue_per_worker));
-                // now we can start the render thread
-                threads.run(self->state.worker_num,
-                            std::make_unique<std::thread>([&]() { fast_render_thread(self, output_each_frame); }));
-                self->state.client_initialized = true;
-              }
-              break;
-            case 21: // pull_job answer
-              {
-                std::istringstream is(data);
-                cereal::BinaryInputArchive archive(is);
-                data::job job;
-                bool to_files = false;
-                int64_t the_time;
-                archive(to_files);
-                archive(the_time);
-                archive(job);
-                if (self->state.num_jobs_requested > 0) self->state.num_jobs_requested--;
-                threads.add_job(self->state.worker_num, job, to_files);
-              }
-              break;
-          }
-        });
-
-        if (!self->state.client_initialized) {
-          self->delayed_send(self, std::chrono::milliseconds(1), remote_pull_job_v);
-          return;
-        }
-
-        size_t need = self->state.num_queue_per_worker - threads.num_queued(self->state.worker_num);
-        need -= self->state.num_jobs_requested;
-
-        // send all frames that are done
-        threads.for_each_and_clear(self->state.worker_num, [&](const data::job &job, const data::pixel_data2 &dat) {
-          self->state.client->send_frame(job, dat, self->state.is_remote_worker);
-        });
-
-        // request new frame(s)
-        for (int i = 0; i < need; i++) {
-          self->state.client->pull_job(self->state.is_remote_worker, (int64_t)std::time(0));
-          self->state.num_jobs_requested++;
-        }
-
-        self->delayed_send(self, std::chrono::milliseconds(1), remote_pull_job_v);
-      },
-
-
-      [=](register_worker_ok, int64_t num_queue_per_worker_server_side) {
-        self->state.num_queue_per_worker = num_queue_per_worker_server_side;
-        threads.run(self->state.worker_num,
-                    std::make_unique<std::thread>([&]() { fast_render_thread(self, output_each_frame); }));
-        self->send(self, pull_job_v);
-      },
-      [=](pull_job) {
-        size_t need = self->state.num_queue_per_worker - threads.num_queued(self->state.worker_num);
-        need -= self->state.num_jobs_requested;
-
-        // send all frames that are done
-        threads.for_each_and_clear(self->state.worker_num, [&](const data::job &job, const data::pixel_data2 &dat) {
-          self->send<message_priority::high>(
-              *self->state.renderer_ptr, render_frame_v, job, dat, self->state.is_remote_worker);
-        });
-
-        // request new frame(s)
-        for (int i = 0; i < need; i++) {
-          if (!self->state.is_remote_worker) {
-            self->send<message_priority::high>(
-                *self->state.renderer_ptr, pull_job_v, self, self->state.is_remote_worker, (int64_t)std::time(0));
-            self->state.num_jobs_requested++;
-          }
-        }
-
-        // loop
-        self->delayed_send(self, std::chrono::milliseconds(1), pull_job_v);
-
-        // below can be too agressive (generator cannot get through to renderer with new frames)
-        // self->send(self, pull_job_v);
-      },
-      [=](get_job,
-          data::job job,
-          const caf::actor &renderer,
-          const caf::actor &streamer,
-          bool to_files,
-          int64_t debug) {
-        // int64_t debug2 = std::time(0);
-        // std::cout << "This job was in transit for: " << (debug2 - debug) << std::endl;
-        if (self->state.num_jobs_requested > 0) self->state.num_jobs_requested--;
-        threads.add_job(self->state.worker_num, job, to_files);
-      },
-      [=](terminate_) {
-        threads.shutdown();
-        self->quit(exit_reason::user_shutdown);
-      },
-  };
-}
-
-behavior remote_worker(caf::stateful_actor<worker_data> *self,
-                       size_t worker_num,
-                       const std::string &renderer_host,
-                       const int &renderer_port,
-                       const int64_t &num_queue_per_worker) {
-  self->state.worker_num = worker_num;
-  rendering_engine_wrapper engine;
-  engine.initialize();
-  self->state.client = std::make_unique<render_client>();
-  return create_worker_behavior(self, num_queue_per_worker, true, true);
-}
-
-behavior worker(caf::stateful_actor<worker_data> *self,
-                caf::stateful_actor<renderer_data> *renderer,
-                size_t worker_num,
-                const int64_t &num_queue_per_worker) {
-  self->state.worker_num = worker_num;
-  self->state.renderer_ptr = static_cast<caf::actor>(renderer);
-  return create_worker_behavior(self, num_queue_per_worker, false, false);
 }

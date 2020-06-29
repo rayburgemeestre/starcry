@@ -7,22 +7,17 @@
 
 #include <string>
 
-class socketbuffer
-{
+class socketbuffer {
 public:
   socketbuffer() = default;
   ~socketbuffer() = default;
 
-  void append(const char *);
   void append(const char *, size_t);
 
   const std::string &get();
   size_t length();
 
-  bool has_line();
   void erase_front(size_t);
-  std::string get_line();
-  std::string get_raw();
 
 protected:
   std::string buffer_;

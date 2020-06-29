@@ -8,15 +8,16 @@
 #include <atomic>
 #include <chrono>
 #include <data/pixels.hpp>
-#include <mutex>
 #include <memory>
+#include <mutex>
 
 #include "common.h"
 
 #include "data/job.hpp"
-#include "rendering_engine_wrapper.h"
-#include "render_server.h"
 #include "render_client.h"
+#include "render_server.h"
+#include "render_threads.h"
+#include "rendering_engine_wrapper.h"
 
 struct ALLEGRO_BITMAP;
 
@@ -31,6 +32,7 @@ struct worker_data {
   size_t num_jobs_requested = 0;
   int64_t num_queue_per_worker = 1;
   bool is_remote_worker = false;
+  render_threads threads;
   std::optional<actor> renderer_ptr = {};
   std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<double, std::milli>> previous_time =
       std::chrono::high_resolution_clock::now();
@@ -57,6 +59,9 @@ struct renderer_data {
 
   std::vector<std::tuple<data::job, data::pixel_data2, bool>> jobs_done;
   std::mutex jobs_done_mut;
+
+  render_threads threads;
+  render_server *server = nullptr;
 };
 
 void fast_render_thread(caf::stateful_actor<worker_data> *self, bool output_each_frame);

@@ -32,7 +32,8 @@ endif()
 if (NOT DEBUG)
     add_definitions("-std=c++17 -O3 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
 else()
-    add_definitions("-std=c++17 -O0 -g -DV8_COMPRESS_POINTERS")  # --no-rosegment is important for being able to let valgrind/callgrind read symbols
+    add_definitions("-std=c++17 -O0 -g -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer")  # --no-rosegment is important for being able to let valgrind/callgrind read symbols
+    # Add for ASAN: -fsanitize=address
 endif()
 
 include_directories(
@@ -156,6 +157,9 @@ target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-window-s.a)
 target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-graphics-s.a)
 # below can be made obsolete if we can get rid of some Joystick related stuff in libsfml-window-s.a
 target_link_libraries(starcry /lib/x86_64-linux-gnu/libudev.so)
+
+# ASAN
+#target_link_libraries(starcry /usr/lib/clang/10.0.1/lib/linux/libclang_rt.asan-x86_64.a)
 
 # trying to include more statically will eventually result in
 # starcry: symbol lookup error: starcry: undefined symbol: pthread_create

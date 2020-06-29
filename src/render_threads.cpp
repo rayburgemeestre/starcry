@@ -6,13 +6,15 @@
 
 #include "render_threads.h"
 
-void render_threads::run(size_t worker_num, std::unique_ptr<std::thread> thread) {
+void render_threads::run(size_t worker_num, std::function<void()> &&func) {
   {
     const std::lock_guard<std::mutex> lock(running_mut);
     running[worker_num] = true;
   }
   const std::lock_guard<std::mutex> lock(threads_mut);
-  threads[worker_num] = std::move(thread);
+  // TODO: was having some issues with threads deconstructing, probably have a bug somewhere else..
+  // threads.emplace(worker_num, std::make_shared<std::thread>(func));
+  threads[worker_num] = new std::thread(func);
 }
 
 bool render_threads::keep_running(size_t worker_num) {
