@@ -51,9 +51,10 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/crow/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/cereal/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/include/"
 )
 
-file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "/opt/cppse/build/v8pp/include/v8pp/context.cpp")
+file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "/opt/cppse/build/v8pp/include/v8pp/context.cpp" "libs/piper/src/**")
 # (below) useful for testing v8 hello world in main.cpp
 #file(GLOB_RECURSE starcry_SOURCES "src/main.cpp" "/opt/cppse/build/v8pp/include/v8pp/context.cpp")
 # (below) useful for testing caf hello world in main.cpp
@@ -94,6 +95,9 @@ target_link_libraries(starcry ${Boost_LIBRARIES})
 # caf
 target_link_libraries(starcry /opt/cppse/build/caf/lib/libcaf_io.a)
 target_link_libraries(starcry /opt/cppse/build/caf/lib/libcaf_core.a)
+
+# piper
+#target_link_libraries(starcry ${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/build/libpiper.a)
 
 # ffmpeg
 target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libswscale.a)
@@ -141,15 +145,6 @@ target_link_libraries(starcry /usr/lib/gcc/x86_64-linux-gnu/7/libstdc++fs.a)
 # generic
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libssl.a)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libcrypto.a)
-
-# crtmpserver
-target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libcrtmpserver.a)
-target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libappselector.a)
-target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libflvplayback.a)
-target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libthelib.a)
-target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libcommon.a)
-target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/libtinyxml.a)
-target_link_libraries(starcry /opt/cppse/build/crtmpserver/lib/liblua.a)
 
 # SFML
 target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-system-s.a)

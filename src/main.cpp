@@ -39,9 +39,6 @@
 
 namespace po = ::boost::program_options;
 
-// crtmpserver
-extern int main__(int argc, const char *argv[]);
-
 using std::bitset;
 using std::cerr;
 using std::cout;
@@ -56,20 +53,6 @@ using std::stringstream;
 using std::vector;
 
 volatile bool starcry_running = true;
-
-class crtmpserver_wrapper {
-public:
-  crtmpserver_wrapper()
-      : crtmpserver_thread_([&]() {
-          int argc = 2;
-          const char *argv[] = {"starcry", "crtmpserver.lua"};
-          main__(argc, argv);
-        }) {}
-  ~crtmpserver_wrapper() { crtmpserver_thread_.join(); }
-
-private:
-  std::thread crtmpserver_thread_;
-};
 
 class main_program {
 private:
@@ -121,9 +104,7 @@ public:
         "save-image", po::value<int64_t>(&save_image), "save image to disk")(
         "to-files", "instead of messaging frames, save files to disk")(
         "expose-renderer", po::value<int>(&renderer_port), "expose renderer on given port")(
-        "webserver", "start embedded webserver")("crtmpserver", "start embedded crtmpserver for rtmp streaming")(
         "stream,stream-hls", "start embedded webserver, and stream hls to webroot")(
-        "stream-rtmp", "start embedded webserver, crtmpserver and stream flv to it on local host (deprecated)")(
         "stdin", "read from stdin and send this to job generator actor")(
         "dimensions,dim", po::value<string>(&dimensions), "specify canvas dimensions i.e. 1920x1080")(
         "script,s", po::value<string>(&script), "javascript file to use for processing")(
@@ -233,13 +214,8 @@ public:
     size_t use_fps = 25;
     std::string stream_mode = "";
     shared_ptr<webserver> ws;
-    if (vm.count("stream") || vm.count("stream-rtmp") || vm.count("stream-hls") || vm.count("webserver")) {
+    if (vm.count("stream") || vm.count("stream-hls") || vm.count("webserver")) {
       ws = make_shared<webserver>();
-    }
-    shared_ptr<crtmpserver_wrapper> cw;
-    if (vm.count("stream-rtmp") || vm.count("crtmpserver")) {
-      cw = make_shared<crtmpserver_wrapper>();
-      ;
     }
     if (vm.count("stream") || vm.count("stream-hls")) {
       stream_mode = "hls";
@@ -260,12 +236,6 @@ public:
         }
       }
       std::cerr << "Stream URL: http://localhost:18080/" << std::endl;
-    }
-    if (vm.count("stream-rtmp")) {
-      stream_mode = "rtmp";
-      if (output_file.substr(0, 4) != "rtmp") {
-        output_file.assign("rtmp://localhost/flvplayback/video");
-      }
     }
     if (output_file.empty()) output_file = "output.h264";
 

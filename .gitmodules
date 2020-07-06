@@ -7,3 +7,6 @@
 [submodule "libs/framer"]
 	path = libs/framer
 	url = https://github.com/rayburgemeestre/framer
+[submodule "libs/piper"]
+	path = libs/piper
+	url = https://github.com/rayburgemeestre/piper
