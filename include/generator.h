@@ -30,13 +30,17 @@ private:
   bool use_stdin = false;
   size_t use_fps = 25;
   bool realtime = false;
+  std::function<void(const data::job &)> on_new_job;
+  std::function<void(size_t, int, int, int)> on_initialized;
 
 public:
-  generator();
+  generator(std::function<void(size_t, int, int, int)> on_initialized,
+            std::function<void(const data::job &)> on_new_job);
 
-  void init();
+  void init(const std::string &filename);
   void generate_frame();
 
+  // kind of private handlers..
   void on_output_line(const std::string &s);
   void on_write_frame(data::job &the_job);
 };

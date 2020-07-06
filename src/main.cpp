@@ -1,6 +1,7 @@
 #include <bitset>
 //#include <experimental/filesystem>
 #include <iostream>
+#include <memory>
 
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wc11-extensions"
@@ -29,20 +30,26 @@
 
 namespace po = ::boost::program_options;
 
-using std::bitset;
-using std::cerr;
-using std::cout;
-using std::ifstream;
-using std::make_shared;
-using std::pair;
-// using std::regex;
-using std::shared_ptr;
-// using std::smatch;
-using std::string;
-using std::stringstream;
-using std::vector;
+// using std::bitset;
+// using std::cerr;
+// using std::cout;
+// using std::ifstream;
+// using std::make_shared;
+// using std::pair;
+//// using std::regex;
+// using std::shared_ptr;
+//// using std::smatch;
+// using std::string;
+// using std::stringstream;
+// using std::vector;
 
 volatile bool starcry_running = true;
+
+// TODO: this doesn't belong here!!!! Just to test..
+#include "allegro5/allegro5.h"
+#include "framer.hpp"
+#include "rendering_engine_wrapper.h"
+///--
 
 class main_program {
 private:
@@ -53,10 +60,10 @@ private:
   //  size_t num_workers = 1;  // number of workers for rendering
   //  string worker_ports;
   //  string dimensions;
-  string output_file = "";
+  std::string output_file = "";
   //  uint32_t settings_ = 0;
-  po::options_description desc = string("Allowed options");
-  string script = "input/test.js";
+  po::options_description desc = std::string("Allowed options");
+  std::string script = "input/test.js";
   //  bool compress = false;
   //  bool rendering_enabled = true;
   //  string renderer_host = "localhost";
@@ -76,10 +83,10 @@ public:
     // clang-format off
     desc.add_options()
       ("help", "produce help message")
-      ("output,o", po::value<string>(&output_file), "filename for video output (default output.h264)")
+      ("output,o", po::value<std::string>(&output_file), "filename for video output (default output.h264)")
       ("gui", "render to allegro5 window")
       ("spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")
-      ("script,s", po::value<string>(&script), "javascript file to use for processing");
+      ("script,s", po::value<std::string>(&script), "javascript file to use for processing");
     // clang-format on
 
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
@@ -91,14 +98,67 @@ public:
       std::exit(1);
     }
     if (vm.count("help")) {
-      cerr << argv[0] << " [ <script> ] [ <output> ]" << std::endl << std::endl << desc << "\n";
+      std::cerr << argv[0] << " [ <script> ] [ <output> ]" << std::endl << std::endl << desc << "\n";
       std::exit(1);
     }
 
-    generator frame_gen;
-    frame_gen.init();
-    for (int i=0; i<250; i++)
-      frame_gen.generate_frame();
+    rendering_engine_wrapper engine;
+    ALLEGRO_BITMAP *bitmap = nullptr;
+    int bitmap_w = 0, bitmap_h = 0;
+    engine.initialize();
+
+    // TODO: add separate initialize fun
+    frame_streamer framer("test.h264", frame_streamer::stream_mode::FILE);
+
+    generator frame_gen(
+        [&](size_t bitrate, int w, int h, int fps) {
+          framer.initialize(bitrate, w, h, fps);
+          framer.run();
+        },
+
+        [&](const data::job &job) {
+          if (bitmap == nullptr) {
+            bitmap = al_create_bitmap(job.width, job.height);
+            bitmap_w = job.width;
+            bitmap_h = job.height;
+          } else {
+            if (bitmap_w != job.width || bitmap_h != job.height) {
+              // TODO: we're dealing with a different size, print out warning as it maybe inefficient.
+              // or use a map for the various sizes..
+              al_destroy_bitmap(bitmap);
+
+              // for now recreate
+              bitmap = al_create_bitmap(job.width, job.height);
+              bitmap_w = job.width;
+              bitmap_h = job.height;
+            }
+          }
+          bitmap = al_create_bitmap(job.width, job.height);
+
+          framer.bitrate_ = job.bitrate;
+          framer.width_ = job.canvas_w;
+          framer.height_ = job.canvas_h;
+
+          engine.render(bitmap,
+                        job.background_color,
+                        job.shapes,
+                        job.offset_x,
+                        job.offset_y,
+                        job.canvas_w,
+                        job.canvas_h,
+                        job.width,
+                        job.height,
+                        job.scale);
+
+          // engine.write_image(bitmap, "output");
+
+          auto pixels = engine.serialize_bitmap2(bitmap, job.width, job.height);
+          framer.add_frame(pixels);
+        });
+    frame_gen.init(script);
+
+    for (int i = 0; i < 250; i++) frame_gen.generate_frame();
+    framer.finalize();
 
     //--------------- old below --------------
 #if 1 == 2

@@ -19,8 +19,8 @@ void rendering_engine_wrapper::initialize() {
 }
 
 void rendering_engine_wrapper::render(image bmp,
-                                      data::color &bg_color,
-                                      shapes_t &shapes,
+                                      const data::color &bg_color,
+                                      const shapes_t &shapes,
                                       uint32_t offset_x,
                                       uint32_t offset_y,
                                       uint32_t canvas_w,

@@ -14,16 +14,18 @@
 #include "primitives.h"
 #include "scripting.h"
 #include "util/assistant.h"
+#include "util/image_splitter.hpp"
 #include "v8_wrapper.hpp"
 
 std::shared_ptr<v8_wrapper> context;
 std::unique_ptr<assistant_> assistant;
 
-generator::generator() {}
+generator::generator(std::function<void(size_t, int, int, int)> on_initialized,
+                     std::function<void(const data::job &)> on_new_job)
+    : on_initialized(on_initialized), on_new_job(on_new_job) {}
 
-void generator::init() {
+void generator::init(const std::string &filename) {
   use_stdin = false;
-  const std::string filename = "input/test.js";
 
   // initialize V8
   context = std::make_shared<v8_wrapper>(filename);
@@ -90,6 +92,8 @@ void generator::init() {
   job.save_image = false;
   assistant->max_frames = context->run<size_t>("typeof max_frames != 'undefined' ? max_frames : 250");
   assistant->realtime = context->run<bool>("typeof realtime != 'undefined' ? realtime : false");
+
+  on_initialized(bitrate, canvas_w, canvas_h, use_fps);
 }
 
 void generator::generate_frame() {
@@ -126,59 +130,25 @@ void call_print_exception(std::string fn, T arg) {
 
 void generator::on_output_line(const std::string &s) {}
 
-// TODO: this doesn't belong here!!!! Just to test..
-#include "allegro5/allegro5.h"
-#include "rendering_engine_wrapper.h"
-#include "framer.hpp"
-
 void generator::on_write_frame(data::job &job) {
-  static int counter = 1;
-
   a(std::cout) << "on write frame" << std::endl;
   a(std::cout) << job.shapes.size() << std::endl;
 
-  static rendering_engine_wrapper engine;
-  static ALLEGRO_BITMAP *bitmap = nullptr;
-  if (counter == 1) {
-    engine.initialize();
-    bitmap = al_create_bitmap(job.width, job.height);
+  util::ImageSplitter<uint32_t> imagesplitter{canvas_w, canvas_h};
+  // We always split horizontal, so we simply can concat the pixels later
+  const auto rectangles =
+      imagesplitter.split(1 /* number of chunks */, util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
+  for (size_t i = 0, counter = 1; i < rectangles.size(); i++) {
+    job.width = rectangles[i].width();
+    job.height = rectangles[i].height();
+    job.offset_x = rectangles[i].x();
+    job.offset_y = rectangles[i].y();
+    job.job_number = current_job++;
+    job.chunk = counter;
+
+    // job is now done to be rendered?? at this point
+    on_new_job(job);
+
+    counter++;
   }
-
-  // job.background_color.r = 1.0;
-  job.offset_x = 0; // ??
-  job.offset_y = 0; // ?? not initialized correctly somehow.. we'll figure it out, somewhere copied, or whatever
-
-  engine.render(bitmap,
-                job.background_color,
-                job.shapes,
-                job.offset_x,
-                job.offset_y,
-                job.canvas_w,
-                job.canvas_h,
-                job.width,
-                job.height,
-                job.scale);
-
-//  engine.write_image(bitmap, "output");
-
-  // another test because I am impatient
-  static auto framer = std::make_shared<frame_streamer>("test.h264",
-                                                        bitrate,
-                                                        25, // fps,
-                                                        job.canvas_w,
-                                                        job.canvas_h,
-                                                        frame_streamer::stream_mode::FILE);
-  if (counter == 1) {
-    std::cout << "initializing framer" << std::endl;
-    framer->run();
-  }
-
-  auto pixels = engine.serialize_bitmap2(bitmap, job.width, job.height);
-  framer->add_frame(pixels);
-
-  if (counter == 250) {
-    framer->finalize();
-  }
-  counter++;
 }
-
