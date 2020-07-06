@@ -131,5 +131,7 @@ behavior render_window(event_based_actor* self, uint16_t port) {
             self->send(renderloop, render_preview_frame_v, width, height, pixels);
             return make_message();
           },
-          [=](std::string ping) -> message { return make_message("pong"); }};
+          [=](std::string ping) -> message {
+            return make_message("pong");
+          }};
 }

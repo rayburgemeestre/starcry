@@ -38,7 +38,9 @@ void start_webserver() {
   crow::App<content_type_fixer> app;
 
   CROW_ROUTE(app, "/api")
-  ([]() { return "API call"; });
+  ([]() {
+    return "API call";
+  });
 
   CROW_ROUTE(app, "/api/test")
   ([]() {

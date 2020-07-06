@@ -247,8 +247,9 @@ behavior create_worker_behavior(caf::stateful_actor<worker_data> *self,
                 if (len == sizeof(self->state.num_queue_per_worker)) {
                   memcpy(&self->state.num_queue_per_worker, data.c_str(), sizeof(self->state.num_queue_per_worker));
                   // now we can start the render thread
-                  self->state.threads.run(self->state.worker_num,
-                                          [=]() { fast_render_thread(self, output_each_frame); });
+                  self->state.threads.run(self->state.worker_num, [=]() {
+                    fast_render_thread(self, output_each_frame);
+                  });
                   self->state.client_initialized = true;
                 }
                 break;
@@ -300,7 +301,9 @@ behavior create_worker_behavior(caf::stateful_actor<worker_data> *self,
 
       [=](register_worker_ok, int64_t num_queue_per_worker_server_side) {
         self->state.num_queue_per_worker = num_queue_per_worker_server_side;
-        self->state.threads.run(self->state.worker_num, [=]() { fast_render_thread(self, output_each_frame); });
+        self->state.threads.run(self->state.worker_num, [=]() {
+          fast_render_thread(self, output_each_frame);
+        });
         self->send(self, pull_job_v);
       },
       [=](pull_job) {

@@ -162,7 +162,9 @@ behavior streamer(stateful_actor<streamer_data> *self, std::optional<size_t> por
                    << ((self->state.num_pixels * sizeof(uint32_t) * fps) / 1024 / 1024) << " MiB/sec), "
                    << renderer_stats << endl;
       },
-      [=](terminate_) { self->quit(exit_reason::user_shutdown); },
+      [=](terminate_) {
+        self->quit(exit_reason::user_shutdown);
+      },
       [=](debug) {
         aout(self) << "streamer mailbox = " << self->mailbox().count() << /*" " << self->mailbox().counter() <<*/ endl;
       }};

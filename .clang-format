@@ -4,8 +4,8 @@ Standard: Cpp11
 
 ColumnLimit: 120
 
-# Allow but not force functions to be defined in a single line
-AllowShortFunctionsOnASingleLine: Inline
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: Empty
 
 # Disable the offset for the access modifiers (e.g. `public:`)
 AccessModifierOffset: -2

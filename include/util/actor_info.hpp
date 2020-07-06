@@ -17,5 +17,7 @@ public:
       flag_.store(false);
     });
   }
-  bool running() { return flag_; }
+  bool running() {
+    return flag_;
+  }
 };

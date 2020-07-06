@@ -13,7 +13,9 @@ using namespace std;
 behavior stdin_reader(stateful_actor<stdin_reader_data> *self, const caf::actor &job_generator) {
   self->link_to(job_generator);
   return {
-      [=](start) { self->send(self, read_stdin_v); },
+      [=](start) {
+        self->send(self, read_stdin_v);
+      },
       [=](read_stdin) {
         string line;
         while (self->state.lines_send < self->state.max_lines_send) {

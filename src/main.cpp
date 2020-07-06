@@ -113,7 +113,6 @@ public:
     generator frame_gen(
         [&](size_t bitrate, int w, int h, int fps) {
           framer.initialize(bitrate, w, h, fps);
-          framer.run();
         },
 
         [&](const data::job &job) {
@@ -350,7 +349,9 @@ public:
                       to_files);
               s->send(renderer_, initialize_v, streamer_, generator, save_image, realtime_, to_files);
             },
-            [=](error &err) { std::exit(2); });
+            [=](error &err) {
+              std::exit(2);
+            });
     s->send(renderer_, start_v, num_workers, num_queue_per_worker);
     s->send(generator, start_v, std::max(max_jobs_queued_for_renderer, num_workers), num_chunks, renderer_);
 

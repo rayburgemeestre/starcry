@@ -65,7 +65,9 @@ public:
     return *this;
   }
 
-  const int &type() { return type_; }
+  const int &type() {
+    return type_;
+  }
 
   template <class Archive>
   void serialize(Archive &ar) {
