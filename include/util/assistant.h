@@ -19,13 +19,15 @@ struct job_generator_data;
  *  the job_generator actor.
  * This class that sits somewhat between V8 and job_generator is implemented in job_generator.cpp
  */
+class generator;
 class assistant_ {
 public:
-  assistant_(stateful_actor<job_generator_data> *job_gen);
+  assistant_();
 
   data::job the_job;
   data::job the_previous_job;
   stateful_actor<job_generator_data> *job_generator;
+  generator *generator;
   size_t max_frames;
   bool realtime = false;
 

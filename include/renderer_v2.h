@@ -8,7 +8,5 @@
 
 class renderer_v2 {
 public:
-
   renderer_v2();
-
 };

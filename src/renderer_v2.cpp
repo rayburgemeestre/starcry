@@ -6,6 +6,4 @@
 
 #include "renderer_v2.h"
 
-renderer_v2::renderer_v2() {
-
-}
+renderer_v2::renderer_v2() {}
