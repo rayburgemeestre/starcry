@@ -38,7 +38,7 @@ public:
   void generate_frame();
 
   void on_output_line(const std::string &s);
-  void on_write_frame(const data::job &the_job);
+  void on_write_frame(data::job &the_job);
 };
 
 void call_print_exception(const std::string &fn);

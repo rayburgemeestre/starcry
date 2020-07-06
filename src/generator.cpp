@@ -23,7 +23,7 @@ generator::generator() {}
 
 void generator::init() {
   use_stdin = false;
-  const std::string filename = "input/motion.js";
+  const std::string filename = "input/test.js";
 
   // initialize V8
   context = std::make_shared<v8_wrapper>(filename);
@@ -75,6 +75,7 @@ void generator::init() {
 
   // initialize job object
   assistant = std::make_unique<assistant_>();
+  assistant->generator = this;
   auto &job = assistant->the_job;
   job.width = canvas_w;
   job.height = canvas_h;
@@ -124,7 +125,60 @@ void call_print_exception(std::string fn, T arg) {
 }
 
 void generator::on_output_line(const std::string &s) {}
-void generator::on_write_frame(const data::job &the_job) {
+
+// TODO: this doesn't belong here!!!! Just to test..
+#include "allegro5/allegro5.h"
+#include "rendering_engine_wrapper.h"
+#include "framer.hpp"
+
+void generator::on_write_frame(data::job &job) {
+  static int counter = 1;
+
   a(std::cout) << "on write frame" << std::endl;
-  a(std::cout) << the_job.shapes.size() << std::endl;
+  a(std::cout) << job.shapes.size() << std::endl;
+
+  static rendering_engine_wrapper engine;
+  static ALLEGRO_BITMAP *bitmap = nullptr;
+  if (counter == 1) {
+    engine.initialize();
+    bitmap = al_create_bitmap(job.width, job.height);
+  }
+
+  // job.background_color.r = 1.0;
+  job.offset_x = 0; // ??
+  job.offset_y = 0; // ?? not initialized correctly somehow.. we'll figure it out, somewhere copied, or whatever
+
+  engine.render(bitmap,
+                job.background_color,
+                job.shapes,
+                job.offset_x,
+                job.offset_y,
+                job.canvas_w,
+                job.canvas_h,
+                job.width,
+                job.height,
+                job.scale);
+
+//  engine.write_image(bitmap, "output");
+
+  // another test because I am impatient
+  static auto framer = std::make_shared<frame_streamer>("test.h264",
+                                                        bitrate,
+                                                        25, // fps,
+                                                        job.canvas_w,
+                                                        job.canvas_h,
+                                                        frame_streamer::stream_mode::FILE);
+  if (counter == 1) {
+    std::cout << "initializing framer" << std::endl;
+    framer->run();
+  }
+
+  auto pixels = engine.serialize_bitmap2(bitmap, job.width, job.height);
+  framer->add_frame(pixels);
+
+  if (counter == 250) {
+    framer->finalize();
+  }
+  counter++;
 }
+

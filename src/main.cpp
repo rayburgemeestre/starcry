@@ -97,9 +97,8 @@ public:
 
     generator frame_gen;
     frame_gen.init();
-    frame_gen.generate_frame();
-    frame_gen.generate_frame();
-    frame_gen.generate_frame();
+    for (int i=0; i<250; i++)
+      frame_gen.generate_frame();
 
     //--------------- old below --------------
 #if 1 == 2
