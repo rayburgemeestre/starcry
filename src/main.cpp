@@ -1,20 +1,7 @@
 #include <bitset>
-#include <experimental/filesystem>
+//#include <experimental/filesystem>
 #include <iostream>
 
-/**
- * This warning is driving me crazy,
- *
- * In file included from /home/trigen/projects/starcry/src/main.cpp:6:
- * In file included from /opt/cppse/build/boost/include/boost/program_options/options_description.hpp:16:
- * In file included from /opt/cppse/build/boost/include/boost/shared_ptr.hpp:17:
- * In file included from /opt/cppse/build/boost/include/boost/smart_ptr/shared_ptr.hpp:28:
- * In file included from /opt/cppse/build/boost/include/boost/smart_ptr/detail/shared_count.hpp:29:
- * In file included from /opt/cppse/build/boost/include/boost/smart_ptr/detail/sp_counted_base.hpp:45:
- *
- * /opt/cppse/build/boost/include/boost/smart_ptr/detail/sp_counted_base_clang.hpp:29:9: warning: '_Atomic' is a C11
- * extension [-Wc11-extensions]
- */
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wc11-extensions"
 #endif  // __clang__
@@ -22,20 +9,20 @@
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
-#include <regex>
-#include "actors/job_generator.h"
-#include "actors/render_window.h"
-#include "actors/renderer.h"
-#include "actors/stdin_reader.h"
-#include "actors/streamer.h"
-#include "atom_types.h"
-#include "caf/io/middleman.hpp"
-#include "caf/logger.hpp"
-#include "common.h"
-#include "data/pixels.hpp"
-#include "util/actor_info.hpp"
-#include "util/settings.hpp"
-#include "webserver.h"
+//#include <regex>
+//#include "actors/job_generator.h"
+//#include "actors/render_window.h"
+//#include "actors/renderer.h"
+//#include "actors/stdin_reader.h"
+//#include "actors/streamer.h"
+//#include "atom_types.h"
+//#include "caf/io/middleman.hpp"
+//#include "caf/logger.hpp"
+//#include "common.h"
+//#include "data/pixels.hpp"
+//#include "util/actor_info.hpp"
+//#include "util/settings.hpp"
+//#include "webserver.h"
 
 namespace po = ::boost::program_options;
 
@@ -45,9 +32,9 @@ using std::cout;
 using std::ifstream;
 using std::make_shared;
 using std::pair;
-using std::regex;
+//using std::regex;
 using std::shared_ptr;
-using std::smatch;
+//using std::smatch;
 using std::string;
 using std::stringstream;
 using std::vector;
@@ -58,28 +45,57 @@ class main_program {
 private:
   po::variables_map vm;
   // settings
-  int worker_port = 0;
-  size_t num_chunks = 1;   // number of chunks to split image size_to
-  size_t num_workers = 1;  // number of workers for rendering
-  string worker_ports;
-  string dimensions;
+//  int worker_port = 0;
+//  size_t num_chunks = 1;   // number of chunks to split image size_to
+//  size_t num_workers = 1;  // number of workers for rendering
+//  string worker_ports;
+//  string dimensions;
   string output_file = "";
-  uint32_t settings_ = 0;
+//  uint32_t settings_ = 0;
   po::options_description desc = string("Allowed options");
   string script = "input/test.js";
-  bool compress = false;
-  bool rendering_enabled = true;
-  string renderer_host = "localhost";
-  int renderer_port = -1;
-  string remote_renderer_info;
-  string remote_streamer_info;
-  size_t max_jobs_queued_for_renderer = 1;
-  int64_t save_image = -1;
-  int64_t num_queue_per_worker = 1;
-  bool to_files = false;
+//  bool compress = false;
+//  bool rendering_enabled = true;
+//  string renderer_host = "localhost";
+//  int renderer_port = -1;
+//  string remote_renderer_info;
+//  string remote_streamer_info;
+//  size_t max_jobs_queued_for_renderer = 1;
+//  int64_t save_image = -1;
+//  int64_t num_queue_per_worker = 1;
+//  bool to_files = false;
 
 public:
   main_program(int argc, char *argv[]) {
+    po::positional_options_description p;
+    p.add("script", 1);
+    p.add("output", 1);
+    // clang-format off
+    desc.add_options()
+      ("help", "produce help message")
+      ("output,o", po::value<string>(&output_file), "filename for video output (default output.h264)")
+      ("gui", "render to allegro5 window")
+      ("spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")
+      ("script,s", po::value<string>(&script), "javascript file to use for processing");
+    // clang-format on
+
+    po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
+    try {
+      po::notify(vm);
+    } catch (po::error &ex) {
+      std::cerr << "Error: " << ex.what() << std::endl;
+      std::cerr << desc << std::endl;
+      std::exit(1);
+    }
+    if (vm.count("help")) {
+      cerr << argv[0] << " [ <script> ] [ <output> ]" << std::endl << std::endl
+           << desc << "\n";
+      std::exit(1);
+    }
+
+    //--------------- old below --------------
+#if 1 == 2
+
     ::settings conf;
     conf.load();
 
@@ -301,52 +317,53 @@ public:
     if (generator_info.running()) s->send<message_priority::high>(generator, terminate__v);
     s->await_all_other_actors_done();
     starcry_running = false;
+#endif
   }
 
-  bool extract_host_port_string(caf::actor_system &system, string host_port_str, string *host_ptr, int *port_ptr) {
-    string &host = *host_ptr;
-    int &port = *port_ptr;
-
-    auto pos = host_port_str.find(":");
-    if (pos == string::npos) {
-      return false;
-    }
-    host = host_port_str.substr(0, pos);
-    port = atoi(host_port_str.substr(pos + 1).c_str());
-    return true;
-  }
-
-  template <typename T>
-  actor spawn_actor_local_or_remote(caf::actor_system &system,
-                                    T *actor_behavior,
-                                    string actor_name,
-                                    string cli_flag_param,
-                                    string cli_flag_value,
-                                    int port) {
-    std::optional<actor> actor_ptr;
-    if (vm.count(cli_flag_param)) {
-      string host;
-      int port = 0;
-      if (!extract_host_port_string(system, cli_flag_value, &host, &port)) {
-        cerr << "parameter for --" << cli_flag_param << " is invalid, please specify <host>:<port>, "
-             << "i.e. 127.0.0.1:11111." << endl;
-      }
-      cerr << "using remote " << actor_name << " at: " << host << ":" << port << endl;
-      auto p = system.middleman().remote_actor(host, port);
-      if (!p) {
-        cerr << "connecting to " << actor_name << " failed: " << system.render(p.error()) << endl;
-      }
-      actor_ptr = *p;
-    } else {
-      std::optional<size_t> the_port;
-      if (port != -1) {
-        the_port = std::optional<size_t>(port);
-      }
-      cerr << "spawning local " << actor_name << endl;
-      actor_ptr = system.spawn<caf::spawn_options::priority_aware_flag>(actor_behavior, the_port);
-    }
-    return *actor_ptr;
-  }
+//  bool extract_host_port_string(caf::actor_system &system, string host_port_str, string *host_ptr, int *port_ptr) {
+//    string &host = *host_ptr;
+//    int &port = *port_ptr;
+//
+//    auto pos = host_port_str.find(":");
+//    if (pos == string::npos) {
+//      return false;
+//    }
+//    host = host_port_str.substr(0, pos);
+//    port = atoi(host_port_str.substr(pos + 1).c_str());
+//    return true;
+//  }
+//
+//  template <typename T>
+//  actor spawn_actor_local_or_remote(caf::actor_system &system,
+//                                    T *actor_behavior,
+//                                    string actor_name,
+//                                    string cli_flag_param,
+//                                    string cli_flag_value,
+//                                    int port) {
+//    std::optional<actor> actor_ptr;
+//    if (vm.count(cli_flag_param)) {
+//      string host;
+//      int port = 0;
+//      if (!extract_host_port_string(system, cli_flag_value, &host, &port)) {
+//        cerr << "parameter for --" << cli_flag_param << " is invalid, please specify <host>:<port>, "
+//             << "i.e. 127.0.0.1:11111." << endl;
+//      }
+//      cerr << "using remote " << actor_name << " at: " << host << ":" << port << endl;
+//      auto p = system.middleman().remote_actor(host, port);
+//      if (!p) {
+//        cerr << "connecting to " << actor_name << " failed: " << system.render(p.error()) << endl;
+//      }
+//      actor_ptr = *p;
+//    } else {
+//      std::optional<size_t> the_port;
+//      if (port != -1) {
+//        the_port = std::optional<size_t>(port);
+//      }
+//      cerr << "spawning local " << actor_name << endl;
+//      actor_ptr = system.spawn<caf::spawn_options::priority_aware_flag>(actor_behavior, the_port);
+//    }
+//    return *actor_ptr;
+//  }
 };
 
 int main(int argc, char *argv[]) {
