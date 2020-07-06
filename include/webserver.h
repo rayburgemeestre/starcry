@@ -6,12 +6,23 @@
 #pragma once
 
 #include <thread>
+#include "crow.h"
+
+struct content_type_fixer {
+  struct context {};
+  void before_handle(crow::request& req, crow::response& res, context& ctx);
+  void after_handle(crow::request& req, crow::response& res, context& ctx);
+};
 
 class webserver {
+private:
+  crow::App<content_type_fixer> app;
+  std::thread webserver_;
+
 public:
   webserver();
-
   ~webserver();
 
-  std::thread webserver_;
+  void start();
+  void stop();
 };

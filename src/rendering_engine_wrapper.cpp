@@ -31,8 +31,8 @@ void rendering_engine_wrapper::render(image bmp,
   return data->engine.render(bmp, bg_color, shapes, offset_x, offset_y, canvas_w, canvas_h, width, height, scale);
 }
 
-void rendering_engine_wrapper::write_image(image bmp, const std::string &prefix) {
-  return data->engine.write_image(bmp, prefix);
+void rendering_engine_wrapper::write_image(image bmp, const std::string &filename) {
+  return data->engine.write_image(bmp, filename);
 }
 
 std::vector<uint32_t> rendering_engine_wrapper::serialize_bitmap2(image bitmap, uint32_t width, uint32_t height) {

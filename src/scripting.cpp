@@ -69,8 +69,8 @@ void output(string s) {
   assistant->generator->on_output_line(s);
 }
 
-void write_frame_fun() {
-  write_frame_fun_impl(false);
+bool write_frame_fun() {
+  return write_frame_fun_impl(false);
 }
 
 void close_fun() {
@@ -79,7 +79,7 @@ void close_fun() {
 
 // deprecated
 
-void write_frame_fun_impl(bool last_frame) {
+bool write_frame_fun_impl(bool last_frame) {
   if (!assistant->the_job.last_frame) {
     assistant->the_job.last_frame =
         last_frame || (assistant->max_frames && assistant->max_frames == assistant->current_frame);
@@ -90,6 +90,7 @@ void write_frame_fun_impl(bool last_frame) {
   // assistant->job_generator->send(assistant->job_generator, write_frame_v, assistant->the_job);
   assistant->generator->on_write_frame(assistant->the_job);
   assistant->the_job.shapes.clear();
+  return assistant->the_job.last_frame;
 }
 
 std::mt19937 mt;  // no custom seeding for now

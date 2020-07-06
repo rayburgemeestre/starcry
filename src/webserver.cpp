@@ -11,32 +11,26 @@
 
 #include <fstream>
 #include <sstream>
-#include "crow.h"
+
 #include "json.h"
 
-struct content_type_fixer {
-  struct context {};
+void content_type_fixer::before_handle(crow::request& req, crow::response& res, context& ctx) {}
 
-  void before_handle(crow::request& req, crow::response& res, context& ctx) {}
+void content_type_fixer::after_handle(crow::request& req, crow::response& res, context& ctx) {
+  if (req.url.find("/images") == 0)
+    res.set_header("Content-Type", "image/png");
+  else if (req.url.find("/scripts") == 0)
+    res.set_header("Content-Type", "text/javascript");
+  else
+    res.set_header("Content-Type", "text/html");
 
-  void after_handle(crow::request& req, crow::response& res, context& ctx) {
-    if (req.url.find("/images") == 0)
-      res.set_header("Content-Type", "image/png");
-    else if (req.url.find("/scripts") == 0)
-      res.set_header("Content-Type", "text/javascript");
-    else
-      res.set_header("Content-Type", "text/html");
-
-    if (req.url.find(".ts") != std::string::npos) {
-      res.set_header("Content-Type", "video/mp2t");
-    }
-    res.set_header("Access-Control-Allow-Origin", "*");
+  if (req.url.find(".ts") != std::string::npos) {
+    res.set_header("Content-Type", "video/mp2t");
   }
-};
+  res.set_header("Access-Control-Allow-Origin", "*");
+}
 
-void start_webserver() {
-  crow::App<content_type_fixer> app;
-
+void webserver::start() {
   CROW_ROUTE(app, "/api")
   ([]() {
     return "API call";
@@ -85,8 +79,13 @@ void start_webserver() {
   app.port(18080).multithreaded().run();
 }
 
-webserver::webserver() : webserver_(start_webserver) {}
+webserver::webserver() : webserver_(std::bind(&webserver::start, this)) {}
+
+void webserver::stop() {
+  app.port(18080).multithreaded().stop();
+}
 
 webserver::~webserver() {
+  stop();
   webserver_.join();
 }

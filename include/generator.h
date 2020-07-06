@@ -30,15 +30,19 @@ private:
   bool use_stdin = false;
   size_t use_fps = 25;
   bool realtime = false;
-  std::function<void(const data::job &)> on_new_job;
+  std::function<bool(const data::job &)> on_new_job;
   std::function<void(size_t, int, int, int)> on_initialized;
+  std::optional<size_t> custom_max_frames;
 
 public:
   generator(std::function<void(size_t, int, int, int)> on_initialized,
-            std::function<void(const data::job &)> on_new_job);
+            std::function<bool(const data::job &)> on_new_job,
+            std::optional<size_t> custom_max_frames = std::nullopt);
+
+  ~generator();
 
   void init(const std::string &filename);
-  void generate_frame();
+  bool generate_frame();
 
   // kind of private handlers..
   void on_output_line(const std::string &s);

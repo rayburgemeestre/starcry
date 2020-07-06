@@ -14,5 +14,8 @@ AccessModifierOffset: -2
 BinPackArguments: false
 BinPackParameters: false
 
+#AlignAfterOpenBracket: AlwaysBreak
+#AlignConsecutiveAssignments: true
+
 # Allows grouping headers into coherent blocks. Google style: Regroup
 IncludeBlocks: Preserve
