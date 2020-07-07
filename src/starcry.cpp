@@ -7,6 +7,8 @@
 #include <experimental/filesystem>
 
 #include "cereal/archives/binary.hpp"
+#include "util/a.hpp"
+#include "util/fps_progress.hpp"
 #include "starcry.h"
 #include "streamer_output/sfml_window.h"
 
@@ -93,16 +95,13 @@ double starcry::render_video(render_video_mode mode) {
         custom_max_frames);
   }
   gen->init(input_script);
-  auto before = std::chrono::high_resolution_clock::now();
-  size_t counter = 0;
+  fps_progress progress;
   while (gen->generate_frame()) {
-    counter++;
+    progress.inc();
   }
-  auto after = std::chrono::high_resolution_clock::now();
   if (framer) framer->finalize();
   if (gui) gui->finalize();
-  std::chrono::duration<double, std::milli> idle = after - before;
-  return (double)counter / (idle.count() / 1000.0);
+  return progress.final();
 }
 
 void starcry::run_benchmarks() {
@@ -111,15 +110,18 @@ void starcry::run_benchmarks() {
   set_output("perf.h264");
   // FPS: 50.0724
   set_custom_max_frames(250);
-  std::cout << "FPS: " << render_video(starcry::render_video_mode::video_only) << std::endl;
+  auto fps = render_video(starcry::render_video_mode::video_only);
+  std::cout << "FPS video rendering: " << fps << std::endl;
   reset();
   // FPS: 1580.37
   set_custom_max_frames(2500);
-  std::cout << "FPS: " << render_video(starcry::render_video_mode::render_only) << std::endl;
+  fps = render_video(starcry::render_video_mode::render_only);
+  std::cout << "FPS rendering only: " << fps << std::endl;
   reset();
   // FPS: 122174
   set_custom_max_frames(250000);
-  std::cout << "FPS: " << render_video(starcry::render_video_mode::generate_only) << std::endl;
+  fps = render_video(starcry::render_video_mode::generate_only);
+  std::cout << "FPS javascript only: " << fps << std::endl;
 }
 
 void starcry::configure_streaming() {

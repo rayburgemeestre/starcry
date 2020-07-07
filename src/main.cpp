@@ -84,12 +84,15 @@ public:
     }
 
     // render video
-    if (vm.count("gui"))
-      std::cout << "FPS: " << sc.render_video(starcry::render_video_mode::video_with_gui) << std::endl;
-    else if (vm.count("gui-only"))
-      std::cout << "FPS: " << sc.render_video(starcry::render_video_mode::gui_only) << std::endl;
-    else
-      std::cout << "FPS: " << sc.render_video(starcry::render_video_mode::video_only) << std::endl;
+    auto fps = ([&](){
+      if (vm.count("gui"))
+        return sc.render_video(starcry::render_video_mode::video_with_gui);
+      else if (vm.count("gui-only"))
+        return sc.render_video(starcry::render_video_mode::gui_only);
+      else
+        return sc.render_video(starcry::render_video_mode::video_only);
+    })();
+    std::cout << "Rendering done, average FPS: " << fps << std::endl;
   }
 };
 
