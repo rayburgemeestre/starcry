@@ -7,10 +7,10 @@
 #include <experimental/filesystem>
 
 #include "cereal/archives/binary.hpp"
-#include "util/a.hpp"
-#include "util/fps_progress.hpp"
 #include "starcry.h"
 #include "streamer_output/sfml_window.h"
+#include "util/a.hpp"
+#include "util/fps_progress.hpp"
 
 starcry::starcry(const std::string &input_script, const std::string &output_file)
     : gen(nullptr), input_script(input_script), output_file(output_file) {

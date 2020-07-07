@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#include "caf/meta/type_name.hpp"
+// #include "caf/meta/type_name.hpp"
 #include "cereal/types/vector.hpp"
 
 #include "color.hpp"
@@ -67,27 +67,4 @@ inline bool operator==(const job &lhs, const job &rhs) {
   return lhs.job_number == rhs.job_number;
 }
 
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector &f, data::job &x) {
-  return f(caf::meta::type_name("data::job"),
-           x.same_host,
-           x.width,
-           x.height,
-           x.offset_x,
-           x.offset_y,
-           x.canvas_w,
-           x.canvas_h,
-           x.job_number,
-           x.frame_number,
-           x.rendered,
-           x.last_frame,
-           x.chunk,
-           x.num_chunks,
-           x.background_color,
-           x.shapes,
-           x.scale,
-           x.bitrate,
-           x.compress,
-           x.save_image);
-}
 }  // namespace data

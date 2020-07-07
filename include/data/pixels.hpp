@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "allegro5/color.h"
-#include "caf/all.hpp"
 #include "cereal/types/vector.hpp"
 
 namespace data {
@@ -31,21 +30,7 @@ struct pixel_data2 {
   }
 };
 
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, data::pixel_data& x) {
-  return f(caf::meta::type_name("data::pixel_data"), x.pixels);
-}
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, data::pixel_data2& x) {
-  return f(caf::meta::type_name("data::pixel_data2"), x.pixels);
-}
 }  // namespace data
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, ALLEGRO_COLOR& x) {
-  return f(caf::meta::type_name("ALLEGRO_COLOR"), x.a, x.b, x.g, x.r);
-}
 
 template <class Processor>
 void serialize(Processor& proc, ::ALLEGRO_COLOR& x, const unsigned int) {

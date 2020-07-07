@@ -84,7 +84,7 @@ public:
     }
 
     // render video
-    auto fps = ([&](){
+    auto fps = ([&]() {
       if (vm.count("gui"))
         return sc.render_video(starcry::render_video_mode::video_with_gui);
       else if (vm.count("gui-only"))

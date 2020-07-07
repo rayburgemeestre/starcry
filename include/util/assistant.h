@@ -4,6 +4,8 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#pragma once
+
 #include <memory>
 
 #include "common.h"
@@ -26,7 +28,7 @@ public:
 
   data::job the_job;
   data::job the_previous_job;
-  stateful_actor<job_generator_data> *job_generator;
+  // stateful_actor<job_generator_data> *job_generator;
   generator *generator;
   size_t max_frames;
   bool realtime = false;

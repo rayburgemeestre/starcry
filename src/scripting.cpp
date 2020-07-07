@@ -7,7 +7,7 @@
 #include "scripting.h"
 #include <random>
 //#include "actors/job_generator.h"
-#include "atom_types.h"
+//#include "atom_types.h"
 #include "generator.h"
 #include "util/assistant.h"
 

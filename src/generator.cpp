@@ -20,6 +20,9 @@
 std::shared_ptr<v8_wrapper> context;
 std::unique_ptr<assistant_> assistant;
 
+// TODO: find a better home for this?
+assistant_::assistant_() : cache(std::make_unique<job_cache>()) {}
+
 generator::generator(std::function<void(size_t, int, int, int)> on_initialized,
                      std::function<bool(const data::job &)> on_new_job,
                      std::optional<size_t> custom_max_frames)
@@ -122,8 +125,8 @@ void call_print_exception(const std::string &fn) {
   try {
     context->call(fn);
   } catch (std::runtime_error &ex) {
-    a(std::cout) << "Runtime error caused during execution of " << fn << "() in javascript:" << endl
-                 << std::string(ex.what()) << endl;
+    a(std::cout) << "Runtime error caused during execution of " << fn << "() in javascript:" << std::endl
+                 << std::string(ex.what()) << std::endl;
   }
 }
 
@@ -132,8 +135,8 @@ void call_print_exception(std::string fn, T arg) {
   try {
     context->call(fn, arg);
   } catch (std::runtime_error &ex) {
-    a(std::cout) << "Runtime error caused during execution of " << fn << "(..) in javascript:" << endl
-                 << std::string(ex.what()) << endl;
+    a(std::cout) << "Runtime error caused during execution of " << fn << "(..) in javascript:" << std::endl
+                 << std::string(ex.what()) << std::endl;
   }
 }
 

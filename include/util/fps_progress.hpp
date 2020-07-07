@@ -6,11 +6,11 @@
 
 #pragma once
 
-#include <chrono>
 #include <atomic>
-#include <thread>
-#include <mutex>
+#include <chrono>
 #include <condition_variable>
+#include <mutex>
+#include <thread>
 
 #include "util/a.hpp"
 
@@ -26,24 +26,27 @@ private:
   std::thread runner;
 
 public:
-
-  fps_progress() : start(std::chrono::high_resolution_clock::now()), last_update(start), runner([&](){
-    while (active) {
-      std::unique_lock<std::mutex> l(mut);
-      cv.wait_for(l, std::chrono::milliseconds(1000), [&]() -> bool { return !active; });
-      if (!active) {
-        break;
-      }
-      auto now = std::chrono::high_resolution_clock::now();
-      std::chrono::duration<double, std::milli> diff = now - last_update;
-      if (diff.count() < 1000.0) {
-        continue; // ignore spurious wake-ups
-      }
-      std::chrono::duration<double, std::milli> passed = now - start;
-      a(std::cout) << "FPS: average=" << (double)counter / (passed.count() / 1000.0)  << ", current=" << (double)(counter - counter_current) << std::endl;
-      counter_current.store(counter);
-    }
-  }) {}
+  fps_progress()
+      : start(std::chrono::high_resolution_clock::now()), last_update(start), runner([&]() {
+          while (active) {
+            std::unique_lock<std::mutex> l(mut);
+            cv.wait_for(l, std::chrono::milliseconds(1000), [&]() -> bool {
+              return !active;
+            });
+            if (!active) {
+              break;
+            }
+            auto now = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double, std::milli> diff = now - last_update;
+            if (diff.count() < 1000.0) {
+              continue;  // ignore spurious wake-ups
+            }
+            std::chrono::duration<double, std::milli> passed = now - start;
+            a(std::cout) << "FPS: average=" << (double)counter / (passed.count() / 1000.0)
+                         << ", current=" << (double)(counter - counter_current) << std::endl;
+            counter_current.store(counter);
+          }
+        }) {}
 
   void inc() {
     counter++;

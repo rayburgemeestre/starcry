@@ -10,7 +10,6 @@ set(BOOST_ROOT "/opt/cppse/build/boost/")
 include(CheckIPOSupported)
 include(ClangFormat)
 
-find_package(CAF REQUIRED core io)
 find_package(V8 REQUIRED)
 find_package(Boost 1.52 COMPONENTS program_options system date_time thread chrono REQUIRED )
 find_package(OpenMP)
@@ -42,7 +41,6 @@ include_directories(
     "/opt/cppse/build/v8pp/include/v8"  # for v8
     "/opt/cppse/build/v8pp/include/v8/include" # for v8
     "/opt/cppse/build/benchmarklib/include/"
-    "/opt/cppse/build/caf/include/"
     "/opt/cppse/build/allegro5/include/"
     "/opt/cppse/build/boost/include/"
     "/opt/cppse/build/ffmpeg/include/"
@@ -57,8 +55,6 @@ include_directories(
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "/opt/cppse/build/v8pp/include/v8pp/context.cpp" "libs/piper/src/**")
 # (below) useful for testing v8 hello world in main.cpp
 #file(GLOB_RECURSE starcry_SOURCES "src/main.cpp" "/opt/cppse/build/v8pp/include/v8pp/context.cpp")
-# (below) useful for testing caf hello world in main.cpp
-#file(GLOB_RECURSE starcry_SOURCES "src/main.cpp")
 
 add_executable(starcry ${starcry_SOURCES})
 
@@ -91,10 +87,6 @@ target_link_libraries(starcry ${Boost_LIBRARIES})
 
 # pthreads
 #target_link_libraries(starcry ${CMAKE_THREAD_LIBS_INIT})
-
-# caf
-target_link_libraries(starcry /opt/cppse/build/caf/lib/libcaf_io.a)
-target_link_libraries(starcry /opt/cppse/build/caf/lib/libcaf_core.a)
 
 # piper
 #target_link_libraries(starcry ${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/build/libpiper.a)
@@ -170,40 +162,40 @@ install (TARGETS starcry DESTINATION bin)
 
 target_clangformat_setup(starcry)
 
-# CAF example
-file(GLOB_RECURSE caf_hello_SOURCES "docs/caf_hello_world.cpp")
-add_executable(caf_hello ${caf_hello_SOURCES})
-check_ipo_supported(RESULT result OUTPUT output)
-if(result)
-set_property(TARGET caf_hello PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-endif()
-target_link_libraries(caf_hello /opt/cppse/build/caf/lib/libcaf_io.a)
-target_link_libraries(caf_hello /opt/cppse/build/caf/lib/libcaf_core.a)
-target_link_libraries(caf_hello /usr/lib/x86_64-linux-gnu/libssl.a)
-target_link_libraries(caf_hello /usr/lib/x86_64-linux-gnu/libcrypto.a)
-install (TARGETS caf_hello DESTINATION bin)
+## CAF example
+#file(GLOB_RECURSE caf_hello_SOURCES "docs/caf_hello_world.cpp")
+#add_executable(caf_hello ${caf_hello_SOURCES})
+#check_ipo_supported(RESULT result OUTPUT output)
+#if(result)
+#set_property(TARGET caf_hello PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+#endif()
+#target_link_libraries(caf_hello /opt/cppse/build/caf/lib/libcaf_io.a)
+#target_link_libraries(caf_hello /opt/cppse/build/caf/lib/libcaf_core.a)
+#target_link_libraries(caf_hello /usr/lib/x86_64-linux-gnu/libssl.a)
+#target_link_libraries(caf_hello /usr/lib/x86_64-linux-gnu/libcrypto.a)
+#install (TARGETS caf_hello DESTINATION bin)
 
-# CAF client / server
-file(GLOB_RECURSE caf_server_SOURCES "docs/caf_server.cpp")
-add_executable(caf_server ${caf_server_SOURCES})
-check_ipo_supported(RESULT result OUTPUT output)
-if(result)
-    set_property(TARGET caf_server PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-endif()
-target_link_libraries(caf_server /opt/cppse/build/caf/lib/libcaf_io.a)
-target_link_libraries(caf_server /opt/cppse/build/caf/lib/libcaf_core.a)
-target_link_libraries(caf_server /usr/lib/x86_64-linux-gnu/libssl.a)
-target_link_libraries(caf_server /usr/lib/x86_64-linux-gnu/libcrypto.a)
-install (TARGETS caf_server DESTINATION bin)
-
-file(GLOB_RECURSE caf_client_SOURCES "docs/caf_client.cpp")
-add_executable(caf_client ${caf_client_SOURCES})
-check_ipo_supported(RESULT result OUTPUT output)
-if(result)
-    set_property(TARGET caf_client PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-endif()
-target_link_libraries(caf_client /opt/cppse/build/caf/lib/libcaf_io.a)
-target_link_libraries(caf_client /opt/cppse/build/caf/lib/libcaf_core.a)
-target_link_libraries(caf_client /usr/lib/x86_64-linux-gnu/libssl.a)
-target_link_libraries(caf_client /usr/lib/x86_64-linux-gnu/libcrypto.a)
-install (TARGETS caf_client DESTINATION bin)
+## CAF client / server
+#file(GLOB_RECURSE caf_server_SOURCES "docs/caf_server.cpp")
+#add_executable(caf_server ${caf_server_SOURCES})
+#check_ipo_supported(RESULT result OUTPUT output)
+#if(result)
+#    set_property(TARGET caf_server PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+#endif()
+#target_link_libraries(caf_server /opt/cppse/build/caf/lib/libcaf_io.a)
+#target_link_libraries(caf_server /opt/cppse/build/caf/lib/libcaf_core.a)
+#target_link_libraries(caf_server /usr/lib/x86_64-linux-gnu/libssl.a)
+#target_link_libraries(caf_server /usr/lib/x86_64-linux-gnu/libcrypto.a)
+#install (TARGETS caf_server DESTINATION bin)
+#
+#file(GLOB_RECURSE caf_client_SOURCES "docs/caf_client.cpp")
+#add_executable(caf_client ${caf_client_SOURCES})
+#check_ipo_supported(RESULT result OUTPUT output)
+#if(result)
+#    set_property(TARGET caf_client PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+#endif()
+#target_link_libraries(caf_client /opt/cppse/build/caf/lib/libcaf_io.a)
+#target_link_libraries(caf_client /opt/cppse/build/caf/lib/libcaf_core.a)
+#target_link_libraries(caf_client /usr/lib/x86_64-linux-gnu/libssl.a)
+#target_link_libraries(caf_client /usr/lib/x86_64-linux-gnu/libcrypto.a)
+#install (TARGETS caf_client DESTINATION bin)
