@@ -1,4 +1,11 @@
+/*
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 #include "webserver.h"
+#include "starcry_interactive.h"
 
 /**
  * Similar to the fix in main.cpp, crow.h was also pulling in boost::shared_ptr, via boost::date_time stuff.
@@ -48,6 +55,12 @@ void webserver::start() {
     return x;
   });
 
+  CROW_ROUTE(app, "/api/test2")
+  ([&]() {
+    sc->add_command();
+    return "OK";
+  });
+
   CROW_ROUTE(app, "/")
   ([] {
     using namespace std;
@@ -75,14 +88,19 @@ void webserver::start() {
   });
 
   crow::logger::setLogLevel(crow::LogLevel::WARNING);
-
   app.port(18080).multithreaded().run();
+  sc->stop();
 }
 
-webserver::webserver() : webserver_(std::bind(&webserver::start, this)) {}
+webserver::webserver() : webserver_(std::bind(&webserver::start, this)), sc(nullptr) {}
+
+webserver::webserver(interactive_starcry* sc) : webserver_(std::bind(&webserver::start, this)), sc(sc) {}
 
 void webserver::stop() {
-  app.port(18080).multithreaded().stop();
+  // sleep at least a bit, calling stop() will cause a segfault if start() didn't initialize fully (afaict)
+  // only reproduced when I was basically doing: "{ webserver ws; /* immediately out of scope */ }"
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  app.stop();
 }
 
 webserver::~webserver() {

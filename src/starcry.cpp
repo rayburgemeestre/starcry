@@ -7,7 +7,9 @@
 #include <experimental/filesystem>
 
 #include "cereal/archives/binary.hpp"
+#include "piper.h"
 #include "starcry.h"
+#include "starcry_interactive.h"
 #include "streamer_output/sfml_window.h"
 #include "util/a.hpp"
 #include "util/fps_progress.hpp"
@@ -141,6 +143,10 @@ void starcry::configure_streaming() {
       }
     }
   }
+}
+
+void starcry::configure_interactive() {
+  interactive_starcry isc;
 }
 
 void starcry::reset() {

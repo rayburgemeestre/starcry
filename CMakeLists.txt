@@ -50,6 +50,7 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/cereal/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/include/"
+    "${CMAKE_CURRENT_SOURCE_DIR}libs/seasocks/src/main/c/"
 )
 
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "/opt/cppse/build/v8pp/include/v8pp/context.cpp" "libs/piper/src/**")
@@ -144,6 +145,9 @@ target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-window-s.a)
 target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-graphics-s.a)
 # below can be made obsolete if we can get rid of some Joystick related stuff in libsfml-window-s.a
 target_link_libraries(starcry /lib/x86_64-linux-gnu/libudev.so)
+
+# seasocks
+target_link_libraries(starcry libs/seasocks/build/src/main/c/libseasocks.a)
 
 # ASAN
 #target_link_libraries(starcry /usr/lib/clang/10.0.1/lib/linux/libclang_rt.asan-x86_64.a)

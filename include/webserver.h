@@ -8,6 +8,8 @@
 #include <thread>
 #include "crow.h"
 
+class interactive_starcry;
+
 struct content_type_fixer {
   struct context {};
   void before_handle(crow::request& req, crow::response& res, context& ctx);
@@ -18,9 +20,11 @@ class webserver {
 private:
   crow::App<content_type_fixer> app;
   std::thread webserver_;
+  interactive_starcry* sc;
 
 public:
   webserver();
+  explicit webserver(interactive_starcry* sc);
   ~webserver();
 
   void start();

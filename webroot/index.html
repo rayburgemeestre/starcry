@@ -1,36 +1,51 @@
-<style type="text/css">
-  html, body { margin: 0;  background-color: black; }
-  video#video {
-    width: 100%;
-  }
-</style>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<!-- Or if you want a more recent canary version -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
-<video id="video"></video>
-<script>
-  var video = document.getElementById('video');
-  if(Hls.isSupported()) {
-    config = {};
-    config.debug = true;
-    var hls = new Hls(config);
-    hls.loadSource('/stream/stream.m3u8');
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED,function() {
-      video.play();
-  });
- }
- // hls.js is not supported on platforms that do not have Media Source Extensions (MSE) enabled.
- // When the browser has built-in HLS support (check using `canPlayType`), we can provide an HLS manifest (i.e. .m3u8 URL) directly to the video element throught the `src` property.
- // This is using the built-in support of the plain video element, without using hls.js.
- // Note: it would be more normal to wait on the 'canplay' event below however on Safari (where you are most likely to find built-in HLS support) the video.src URL must be on the user-driven
- // white-list before a 'canplay' event will be emitted; the last video event that can be reliably listened-for when the URL is not on the white-list is 'loadedmetadata'.
-  else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = '/stream/stream.m3u8';
-    video.addEventListener('loadedmetadata',function() {
-      video.play();
-    });
-  }
+<script src="/scripts/vue.js"></script>
+<script src="/scripts/zepto.js"></script>
+<link href="/css/style.css" rel="stylesheet" type="text/css" />
+
+<textarea>
+    Hello world
+</textarea>
+
+<h1>Vue JS test</h1>
+
+<!-- template for the polygraph component. -->
+<script type="text/x-template" id="polygraph-template">
+    <g>
+        <polygon :points="points"></polygon>
+        <circle cx="100" cy="100" r="80"></circle>
+        <axis-label
+                v-for="stat in stats"
+                :stat="stat"
+                :index="$index"
+                :total="stats.length">
+        </axis-label>
+    </g>
 </script>
 
+<!-- template for the axis label component. -->
+<script type="text/x-template" id="axis-label-template">
+    <text :x="point.x" :y="point.y">{{stat.label}}</text>
+</script>
 
+<!-- demo root element -->
+<div id="demo">
+    <!-- Use the component -->
+    <svg width="200" height="200">
+        <polygraph :stats="stats"></polygraph>
+    </svg>
+    <!-- controls -->
+    <div v-for="stat in stats">
+        <label>{{stat.label}}</label>
+        <input type="range" v-model="stat.value" min="0" max="100">
+        <span>{{stat.value}}</span>
+        <button @click="remove(stat)">X</button>
+    </div>
+    <form id="add">
+        <input name="newlabel" v-model="newLabel">
+        <button @click="add">Add a Stat</button>
+    </form>
+    <pre id="raw">{{stats | json}}</pre>
+</div>
+
+<p style="font-size:12px">* input[type="range"] requires IE10 or above.</p>
+<script src="/scripts/app.js"></script>

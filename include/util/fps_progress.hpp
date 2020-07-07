@@ -42,7 +42,7 @@ public:
               continue;  // ignore spurious wake-ups
             }
             std::chrono::duration<double, std::milli> passed = now - start;
-            a(std::cout) << "FPS: average=" << (double)counter / (passed.count() / 1000.0)
+            a(std::cout) << "FPS: frame=" << counter << ", average=" << (double)counter / (passed.count() / 1000.0)
                          << ", current=" << (double)(counter - counter_current) << std::endl;
             counter_current.store(counter);
           }

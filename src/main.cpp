@@ -43,6 +43,7 @@ public:
       ("gui-only", "render to graphical window only (no video)")
       ("spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")
       ("stream", "start embedded webserver and stream HLS to webroot")
+      ("interactive,i", "start embedded webserver and launch in interactive mode")
       ("perf", "run performance tests");
     // clang-format on
 
@@ -75,12 +76,19 @@ public:
       return;
     }
 
+    // configure interactive mode
+    if (vm.count("interactive")) {
+      std::cerr << "Control plane here: http://localhost:18080/" << std::endl;
+      sc.configure_interactive();
+      return;
+    }
+
     // configure streaming
     std::unique_ptr<webserver> ws;
     if (vm.count("stream")) {
       ws = std::make_unique<webserver>();
       sc.configure_streaming();
-      std::cerr << "Stream URL: http://localhost:18080/" << std::endl;
+      std::cerr << "View stream here: http://localhost:18080/stream.html" << std::endl;
     }
 
     // render video
