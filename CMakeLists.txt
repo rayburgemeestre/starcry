@@ -49,12 +49,12 @@ include_directories(
     "/opt/cppse/build/ffmpeg/include/"
     "/opt/cppse/build/fastpfor/include/"
     "/opt/cppse/build/sfml/include/"
+    "/opt/cppse/build/seasocks/include/"
+    "/opt/cppse/build/png++/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/crow/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/cereal/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/include/"
-    "${CMAKE_CURRENT_SOURCE_DIR}/libs/seasocks/src/main/c/"
-    "${CMAKE_CURRENT_SOURCE_DIR}/libs/png++/"
 )
 
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "/opt/cppse/build/v8pp/include/v8pp/context.cpp" "libs/piper/src/**")
@@ -151,7 +151,7 @@ target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-graphics-s.a)
 target_link_libraries(starcry /lib/x86_64-linux-gnu/libudev.so)
 
 # seasocks
-target_link_libraries(starcry ${CMAKE_CURRENT_SOURCE_DIR}/libs/seasocks/build/src/main/c/libseasocks.a)
+target_link_libraries(starcry /opt/cppse/build/seasocks/lib/libseasocks.a)
 
 if (SANITIZER)
 # ASAN

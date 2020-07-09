@@ -50,7 +50,7 @@ starcry_pipeline::starcry_pipeline()
       bitmap(std::make_shared<bitmap_wrapper>()),
       gen(nullptr),
       engine(std::make_shared<rendering_engine_wrapper>()),
-      system(std::make_shared<pipeline_system>(false)),
+      system(std::make_shared<pipeline_system>(true)),
       cmds(system->create_queue("commands", 10)),
       jobs(system->create_queue("jobs", 10)),
       frames(system->create_queue("frames", 10)) {
