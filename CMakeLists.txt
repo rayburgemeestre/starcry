@@ -28,15 +28,18 @@ else()
     #set (CLANG_FLAGS "")
 endif()
 
-if (NOT DEBUG)
-    add_definitions("-std=c++17 -O3 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
+if (SANITIZER)
+    add_definitions("-fsanitize=address")
+endif()
+if (DEBUG)
+    # --no-rosegment is important for being able to let valgrind/callgrind read symbols
+    add_definitions("-std=c++17 -O0 -g -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer")
 else()
-    add_definitions("-std=c++17 -O0 -g -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer")  # --no-rosegment is important for being able to let valgrind/callgrind read symbols
-    # Add for ASAN: -fsanitize=address
+    add_definitions("-std=c++17 -O3 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
 endif()
 
 include_directories(
-    "./include/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/"
     "/opt/cppse/build/v8pp/include/"  # for v8pp
     "/opt/cppse/build/v8pp/include/v8"  # for v8
     "/opt/cppse/build/v8pp/include/v8/include" # for v8
@@ -50,7 +53,8 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/cereal/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/include/"
-    "${CMAKE_CURRENT_SOURCE_DIR}libs/seasocks/src/main/c/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libs/seasocks/src/main/c/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libs/png++/"
 )
 
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "/opt/cppse/build/v8pp/include/v8pp/context.cpp" "libs/piper/src/**")
@@ -147,59 +151,13 @@ target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-graphics-s.a)
 target_link_libraries(starcry /lib/x86_64-linux-gnu/libudev.so)
 
 # seasocks
-target_link_libraries(starcry libs/seasocks/build/src/main/c/libseasocks.a)
+target_link_libraries(starcry ${CMAKE_CURRENT_SOURCE_DIR}/libs/seasocks/build/src/main/c/libseasocks.a)
 
+if (SANITIZER)
 # ASAN
-#target_link_libraries(starcry /usr/lib/clang/10.0.1/lib/linux/libclang_rt.asan-x86_64.a)
-
-# trying to include more statically will eventually result in
-# starcry: symbol lookup error: starcry: undefined symbol: pthread_create
-# at runtime..
-#target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/librt.a)
-#target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libm.a)
-#target_link_libraries(starcry -Wl,--whole-archive /usr/lib/x86_64-linux-gnu/libpthread.a -Wl,--no-whole-archive)
-#target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libc.a)
-#target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libmvec.a)
-#target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libpthread.a)
+target_link_libraries(starcry /usr/lib/clang/10.0.1/lib/linux/libclang_rt.asan-x86_64.a)
+endif()
 
 install (TARGETS starcry DESTINATION bin)
 
 target_clangformat_setup(starcry)
-
-## CAF example
-#file(GLOB_RECURSE caf_hello_SOURCES "docs/caf_hello_world.cpp")
-#add_executable(caf_hello ${caf_hello_SOURCES})
-#check_ipo_supported(RESULT result OUTPUT output)
-#if(result)
-#set_property(TARGET caf_hello PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-#endif()
-#target_link_libraries(caf_hello /opt/cppse/build/caf/lib/libcaf_io.a)
-#target_link_libraries(caf_hello /opt/cppse/build/caf/lib/libcaf_core.a)
-#target_link_libraries(caf_hello /usr/lib/x86_64-linux-gnu/libssl.a)
-#target_link_libraries(caf_hello /usr/lib/x86_64-linux-gnu/libcrypto.a)
-#install (TARGETS caf_hello DESTINATION bin)
-
-## CAF client / server
-#file(GLOB_RECURSE caf_server_SOURCES "docs/caf_server.cpp")
-#add_executable(caf_server ${caf_server_SOURCES})
-#check_ipo_supported(RESULT result OUTPUT output)
-#if(result)
-#    set_property(TARGET caf_server PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-#endif()
-#target_link_libraries(caf_server /opt/cppse/build/caf/lib/libcaf_io.a)
-#target_link_libraries(caf_server /opt/cppse/build/caf/lib/libcaf_core.a)
-#target_link_libraries(caf_server /usr/lib/x86_64-linux-gnu/libssl.a)
-#target_link_libraries(caf_server /usr/lib/x86_64-linux-gnu/libcrypto.a)
-#install (TARGETS caf_server DESTINATION bin)
-#
-#file(GLOB_RECURSE caf_client_SOURCES "docs/caf_client.cpp")
-#add_executable(caf_client ${caf_client_SOURCES})
-#check_ipo_supported(RESULT result OUTPUT output)
-#if(result)
-#    set_property(TARGET caf_client PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-#endif()
-#target_link_libraries(caf_client /opt/cppse/build/caf/lib/libcaf_io.a)
-#target_link_libraries(caf_client /opt/cppse/build/caf/lib/libcaf_core.a)
-#target_link_libraries(caf_client /usr/lib/x86_64-linux-gnu/libssl.a)
-#target_link_libraries(caf_client /usr/lib/x86_64-linux-gnu/libcrypto.a)
-#install (TARGETS caf_client DESTINATION bin)

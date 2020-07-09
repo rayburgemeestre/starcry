@@ -16,7 +16,7 @@ private:
 public:
   bitmap_wrapper() = default;
   ~bitmap_wrapper() {
-    if (bitmap == nullptr) {
+    if (bitmap != nullptr) {
       al_destroy_bitmap(bitmap);
     }
   }
@@ -29,7 +29,7 @@ public:
       if (bitmap_w != width || bitmap_h != height) {
         // TODO: we're dealing with a different size, print out warning as it maybe inefficient.
         // or use a map for the various sizes..
-        al_destroy_bitmap(bitmap);
+        if (bitmap != nullptr) al_destroy_bitmap(bitmap);
 
         // for now recreate
         bitmap = al_create_bitmap(width, height);

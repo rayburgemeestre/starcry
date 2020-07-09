@@ -4,7 +4,6 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <bitset>
 #include <iostream>
 
 #ifdef __clang__
@@ -16,7 +15,6 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include "starcry.h"
-#include "webserver.h"
 
 namespace po = ::boost::program_options;
 
@@ -84,9 +82,7 @@ public:
     }
 
     // configure streaming
-    std::unique_ptr<webserver> ws;
     if (vm.count("stream")) {
-      ws = std::make_unique<webserver>();
       sc.configure_streaming();
       std::cerr << "View stream here: http://localhost:18080/stream.html" << std::endl;
     }

@@ -1,9 +1,6 @@
 [submodule "libs/cereal"]
 	path = libs/cereal
 	url = https://github.com/USCiLab/cereal
-[submodule "libs/crow"]
-	path = libs/crow
-	url = https://github.com/rayburgemeestre/crow
 [submodule "libs/framer"]
 	path = libs/framer
 	url = https://github.com/rayburgemeestre/framer

@@ -2,7 +2,12 @@ SHELL:=/bin/bash
 
 fast-docker-build:
 	# build starcry with tailored image so we can invoke the make command straight away
+	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core_"
+
+ci:
+	# Only difference with above is: no -i flag
 	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core_"
+
 
 debug:
 	# build starcry with tailored image so we can invoke the make command straight away

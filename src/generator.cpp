@@ -17,6 +17,7 @@
 #include "util/image_splitter.hpp"
 #include "v8_wrapper.hpp"
 
+// TODO: find a better home for this?
 std::shared_ptr<v8_wrapper> context;
 std::unique_ptr<assistant_> assistant;
 
@@ -26,7 +27,15 @@ assistant_::assistant_() : cache(std::make_unique<job_cache>()) {}
 generator::generator(std::function<void(size_t, int, int, int)> on_initialized,
                      std::function<bool(const data::job &)> on_new_job,
                      std::optional<size_t> custom_max_frames)
-    : on_initialized(on_initialized), on_new_job(on_new_job), custom_max_frames(custom_max_frames) {}
+    : on_initialized(on_initialized), on_new_job(on_new_job), custom_max_frames(custom_max_frames) {
+  // TODO: find different solution for this
+  static bool once = true;
+  if (once) {
+    context = nullptr;
+    once = false;
+  }
+  assistant = nullptr;
+}
 
 generator::~generator() {
   // The following should stay commented, successive instances of this generator class
@@ -62,16 +71,16 @@ void generator::init(const std::string &filename) {
     // TODO: context->add_fun("add_rectangle", &add_rectangle);
 
     context->add_include_fun();
-  }
 
-  // evaluate input script file in V8 context
-  std::ifstream stream(filename.c_str());
-  if (!stream && filename != "-") {
-    throw std::runtime_error("could not locate file " + filename);
+    // evaluate input script file in V8 context
+    std::ifstream stream(filename.c_str());
+    if (!stream && filename != "-") {
+      throw std::runtime_error("could not locate file " + filename);
+    }
+    std::istreambuf_iterator<char> begin(filename == "-" ? std::cin : stream), end;
+    context->run(std::string(begin, end));
   }
-  std::istreambuf_iterator<char> begin(filename == "-" ? std::cin : stream), end;
   context->run("var current_frame = 0;");
-  context->run(std::string(begin, end));
   if (context->run<bool>("typeof initialize != 'undefined'")) {
     call_print_exception("initialize");
   }

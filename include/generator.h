@@ -16,8 +16,8 @@
 
 class generator {
 private:
-  uint32_t canvas_w;
-  uint32_t canvas_h;
+  uint32_t canvas_w = 0;
+  uint32_t canvas_h = 0;
   size_t current_job = 0;
   size_t num_chunks = 0;
   size_t lines_received = 0;
