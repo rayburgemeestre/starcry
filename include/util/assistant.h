@@ -8,8 +8,6 @@
 
 #include <memory>
 
-#include "common.h"
-
 struct job_generator_data;
 
 #include "data/job.hpp"
