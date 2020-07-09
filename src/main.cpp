@@ -25,6 +25,7 @@ private:
   size_t frame_of_interest = std::numeric_limits<size_t>::max();
   po::options_description desc = std::string("Allowed options");
   std::string script = "input/test.js";
+  size_t num_worker_threads = 1;
 
 public:
   main_program(int argc, char *argv[]) {
@@ -37,6 +38,7 @@ public:
       ("script,s", po::value<std::string>(&script), "javascript file to use for processing")
       ("output,o", po::value<std::string>(&output_file), "filename for video output (default output.h264)")
       ("frame,f", po::value<size_t>(&frame_of_interest), "specific frame to render and save as BMP file")
+      ("num_threads,t", po::value<size_t>(&num_worker_threads), "number of local render threads (default 1)")
       ("gui", "render to graphical window")
       ("gui-only", "render to graphical window only (no video)")
       ("spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")
@@ -77,7 +79,7 @@ public:
     // configure interactive mode
     if (vm.count("interactive")) {
       std::cerr << "Control plane here: http://localhost:18080/" << std::endl;
-      sc.configure_interactive();
+      sc.configure_interactive(num_worker_threads);
       return;
     }
 

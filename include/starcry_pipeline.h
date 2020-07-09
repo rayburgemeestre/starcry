@@ -65,19 +65,16 @@ class starcry_pipeline {
 private:
   std::shared_ptr<seasocks::Server> server;
   std::shared_ptr<Handler> chat_handler;
-  std::shared_ptr<bitmap_wrapper> bitmap;
+  std::map<int, std::shared_ptr<bitmap_wrapper>> bitmaps;
   std::shared_ptr<generator> gen;
-  std::shared_ptr<rendering_engine_wrapper> engine;
-
+  std::map<int, std::shared_ptr<rendering_engine_wrapper>> engines;
   std::shared_ptr<pipeline_system> system;
   std::shared_ptr<queue> cmds;
   std::shared_ptr<queue> jobs;
   std::shared_ptr<queue> frames;
 
-  std::shared_ptr<data::job> the_job;
-
 public:
-  starcry_pipeline();
+  starcry_pipeline(size_t num_local_engines);
 
   void add_command(seasocks::WebSocket *client, int frame_num);
 

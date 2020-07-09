@@ -44,76 +44,70 @@ struct DataHandler : CrackedUriPageHandler {
   }
 };
 
-starcry_pipeline::starcry_pipeline()
+starcry_pipeline::starcry_pipeline(size_t num_local_engines)
     : server(std::make_shared<Server>(std::make_shared<PrintfLogger>(PrintfLogger::Level::Info))),
       chat_handler(std::make_shared<Handler>(this)),
-      bitmap(std::make_shared<bitmap_wrapper>()),
+      bitmaps({}),
       gen(nullptr),
-      engine(std::make_shared<rendering_engine_wrapper>()),
+      engines({}),
       system(std::make_shared<pipeline_system>(true)),
       cmds(system->create_queue("commands", 10)),
       jobs(system->create_queue("jobs", 10)),
       frames(system->create_queue("frames", 10)) {
-  engine->initialize();
-
-  // doing this fixes a bunch of segfaults after the optimizer does his thing
-  static auto pipeline = this;
 
   system->spawn_transformer<instruction>(
-      "generator",
       [&](auto cmd_def) -> auto {
-        pipeline->gen = std::make_shared<generator>([](size_t, int, int, int) {},
-                                                    [&](const data::job &job) {
-                                                      if (cmd_def->frame != job.frame_number) {
-                                                        return true;  // fast forward
-                                                      }
-                                                      // copied here
-                                                      pipeline->the_job = std::make_shared<data::job>(job);
-                                                      return false;
-                                                    });
-        pipeline->gen->init("input/test.js");
-        while (pipeline->gen->generate_frame()) {
+        std::shared_ptr<data::job> the_job;
+        gen = std::make_shared<generator>([](size_t, int, int, int) {},
+                                          [&](const data::job &job) {
+                                            if (cmd_def->frame != job.frame_number) {
+                                              return true;  // fast forward
+                                            }
+                                            // copy the job here
+                                            the_job = std::make_shared<data::job>(job);
+                                            return false;
+                                          });
+        gen->init("input/test.js");
+        while (gen->generate_frame()) {
         }
-        return std::make_shared<job_message>(cmd_def->client, pipeline->the_job);
+        return std::make_shared<job_message>(cmd_def->client, the_job);
       },
       cmds,
-      jobs);
-
-  system->spawn_transformer<job_message>(
-      "renderer",
-      [&](auto job_msg) -> auto {
-        auto &job = job_msg->job;
-        png::image<png::rgb_pixel> image(job->width, job->height);
-        auto bmp = pipeline->bitmap->get(job->width, job->height);
-        render_job(*pipeline->engine, *job, bmp);
-        auto pixels = pipeline->engine->serialize_bitmap2(bmp, job->width, job->height);
-        copy_to_png(pixels, job->width, job->height, image);
-        std::ostringstream ss;
-        image.write_stream(ss);
-        return std::make_shared<render_msg>(job_msg->client, ss.str());
-      },
       jobs,
-      frames);
+      transform_type::same_pool);
 
-  static auto hand = chat_handler;
-
-  auto xyz = [&](std::shared_ptr<render_msg> job_msg) {
-    hand->callback(job_msg->client, job_msg->buffer);
-  };
+  for (size_t i = 0; i < num_local_engines; i++) {
+    engines[i] = std::make_shared<rendering_engine_wrapper>();
+    engines[i]->initialize();
+    bitmaps[i] = std::make_shared<bitmap_wrapper>();
+    auto foo = [ i = i, this ](auto job_msg) -> auto {
+      auto &job = *job_msg->job;
+      png::image<png::rgb_pixel> image(job.width, job.height);
+      auto bmp = bitmaps[i]->get(job.width, job.height);
+      render_job(*engines[i], job, bmp);
+      auto pixels = engines[i]->serialize_bitmap2(bmp, job.width, job.height);
+      copy_to_png(pixels, job.width, job.height, image);
+      std::ostringstream ss;
+      image.write_stream(ss);
+      return std::make_shared<render_msg>(job_msg->client, ss.str());
+    };
+    system->spawn_transformer<job_message>("renderer " + std::to_string(i), foo, jobs, frames);
+  }
 
   system->spawn_consumer<render_msg>(
-      "** client **",
-      [&](std::shared_ptr<render_msg> job_msg) {
-        pipeline->server->execute(std::bind(xyz, job_msg));
-      },
-      frames);
+    "** client **",
+    [this](std::shared_ptr<render_msg> job_msg) {
+      server->execute(std::bind([&](std::shared_ptr<render_msg> job_msg) {
+        chat_handler->callback(job_msg->client, job_msg->buffer);
+      }, job_msg));
+    },
+    frames);
 
   auto root = std::make_shared<RootPageHandler>();
   root->add(std::make_shared<seasocks::PathHandler>("data", std::make_shared<DataHandler>()));
   server->addPageHandler(root);
   server->addWebSocketHandler("/chat", chat_handler);
-
-  system->start(false);  // non blocking
+  system->start(false);
   server->serve("webroot", 18080);
   system->explicit_join();
 }

@@ -145,8 +145,8 @@ void starcry::configure_streaming() {
   }
 }
 
-void starcry::configure_interactive() {
-  starcry_pipeline isc;
+void starcry::configure_interactive(size_t num_local_engines) {
+  starcry_pipeline isc(num_local_engines);
 }
 
 void starcry::reset() {
