@@ -145,8 +145,8 @@ void starcry::configure_streaming() {
   }
 }
 
-void starcry::configure_interactive(size_t num_local_engines) {
-  starcry_pipeline isc(num_local_engines);
+void starcry::configure_interactive(size_t num_local_engines, bool enable_remote_workers, bool visualization_enabled) {
+  starcry_pipeline isc(num_local_engines, enable_remote_workers, visualization_enabled, true);
 }
 
 void starcry::reset() {

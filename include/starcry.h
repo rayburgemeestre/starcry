@@ -34,7 +34,7 @@ public:
   render_frame_result render_frame(size_t frame_of_interest);
   double render_video(render_video_mode mode = render_video_mode::video_only);
   void run_benchmarks();
-  void configure_interactive(size_t num_local_engines);
+  void configure_interactive(size_t num_local_engines, bool enable_remote_workers, bool visualization_enabled);
   void configure_streaming();
   void reset();
 

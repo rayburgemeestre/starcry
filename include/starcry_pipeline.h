@@ -33,6 +33,7 @@ class bitmap_wrapper;
 class generator;
 class rendering_engine_wrapper;
 class ALLEGRO_BITMAP;
+class render_server;
 
 namespace data {
 class job;
@@ -43,8 +44,12 @@ public:
   seasocks::WebSocket *client;
   instruction_type type;
   size_t frame;
-  instruction(seasocks::WebSocket *client, instruction_type type, size_t frame)
-      : client(client), type(type), frame(frame) {}
+  std::string script;
+  std::string output_file;
+  instruction(seasocks::WebSocket *client, instruction_type type, std::string script, size_t frame)
+      : client(client), type(type), frame(frame), script(script), output_file("") {}
+  instruction(seasocks::WebSocket *client, instruction_type type, std::string script, std::string output_file)
+      : client(client), type(type), frame(0), script(std::move(script)), output_file(std::move(output_file)) {}
 };
 
 class job_message : public message_type {
@@ -58,7 +63,13 @@ class render_msg : public message_type {
 public:
   seasocks::WebSocket *client;
   std::string buffer;
-  render_msg(seasocks::WebSocket *client, std::string buf) : client(client), buffer(std::move(buf)) {}
+  std::vector<uint32_t> pixels;
+  uint32_t width;
+  uint32_t height;
+  render_msg(seasocks::WebSocket *client, uint32_t width, uint32_t height, std::string buf)
+      : client(client), buffer(std::move(buf)), width(width), height(height) {}
+  render_msg(seasocks::WebSocket *client, uint32_t width, uint32_t height, std::vector<uint32_t> pixels)
+      : client(client), pixels(std::move(pixels)), width(width), height(height) {}
 };
 
 class starcry_pipeline {
@@ -72,11 +83,18 @@ private:
   std::shared_ptr<queue> cmds;
   std::shared_ptr<queue> jobs;
   std::shared_ptr<queue> frames;
+  std::shared_ptr<render_server> render_server;
 
 public:
-  starcry_pipeline(size_t num_local_engines);
+  starcry_pipeline(
+      size_t num_local_engines,
+      bool enable_remote_workers,
+      bool visualization_enabled,
+      bool is_interactive,
+      std::function<void(starcry_pipeline &sc)> on_pipeline_initialized = [](auto &) {});
 
-  void add_command(seasocks::WebSocket *client, int frame_num);
+  void add_command(seasocks::WebSocket *client, const std::string &script, int frame_num);
+  void add_command(seasocks::WebSocket *client, const std::string &script, const std::string &output_file);
 
 private:
   void render_job(rendering_engine_wrapper &engine, const data::job &job, ALLEGRO_BITMAP *bmp);

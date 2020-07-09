@@ -96,190 +96,79 @@ void del_from_pfds(struct pollfd pfds[], int i, int *fd_count) {
 }
 
 render_server::render_server() {
-  type = server_type::poll_based;
+  pfds = (struct pollfd *)malloc(sizeof *pfds * fd_size);
 
-  if (type == server_type::poll_based) {
-    pfds = (struct pollfd *)malloc(sizeof *pfds * fd_size);
+  // Set up and get a listening socket
+  listener = get_listener_socket();
 
-    // Set up and get a listening socket
-    listener = get_listener_socket();
-
-    if (listener == -1) {
-      fprintf(stderr, "error getting listening socket\n");
-      exit(1);
-    }
-
-    // Add the listener to set
-    pfds[0].fd = listener;
-    pfds[0].events = POLLIN;  // Report ready to read on incoming connection
-
-    fd_count = 1;  // For the listener
+  if (listener == -1) {
+    fprintf(stderr, "error getting listening socket\n");
+    exit(1);
   }
-  if (type == server_type::select_based) {
-    FD_ZERO(&master);  // clear the master and temp sets
-    FD_ZERO(&read_fds);
 
-    // get us a socket and bind it
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-    if ((rv = getaddrinfo(NULL, PORT, &hints, &ai)) != 0) {
-      fprintf(stderr, "selectserver: %s\n", gai_strerror(rv));
-      exit(1);
-    }
+  // Add the listener to set
+  pfds[0].fd = listener;
+  pfds[0].events = POLLIN;  // Report ready to read on incoming connection
 
-    for (p = ai; p != NULL; p = p->ai_next) {
-      listener = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-      if (listener < 0) {
-        continue;
-      }
-
-      // lose the pesky "address already in use" error message
-      setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-
-      if (bind(listener, p->ai_addr, p->ai_addrlen) < 0) {
-        close(listener);
-        continue;
-      }
-
-      break;
-    }
-
-    // if we got here, it means we didn't get bound
-    if (p == NULL) {
-      fprintf(stderr, "selectserver: failed to bind\n");
-      exit(2);
-    }
-
-    freeaddrinfo(ai);  // all done with this
-
-    // listen
-    if (listen(listener, 10) == -1) {
-      perror("listen");
-      exit(3);
-    }
-
-    // add the listener to the master set
-    FD_SET(listener, &master);
-
-    // keep track of the biggest file descriptor
-    fdmax = listener;  // so far, it's this one
-  }
+  fd_count = 1;  // For the listener
 }
 
 void render_server::run(std::function<void(int fd, int type, size_t len, const std::string &msg)> fn) {
   msg_callback = fn;
-  if (type == server_type::poll_based) {
-    while (true) {
-      int poll_count = poll(pfds, fd_count, -1);
+  while (true) {
+    int poll_count = poll(pfds, fd_count, -1);
 
-      if (poll_count == -1) {
-        perror("poll");
-        exit(1);
-      }
-
-      // Run through the existing connections looking for data to read
-      for (int i = 0; i < fd_count; i++) {
-        // Check if someone's ready to read
-        if (pfds[i].revents & POLLIN) {  // We got one!!
-
-          if (pfds[i].fd == listener) {
-            // If listener is ready to read, handle new connection
-
-            addrlen = sizeof remoteaddr;
-            newfd = accept(listener, (struct sockaddr *)&remoteaddr, &addrlen);
-
-            if (newfd == -1) {
-              perror("accept");
-            } else {
-              add_to_pfds(&pfds, newfd, &fd_count, &fd_size);
-
-              printf(
-                  "pollserver: new connection from %s on "
-                  "socket %d\n",
-                  inet_ntop(
-                      remoteaddr.ss_family, get_in_addr((struct sockaddr *)&remoteaddr), remoteIP, INET6_ADDRSTRLEN),
-                  newfd);
-            }
-          } else {
-            // If not the listener, we're just a regular client
-            int nbytes = recv(pfds[i].fd, buf, sizeof buf, 0);
-
-            int sender_fd = pfds[i].fd;
-
-            if (nbytes <= 0) {
-              // Got error or connection closed by client
-              if (nbytes == 0) {
-                // Connection closed
-                printf("pollserver: socket %d hung up\n", sender_fd);
-              } else {
-                perror("recv");
-              }
-
-              close(pfds[i].fd);  // Bye!
-
-              del_from_pfds(pfds, i, &fd_count);
-
-            } else {
-              // We got some good data from a client
-              buffers[sender_fd].append(buf, nbytes);
-              process(sender_fd);
-            }
-          }
-        }
-      }
+    if (poll_count == -1) {
+      perror("poll");
+      exit(1);
     }
-  }
-  if (type == server_type::select_based) {
-    while (true) {
-      read_fds = master;  // copy it
-      if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
-        perror("select");
-        exit(4);
-      }
 
-      // run through the existing connections looking for data to read
-      for (i = 0; i <= fdmax; i++) {
-        if (FD_ISSET(i, &read_fds)) {  // we got one!!
-          if (i == listener) {
-            // handle new connections
-            addrlen = sizeof remoteaddr;
-            newfd = accept(listener, (struct sockaddr *)&remoteaddr, &addrlen);
+    // Run through the existing connections looking for data to read
+    for (int i = 0; i < fd_count; i++) {
+      // Check if someone's ready to read
+      if (pfds[i].revents & POLLIN) {  // We got one!!
 
-            if (newfd == -1) {
-              perror("accept");
-            } else {
-              FD_SET(newfd, &master);  // add to master set
-              if (newfd > fdmax) {     // keep track of the max
-                fdmax = newfd;
-              }
-              printf(
-                  "selectserver: new connection from %s on "
-                  "socket %d\n",
-                  inet_ntop(
-                      remoteaddr.ss_family, get_in_addr((struct sockaddr *)&remoteaddr), remoteIP, INET6_ADDRSTRLEN),
-                  newfd);
-            }
+        if (pfds[i].fd == listener) {
+          // If listener is ready to read, handle new connection
+
+          addrlen = sizeof remoteaddr;
+          newfd = accept(listener, (struct sockaddr *)&remoteaddr, &addrlen);
+
+          if (newfd == -1) {
+            perror("accept");
           } else {
-            // handle data from a client
-            if ((nbytes = recv(i, buf, sizeof buf, 0)) <= 0) {
-              // got error or connection closed by client
-              if (nbytes == 0) {
-                // connection closed
-                printf("selectserver: socket %d hung up\n", i);
-              } else {
-                perror("recv");
-              }
-              close(i);            // bye!
-              FD_CLR(i, &master);  // remove from master set
+            add_to_pfds(&pfds, newfd, &fd_count, &fd_size);
+
+            printf(
+                "pollserver: new connection from %s on "
+                "socket %d\n",
+                inet_ntop(
+                    remoteaddr.ss_family, get_in_addr((struct sockaddr *)&remoteaddr), remoteIP, INET6_ADDRSTRLEN),
+                newfd);
+          }
+        } else {
+          // If not the listener, we're just a regular client
+          int nbytes = recv(pfds[i].fd, buf, sizeof buf, 0);
+
+          int sender_fd = pfds[i].fd;
+
+          if (nbytes <= 0) {
+            // Got error or connection closed by client
+            if (nbytes == 0) {
+              // Connection closed
+              printf("pollserver: socket %d hung up\n", sender_fd);
             } else {
-              // we got some data from a client
-
-              buffers[i].append(buf, nbytes);
-
-              process(i);
+              perror("recv");
             }
+
+            close(pfds[i].fd);  // Bye!
+
+            del_from_pfds(pfds, i, &fd_count);
+
+          } else {
+            // We got some good data from a client
+            buffers[sender_fd].append(buf, nbytes);
+            process(sender_fd);
           }
         }
       }

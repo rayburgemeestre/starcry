@@ -15,6 +15,7 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include "starcry.h"
+#include "starcry_pipeline.h"
 
 namespace po = ::boost::program_options;
 
@@ -39,12 +40,15 @@ public:
       ("output,o", po::value<std::string>(&output_file), "filename for video output (default output.h264)")
       ("frame,f", po::value<size_t>(&frame_of_interest), "specific frame to render and save as BMP file")
       ("num_threads,t", po::value<size_t>(&num_worker_threads), "number of local render threads (default 1)")
+      ("server,s", "start server to allow dynamic renderers (default no)")
       ("gui", "render to graphical window")
       ("gui-only", "render to graphical window only (no video)")
       ("spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")
       ("stream", "start embedded webserver and stream HLS to webroot")
       ("interactive,i", "start embedded webserver and launch in interactive mode")
-      ("perf", "run performance tests");
+      ("pipeline,p", "non-interactive pipeline mode")
+      ("perf", "run performance tests")
+      ("vis,v", "enable visualization (default no)");
     // clang-format on
 
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
@@ -79,7 +83,7 @@ public:
     // configure interactive mode
     if (vm.count("interactive")) {
       std::cerr << "Control plane here: http://localhost:18080/" << std::endl;
-      sc.configure_interactive(num_worker_threads);
+      sc.configure_interactive(num_worker_threads, vm.count("server"), vm.count("vis"));
       return;
     }
 
@@ -87,6 +91,14 @@ public:
     if (vm.count("stream")) {
       sc.configure_streaming();
       std::cerr << "View stream here: http://localhost:18080/stream.html" << std::endl;
+    }
+
+    // render in pipeline mode (future default)
+    if (vm.count("pipeline")) {
+      starcry_pipeline sp(num_worker_threads, vm.count("server"), vm.count("vis"), false, [&](auto &sc) {
+        sc.add_command(nullptr, script, output_file);
+      });
+      return;
     }
 
     // render video

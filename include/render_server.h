@@ -27,8 +27,6 @@
 
 class render_server {
 private:
-  enum class server_type { poll_based, select_based } type;
-
   // common
   struct pollfd *pfds = nullptr;
   int listener;                        // Listening socket descriptor
