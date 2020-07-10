@@ -93,23 +93,26 @@ public:
       std::cerr << "View stream here: http://localhost:18080/stream.html" << std::endl;
     }
 
+    auto mode = ([&]() {
+      if (vm.count("gui"))
+        return starcry::render_video_mode::video_with_gui;
+      else if (vm.count("gui-only"))
+        return starcry::render_video_mode::gui_only;
+      else
+        return starcry::render_video_mode::video_only;
+    })();
+
     // render in pipeline mode (future default)
     if (vm.count("pipeline")) {
-      starcry_pipeline sp(num_worker_threads, vm.count("server"), vm.count("vis"), false, [&](auto &sc) {
+      auto create_video = [&](auto &sc) {
         sc.add_command(nullptr, script, output_file);
-      });
+      };
+      starcry_pipeline sp(num_worker_threads, vm.count("server"), vm.count("vis"), false, mode, create_video);
       return;
     }
 
     // render video
-    auto fps = ([&]() {
-      if (vm.count("gui"))
-        return sc.render_video(starcry::render_video_mode::video_with_gui);
-      else if (vm.count("gui-only"))
-        return sc.render_video(starcry::render_video_mode::gui_only);
-      else
-        return sc.render_video(starcry::render_video_mode::video_only);
-    })();
+    auto fps = sc.render_video(mode);
     std::cout << "Rendering done, average FPS: " << fps << std::endl;
   }
 };

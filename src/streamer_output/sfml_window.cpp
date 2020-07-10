@@ -17,11 +17,11 @@ sfml_window::sfml_window()
 
   window.setActive(false);
 
-  // font.loadFromFile("monaco.ttf");
-  // text.setFont(font); // font is a sf::Font
-  // text.setCharacterSize(24); // in pixels, not points!
-  // text.setFillColor(sf::Color::Red);
-  // text.setStyle(sf::Text::Bold | sf::Text::Underlined);
+  //  font.loadFromFile("monaco.ttf");
+  //  text.setFont(font); // font is a sf::Font
+  //  text.setCharacterSize(24); // in pixels, not points!
+  //  text.setFillColor(sf::Color::Red);
+  //  text.setStyle(sf::Text::Bold | sf::Text::Underlined);
 
   sf::Clock clock, total_clock;
   sf::Time elapsed = clock.restart();

@@ -52,6 +52,7 @@ starcry_pipeline::starcry_pipeline(size_t num_local_engines,
                                    bool enable_remote_workers,
                                    bool visualization_enabled,
                                    bool is_interactive,
+                                   starcry::render_video_mode mode,
                                    std::function<void(starcry_pipeline &sc)> on_pipeline_initialized)
     : server(std::make_shared<Server>(std::make_shared<PrintfLogger>(PrintfLogger::Level::Info))),
       chat_handler(std::make_shared<Handler>(this)),
@@ -61,7 +62,12 @@ starcry_pipeline::starcry_pipeline(size_t num_local_engines,
       system(std::make_shared<pipeline_system>(visualization_enabled)),
       cmds(system->create_queue("commands", 10)),
       jobs(system->create_queue("jobs", 10)),
-      frames(system->create_queue("frames", 10)) {
+      frames(system->create_queue("frames", 10)),
+      mode(mode) {
+  std::shared_ptr<sfml_window> gui = nullptr;
+  if (mode == starcry::render_video_mode::video_with_gui || mode == starcry::render_video_mode::gui_only)
+    gui = std::make_unique<sfml_window>();
+
   std::shared_ptr<frame_streamer> framer = nullptr;
   system->spawn_consumer<instruction>(
       [&](auto cmd_def) {
@@ -82,7 +88,8 @@ starcry_pipeline::starcry_pipeline(size_t num_local_engines,
           jobs->push(std::make_shared<job_message>(cmd_def->client, the_job));
           jobs->sleep_until_not_full();
         } else if (cmd_def->type == instruction_type::get_video) {
-          if (!framer)
+          if (!framer &&
+              (mode == starcry::render_video_mode::video_only || mode == starcry::render_video_mode::video_with_gui))
             framer = std::make_unique<frame_streamer>(cmd_def->output_file, frame_streamer::stream_mode::FILE);
           gen = std::make_shared<generator>(
               [&](size_t bitrate, int width, int height, int fps) {
@@ -139,9 +146,6 @@ starcry_pipeline::starcry_pipeline(size_t num_local_engines,
     };
     system->spawn_transformer<job_message>("renderer " + std::to_string(i), foo, jobs, frames);
   }
-
-  std::shared_ptr<sfml_window> gui = nullptr;
-  // gui = std::make_unique<sfml_window>();
 
   system->spawn_consumer<render_msg>(
       "** client **",

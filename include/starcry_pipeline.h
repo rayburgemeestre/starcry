@@ -12,6 +12,8 @@
 
 #include "piper.h"
 
+#include "starcry.h"  // for render mode
+
 #include "seasocks/PrintfLogger.h"
 #include "seasocks/Response.h"
 #include "seasocks/Server.h"
@@ -84,6 +86,7 @@ private:
   std::shared_ptr<queue> jobs;
   std::shared_ptr<queue> frames;
   std::shared_ptr<render_server> render_server;
+  starcry::render_video_mode mode;
 
 public:
   starcry_pipeline(
@@ -91,6 +94,7 @@ public:
       bool enable_remote_workers,
       bool visualization_enabled,
       bool is_interactive,
+      starcry::render_video_mode mode,
       std::function<void(starcry_pipeline &sc)> on_pipeline_initialized = [](auto &) {});
 
   void add_command(seasocks::WebSocket *client, const std::string &script, int frame_num);
