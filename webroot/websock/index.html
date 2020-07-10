@@ -5,7 +5,6 @@
     <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
     <script src="/scripts/zepto.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue-slider-component@latest/dist/vue-slider-component.umd.min.js"></script>
-    <script src="app.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vue-slider-component@latest/theme/default.css">
     <style>
         html { background-color: #333333; padding: 50px; }
@@ -17,12 +16,14 @@
 <div id="app">
     <vue-slider ref="slider" v-model="value" v-bind="options"></vue-slider>
     <h1>{{ value }}</h1>
+    <h2>{{ websock_status }}</h2>
+    <img id="test" />
 </div>
 
-<img id="test" />
 
 <script>
-    new Vue( {
+    let ws;
+    let app = new Vue( {
         el: '#app',
         data () {
             return {
@@ -64,7 +65,8 @@
                     stepActiveStyle: void 0,
                     labelStyle: void 0,
                     labelActiveStyle: void 0,
-                }
+                },
+                websock_status: 'connecting'
             }
         },
         methods: {
@@ -80,6 +82,28 @@
             'vueSlider': window[ 'vue-slider-component' ],
         }
     })
+
+    function connect() {
+        let protocol = document.location.protocol.replace('http', 'ws');
+        ws = new WebSocket(protocol + '//' + document.location.host + '/chat', ['string', 'foo']);
+        ws.onopen = function () {
+            app.$data.websock_status = 'connected';
+        };
+        ws.onclose = function () {
+            app.$data.websock_status = 'disconnected';
+            setTimeout(connect, 1000);
+        };
+        ws.onmessage = function (message) {
+            var urlCreator = window.URL || window.webkitURL;
+            var blob = new Blob([message.data], {name: 'test.png', type: 'image/png'});
+            var imageUrl = urlCreator.createObjectURL(blob);
+            document.querySelector("img").src = imageUrl;
+        };
+        ws.onerror = function (error) {
+            console.log("ERROR: " + error);
+        };
+    }
+    connect();
 </script>
 
 </body>
