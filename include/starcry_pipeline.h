@@ -31,6 +31,7 @@ enum class instruction_type {
   get_video,
 };
 
+class sfml_window;
 class bitmap_wrapper;
 class generator;
 class rendering_engine_wrapper;
@@ -85,7 +86,9 @@ private:
   std::shared_ptr<queue> cmds;
   std::shared_ptr<queue> jobs;
   std::shared_ptr<queue> frames;
-  std::shared_ptr<render_server> render_server;
+  std::shared_ptr<render_server> renderserver;
+  std::shared_ptr<sfml_window> gui = nullptr;
+  std::shared_ptr<frame_streamer> framer = nullptr;
   starcry::render_video_mode mode;
 
 public:
@@ -106,4 +109,5 @@ private:
                    uint32_t width,
                    uint32_t height,
                    png::image<png::rgb_pixel> &dest);
+  void command_to_jobs(std::shared_ptr<instruction> cmd_def);
 };

@@ -10,6 +10,7 @@
 #include <map>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <arpa/inet.h>
@@ -25,6 +26,8 @@
 #include "data/job.hpp"
 #include "util/socketbuffer.h"
 
+class queue;
+
 class render_server {
 private:
   // common
@@ -38,7 +41,7 @@ private:
 
   std::map<int, socketbuffer> buffers;
   std::mutex buffers_mut;
-  std::function<void(int fd, int type, size_t len, const std::string &msg)> msg_callback;
+  std::function<bool(int fd, int type, size_t len, const std::string &msg)> msg_callback;
   std::map<int, socketbuffer> send_buffers;
 
   // poll based stuff
@@ -56,16 +59,19 @@ private:
   int i, rv;
   struct addrinfo hints, *ai, *p;
 
+  std::shared_ptr<queue> source;
+  std::shared_ptr<queue> dest;
+  std::thread runner;
+
 public:
-  render_server();
+  render_server(std::shared_ptr<queue> source, std::shared_ptr<queue> dest);
+  ~render_server();
 
-  void run(std::function<void(int fd, int type, size_t len, const std::string &msg)> fn);
+  void run(std::function<bool(int fd, int type, size_t len, const std::string &msg)> fn);
 
-  void process(int fd);
+  bool process(int fd);
 
   void poll_and_send();
-
-  ~render_server();
 
   int send_msg(int fd, int type, const char *data, int len_data);
 

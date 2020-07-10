@@ -40,7 +40,8 @@ public:
       ("output,o", po::value<std::string>(&output_file), "filename for video output (default output.h264)")
       ("frame,f", po::value<size_t>(&frame_of_interest), "specific frame to render and save as BMP file")
       ("num_threads,t", po::value<size_t>(&num_worker_threads), "number of local render threads (default 1)")
-      ("server,s", "start server to allow dynamic renderers (default no)")
+      ("server", "start server to allow dynamic renderers (default no)")
+      ("client", "start client renderer, connects to hardcoded address")
       ("gui", "render to graphical window")
       ("gui-only", "render to graphical window only (no video)")
       ("spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")
@@ -91,6 +92,12 @@ public:
     if (vm.count("stream")) {
       sc.configure_streaming();
       std::cerr << "View stream here: http://localhost:18080/stream.html" << std::endl;
+    }
+
+    // client renderer
+    if (vm.count("client")) {
+      sc.run_client();
+      return;
     }
 
     auto mode = ([&]() {

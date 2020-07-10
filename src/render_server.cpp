@@ -95,7 +95,7 @@ void del_from_pfds(struct pollfd pfds[], int i, int *fd_count) {
   (*fd_count)--;
 }
 
-render_server::render_server() {
+render_server::render_server(std::shared_ptr<queue> source, std::shared_ptr<queue> dest) : source(source), dest(dest) {
   pfds = (struct pollfd *)malloc(sizeof *pfds * fd_size);
 
   // Set up and get a listening socket
@@ -113,70 +113,78 @@ render_server::render_server() {
   fd_count = 1;  // For the listener
 }
 
-void render_server::run(std::function<void(int fd, int type, size_t len, const std::string &msg)> fn) {
+render_server::~render_server() {
+  runner.join();
+}
+
+void render_server::run(std::function<bool(int fd, int type, size_t len, const std::string &msg)> fn) {
   msg_callback = fn;
-  while (true) {
-    int poll_count = poll(pfds, fd_count, -1);
+  runner = std::thread([&]() {
+    while (true) {
+      int poll_count = poll(pfds, fd_count, -1);
 
-    if (poll_count == -1) {
-      perror("poll");
-      exit(1);
-    }
+      if (poll_count == -1) {
+        perror("poll");
+        exit(1);
+      }
 
-    // Run through the existing connections looking for data to read
-    for (int i = 0; i < fd_count; i++) {
-      // Check if someone's ready to read
-      if (pfds[i].revents & POLLIN) {  // We got one!!
+      // Run through the existing connections looking for data to read
+      for (int i = 0; i < fd_count; i++) {
+        // Check if someone's ready to read
+        if (pfds[i].revents & POLLIN) {  // We got one!!
 
-        if (pfds[i].fd == listener) {
-          // If listener is ready to read, handle new connection
+          if (pfds[i].fd == listener) {
+            // If listener is ready to read, handle new connection
 
-          addrlen = sizeof remoteaddr;
-          newfd = accept(listener, (struct sockaddr *)&remoteaddr, &addrlen);
+            addrlen = sizeof remoteaddr;
+            newfd = accept(listener, (struct sockaddr *)&remoteaddr, &addrlen);
 
-          if (newfd == -1) {
-            perror("accept");
-          } else {
-            add_to_pfds(&pfds, newfd, &fd_count, &fd_size);
-
-            printf(
-                "pollserver: new connection from %s on "
-                "socket %d\n",
-                inet_ntop(
-                    remoteaddr.ss_family, get_in_addr((struct sockaddr *)&remoteaddr), remoteIP, INET6_ADDRSTRLEN),
-                newfd);
-          }
-        } else {
-          // If not the listener, we're just a regular client
-          int nbytes = recv(pfds[i].fd, buf, sizeof buf, 0);
-
-          int sender_fd = pfds[i].fd;
-
-          if (nbytes <= 0) {
-            // Got error or connection closed by client
-            if (nbytes == 0) {
-              // Connection closed
-              printf("pollserver: socket %d hung up\n", sender_fd);
+            if (newfd == -1) {
+              perror("accept");
             } else {
-              perror("recv");
+              add_to_pfds(&pfds, newfd, &fd_count, &fd_size);
+
+              printf(
+                  "pollserver: new connection from %s on "
+                  "socket %d\n",
+                  inet_ntop(
+                      remoteaddr.ss_family, get_in_addr((struct sockaddr *)&remoteaddr), remoteIP, INET6_ADDRSTRLEN),
+                  newfd);
             }
-
-            close(pfds[i].fd);  // Bye!
-
-            del_from_pfds(pfds, i, &fd_count);
-
           } else {
-            // We got some good data from a client
-            buffers[sender_fd].append(buf, nbytes);
-            process(sender_fd);
+            // If not the listener, we're just a regular client
+            int nbytes = recv(pfds[i].fd, buf, sizeof buf, 0);
+
+            int sender_fd = pfds[i].fd;
+
+            if (nbytes <= 0) {
+              // Got error or connection closed by client
+              if (nbytes == 0) {
+                // Connection closed
+                printf("pollserver: socket %d hung up\n", sender_fd);
+              } else {
+                perror("recv");
+              }
+
+              close(pfds[i].fd);  // Bye!
+
+              del_from_pfds(pfds, i, &fd_count);
+
+            } else {
+              // We got some good data from a client
+              buffers[sender_fd].append(buf, nbytes);
+              if (!process(sender_fd)) {
+                return;  // we're done
+              }
+            }
           }
         }
       }
     }
-  }
+  });
 }
 
-void render_server::process(int fd) {
+bool render_server::process(int fd) {
   while (true) {
     const std::string &buf = buffers[fd].get();
     const char *raw = buf.c_str();
@@ -187,7 +195,10 @@ void render_server::process(int fd) {
       int type = *tmp;
       int len = *(tmp + 1);
       if (len + (sizeof(int) * 2) <= buf_len) {
-        msg_callback(fd, type, size_t(len), buf.substr(sizeof(int) * 2, len));
+        if (!msg_callback(fd, type, size_t(len), buf.substr(sizeof(int) * 2, len))) {
+          // terminate
+          return false;
+        }
         buffers[fd].erase_front((sizeof(int) * 2) + len);
       } else {
         break;
@@ -196,9 +207,27 @@ void render_server::process(int fd) {
       break;
     }
   }
-}
 
-render_server::~render_server() {}
+  const std::lock_guard<std::mutex> lock(buffers_mut);
+  bool stop = false;
+  while (!stop) {
+    for (auto &pair : send_buffers) {
+      const auto fd = pair.first;
+      auto &buffer = pair.second;
+
+      if (buffer.length() > 0) {
+        int n = send(fd, buffer.get().c_str(), buffer.length(), 0);
+        if (n == -1) {
+          throw std::runtime_error("send failure, todo: fix");
+        }
+        buffer.erase_front(n);
+      } else {
+        stop = true;
+      }
+    }
+  }
+  return true;
+}
 
 int render_server::send_msg(int fd, int type, const char *data, int len_data) {
   auto mbs = double(len_data) / double(1024 * 1024 * 1024);

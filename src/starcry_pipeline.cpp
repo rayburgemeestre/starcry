@@ -13,7 +13,9 @@
 #include <cstring>
 #include <sstream>
 
+#include "cereal/archives/binary.hpp"
 #include "framer.hpp"
+#include "render_server.h"
 #include "streamer_output/sfml_window.h"
 
 using namespace seasocks;
@@ -64,72 +66,64 @@ starcry_pipeline::starcry_pipeline(size_t num_local_engines,
       jobs(system->create_queue("jobs", 10)),
       frames(system->create_queue("frames", 10)),
       mode(mode) {
-  std::shared_ptr<sfml_window> gui = nullptr;
   if (mode == starcry::render_video_mode::video_with_gui || mode == starcry::render_video_mode::gui_only)
     gui = std::make_unique<sfml_window>();
 
-  std::shared_ptr<frame_streamer> framer = nullptr;
-  system->spawn_consumer<instruction>(
-      [&](auto cmd_def) {
-        std::shared_ptr<data::job> the_job;
-        if (cmd_def->type == instruction_type::get_image) {
-          gen = std::make_shared<generator>([](size_t, int, int, int) {},
-                                            [&](const data::job &job) {
-                                              if (cmd_def->frame != job.frame_number) {
-                                                return true;  // fast forward
-                                              }
-                                              // copy the job here
-                                              the_job = std::make_shared<data::job>(job);
-                                              return false;
-                                            });
-          gen->init(cmd_def->script);
-          while (gen->generate_frame()) {
-          }
-          jobs->push(std::make_shared<job_message>(cmd_def->client, the_job));
-          jobs->sleep_until_not_full();
-        } else if (cmd_def->type == instruction_type::get_video) {
-          if (!framer &&
-              (mode == starcry::render_video_mode::video_only || mode == starcry::render_video_mode::video_with_gui))
-            framer = std::make_unique<frame_streamer>(cmd_def->output_file, frame_streamer::stream_mode::FILE);
-          gen = std::make_shared<generator>(
-              [&](size_t bitrate, int width, int height, int fps) {
-                if (framer) framer->initialize(bitrate, width, height, fps /*use_fps ? *use_fps : fps*/);
-              },
-              [&](const data::job &job) {
-                the_job = std::make_shared<data::job>(job);
-                return true;
-              });
-          gen->init(cmd_def->script);
-          while (true) {
-            auto ret = gen->generate_frame();
-            jobs->push(std::make_shared<job_message>(cmd_def->client, the_job));
-            jobs->sleep_until_not_full();
-            if (!ret) break;
-          }
-          // bring the house down
-          cmds->check_terminate();
-          jobs->check_terminate();
-        }
-      },
-      cmds);
+  system->spawn_consumer<instruction>(std::bind(&starcry_pipeline::command_to_jobs, this, std::placeholders::_1), cmds);
 
-  //  if (enable_remote_workers) {
-  //    server = std::make_unique<render_server>();
-  //    system->spawn_transformer<job_message>(
-  //        "render server",
-  //        [this](auto job_msg) -> auto {
-  //          .... TODO ...
-  //          return std::make_shared<render_msg>(job_msg->client, "");
-  //        },
-  //        jobs,
-  //        frames);
-  //  }
+  if (enable_remote_workers) {
+    int64_t num_queue_per_worker = 2;
+    renderserver = std::make_shared<render_server>(jobs, frames);
+    renderserver->run([&](int sockfd, int type, size_t len, const std::string &data) -> bool {
+      switch (type) {
+        case 10:  // register_me
+        {
+          renderserver->send_msg(sockfd, type + 1, (const char *)&num_queue_per_worker, sizeof(num_queue_per_worker));
+          break;
+        }
+        case 20:  // pull_job
+        {
+          while (true) {
+            if (!jobs->has_items(0)) {
+              jobs->sleep_until_items_available(0);
+              if (!jobs->active) {
+                frames->check_terminate();
+                return false;  // shutdown server
+              }
+            }
+            auto job = std::dynamic_pointer_cast<job_message>(jobs->pop(0));
+            if (job) {  // can be nullptr if someone else took it faster than us
+              std::ostringstream os;
+              cereal::BinaryOutputArchive archive(os);
+              archive(*(job->job));
+              renderserver->send_msg(sockfd, type + 1, os.str().c_str(), os.str().size());
+              break;
+            }
+          }
+          break;
+        }
+        case 30: {
+          std::istringstream is(data);
+          cereal::BinaryInputArchive archive(is);
+          data::job job;
+          data::pixel_data2 dat;
+          bool is_remote;
+          archive(job);
+          archive(dat);
+          archive(is_remote);
+          auto frame = std::make_shared<render_msg>(nullptr, job.width, job.height, dat.pixels);
+          frames->push(frame);
+        }
+      }
+      return true;
+    });
+  }
 
   for (size_t i = 0; i < num_local_engines; i++) {
     engines[i] = std::make_shared<rendering_engine_wrapper>();
     engines[i]->initialize();
     bitmaps[i] = std::make_shared<bitmap_wrapper>();
-    auto foo = [ i = i, this ](auto job_msg) -> auto {
+    auto fun = [ i = i, this ](auto job_msg) -> auto {
       auto &job = *job_msg->job;
       png::image<png::rgb_pixel> image(job.width, job.height);
       auto bmp = bitmaps[i]->get(job.width, job.height);
@@ -144,12 +138,13 @@ starcry_pipeline::starcry_pipeline(size_t num_local_engines,
         return std::make_shared<render_msg>(job_msg->client, job.width, job.height, ss.str());
       }
     };
-    system->spawn_transformer<job_message>("renderer " + std::to_string(i), foo, jobs, frames);
+    system->spawn_transformer<job_message>(
+        "renderer " + std::to_string(i), fun, jobs, frames, transform_type::same_pool);
   }
 
   system->spawn_consumer<render_msg>(
       "** client **",
-      [this, &gui, &framer](std::shared_ptr<render_msg> job_msg) {
+      [this](std::shared_ptr<render_msg> job_msg) {
         if (job_msg->client == nullptr) {
           if (gui) gui->add_frame(job_msg->width, job_msg->height, job_msg->pixels);
           if (framer) framer->add_frame(job_msg->pixels);
@@ -214,5 +209,46 @@ void starcry_pipeline::copy_to_png(const std::vector<uint32_t> &source,
       dest[y][x] = png::rgb_pixel(*(data + 2), *(data + 1), *(data + 0));
       index++;
     }
+  }
+}
+void starcry_pipeline::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
+  std::shared_ptr<data::job> the_job;
+  if (cmd_def->type == instruction_type::get_image) {
+    gen = std::make_shared<generator>([](size_t, int, int, int) {},
+                                      [&](const data::job &job) {
+                                        if (cmd_def->frame != job.frame_number) {
+                                          return true;  // fast forward
+                                        }
+                                        // copy the job here
+                                        the_job = std::make_shared<data::job>(job);
+                                        return false;
+                                      });
+    gen->init(cmd_def->script);
+    while (gen->generate_frame()) {
+    }
+    jobs->push(std::make_shared<job_message>(cmd_def->client, the_job));
+    jobs->sleep_until_not_full();
+  } else if (cmd_def->type == instruction_type::get_video) {
+    if (!framer &&
+        (mode == starcry::render_video_mode::video_only || mode == starcry::render_video_mode::video_with_gui))
+      framer = std::make_unique<frame_streamer>(cmd_def->output_file, frame_streamer::stream_mode::FILE);
+    gen = std::make_shared<generator>(
+        [&](size_t bitrate, int width, int height, int fps) {
+          if (framer) framer->initialize(bitrate, width, height, fps /*use_fps ? *use_fps : fps*/);
+        },
+        [&](const data::job &job) {
+          the_job = std::make_shared<data::job>(job);
+          return true;
+        });
+    gen->init(cmd_def->script);
+    while (true) {
+      auto ret = gen->generate_frame();
+      jobs->push(std::make_shared<job_message>(cmd_def->client, the_job));
+      jobs->sleep_until_not_full();
+      if (!ret) break;
+    }
+    // bring the house down
+    cmds->check_terminate();
+    jobs->check_terminate();
   }
 }

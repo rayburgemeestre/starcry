@@ -8,6 +8,7 @@
 
 #include "cereal/archives/binary.hpp"
 #include "piper.h"
+#include "render_client.h"
 #include "starcry.h"
 #include "starcry_pipeline.h"
 #include "streamer_output/sfml_window.h"
@@ -38,7 +39,6 @@ starcry::render_frame_result starcry::render_frame(size_t frame_of_interest) {
                                           return true;  // fast forward
                                         }
                                         auto bmp = bitmap.get(job.width, job.height);
-
                                         std::ostringstream os;
                                         {
                                           cereal::BinaryOutputArchive archive(os);
@@ -148,6 +148,44 @@ void starcry::configure_streaming() {
 void starcry::configure_interactive(size_t num_local_engines, bool enable_remote_workers, bool visualization_enabled) {
   starcry_pipeline isc(
       num_local_engines, enable_remote_workers, visualization_enabled, true, starcry::render_video_mode::render_only);
+}
+
+void starcry::run_client() {
+  int64_t num_queue_per_worker = 0;
+  render_client client;
+
+  client.set_message_fun([&](int sockfd, int type, size_t len, const std::string &data) {
+    switch (type) {
+      case 11:  // register_me response
+      {
+        if (len == sizeof(num_queue_per_worker)) {
+          memcpy(&num_queue_per_worker, data.c_str(), sizeof(num_queue_per_worker));
+        }
+        client.pull_job(true, 0);
+        break;
+      }
+      case 21:  // pull_job answer
+      {
+        std::istringstream is(data);
+        cereal::BinaryInputArchive archive(is);
+        data::job job;
+        archive(job);
+        auto bmp = bitmap.get(job.width, job.height);
+        render_job(engine, job, bmp);
+
+        data::pixel_data2 dat;
+        dat.pixels = engine.serialize_bitmap2(bmp, job.width, job.height);
+        job.shapes.clear();
+        client.send_frame(job, dat, true);
+        client.pull_job(true, 0);
+        break;
+      }
+    }
+  });
+  client.register_me();
+  while (client.poll()) {
+    std::cout << "client poll.." << std::endl;
+  }
 }
 
 void starcry::reset() {
