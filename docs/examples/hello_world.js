@@ -1,10 +1,10 @@
 // The following settings are mandatory
 const fps           = 25;       // number of frames per second for the resulting video
 const max_frames    = 10 * fps; // total number of frames to render in order to get 10
-                              //   seconds worth of video.
+                                //   seconds worth of video.
 const canvas_w      = 480;      // width
 const canvas_h      = 320;      // height
-const realtime      = true; 
+const realtime      = true;
 
 // The following function is invoked before rendering each frame
 function next() {

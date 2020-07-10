@@ -3,12 +3,18 @@
 Hello world
 ===========
 
-Depending on your intended use case different *Hello world*'s may be applicable. We'll start with the most basic one.
-
 Generating a video
 ------------------
 
-This manual is going to assume starcry is already present on the system.
+This manual is going to assume ``starcry`` is already present on the system.
+
+If you don't want to install it, you can also use ``docker`` by defining the following alias:
+
+::
+
+    alias starcry='docker run -it -v `pwd`:`pwd` -w `pwd` rayburgemeestre/starcry:latest'
+
+The docker image is very light-weight and takes only about +/- 58 MiB of disk space.
 
 Create a new file ``hello_world.js`` and save to it the following content.
 
@@ -19,48 +25,46 @@ From the commandline you can invoke the following command.
 
 ::
 
-    starcry hello_world.js
+    starcry hello_world.js            # generates video to output.h264
+    starcry hello_world.js test.h264  # explicitly specify the output filename
 
 In the current directory this will generate the video file ``output.h264``.
-Use for example ``ffplay`` to view it.
+Use for example ``ffplay`` or ``mpv`` or ``mplayer`` to view it.
 
 ::
 
-    ffplay output.h264
+    mpv output.h264
 
 The result should look like the following animated gif.
 
 .. image:: output.gif
 
-Alternatively you can instead view the rendering in realtime without producing the video.
-However this script will not take long to render.
+Other useful options are:
 
 ::
 
-    starcry hello_world.js --gui --no-video-output
+    starcry hello_world.js --gui       # will also show a preview window
+    starcry hello_world.js --gui-only  # will only show the rendering on the preview window
 
-Using standard input
---------------------
 
-Create a new file ``hello_world2.js`` and save to it the following content.
+Interactive mode
+----------------
 
-.. highlight:: javascript
-.. literalinclude:: examples/hello_world2.js
-
-From the commandline you can invoke the following command.
-
+.. highlight:: bash
 ::
 
-    ping -c 75 8.8.8.8 | starcry hello_world2.js --gui
+    starcry -i     # interactive mode
+    starcry -i -v  # interactive mode + cli visualisation enabled
 
-The result should look like the following animated gif.
+The UI will be viewable at http://localhost:18080/websock/
 
-.. image:: ping.gif
+This UI is a work in progress.
 
-Using RTMP streaming
---------------------
 
-We will use the provided exapmle ``clock.js`` and demonstrate how to use streaming instead of generating a video.
+Using HLS streaming
+-------------------
+
+We will use the provided example ``clock.js`` and demonstrate how to use streaming instead of generating a video.
 
 .. highlight:: javascript
 .. literalinclude:: ../input/clock.js
@@ -72,16 +76,6 @@ From the commandline you can invoke the following command.
 
     starcry --stream clock.js
 
-The ``stream`` parameter is shorthand for the following command.
-
-.. highlight:: bash
-::
-
-    starcry --webserver \
-            --crtmpserver \
-            input/clock.js rtmp://localhost/flvplayback/video
-
-Starcry has an embedded RTMP server that will be used, and the webserver will provide an example HTML page where the stream can be viewed using JWplayer.
-Note that any rtmp server can be specified. Output will look like the following (screenshot).
+The stream will be viewable at http://localhost:18080/stream.html
 
 .. image:: clock_stream.png

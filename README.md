@@ -4,11 +4,39 @@ This is a new version of Starcry which was originally a rendering engine with a 
 It aimed to be the *Photoshop for Video*, albeit vector-based.
 The first version was already quite advanced with features including Motion blur, Textures, Gradients, Polygons, Lines, Circles, Ellipses, Rectangles.
 Gravity effects, all kinds of Motions, Behaviors, Custom Easing (Linear, Exponential, ..), etc., etc.
-The code got a little unmaintainable which led to this rewrite.
+However, the code got a little unmaintainable which led to this rewrite.
 
 ![screenshot](https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/screenshot_v1.png)
 
-One of the videos that could be rendered with this system can be found [here][https://vimeo.com/20206213].
+One of the videos that could be rendered with the old system can be found [here][https://vimeo.com/20206213].
+
+## Quickstart
+
+    # create alias
+    alias starcry='docker run -it -v `pwd`:`pwd` -w `pwd` rayburgemeestre/starcry:latest'  # 58 MiB
+    
+    # get a video definition file
+    wget https://raw.githubusercontent.com/rayburgemeestre/starcry/master/input/test.js
+    
+    # render it
+    starcry test.js
+    
+    # view the video
+    ffplay output.h264
+    
+## Building
+
+    git clone --recursive https://bitbucket.org/rayburgemeestre/starcry
+    cd starcry
+    make        # will do a dockerized build
+    make debug  # same, but debug build
+    
+The executable produced will be in `build` and due to static linking should run on systems such as Ubuntu 18.04.
+
+## Current state
+
+The risk of this project has been a bit of the second-system effect, however now five years of slow development a workable architecture became clear.
+Now a huge refactoring and implementation spree is in progress to make it happen.
 
 ## Project goal
 
@@ -16,16 +44,19 @@ The goal is to make scripting more first-class with reasonable V8 integration.
 Streaming frames to video or online streaming service, as opposed to rendering individual BMP files first.
 Web-based UI with less entanglement with the rest of the system.
 
-The codebase should stay maintainable so a new rewrite won't be needed anytime soon.
+## Design decisions
 
-## Building
+Some design decisions made so far have been:
 
-For now visit http://cppse.nl/docs/developer\_manual.html for manually building.
+* Pipeline architecture
+* V8 as scripting engine
+* Web interface based on VueJS and Vuikit
+* Web server with websockets support using Seasocks.
+* Video generation using ffmpeg
+* Render workers should be plug& play for scaling easily
+* Deploy in Kubernetes
 
-In the near future docker can be used for building without having to worry about all the dependencies.
+## Documentation
 
-<!--
-## Misc - Notes on static compiling
+For now visit http://cppse.nl/docs/.
 
-yum install libicu-devel mesa-libGLU-devel
--->

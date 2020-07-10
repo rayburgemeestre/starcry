@@ -15,29 +15,22 @@ The simplest way to use the program is ``starcry <script> [ <file> ]``.
 +---------------------------------+---------------------------------------------------------------------+
 | ``starcry test.js test.h264``   | Render video using ``test.js`` to location ``test.h264``.           |
 +---------------------------------+---------------------------------------------------------------------+
-| ``starcry test.js --gui``       | Render video and launch UI that shows rendering progress.           |
+| ``starcry test.js --gui``       | Render video and launch preview window that shows rendering.        |
 +---------------------------------+---------------------------------------------------------------------+
-| ``starcry --spawn-gui``         | Launch UI manually this way.                                        |
+| ``starcry test.js --gui-only``  | Render but only show preview window, do not render to video file.   |
++---------------------------------+---------------------------------------------------------------------+
+| ``starcry -i``                  | Launch interactive mode. Point browser to http://localhost:18080    |
++---------------------------------+---------------------------------------------------------------------+
+| ``starcry -p``                  | Launch pipeline mode.                                               |
++---------------------------------+---------------------------------------------------------------------+
+| ``starcry -v``                  | Visualize pipeline performance in console.                          |
 +---------------------------------+---------------------------------------------------------------------+
 | **Fine-tuning**                 |                                                                     |
 +---------------------------------+---------------------------------------------------------------------+
-| ``starcry ... -n 8``            | Render using 8 *local* threads (instead of default of 4).           |
+| ``starcry ... -t 8``            | Render using 8 *local* threads (instead of default of 1).           |
 +---------------------------------+---------------------------------------------------------------------+
-| ``starcry ... -c 4``            | Split frames into 4 chunks (or *job*) (instead of 1 per frame).     |
+| ``starcry ... -c 4``            | Split frames into 4 chunks (instead of 1 per frame).                |
 +---------------------------------+---------------------------------------------------------------------+
-| **Using remote workers**        |                                                                     |
-+---------------------------------+---------------------------------------------------------------------+
-| ``starcry -w 10000``            | Launch a worker on port 10000.                                      |
-+---------------------------------+---------------------------------------------------------------------+
-| ``starcry ... -r servers.txt``  | Render using workers specified in ``servers.txt``.                  |
-+---------------------------------+---------------------------------------------------------------------+
-| ``starcry ... --compress``      | Compress (useful for sending large frame sizes over the network)    |
-+---------------------------------+---------------------------------------------------------------------+
-
-**The GUI (---gui, ---spawn-gui)**
-
-The GUI binds to a any available port and writes this information to ``$HOME/.starcry.conf``.
-Via this configuration file successive starcry instances can re-use the same UI window.
 
 **Setting parameters from within Javascript**
 
