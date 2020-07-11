@@ -19,13 +19,13 @@ class sfml_window;
 class bitmap_wrapper;
 class generator;
 class rendering_engine_wrapper;
-class ALLEGRO_BITMAP;
+struct ALLEGRO_BITMAP;
 class render_server;
 class webserver;
 class frame_streamer;
 
 namespace data {
-class job;
+struct job;
 }
 
 namespace seasocks {

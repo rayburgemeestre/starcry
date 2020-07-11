@@ -20,18 +20,11 @@ private:
   uint32_t canvas_h = 0;
   size_t current_job = 0;
   size_t num_chunks = 0;
-  size_t lines_received = 0;
-  int64_t jobs_queued_for_renderer = 0;
-  int64_t max_jobs_queued_for_renderer = 1;
-  bool has_max_jobs_queued_for_renderer = false;
-  //  std::optional<actor> renderer_ptr;
-  //  std::shared_ptr<MeasureInterval> fps_counter;
   size_t bitrate = 0;
-  bool use_stdin = false;
   size_t use_fps = 25;
   bool realtime = false;
-  std::function<bool(const data::job &)> on_new_job;
   std::function<void(size_t, int, int, int)> on_initialized;
+  std::function<bool(const data::job &)> on_new_job;
   std::optional<size_t> custom_max_frames;
 
 public:

@@ -145,7 +145,6 @@ void render_client::send_frame(const data::job &job, const data::pixel_data2 &da
 }
 
 int render_client::send_msg(int fd, int type, const char *data, int len_data) {
-  auto mbs = double(len_data) / double(1024 * 1024 * 1024);
   // send header
   int msg[] = {type, len_data};
   int len = sizeof(msg);

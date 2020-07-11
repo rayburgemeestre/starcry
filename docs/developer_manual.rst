@@ -10,7 +10,7 @@ Prerequisites
 .. highlight:: bash
 ::
 
-    git clone --recursive https://bitbucket.org/rayburgemeestre/starcry
+    git clone --recursive https://github.com/rayburgemeestre/starcry
     cd starcry
     make        # will do a dockerized build
     make debug  # same, but debug build

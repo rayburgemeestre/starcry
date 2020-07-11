@@ -24,7 +24,6 @@ sfml_window::sfml_window()
   //  text.setStyle(sf::Text::Bold | sf::Text::Underlined);
 
   sf::Clock clock, total_clock;
-  sf::Time elapsed = clock.restart();
 }
 
 void sfml_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels) {

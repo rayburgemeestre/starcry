@@ -46,7 +46,7 @@ generator::~generator() {
 }
 
 void generator::init(const std::string &filename) {
-  use_stdin = false;  // TODO: now hardcoded
+//  bool use_stdin = false;  // TODO: now hardcoded
 
   if (context == nullptr) {
     context = std::make_shared<v8_wrapper>(filename);
@@ -87,7 +87,7 @@ void generator::init(const std::string &filename) {
 
   // read some configuration from V8 context
   bitrate = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");
-  use_stdin = context->run<bool>("typeof stdin != 'undefined' ? stdin : false");
+  // use_stdin = context->run<bool>("typeof stdin != 'undefined' ? stdin : false");
   use_fps = context->run<size_t>("typeof fps != 'undefined' ? fps : 25");
   realtime = context->run<bool>("typeof realtime != 'undefined' ? realtime : false");
   canvas_w = context->run<uint32_t>("typeof canvas_w != 'undefined' ? canvas_w : " + std::to_string(canvas_w));

@@ -230,7 +230,6 @@ bool render_server::process(int fd) {
 }
 
 int render_server::send_msg(int fd, int type, const char *data, int len_data) {
-  auto mbs = double(len_data) / double(1024 * 1024 * 1024);
   const std::lock_guard<std::mutex> lock(buffers_mut);
   // send header
   int msg[] = {type, len_data};

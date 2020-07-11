@@ -20,7 +20,7 @@ class WebSocket;
 }
 
 namespace data {
-class job;
+struct job;
 }
 
 class instruction : public message_type {

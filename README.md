@@ -26,7 +26,7 @@ One of the videos that could be rendered with the old system can be found [here]
     
 ## Building
 
-    git clone --recursive https://bitbucket.org/rayburgemeestre/starcry
+    git clone --recursive https://github.com/rayburgemeestre/starcry
     cd starcry
     make        # will do a dockerized build
     make debug  # same, but debug build

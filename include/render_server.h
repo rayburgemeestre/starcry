@@ -50,15 +50,6 @@ private:
   int fd_count = 0;
   int fd_size = 5;
 
-  // select based
-  fd_set master;    // master file descriptor list
-  fd_set read_fds;  // temp file descriptor list for select()
-  int fdmax;        // maximum file descriptor number
-  int nbytes;
-  int yes = 1;  // for setsockopt() SO_REUSEADDR, below
-  int i, rv;
-  struct addrinfo hints, *ai, *p;
-
   std::shared_ptr<queue> source;
   std::shared_ptr<queue> dest;
   std::thread runner;

@@ -33,7 +33,7 @@ if (SANITIZER)
 endif()
 if (DEBUG)
     # --no-rosegment is important for being able to let valgrind/callgrind read symbols
-    add_definitions("-std=c++17 -O0 -g -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer")
+    add_definitions("-std=c++17 -O0 -g -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall")
 else()
     add_definitions("-std=c++17 -O3 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
 endif()
@@ -51,7 +51,6 @@ include_directories(
     "/opt/cppse/build/sfml/include/"
     "/opt/cppse/build/seasocks/include/"
     "/opt/cppse/build/png++/"
-    "${CMAKE_CURRENT_SOURCE_DIR}/libs/crow/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/cereal/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/include/"
