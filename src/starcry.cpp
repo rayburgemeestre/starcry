@@ -106,7 +106,8 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   } else if (cmd_def->type == instruction_type::get_video) {
     std::optional<int> use_fps;
     if (!framer &&
-        (mode == starcry::render_video_mode::video_only || mode == starcry::render_video_mode::video_with_gui)) {
+        (mode == starcry::render_video_mode::video_only || mode == starcry::render_video_mode::video_with_gui) &&
+        cmd_def->output_file != "/dev/null") {
       auto stream_mode = frame_streamer::stream_mode::FILE;
       auto output_file = cmd_def->output_file;
       if (output_file.substr(output_file.size() - 4, 4) == "m3u8") {
