@@ -54,8 +54,8 @@ function initialize() {
 function next() {
   const d = new Date();
   const m_hour = d.getHours() % 12;
-  const m_min = 26;
-  const m_sec = 40;
+  const m_min = d.getMinutes();
+  const m_sec = d.getSeconds();
   const m_ms = d.getMilliseconds();
   const rad_sec = ((m_sec * 1000) + (m_ms)) / 1000 / 60;
   const rad_min = ((m_min * 60 * 1000) + (m_sec * 1000) + (m_ms)) / (60 * 1000) / 60;

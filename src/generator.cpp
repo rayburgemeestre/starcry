@@ -46,7 +46,7 @@ generator::~generator() {
 }
 
 void generator::init(const std::string &filename) {
-//  bool use_stdin = false;  // TODO: now hardcoded
+  //  bool use_stdin = false;  // TODO: now hardcoded
 
   if (context == nullptr) {
     context = std::make_shared<v8_wrapper>(filename);

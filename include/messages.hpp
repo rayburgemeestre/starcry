@@ -31,9 +31,9 @@ public:
   std::string script;
   std::string output_file;
   instruction(seasocks::WebSocket *client, instruction_type type, std::string script, size_t frame)
-    : client(client), type(type), frame(frame), script(script), output_file("") {}
+      : client(client), type(type), frame(frame), script(script), output_file("") {}
   instruction(seasocks::WebSocket *client, instruction_type type, std::string script, std::string output_file)
-    : client(client), type(type), frame(0), script(std::move(script)), output_file(std::move(output_file)) {}
+      : client(client), type(type), frame(0), script(std::move(script)), output_file(std::move(output_file)) {}
 };
 
 class job_message : public message_type {
@@ -51,8 +51,7 @@ public:
   uint32_t width;
   uint32_t height;
   render_msg(seasocks::WebSocket *client, uint32_t width, uint32_t height, std::string buf)
-    : client(client), buffer(std::move(buf)), width(width), height(height) {}
+      : client(client), buffer(std::move(buf)), width(width), height(height) {}
   render_msg(seasocks::WebSocket *client, uint32_t width, uint32_t height, std::vector<uint32_t> pixels)
-    : client(client), pixels(std::move(pixels)), width(width), height(height) {}
+      : client(client), pixels(std::move(pixels)), width(width), height(height) {}
 };
-

@@ -6,11 +6,11 @@
 
 #include "webserver.h"
 
-#include "starcry_pipeline.h"
+#include "starcry.h"
 
 #include <memory>
 
-Handler::Handler(starcry_pipeline *sc) : sc(sc) {}
+Handler::Handler(starcry *sc) : sc(sc) {}
 
 void Handler::onConnect(seasocks::WebSocket *con) {
   _cons.insert(con);
@@ -35,7 +35,7 @@ std::shared_ptr<seasocks::Response> DataHandler::handle(const seasocks::CrackedU
   return seasocks::Response::jsonResponse("{}");
 }
 
-webserver::webserver(starcry_pipeline *sc)
+webserver::webserver(starcry *sc)
     : server(std::make_shared<seasocks::Server>(
           std::make_shared<seasocks::PrintfLogger>(seasocks::PrintfLogger::Level::Info))),
       chat_handler(std::make_shared<Handler>(sc)) {

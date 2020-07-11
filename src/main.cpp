@@ -4,6 +4,7 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include <experimental/filesystem>
 #include <iostream>
 
 #ifdef __clang__
@@ -15,7 +16,6 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include "starcry.h"
-#include "starcry_pipeline.h"
 
 namespace po = ::boost::program_options;
 
@@ -65,42 +65,31 @@ public:
       std::exit(1);
     }
 
-    starcry sc(script, output_file);
-
-    // render still image
-    if (frame_of_interest != std::numeric_limits<size_t>::max()) {
-      auto res = sc.render_frame(frame_of_interest);
-      std::cout << "Render time: " << res.time << " seconds, definition size: " << res.definition_bytes << " bytes"
-                << std::endl;
-      return;
-    }
-
-    // run some benchmark tests
-    if (vm.count("perf")) {
-      sc.run_benchmarks();
-      return;
-    }
-
-    // configure interactive mode
-    if (vm.count("interactive")) {
-      std::cerr << "Control plane here: http://localhost:18080/" << std::endl;
-      sc.configure_interactive(num_worker_threads, vm.count("server"), vm.count("vis"));
-      return;
-    }
+    bool is_interactive = vm.count("interactive");
+    bool start_webserver = is_interactive == true;
 
     // configure streaming
     if (vm.count("stream")) {
-      sc.configure_streaming();
+      if (output_file == "output.h264") {  // default
+        output_file = "webroot/stream/stream.m3u8";
+        // clean up left-over streaming artifacts
+        namespace fs = std::experimental::filesystem;
+        const fs::path stream_path{"webroot/stream"};
+        for (const auto &entry : fs::directory_iterator(stream_path)) {
+          const auto filename = entry.path().filename().string();
+          // Note to self in the future: non-experimental filesystem can do:
+          //  if (entry.is_regular_file())...
+          if (filename.rfind("stream.m3u8", 0) == 0) {
+            std::cerr << "cleaning up old file: " << filename << std::endl;
+            fs::remove(entry.path());
+          }
+        }
+      }
       std::cerr << "View stream here: http://localhost:18080/stream.html" << std::endl;
+      start_webserver = true;
     }
 
-    // client renderer
-    if (vm.count("client")) {
-      sc.run_client();
-      return;
-    }
-
-    auto mode = ([&]() {
+    auto p_mode = ([&]() {
       if (vm.count("gui"))
         return starcry::render_video_mode::video_with_gui;
       else if (vm.count("gui-only"))
@@ -109,27 +98,32 @@ public:
         return starcry::render_video_mode::video_only;
     })();
 
-    auto p_mode = ([&]() {
-      if (vm.count("gui"))
-        return starcry_pipeline::render_video_mode::video_with_gui;
-      else if (vm.count("gui-only"))
-        return starcry_pipeline::render_video_mode::gui_only;
-      else
-        return starcry_pipeline::render_video_mode::video_only;
-    })();
-
-    // render in pipeline mode (future default)
-    if (vm.count("pipeline")) {
-      auto create_video = [&](auto &sc) {
+    auto render_command = [&](starcry &sc) {
+      if (is_interactive) {
+        // in interactive mode commands come from the web interface
+        return;
+      }
+      if (frame_of_interest != std::numeric_limits<size_t>::max()) {
+        // render still image
+        sc.add_command(nullptr, script, frame_of_interest);
+      } else {
+        // render video
         sc.add_command(nullptr, script, output_file);
-      };
-      starcry_pipeline sp(num_worker_threads, vm.count("server"), vm.count("vis"), false, p_mode, create_video);
-      return;
-    }
+      }
+    };
+    starcry sc(num_worker_threads,
+               vm.count("server"),
+               vm.count("vis"),
+               is_interactive,
+               start_webserver,
+               p_mode,
+               render_command);
 
-    // render video
-    auto fps = sc.render_video(mode);
-    std::cout << "Rendering done, average FPS: " << fps << std::endl;
+    if (vm.count("client")) {
+      sc.run_client();
+    } else {
+      sc.run_server();
+    }
   }
 };
 

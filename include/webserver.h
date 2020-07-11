@@ -16,13 +16,13 @@
 
 #include "messages.hpp"
 
-class starcry_pipeline;
+class starcry;
 
 struct Handler : seasocks::WebSocket::Handler {
-  starcry_pipeline *sc;
+  starcry *sc;
   std::set<seasocks::WebSocket *> _cons;
 
-  explicit Handler(starcry_pipeline *sc);
+  explicit Handler(starcry *sc);
 
   void onConnect(seasocks::WebSocket *con) override;
   void onDisconnect(seasocks::WebSocket *con) override;
@@ -43,7 +43,7 @@ private:
   std::shared_ptr<Handler> chat_handler;
 
 public:
-  explicit webserver(starcry_pipeline *sc);
+  explicit webserver(starcry *sc);
 
   void run();
 

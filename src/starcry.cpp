@@ -4,157 +4,253 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <experimental/filesystem>
-
-#include "cereal/archives/binary.hpp"
-#include "piper.h"
-#include "render_client.h"
 #include "starcry.h"
-#include "starcry_pipeline.h"
+
+#include <cstring>
+#include <sstream>
+
+#include "bitmap_wrapper.hpp"
+#include "cereal/archives/binary.hpp"
+#include "framer.hpp"
+#include "generator.h"
+#include "render_client.h"
+#include "render_server.h"
+#include "rendering_engine_wrapper.h"
 #include "streamer_output/sfml_window.h"
-#include "util/a.hpp"
-#include "util/fps_progress.hpp"
+#include "webserver.h"
 
-starcry::starcry(const std::string &input_script, const std::string &output_file)
-    : gen(nullptr), input_script(input_script), output_file(output_file) {
-  engine.initialize();
-}
+starcry::starcry(size_t num_local_engines,
+                 bool enable_remote_workers,
+                 bool visualization_enabled,
+                 bool is_interactive,
+                 bool start_webserver,
+                 starcry::render_video_mode mode,
+                 std::function<void(starcry &sc)> on_pipeline_initialized)
+    : num_local_engines(num_local_engines),
+      enable_remote_workers(enable_remote_workers),
+      is_interactive(is_interactive),
+      start_webserver(start_webserver),
+      bitmaps({}),
+      gen(nullptr),
+      engines({}),
+      system(std::make_shared<pipeline_system>(visualization_enabled)),
+      cmds(system->create_queue("commands", 10)),
+      jobs(system->create_queue("jobs", 10)),
+      frames(system->create_queue("frames", 10)),
+      mode(mode),
+      on_pipeline_initialized(on_pipeline_initialized) {}
 
-void starcry::set_script(const std::string &script) {
-  input_script = script;
-}
-void starcry::set_output(const std::string &output) {
-  output_file = output;
-}
-void starcry::set_custom_max_frames(size_t max_frames) {
-  custom_max_frames = max_frames;
-}
-
-starcry::render_frame_result starcry::render_frame(size_t frame_of_interest) {
-  starcry::render_frame_result res;
-  if (!gen) {
-    gen = std::make_unique<generator>([&](size_t bitrate, int w, int h, int fps) {},
-                                      [&](const data::job &job) {
-                                        if (frame_of_interest != job.frame_number) {
-                                          return true;  // fast forward
-                                        }
-                                        auto bmp = bitmap.get(job.width, job.height);
-                                        std::ostringstream os;
-                                        {
-                                          cereal::BinaryOutputArchive archive(os);
-                                          archive(job);
-                                        }
-                                        res.definition_bytes = os.str().length();
-                                        render_job(engine, job, bmp);
-                                        if (output_file == "output.h264") {
-                                          engine.write_image(bmp, "output.bmp");
-                                        } else {
-                                          engine.write_image(bmp, output_file);
-                                        }
-                                        return false;  // done
-                                      });
-  }
-  gen->init(input_script);
-  auto before = std::chrono::high_resolution_clock::now();
-  while (gen->generate_frame())
-    ;
-  auto after = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> idle = after - before;
-  res.time = idle.count() / 1000.0;
-  return res;
+void starcry::add_command(seasocks::WebSocket *client, const std::string &script, int frame_num) {
+  cmds->push(std::make_shared<instruction>(client, instruction_type::get_image, script, frame_num));
 }
 
-double starcry::render_video(render_video_mode mode) {
-  auto stream_mode = frame_streamer::stream_mode::FILE;
-  std::optional<int> use_fps;
-  if (output_file.substr(output_file.size() - 4, 4) == "m3u8") {
-    stream_mode = frame_streamer::stream_mode::HLS;
-    use_fps = 1000;
-  }
-  std::unique_ptr<frame_streamer> framer;
-  std::unique_ptr<sfml_window> gui;
-  if (mode == render_video_mode::video_only || mode == render_video_mode::video_with_gui) {
-    framer = std::make_unique<frame_streamer>(output_file, stream_mode);
-  }
-  if (mode == render_video_mode::gui_only || mode == render_video_mode::video_with_gui) {
-    gui = std::make_unique<sfml_window>();
-  }
-  if (!gen) {
-    gen = std::make_unique<generator>(
-        [&](size_t bitrate, int w, int h, int fps) {
-          if (framer) framer->initialize(bitrate, w, h, use_fps ? *use_fps : fps);
-        },
-        [&](const data::job &job) {
-          if (mode != render_video_mode::generate_only) {
-            auto bmp = bitmap.get(job.width, job.height);
-            render_job(engine, job, bmp);
-            auto pixels = engine.serialize_bitmap2(bmp, job.width, job.height);
-            if (framer) framer->add_frame(pixels);
-            if (gui) gui->add_frame(job.width, job.height, pixels);
-          }
-          return true;
-        },
-        custom_max_frames);
-  }
-  gen->init(input_script);
-  fps_progress progress;
-  while (gen->generate_frame()) {
-    progress.inc();
-  }
-  if (framer) framer->finalize();
-  if (gui) gui->finalize();
-  return progress.final();
+void starcry::add_command(seasocks::WebSocket *client, const std::string &script, const std::string &output_file) {
+  cmds->push(std::make_shared<instruction>(client, instruction_type::get_video, script, output_file));
 }
 
-void starcry::run_benchmarks() {
-  std::cout << "running performance tests" << std::endl;
-  set_script("input/perf.js");
-  set_output("perf.h264");
-  // FPS: 50.0724
-  set_custom_max_frames(250);
-  auto fps = render_video(starcry::render_video_mode::video_only);
-  std::cout << "FPS video rendering: " << fps << std::endl;
-  reset();
-  // FPS: 1580.37
-  set_custom_max_frames(2500);
-  fps = render_video(starcry::render_video_mode::render_only);
-  std::cout << "FPS rendering only: " << fps << std::endl;
-  reset();
-  // FPS: 122174
-  set_custom_max_frames(250000);
-  fps = render_video(starcry::render_video_mode::generate_only);
-  std::cout << "FPS javascript only: " << fps << std::endl;
+void starcry::render_job(rendering_engine_wrapper &engine, const data::job &job, ALLEGRO_BITMAP *bmp) {
+  engine.render(bmp,
+                job.background_color,
+                job.shapes,
+                job.offset_x,
+                job.offset_y,
+                job.canvas_w,
+                job.canvas_h,
+                job.width,
+                job.height,
+                job.scale);
 }
 
-void starcry::configure_streaming() {
-  if (output_file == "output.h264") {
-    output_file.assign("webroot/stream/stream.m3u8");
-    set_output(output_file);
-    // clean up left-over streaming artifacts
-    namespace fs = std::experimental::filesystem;
-    const fs::path stream_path{"webroot/stream"};
-    for (const auto &entry : fs::directory_iterator(stream_path)) {
-      const auto filename = entry.path().filename().string();
-      // Note to self in the future: non-experimental filesystem can do:
-      //  if (entry.is_regular_file())...
-      if (filename.rfind("stream.m3u8", 0) == 0) {
-        std::cerr << "cleaning up old file: " << filename << std::endl;
-        fs::remove(entry.path());
-      }
+void starcry::copy_to_png(const std::vector<uint32_t> &source,
+                          uint32_t width,
+                          uint32_t height,
+                          png::image<png::rgb_pixel> &dest) {
+  size_t index = 0;
+  for (uint32_t y = 0; y < height; y++) {
+    for (uint32_t x = 0; x < width; x++) {
+      // BGRA -> RGB
+      uint8_t *data = (uint8_t *)&(source[index]);
+      dest[y][x] = png::rgb_pixel(*(data + 2), *(data + 1), *(data + 0));
+      index++;
     }
   }
 }
+void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
+  std::shared_ptr<data::job> the_job;
+  if (cmd_def->type == instruction_type::get_image) {
+    gen = std::make_shared<generator>([](size_t, int, int, int) {},
+                                      [&](const data::job &job) {
+                                        if (cmd_def->frame != job.frame_number) {
+                                          return true;  // fast forward
+                                        }
+                                        // copy the job here
+                                        the_job = std::make_shared<data::job>(job);
+                                        return false;
+                                      });
+    gen->init(cmd_def->script);
+    while (gen->generate_frame()) {
+    }
+    the_job->job_number = std::numeric_limits<size_t>::max();
+    jobs->push(std::make_shared<job_message>(cmd_def->client, the_job));
+    if (cmd_def->client == nullptr) {  // cli thing
+      cmds->check_terminate();
+      jobs->check_terminate();
+    }
+    jobs->sleep_until_not_full();
+  } else if (cmd_def->type == instruction_type::get_video) {
+    std::optional<int> use_fps;
+    if (!framer &&
+        (mode == starcry::render_video_mode::video_only || mode == starcry::render_video_mode::video_with_gui)) {
+      auto stream_mode = frame_streamer::stream_mode::FILE;
+      auto output_file = cmd_def->output_file;
+      if (output_file.substr(output_file.size() - 4, 4) == "m3u8") {
+        use_fps = 1000;
+        stream_mode = frame_streamer::stream_mode::HLS;
+      }
+      framer = std::make_unique<frame_streamer>(cmd_def->output_file, stream_mode);
+    }
 
-void starcry::configure_interactive(size_t num_local_engines, bool enable_remote_workers, bool visualization_enabled) {
-  starcry_pipeline isc(num_local_engines,
-                       enable_remote_workers,
-                       visualization_enabled,
-                       true,
-                       starcry_pipeline::render_video_mode::render_only);
+    gen = std::make_shared<generator>(
+        [&](size_t bitrate, int width, int height, int fps) {
+          if (framer) framer->initialize(bitrate, width, height, use_fps ? *use_fps : fps);
+        },
+        [&](const data::job &job) {
+          the_job = std::make_shared<data::job>(job);
+          return true;
+        });
+    gen->init(cmd_def->script);
+    while (true) {
+      auto ret = gen->generate_frame();
+      jobs->push(std::make_shared<job_message>(cmd_def->client, the_job));
+      jobs->sleep_until_not_full();
+      if (!ret) break;
+    }
+    // bring the house down
+    cmds->check_terminate();
+    jobs->check_terminate();
+  }
+}
+
+bool starcry::on_client_message(int sockfd, int type, size_t len, const std::string &data) {
+  switch (type) {
+    case 10:  // register_me
+    {
+      renderserver->send_msg(sockfd, type + 1, (const char *)&num_queue_per_worker, sizeof(num_queue_per_worker));
+      break;
+    }
+    case 20:  // pull_job
+    {
+      while (true) {
+        if (!jobs->has_items(0)) {
+          jobs->sleep_until_items_available(0);
+          if (!jobs->active) {
+            frames->check_terminate();
+            return false;  // shutdown server
+          }
+        }
+        auto job = std::dynamic_pointer_cast<job_message>(jobs->pop(0));
+        if (job) {  // can be nullptr if someone else took it faster than us
+          std::ostringstream os;
+          cereal::BinaryOutputArchive archive(os);
+          archive(*(job->job));
+          renderserver->send_msg(sockfd, type + 1, os.str().c_str(), os.str().size());
+          break;
+        }
+      }
+      break;
+    }
+    case 30: {
+      std::istringstream is(data);
+      cereal::BinaryInputArchive archive(is);
+      data::job job;
+      data::pixel_data2 dat;
+      bool is_remote;
+      archive(job);
+      archive(dat);
+      archive(is_remote);
+      auto frame = std::make_shared<render_msg>(nullptr, job.width, job.height, dat.pixels);
+      frames->push(frame);
+    }
+  }
+  return true;
+}
+
+std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_message> job_msg) {
+  auto &job = *job_msg->job;
+  png::image<png::rgb_pixel> image(job.width, job.height);
+  auto bmp = bitmaps[i]->get(job.width, job.height);
+  render_job(*engines[i], job, bmp);
+  auto pixels = engines[i]->serialize_bitmap2(bmp, job.width, job.height);  // rvo
+  if (job.job_number == std::numeric_limits<size_t>::max()) {
+    engines[i]->write_image(bmp, "output.bmp");
+  }
+  if (job_msg->client == nullptr) {
+    return std::make_shared<render_msg>(job_msg->client, job.width, job.height, pixels);
+  } else {
+    copy_to_png(pixels, job.width, job.height, image);
+    std::ostringstream ss;
+    image.write_stream(ss);
+    return std::make_shared<render_msg>(job_msg->client, job.width, job.height, ss.str());
+  }
+}
+
+void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
+  if (job_msg->client == nullptr) {
+    if (gui) gui->add_frame(job_msg->width, job_msg->height, job_msg->pixels);
+    if (framer) framer->add_frame(job_msg->pixels);
+  } else {
+    auto fun = [&](std::shared_ptr<Handler> chat_handler, std::shared_ptr<render_msg> job_msg) {
+      chat_handler->callback(job_msg->client, job_msg->buffer);
+    };
+    if (webserv) webserv->execute(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+  }
+}
+
+void starcry::run_server() {
+  if (mode == starcry::render_video_mode::video_with_gui || mode == starcry::render_video_mode::gui_only)
+    gui = std::make_unique<sfml_window>();
+
+  system->spawn_consumer<instruction>(std::bind(&starcry::command_to_jobs, this, std::placeholders::_1), cmds);
+
+  if (enable_remote_workers) {
+    renderserver = std::make_shared<render_server>(jobs, frames);
+    renderserver->run(std::bind(&starcry::on_client_message,
+                                this,
+                                std::placeholders::_1,
+                                std::placeholders::_2,
+                                std::placeholders::_3,
+                                std::placeholders::_4));
+  }
+
+  for (size_t i = 0; i < num_local_engines; i++) {
+    engines[i] = std::make_shared<rendering_engine_wrapper>();
+    engines[i]->initialize();
+    bitmaps[i] = std::make_shared<bitmap_wrapper>();
+    system->spawn_transformer<job_message>("renderer " + std::to_string(i),
+                                           std::bind(&starcry::job_to_frame, this, i, std::placeholders::_1),
+                                           jobs,
+                                           frames,
+                                           transform_type::same_pool);
+  }
+
+  system->spawn_consumer<render_msg>(
+      "** client **", std::bind(&starcry::handle_frame, this, std::placeholders::_1), frames);
+
+  system->start(false);
+  on_pipeline_initialized(*this);
+  if (start_webserver) {
+    webserv = std::make_shared<webserver>(this);  // blocks
+    webserv->run();
+  }
+  system->explicit_join();
+  if (gui) gui->finalize();
+  if (framer) framer->finalize();
 }
 
 void starcry::run_client() {
-  int64_t num_queue_per_worker = 0;
+  rendering_engine_wrapper engine;
+  bitmap_wrapper bitmap;
+  int64_t num_queue_per_worker = 0;  // currently not used..
   render_client client;
 
   client.set_message_fun([&](int sockfd, int type, size_t len, const std::string &data) {
@@ -189,21 +285,4 @@ void starcry::run_client() {
   while (client.poll()) {
     std::cout << "client poll.." << std::endl;
   }
-}
-
-void starcry::reset() {
-  gen = nullptr;
-}
-
-void starcry::render_job(rendering_engine_wrapper &engine, const data::job &job, ALLEGRO_BITMAP *bmp) {
-  engine.render(bmp,
-                job.background_color,
-                job.shapes,
-                job.offset_x,
-                job.offset_y,
-                job.canvas_w,
-                job.canvas_h,
-                job.width,
-                job.height,
-                job.scale);
 }
