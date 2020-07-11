@@ -49,6 +49,7 @@ public:
       ("interactive,i", "start embedded webserver and launch in interactive mode")
       ("pipeline,p", "non-interactive pipeline mode")
       ("perf", "run performance tests")
+      ("compression", "enable pixel compression on rendered pixels")
       ("vis,v", "enable visualization (default no)");
     // clang-format on
 
@@ -116,6 +117,7 @@ public:
                vm.count("vis"),
                is_interactive,
                start_webserver,
+               vm.count("compression"),
                p_mode,
                render_command);
 

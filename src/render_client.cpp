@@ -8,10 +8,9 @@
 
 #include "render_client.h"
 
-#include "util/socket_utils.h"
-
-#include <cereal/archives/binary.hpp>
-#include <cereal/types/vector.hpp>
+#include "cereal/archives/binary.hpp"
+#include "cereal/types/vector.hpp"
+#include "util/compress_vector.h"
 
 render_client::render_client() {
   memset(&hints, 0, sizeof hints);
@@ -135,9 +134,15 @@ void render_client::pull_job(bool is_remote, int64_t timestamp) {
   send_msg(sockfd, 20, msg, len);
 }
 
-void render_client::send_frame(const data::job &job, const data::pixel_data2 &dat, bool is_remote) {
+void render_client::send_frame(data::job &job, data::pixel_data2 &dat, bool is_remote) {
   std::ostringstream os;
   cereal::BinaryOutputArchive archive(os);
+  double compression_ratio = 0;
+  job.shapes.clear();
+  if (job.compress) {
+    compress_vector<uint32_t> cv;
+    cv.compress(&dat.pixels, &compression_ratio);
+  }
   archive(job);
   archive(dat);
   archive(is_remote);

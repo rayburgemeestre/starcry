@@ -17,6 +17,7 @@
 #include "render_server.h"
 #include "rendering_engine_wrapper.h"
 #include "streamer_output/sfml_window.h"
+#include "util/compress_vector.h"
 #include "webserver.h"
 
 starcry::starcry(size_t num_local_engines,
@@ -24,12 +25,14 @@ starcry::starcry(size_t num_local_engines,
                  bool visualization_enabled,
                  bool is_interactive,
                  bool start_webserver,
+                 bool enable_compression,
                  starcry::render_video_mode mode,
                  std::function<void(starcry &sc)> on_pipeline_initialized)
     : num_local_engines(num_local_engines),
       enable_remote_workers(enable_remote_workers),
       is_interactive(is_interactive),
       start_webserver(start_webserver),
+      enable_compression(enable_compression),
       bitmaps({}),
       gen(nullptr),
       engines({}),
@@ -85,6 +88,9 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
                                         }
                                         // copy the job here
                                         the_job = std::make_shared<data::job>(job);
+                                        if (enable_compression) {
+                                          the_job->compress = true;
+                                        }
                                         return false;
                                       });
     gen->init(cmd_def->script);
@@ -168,6 +174,12 @@ bool starcry::on_client_message(int sockfd, int type, size_t len, const std::str
       archive(job);
       archive(dat);
       archive(is_remote);
+
+      if (job.compress) {
+        compress_vector<uint32_t> cv;
+        cv.decompress(&dat.pixels, job.width * job.height);
+      }
+
       auto frame = std::make_shared<render_msg>(nullptr, job.width, job.height, dat.pixels);
       frames->push(frame);
     }
@@ -249,6 +261,7 @@ void starcry::run_server() {
 
 void starcry::run_client() {
   rendering_engine_wrapper engine;
+  engine.initialize();
   bitmap_wrapper bitmap;
   int64_t num_queue_per_worker = 0;  // currently not used..
   render_client client;
@@ -274,7 +287,6 @@ void starcry::run_client() {
 
         data::pixel_data2 dat;
         dat.pixels = engine.serialize_bitmap2(bmp, job.width, job.height);
-        job.shapes.clear();
         client.send_frame(job, dat, true);
         client.pull_job(true, 0);
         break;

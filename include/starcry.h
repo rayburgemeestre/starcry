@@ -41,6 +41,7 @@ private:
   bool enable_remote_workers;
   bool is_interactive;
   bool start_webserver;
+  bool enable_compression;
 
   std::map<int, std::shared_ptr<bitmap_wrapper>> bitmaps;
   std::shared_ptr<generator> gen;
@@ -64,6 +65,7 @@ public:
       bool visualization_enabled,
       bool is_interactive,
       bool start_webserver,
+      bool enable_compression,
       render_video_mode mode,
       std::function<void(starcry &sc)> on_pipeline_initialized = [](auto &) {});
 

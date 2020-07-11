@@ -38,11 +38,11 @@ std::shared_ptr<seasocks::Response> DataHandler::handle(const seasocks::CrackedU
 webserver::webserver(starcry *sc)
     : server(std::make_shared<seasocks::Server>(
           std::make_shared<seasocks::PrintfLogger>(seasocks::PrintfLogger::Level::Info))),
-      chat_handler(std::make_shared<Handler>(sc)) {
+      image_handler(std::make_shared<Handler>(sc)) {
   auto root = std::make_shared<seasocks::RootPageHandler>();
   root->add(std::make_shared<seasocks::PathHandler>("data", std::make_shared<DataHandler>()));
   server->addPageHandler(root);
-  server->addWebSocketHandler("/chat", chat_handler);
+  server->addWebSocketHandler("/image", image_handler);
 };
 
 void webserver::run() {

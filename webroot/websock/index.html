@@ -85,7 +85,7 @@
 
     function connect() {
         let protocol = document.location.protocol.replace('http', 'ws');
-        ws = new WebSocket(protocol + '//' + document.location.host + '/chat', ['string', 'foo']);
+        ws = new WebSocket(protocol + '//' + document.location.host + '/image', ['tag_test']);
         ws.onopen = function () {
             app.$data.websock_status = 'connected';
         };

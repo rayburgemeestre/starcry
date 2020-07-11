@@ -33,7 +33,7 @@ if (SANITIZER)
 endif()
 if (DEBUG)
     # --no-rosegment is important for being able to let valgrind/callgrind read symbols
-    add_definitions("-std=c++17 -O0 -g -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall")
+    add_definitions("-std=c++17 -O0 -g -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3")
 else()
     add_definitions("-std=c++17 -O3 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
 endif()

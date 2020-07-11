@@ -55,6 +55,6 @@ public:
 
   void register_me();
   void pull_job(bool is_remote, int64_t timestamp);
-  void send_frame(const data::job &job, const data::pixel_data2 &dat, bool is_remote);
+  void send_frame(data::job &job, data::pixel_data2 &dat, bool is_remote);
   int send_msg(int fd, int type, const char *data, int len_data);
 };

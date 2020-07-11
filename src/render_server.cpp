@@ -6,10 +6,12 @@
 #include <sstream>
 
 #include "cereal/archives/binary.hpp"
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wunused-private-field"
+#endif  // __clang__
 #include "cereal/archives/json.hpp"
 
 #include "render_server.h"
-#include "util/socket_utils.h"
 
 #define PORT "10000"
 

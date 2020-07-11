@@ -40,7 +40,7 @@ struct DataHandler : seasocks::CrackedUriPageHandler {
 class webserver {
 private:
   std::shared_ptr<seasocks::Server> server;
-  std::shared_ptr<Handler> chat_handler;
+  std::shared_ptr<Handler> image_handler;
 
 public:
   explicit webserver(starcry *sc);
@@ -50,7 +50,7 @@ public:
   template <typename T>
   void execute(T fun, std::shared_ptr<render_msg> job_msg) {
     if (server) {
-      server->execute(std::bind(fun, chat_handler, job_msg));
+      server->execute(std::bind(fun, image_handler, job_msg));
     }
   }
 };
