@@ -35,7 +35,7 @@ extern void *get_in_addr(struct sockaddr *sa);
 
 class render_client {
 private:
-  int sockfd, numbytes;
+  int sockfd;
   char buf[MAXDATASIZE];
   struct addrinfo hints, *servinfo, *p;
   int rv;

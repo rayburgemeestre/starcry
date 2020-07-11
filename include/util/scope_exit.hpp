@@ -13,5 +13,7 @@ private:
 public:
   scope_exit(T f) : func_(f) {}
 
-  ~scope_exit() { func_(); }
+  ~scope_exit() {
+    func_();
+  }
 };

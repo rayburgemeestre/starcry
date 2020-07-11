@@ -6,8 +6,9 @@
 
 #include "scripting.h"
 #include <random>
-#include "actors/job_generator.h"
-#include "atom_types.h"
+//#include "actors/job_generator.h"
+//#include "atom_types.h"
+#include "generator.h"
 #include "util/assistant.h"
 
 using namespace std;
@@ -64,11 +65,12 @@ void add_text(double x, double y, double z, double textsize, string text, string
 }
 
 void output(string s) {
-  assistant->job_generator->send(assistant->job_generator, output_line_v, s);
+  // assistant->job_generator->send(assistant->job_generator, output_line_v, s);
+  assistant->generator->on_output_line(s);
 }
 
-void write_frame_fun() {
-  write_frame_fun_impl(false);
+bool write_frame_fun() {
+  return write_frame_fun_impl(false);
 }
 
 void close_fun() {
@@ -77,16 +79,18 @@ void close_fun() {
 
 // deprecated
 
-void write_frame_fun_impl(bool last_frame) {
+bool write_frame_fun_impl(bool last_frame) {
   if (!assistant->the_job.last_frame) {
     assistant->the_job.last_frame =
         last_frame || (assistant->max_frames && assistant->max_frames == assistant->current_frame);
   }
   assistant->the_job.frame_number = assistant->current_frame++;
   assistant->the_job.job_number = assistant->current_job++;
-  assistant->cache->take(assistant->the_job);
-  assistant->job_generator->send(assistant->job_generator, write_frame_v, assistant->the_job);
+  // assistant->cache->take(assistant->the_job);
+  // assistant->job_generator->send(assistant->job_generator, write_frame_v, assistant->the_job);
+  assistant->generator->on_write_frame(assistant->the_job);
   assistant->the_job.shapes.clear();
+  return assistant->the_job.last_frame;
 }
 
 std::mt19937 mt;  // no custom seeding for now

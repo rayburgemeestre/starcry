@@ -61,29 +61,8 @@ void render_client::set_message_fun(std::function<void(int fd, int type, size_t 
 
 bool render_client::poll() {
   bool ret = false;
-  memset(buf, 0x00, sizeof(buf));
-  auto n = recvtimeout(sockfd, buf, sizeof buf, 0);
-  if (n == -1) {
-    // error occurred
-    perror("recvtimeout");
-  } else if (n == -2) {
-    // timeout occurred
-  } else {
-    ret = true;
-    buffer.append(buf, n);
-  }
 
-  //  auto n = recv(sockfd, buf, sizeof(buf), 0);
-  //  } if (n < 0) {
-  //    perror("recv?");
-  //  } else {
-  //    ret = true;
-  //    buffer.append(buf, n);
-  //  }
-
-  process();
-
-  if (send_buffer.length() > 0) {
+  while (send_buffer.length() > 0) {
     int n = send(sockfd, send_buffer.get().c_str(), send_buffer.get().size(), 0);
     if (n == -1) {
       perror("send");
@@ -91,6 +70,30 @@ bool render_client::poll() {
     }
     send_buffer.erase_front(n);
   }
+
+  //  auto n = recvtimeout(sockfd, buf, sizeof buf, 0);
+  //  if (n == -1) {
+  //    // error occurred
+  //    perror("recvtimeout");
+  //  } else if (n == -2) {
+  //    // timeout occurred
+  //  } else {
+  //    ret = true;
+  //    buffer.append(buf, n);
+  //  }
+
+  memset(buf, 0x00, sizeof(buf));
+  auto n = recv(sockfd, buf, sizeof(buf), 0);
+  if (n == 0) {
+    return ret;
+  } else if (n < 0) {
+    perror("recv");
+  } else {
+    ret = true;
+    buffer.append(buf, n);
+  }
+
+  process();
 
   return ret;
 }
@@ -142,7 +145,6 @@ void render_client::send_frame(const data::job &job, const data::pixel_data2 &da
 }
 
 int render_client::send_msg(int fd, int type, const char *data, int len_data) {
-  auto mbs = double(len_data) / double(1024 * 1024 * 1024);
   // send header
   int msg[] = {type, len_data};
   int len = sizeof(msg);

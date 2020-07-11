@@ -95,82 +95,31 @@ void del_from_pfds(struct pollfd pfds[], int i, int *fd_count) {
   (*fd_count)--;
 }
 
-render_server::render_server() {
-  type = server_type::poll_based;
+render_server::render_server(std::shared_ptr<queue> source, std::shared_ptr<queue> dest) : source(source), dest(dest) {
+  pfds = (struct pollfd *)malloc(sizeof *pfds * fd_size);
 
-  if (type == server_type::poll_based) {
-    pfds = (struct pollfd *)malloc(sizeof *pfds * fd_size);
+  // Set up and get a listening socket
+  listener = get_listener_socket();
 
-    // Set up and get a listening socket
-    listener = get_listener_socket();
-
-    if (listener == -1) {
-      fprintf(stderr, "error getting listening socket\n");
-      exit(1);
-    }
-
-    // Add the listener to set
-    pfds[0].fd = listener;
-    pfds[0].events = POLLIN;  // Report ready to read on incoming connection
-
-    fd_count = 1;  // For the listener
+  if (listener == -1) {
+    fprintf(stderr, "error getting listening socket\n");
+    exit(1);
   }
-  if (type == server_type::select_based) {
-    FD_ZERO(&master);  // clear the master and temp sets
-    FD_ZERO(&read_fds);
 
-    // get us a socket and bind it
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-    if ((rv = getaddrinfo(NULL, PORT, &hints, &ai)) != 0) {
-      fprintf(stderr, "selectserver: %s\n", gai_strerror(rv));
-      exit(1);
-    }
+  // Add the listener to set
+  pfds[0].fd = listener;
+  pfds[0].events = POLLIN;  // Report ready to read on incoming connection
 
-    for (p = ai; p != NULL; p = p->ai_next) {
-      listener = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-      if (listener < 0) {
-        continue;
-      }
-
-      // lose the pesky "address already in use" error message
-      setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-
-      if (bind(listener, p->ai_addr, p->ai_addrlen) < 0) {
-        close(listener);
-        continue;
-      }
-
-      break;
-    }
-
-    // if we got here, it means we didn't get bound
-    if (p == NULL) {
-      fprintf(stderr, "selectserver: failed to bind\n");
-      exit(2);
-    }
-
-    freeaddrinfo(ai);  // all done with this
-
-    // listen
-    if (listen(listener, 10) == -1) {
-      perror("listen");
-      exit(3);
-    }
-
-    // add the listener to the master set
-    FD_SET(listener, &master);
-
-    // keep track of the biggest file descriptor
-    fdmax = listener;  // so far, it's this one
-  }
+  fd_count = 1;  // For the listener
 }
 
-void render_server::run(std::function<void(int fd, int type, size_t len, const std::string &msg)> fn) {
+render_server::~render_server() {
+  runner.join();
+}
+
+void render_server::run(std::function<bool(int fd, int type, size_t len, const std::string &msg)> fn) {
   msg_callback = fn;
-  if (type == server_type::poll_based) {
+  runner = std::thread([&]() {
     while (true) {
       int poll_count = poll(pfds, fd_count, -1);
 
@@ -224,70 +173,18 @@ void render_server::run(std::function<void(int fd, int type, size_t len, const s
             } else {
               // We got some good data from a client
               buffers[sender_fd].append(buf, nbytes);
-              process(sender_fd);
+              if (!process(sender_fd)) {
+                return;  // we're done
+              }
             }
           }
         }
       }
     }
-  }
-  if (type == server_type::select_based) {
-    while (true) {
-      read_fds = master;  // copy it
-      if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
-        perror("select");
-        exit(4);
-      }
-
-      // run through the existing connections looking for data to read
-      for (i = 0; i <= fdmax; i++) {
-        if (FD_ISSET(i, &read_fds)) {  // we got one!!
-          if (i == listener) {
-            // handle new connections
-            addrlen = sizeof remoteaddr;
-            newfd = accept(listener, (struct sockaddr *)&remoteaddr, &addrlen);
-
-            if (newfd == -1) {
-              perror("accept");
-            } else {
-              FD_SET(newfd, &master);  // add to master set
-              if (newfd > fdmax) {     // keep track of the max
-                fdmax = newfd;
-              }
-              printf(
-                  "selectserver: new connection from %s on "
-                  "socket %d\n",
-                  inet_ntop(
-                      remoteaddr.ss_family, get_in_addr((struct sockaddr *)&remoteaddr), remoteIP, INET6_ADDRSTRLEN),
-                  newfd);
-            }
-          } else {
-            // handle data from a client
-            if ((nbytes = recv(i, buf, sizeof buf, 0)) <= 0) {
-              // got error or connection closed by client
-              if (nbytes == 0) {
-                // connection closed
-                printf("selectserver: socket %d hung up\n", i);
-              } else {
-                perror("recv");
-              }
-              close(i);            // bye!
-              FD_CLR(i, &master);  // remove from master set
-            } else {
-              // we got some data from a client
-
-              buffers[i].append(buf, nbytes);
-
-              process(i);
-            }
-          }
-        }
-      }
-    }
-  }
+  });
 }
 
-void render_server::process(int fd) {
+bool render_server::process(int fd) {
   while (true) {
     const std::string &buf = buffers[fd].get();
     const char *raw = buf.c_str();
@@ -298,7 +195,10 @@ void render_server::process(int fd) {
       int type = *tmp;
       int len = *(tmp + 1);
       if (len + (sizeof(int) * 2) <= buf_len) {
-        msg_callback(fd, type, size_t(len), buf.substr(sizeof(int) * 2, len));
+        if (!msg_callback(fd, type, size_t(len), buf.substr(sizeof(int) * 2, len))) {
+          // terminate
+          return false;
+        }
         buffers[fd].erase_front((sizeof(int) * 2) + len);
       } else {
         break;
@@ -307,12 +207,29 @@ void render_server::process(int fd) {
       break;
     }
   }
+
+  const std::lock_guard<std::mutex> lock(buffers_mut);
+  bool stop = false;
+  while (!stop) {
+    for (auto &pair : send_buffers) {
+      const auto fd = pair.first;
+      auto &buffer = pair.second;
+
+      if (buffer.length() > 0) {
+        int n = send(fd, buffer.get().c_str(), buffer.length(), 0);
+        if (n == -1) {
+          throw std::runtime_error("send failure, todo: fix");
+        }
+        buffer.erase_front(n);
+      } else {
+        stop = true;
+      }
+    }
+  }
+  return true;
 }
 
-render_server::~render_server() {}
-
 int render_server::send_msg(int fd, int type, const char *data, int len_data) {
-  auto mbs = double(len_data) / double(1024 * 1024 * 1024);
   const std::lock_guard<std::mutex> lock(buffers_mut);
   // send header
   int msg[] = {type, len_data};

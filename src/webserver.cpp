@@ -1,90 +1,50 @@
+/*
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 #include "webserver.h"
 
-/**
- * Similar to the fix in main.cpp, crow.h was also pulling in boost::shared_ptr, via boost::date_time stuff.
- * /opt/cppse/build/boost/include/boost/smart_ptr/detail/sp_counted_base_clang.hpp:29:9: warning: '_Atomic' is a C11
- * extension [-Wc11-extensions]
- */
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wc11-extensions"
-#endif  // __clang__
+#include "starcry_pipeline.h"
 
-#include <fstream>
-#include <sstream>
-#include "crow.h"
-#include "json.h"
+#include <memory>
 
-struct content_type_fixer {
-  struct context {};
+Handler::Handler(starcry_pipeline *sc) : sc(sc) {}
 
-  void before_handle(crow::request& req, crow::response& res, context& ctx) {}
-
-  void after_handle(crow::request& req, crow::response& res, context& ctx) {
-    if (req.url.find("/images") == 0)
-      res.set_header("Content-Type", "image/png");
-    else if (req.url.find("/scripts") == 0)
-      res.set_header("Content-Type", "text/javascript");
-    else
-      res.set_header("Content-Type", "text/html");
-
-    if (req.url.find(".ts") != std::string::npos) {
-      res.set_header("Content-Type", "video/mp2t");
-    }
-    res.set_header("Access-Control-Allow-Origin", "*");
-  }
-};
-
-void start_webserver() {
-  crow::App<content_type_fixer> app;
-
-  CROW_ROUTE(app, "/api")
-  ([]() { return "API call"; });
-
-  CROW_ROUTE(app, "/api/test")
-  ([]() {
-    crow::json::wvalue x;
-    std::string label{"A"};
-    for (int i = 0; i < 6; i++) {
-      x["data"][i]["label"] = label;
-      x["data"][i]["value"] = 100;
-      label[0]++;
-    }
-    return x;
-  });
-
-  CROW_ROUTE(app, "/")
-  ([] {
-    using namespace std;
-    ifstream ifile("webroot/index.html", ios::binary);
-    string s((istreambuf_iterator<char>(ifile)), (istreambuf_iterator<char>()));
-    return s;
-  });
-
-  CROW_ROUTE(app, "/<string>")
-  ([](std::string str) {
-    using namespace std;
-    ifstream ifile("webroot/"s + str, ios::binary);
-    string s((istreambuf_iterator<char>(ifile)), (istreambuf_iterator<char>()));
-    return s;
-  });
-
-  CROW_ROUTE(app, "/<string>/<string>")
-  ([](std::string folder, std::string file) {
-    using namespace std;
-    ifstream ifile("webroot/"s + folder + "/" + file, ios::binary);
-    string s((istreambuf_iterator<char>(ifile)), (istreambuf_iterator<char>()));
-    // cout << "read = " << s.size() << " & " << s.length() << endl;
-    // cout << "console = " << s.data() << endl;
-    return s;
-  });
-
-  crow::logger::setLogLevel(crow::LogLevel::WARNING);
-
-  app.port(18080).multithreaded().run();
+void Handler::onConnect(seasocks::WebSocket *con) {
+  _cons.insert(con);
 }
 
-webserver::webserver() : webserver_(start_webserver) {}
+void Handler::onDisconnect(seasocks::WebSocket *con) {
+  _cons.erase(con);
+}
 
-webserver::~webserver() {
-  webserver_.join();
+void Handler::onData(seasocks::WebSocket *con, const char *data) {
+  sc->add_command(con, "input/test.js", std::atoi(data));
+}
+
+void Handler::callback(seasocks::WebSocket *recipient, std::string s) {
+  if (_cons.find(recipient) != _cons.end()) {
+    recipient->send((const uint8_t *)s.c_str(), s.size() * sizeof(uint8_t));
+  }
+}
+
+std::shared_ptr<seasocks::Response> DataHandler::handle(const seasocks::CrackedUri & /*uri*/,
+                                                        const seasocks::Request &request) {
+  return seasocks::Response::jsonResponse("{}");
+}
+
+webserver::webserver(starcry_pipeline *sc)
+    : server(std::make_shared<seasocks::Server>(
+          std::make_shared<seasocks::PrintfLogger>(seasocks::PrintfLogger::Level::Info))),
+      chat_handler(std::make_shared<Handler>(sc)) {
+  auto root = std::make_shared<seasocks::RootPageHandler>();
+  root->add(std::make_shared<seasocks::PathHandler>("data", std::make_shared<DataHandler>()));
+  server->addPageHandler(root);
+  server->addWebSocketHandler("/chat", chat_handler);
+};
+
+void webserver::run() {
+  server->serve("webroot", 18080);
 }

@@ -1,0 +1,77 @@
+/*
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+#pragma once
+
+#include <data/job.hpp>
+#include <data/pixels.hpp>
+#include <memory>
+#include <mutex>
+
+#include "messages.hpp"
+#include "piper.h"
+#include "png.hpp"
+
+class sfml_window;
+class bitmap_wrapper;
+class generator;
+class rendering_engine_wrapper;
+struct ALLEGRO_BITMAP;
+class render_server;
+class webserver;
+class frame_streamer;
+
+namespace data {
+struct job;
+}
+
+namespace seasocks {
+class WebSocket;
+}
+
+class starcry_pipeline {
+public:
+  enum class render_video_mode { generate_only, render_only, video_only, video_with_gui, gui_only };
+
+private:
+  std::map<int, std::shared_ptr<bitmap_wrapper>> bitmaps;
+  std::shared_ptr<generator> gen;
+  std::map<int, std::shared_ptr<rendering_engine_wrapper>> engines;
+  std::shared_ptr<pipeline_system> system;
+  std::shared_ptr<queue> cmds;
+  std::shared_ptr<queue> jobs;
+  std::shared_ptr<queue> frames;
+  std::shared_ptr<render_server> renderserver;
+  std::shared_ptr<sfml_window> gui = nullptr;
+  std::shared_ptr<frame_streamer> framer = nullptr;
+  std::shared_ptr<webserver> webserv = nullptr;
+  render_video_mode mode;
+  int64_t num_queue_per_worker = 1;
+
+public:
+  starcry_pipeline(
+      size_t num_local_engines,
+      bool enable_remote_workers,
+      bool visualization_enabled,
+      bool is_interactive,
+      render_video_mode mode,
+      std::function<void(starcry_pipeline &sc)> on_pipeline_initialized = [](auto &) {});
+
+  void add_command(seasocks::WebSocket *client, const std::string &script, int frame_num);
+  void add_command(seasocks::WebSocket *client, const std::string &script, const std::string &output_file);
+
+private:
+  void render_job(rendering_engine_wrapper &engine, const data::job &job, ALLEGRO_BITMAP *bmp);
+  void copy_to_png(const std::vector<uint32_t> &source,
+                   uint32_t width,
+                   uint32_t height,
+                   png::image<png::rgb_pixel> &dest);
+
+  void command_to_jobs(std::shared_ptr<instruction> cmd_def);
+  std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);
+  bool on_client_message(int sockfd, int type, size_t len, const std::string &data);
+  void handle_frame(std::shared_ptr<render_msg> job_msg);
+};

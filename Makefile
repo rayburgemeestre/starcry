@@ -2,7 +2,12 @@ SHELL:=/bin/bash
 
 fast-docker-build:
 	# build starcry with tailored image so we can invoke the make command straight away
+	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core_"
+
+ci:
+	# Only difference with above is: no -i flag
 	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core_"
+
 
 debug:
 	# build starcry with tailored image so we can invoke the make command straight away
@@ -40,7 +45,7 @@ deps:
 
 	sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5CE16B7B
 	sudo add-apt-repository "deb [arch=amd64] https://cppse.nl/repo/ $$(lsb_release -cs) main"
-	sudo apt-get install cppseffmpeg=1.1 v8pp=1.1 crtmpserver=1.1 allegro5=1.1 caf=1.1 benchmarklib=1.1 fastpfor=1.1 boost=1.1 sfml=1.1 seasocks=1.1 pngpp=1.1
+	sudo apt-get install cppseffmpeg=1.1 v8pp=1.1 allegro5=1.1 caf=1.1 benchmarklib=1.1 fastpfor=1.1 boost=1.1 sfml=1.1 seasocks=1.1 pngpp=1.1
 
 	# dependencies runtime
 	sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev \

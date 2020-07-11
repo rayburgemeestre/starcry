@@ -25,12 +25,24 @@ struct pos {
     y_ = y;
     z_ = z;
   }
-  double get_x() const { return x_; }
-  double get_y() const { return y_; }
-  double get_z() const { return z_; }
-  void set_x(double x) { x_ = x; }
-  void set_y(double y) { y_ = y; }
-  void set_z(double z) { z_ = z; }
+  double get_x() const {
+    return x_;
+  }
+  double get_y() const {
+    return y_;
+  }
+  double get_z() const {
+    return z_;
+  }
+  void set_x(double x) {
+    x_ = x;
+  }
+  void set_y(double y) {
+    y_ = y;
+  }
+  void set_z(double z) {
+    z_ = z;
+  }
 
   static void add_to_context(v8pp::context &ctx);
 };
@@ -44,14 +56,30 @@ struct shape {
   shape() : shape(data::blending_type::normal) {}
   shape(int blending_type) : blending_type_(blending_type) {}
 
-  double get_x() const { return x_; }
-  double get_y() const { return y_; }
-  double get_z() const { return z_; }
-  int get_blending_type() const { return blending_type_; }
-  void set_x(double x) { x_ = x; }
-  void set_y(double y) { y_ = y; }
-  void set_z(double z) { z_ = z; }
-  void set_blending_type(int bt) { blending_type_ = bt; }
+  double get_x() const {
+    return x_;
+  }
+  double get_y() const {
+    return y_;
+  }
+  double get_z() const {
+    return z_;
+  }
+  int get_blending_type() const {
+    return blending_type_;
+  }
+  void set_x(double x) {
+    x_ = x;
+  }
+  void set_y(double y) {
+    y_ = y;
+  }
+  void set_z(double z) {
+    z_ = z;
+  }
+  void set_blending_type(int bt) {
+    blending_type_ = bt;
+  }
 
   static void add_to_context(v8pp::context &ctx);
 };
@@ -90,7 +118,9 @@ private:
 public:
   gradient();
 
-  void add_color(double index, const color &col) { colors.emplace_back(std::make_pair(index, col)); }
+  void add_color(double index, const color &col) {
+    colors.emplace_back(std::make_pair(index, col));
+  }
 
   template <typename... Args>
   void add_impl(double index, std::true_type, transparency &trans, Args &&... args) {

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Starcry UI</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="/scripts/zepto.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-slider-component@latest/dist/vue-slider-component.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vue-slider-component@latest/theme/default.css">
+    <style>
+        html { background-color: #333333; padding: 50px; }
+        img { width: 100%; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <vue-slider ref="slider" v-model="value" v-bind="options"></vue-slider>
+    <h1>{{ value }}</h1>
+    <h2>{{ websock_status }}</h2>
+    <img id="test" />
+</div>
+
+
+<script>
+    let ws;
+    let app = new Vue( {
+        el: '#app',
+        data () {
+            return {
+                value: 0,
+                options: {
+                    dotSize: 44,
+                    width: 'auto',
+                    height: 4,
+                    contained: false,
+                    direction: 'ltr',
+                    data: null,
+                    min: 0,
+                    max: 250,
+                    interval: 1,
+                    disabled: false,
+                    clickable: true,
+                    duration: 0.5,
+                    adsorb: false,
+                    lazy: false,
+                    tooltip: 'active',
+                    tooltipPlacement: 'top',
+                    tooltipFormatter: void 0,
+                    useKeyboard: false,
+                    keydownHook: null,
+                    dragOnClick: false,
+                    enableCross: true,
+                    fixed: false,
+                    minRange: void 0,
+                    maxRange: void 0,
+                    order: true,
+                    marks: false,
+                    dotOptions: void 0,
+                    process: true,
+                    dotStyle: void 0,
+                    railStyle: void 0,
+                    processStyle: void 0,
+                    tooltipStyle: void 0,
+                    stepStyle: void 0,
+                    stepActiveStyle: void 0,
+                    labelStyle: void 0,
+                    labelActiveStyle: void 0,
+                },
+                websock_status: 'connecting'
+            }
+        },
+        methods: {
+        },
+        mounted () {
+        },
+        watch: {
+            value: function (val) {
+                ws.send(val);
+            }
+        },
+        components: {
+            'vueSlider': window[ 'vue-slider-component' ],
+        }
+    })
+
+    function connect() {
+        let protocol = document.location.protocol.replace('http', 'ws');
+        ws = new WebSocket(protocol + '//' + document.location.host + '/chat', ['string', 'foo']);
+        ws.onopen = function () {
+            app.$data.websock_status = 'connected';
+        };
+        ws.onclose = function () {
+            app.$data.websock_status = 'disconnected';
+            setTimeout(connect, 1000);
+        };
+        ws.onmessage = function (message) {
+            var urlCreator = window.URL || window.webkitURL;
+            var blob = new Blob([message.data], {name: 'test.png', type: 'image/png'});
+            var imageUrl = urlCreator.createObjectURL(blob);
+            document.querySelector("img").src = imageUrl;
+        };
+        ws.onerror = function (error) {
+            console.log("ERROR: " + error);
+        };
+    }
+    connect();
+</script>
+
+</body>
+</html>

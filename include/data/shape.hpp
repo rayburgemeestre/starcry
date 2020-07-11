@@ -10,8 +10,6 @@
 
 #include "cereal/types/string.hpp"
 
-#include <caf/meta/type_name.hpp>
-
 #include "data/gradient.hpp"
 
 namespace data {
@@ -65,7 +63,9 @@ public:
     return *this;
   }
 
-  const int &type() { return type_; }
+  const int &type() {
+    return type_;
+  }
 
   template <class Archive>
   void serialize(Archive &ar) {
@@ -75,11 +75,6 @@ public:
 public:
   int type_;
 };
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector &f, data::blending_type &x) {
-  return f(caf::meta::type_name("data::blending_type"), x.type_);
-}
 
 struct shape {
   double x;
@@ -110,25 +105,4 @@ inline bool operator==(const shape &lhs, const shape &rhs) {
   return 0 == std::memcmp(reinterpret_cast<const void *>(&lhs), reinterpret_cast<const void *>(&rhs), sizeof(shape));
 }
 
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector &f, data::shape &x) {
-  return f(caf::meta::type_name("data::shape"),
-           x.x,
-           x.y,
-           x.z,
-           x.x2,
-           x.y2,
-           x.z2,
-           x.type,
-           x.r,
-           x.g,
-           x.b,
-           x.radius,
-           x.text_size,
-           x.radius_size,
-           x.text,
-           x.align,
-           x.gradient_,
-           x.blending_);
-}
 }  // namespace data

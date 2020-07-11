@@ -39,13 +39,25 @@ public:
 
   line(coord a, coord b, double size = 1) : x(a.x), y(a.y), x2(b.x), y2(b.y), size(size) {}
 
-  coord from() { return coord(x, y); }
-  coord to() { return coord(x2, y2); }
-  bool vertical() const { return x == x2; }
-  bool horizontal() const { return y == y2; }
-  coord center() const { return coord(((x - x2) / 2) + x2, ((y - y2) / 2) + y2); }
+  coord from() {
+    return coord(x, y);
+  }
+  coord to() {
+    return coord(x2, y2);
+  }
+  bool vertical() const {
+    return x == x2;
+  }
+  bool horizontal() const {
+    return y == y2;
+  }
+  coord center() const {
+    return coord(((x - x2) / 2) + x2, ((y - y2) / 2) + y2);
+  }
 
-  double slope() const { return (y - y2) / (x - x2); }
+  double slope() const {
+    return (y - y2) / (x - x2);
+  }
   double intersect() const {
     // y = mx + b
     double mx = slope() * this->x;
@@ -555,9 +567,15 @@ public:
     al_put_pixel(absX, absY, al_map_rgba_f(bg.r, bg.g, bg.b, 0));
   }
 
-  void scale(double scale) { scale_ = scale; }
-  void width(uint32_t width) { width_ = width; }
-  void height(uint32_t height) { height_ = height; }
+  void scale(double scale) {
+    scale_ = scale;
+  }
+  void width(uint32_t width) {
+    width_ = width;
+  }
+  void height(uint32_t height) {
+    height_ = height;
+  }
   void center(double x, double y) {
     center_x_ = x;
     center_y_ = y;
