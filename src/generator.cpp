@@ -22,7 +22,7 @@ std::shared_ptr<v8_wrapper> context;
 std::unique_ptr<assistant_> assistant;
 
 // TODO: find a better home for this?
-assistant_::assistant_() : cache(std::make_unique<job_cache>()) {}
+assistant_::assistant_() {}
 
 generator::generator(std::function<void(size_t, int, int, int)> on_initialized,
                      std::function<bool(const data::job &)> on_new_job,

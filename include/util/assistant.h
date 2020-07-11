@@ -8,10 +8,7 @@
 
 #include <memory>
 
-struct job_generator_data;
-
 #include "data/job.hpp"
-#include "job_cache.h"
 
 /**
  * Small helper class to job_generator which needs to be global, so some global functions
@@ -33,7 +30,6 @@ public:
 
   size_t current_frame = 0;
   size_t current_job = 0;
-  std::unique_ptr<job_cache> cache;
 };
 
 extern std::unique_ptr<assistant_> assistant;
