@@ -6,59 +6,25 @@
 
 #include "starcry_pipeline.h"
 
-#include <generator.h>
-#include <render_server.h>
-#include <rendering_engine_wrapper.h>
-#include <bitmap_wrapper.hpp>
 #include <cstring>
 #include <sstream>
 
 #include "cereal/archives/binary.hpp"
 #include "framer.hpp"
+#include "generator.h"
 #include "render_server.h"
+#include "rendering_engine_wrapper.h"
+#include "bitmap_wrapper.hpp"
 #include "streamer_output/sfml_window.h"
-
-using namespace seasocks;
-
-struct Handler : WebSocket::Handler {
-  starcry_pipeline *sc;
-  std::set<WebSocket *> _cons;
-
-  explicit Handler(starcry_pipeline *sc) : sc(sc) {}
-
-  void onConnect(WebSocket *con) override {
-    _cons.insert(con);
-  }
-  void onDisconnect(WebSocket *con) override {
-    _cons.erase(con);
-  }
-
-  void onData(WebSocket *con, const char *data) override {
-    sc->add_command(con, "input/test.js", std::atoi(data));
-  }
-
-  void callback(WebSocket *recipient, std::string s) {
-    if (_cons.find(recipient) != _cons.end()) {
-      recipient->send((const uint8_t *)s.c_str(), s.size() * sizeof(uint8_t));
-    }
-  }
-};
-
-struct DataHandler : CrackedUriPageHandler {
-  virtual std::shared_ptr<Response> handle(const CrackedUri & /*uri*/, const Request &request) override {
-    return Response::jsonResponse("{}");
-  }
-};
+#include "webserver.h"
 
 starcry_pipeline::starcry_pipeline(size_t num_local_engines,
                                    bool enable_remote_workers,
                                    bool visualization_enabled,
                                    bool is_interactive,
-                                   starcry::render_video_mode mode,
+                                   starcry_pipeline::render_video_mode mode,
                                    std::function<void(starcry_pipeline &sc)> on_pipeline_initialized)
-    : server(std::make_shared<Server>(std::make_shared<PrintfLogger>(PrintfLogger::Level::Info))),
-      chat_handler(std::make_shared<Handler>(this)),
-      bitmaps({}),
+    : bitmaps({}),
       gen(nullptr),
       engines({}),
       system(std::make_shared<pipeline_system>(visualization_enabled)),
@@ -66,115 +32,48 @@ starcry_pipeline::starcry_pipeline(size_t num_local_engines,
       jobs(system->create_queue("jobs", 10)),
       frames(system->create_queue("frames", 10)),
       mode(mode) {
-  if (mode == starcry::render_video_mode::video_with_gui || mode == starcry::render_video_mode::gui_only)
+  if (mode == starcry_pipeline::render_video_mode::video_with_gui ||
+      mode == starcry_pipeline::render_video_mode::gui_only)
     gui = std::make_unique<sfml_window>();
 
   system->spawn_consumer<instruction>(std::bind(&starcry_pipeline::command_to_jobs, this, std::placeholders::_1), cmds);
 
   if (enable_remote_workers) {
-    int64_t num_queue_per_worker = 2;
     renderserver = std::make_shared<render_server>(jobs, frames);
-    renderserver->run([&](int sockfd, int type, size_t len, const std::string &data) -> bool {
-      switch (type) {
-        case 10:  // register_me
-        {
-          renderserver->send_msg(sockfd, type + 1, (const char *)&num_queue_per_worker, sizeof(num_queue_per_worker));
-          break;
-        }
-        case 20:  // pull_job
-        {
-          while (true) {
-            if (!jobs->has_items(0)) {
-              jobs->sleep_until_items_available(0);
-              if (!jobs->active) {
-                frames->check_terminate();
-                return false;  // shutdown server
-              }
-            }
-            auto job = std::dynamic_pointer_cast<job_message>(jobs->pop(0));
-            if (job) {  // can be nullptr if someone else took it faster than us
-              std::ostringstream os;
-              cereal::BinaryOutputArchive archive(os);
-              archive(*(job->job));
-              renderserver->send_msg(sockfd, type + 1, os.str().c_str(), os.str().size());
-              break;
-            }
-          }
-          break;
-        }
-        case 30: {
-          std::istringstream is(data);
-          cereal::BinaryInputArchive archive(is);
-          data::job job;
-          data::pixel_data2 dat;
-          bool is_remote;
-          archive(job);
-          archive(dat);
-          archive(is_remote);
-          auto frame = std::make_shared<render_msg>(nullptr, job.width, job.height, dat.pixels);
-          frames->push(frame);
-        }
-      }
-      return true;
-    });
+    renderserver->run(std::bind(&starcry_pipeline::on_client_message,
+                                this,
+                                std::placeholders::_1,
+                                std::placeholders::_2,
+                                std::placeholders::_3,
+                                std::placeholders::_4));
   }
 
   for (size_t i = 0; i < num_local_engines; i++) {
     engines[i] = std::make_shared<rendering_engine_wrapper>();
     engines[i]->initialize();
     bitmaps[i] = std::make_shared<bitmap_wrapper>();
-    auto fun = [ i = i, this ](auto job_msg) -> auto {
-      auto &job = *job_msg->job;
-      png::image<png::rgb_pixel> image(job.width, job.height);
-      auto bmp = bitmaps[i]->get(job.width, job.height);
-      render_job(*engines[i], job, bmp);
-      auto pixels = engines[i]->serialize_bitmap2(bmp, job.width, job.height);  // rvo
-      if (job_msg->client == nullptr) {
-        return std::make_shared<render_msg>(job_msg->client, job.width, job.height, pixels);
-      } else {
-        copy_to_png(pixels, job.width, job.height, image);
-        std::ostringstream ss;
-        image.write_stream(ss);
-        return std::make_shared<render_msg>(job_msg->client, job.width, job.height, ss.str());
-      }
-    };
-    system->spawn_transformer<job_message>(
-        "renderer " + std::to_string(i), fun, jobs, frames, transform_type::same_pool);
+    system->spawn_transformer<job_message>("renderer " + std::to_string(i),
+                                           std::bind(&starcry_pipeline::job_to_frame, this, i, std::placeholders::_1),
+                                           jobs,
+                                           frames,
+                                           transform_type::same_pool);
   }
 
   system->spawn_consumer<render_msg>(
-      "** client **",
-      [this](std::shared_ptr<render_msg> job_msg) {
-        if (job_msg->client == nullptr) {
-          if (gui) gui->add_frame(job_msg->width, job_msg->height, job_msg->pixels);
-          if (framer) framer->add_frame(job_msg->pixels);
-        } else {
-          server->execute(std::bind(
-              [&](std::shared_ptr<render_msg> job_msg) {
-                chat_handler->callback(job_msg->client, job_msg->buffer);
-              },
-              job_msg));
-        }
-      },
-      frames);
+      "** client **", std::bind(&starcry_pipeline::handle_frame, this, std::placeholders::_1), frames);
 
-  auto root = std::make_shared<RootPageHandler>();
-  root->add(std::make_shared<seasocks::PathHandler>("data", std::make_shared<DataHandler>()));
-  if (is_interactive) {
-    server->addPageHandler(root);
-    server->addWebSocketHandler("/chat", chat_handler);
-  }
   system->start(false);
   on_pipeline_initialized(*this);
   if (is_interactive) {
-    server->serve("webroot", 18080);
+    webserv = std::make_shared<webserver>(this);  // blocks
+    webserv->run();
   }
   system->explicit_join();
   if (gui) gui->finalize();
   if (framer) framer->finalize();
 }
 
-void starcry_pipeline::add_command(WebSocket *client, const std::string &script, int frame_num) {
+void starcry_pipeline::add_command(seasocks::WebSocket *client, const std::string &script, int frame_num) {
   cmds->push(std::make_shared<instruction>(client, instruction_type::get_image, script, frame_num));
 }
 
@@ -229,8 +128,8 @@ void starcry_pipeline::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     jobs->push(std::make_shared<job_message>(cmd_def->client, the_job));
     jobs->sleep_until_not_full();
   } else if (cmd_def->type == instruction_type::get_video) {
-    if (!framer &&
-        (mode == starcry::render_video_mode::video_only || mode == starcry::render_video_mode::video_with_gui))
+    if (!framer && (mode == starcry_pipeline::render_video_mode::video_only ||
+                    mode == starcry_pipeline::render_video_mode::video_with_gui))
       framer = std::make_unique<frame_streamer>(cmd_def->output_file, frame_streamer::stream_mode::FILE);
     gen = std::make_shared<generator>(
         [&](size_t bitrate, int width, int height, int fps) {
@@ -250,5 +149,77 @@ void starcry_pipeline::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     // bring the house down
     cmds->check_terminate();
     jobs->check_terminate();
+  }
+}
+
+bool starcry_pipeline::on_client_message(int sockfd, int type, size_t len, const std::string &data) {
+  switch (type) {
+    case 10:  // register_me
+    {
+      renderserver->send_msg(sockfd, type + 1, (const char *)&num_queue_per_worker, sizeof(num_queue_per_worker));
+      break;
+    }
+    case 20:  // pull_job
+    {
+      while (true) {
+        if (!jobs->has_items(0)) {
+          jobs->sleep_until_items_available(0);
+          if (!jobs->active) {
+            frames->check_terminate();
+            return false;  // shutdown server
+          }
+        }
+        auto job = std::dynamic_pointer_cast<job_message>(jobs->pop(0));
+        if (job) {  // can be nullptr if someone else took it faster than us
+          std::ostringstream os;
+          cereal::BinaryOutputArchive archive(os);
+          archive(*(job->job));
+          renderserver->send_msg(sockfd, type + 1, os.str().c_str(), os.str().size());
+          break;
+        }
+      }
+      break;
+    }
+    case 30: {
+      std::istringstream is(data);
+      cereal::BinaryInputArchive archive(is);
+      data::job job;
+      data::pixel_data2 dat;
+      bool is_remote;
+      archive(job);
+      archive(dat);
+      archive(is_remote);
+      auto frame = std::make_shared<render_msg>(nullptr, job.width, job.height, dat.pixels);
+      frames->push(frame);
+    }
+  }
+  return true;
+}
+
+std::shared_ptr<render_msg> starcry_pipeline::job_to_frame(size_t i, std::shared_ptr<job_message> job_msg) {
+  auto &job = *job_msg->job;
+  png::image<png::rgb_pixel> image(job.width, job.height);
+  auto bmp = bitmaps[i]->get(job.width, job.height);
+  render_job(*engines[i], job, bmp);
+  auto pixels = engines[i]->serialize_bitmap2(bmp, job.width, job.height);  // rvo
+  if (job_msg->client == nullptr) {
+    return std::make_shared<render_msg>(job_msg->client, job.width, job.height, pixels);
+  } else {
+    copy_to_png(pixels, job.width, job.height, image);
+    std::ostringstream ss;
+    image.write_stream(ss);
+    return std::make_shared<render_msg>(job_msg->client, job.width, job.height, ss.str());
+  }
+}
+
+void starcry_pipeline::handle_frame(std::shared_ptr<render_msg> job_msg) {
+  if (job_msg->client == nullptr) {
+    if (gui) gui->add_frame(job_msg->width, job_msg->height, job_msg->pixels);
+    if (framer) framer->add_frame(job_msg->pixels);
+  } else {
+    auto fun = [&](std::shared_ptr<Handler> chat_handler, std::shared_ptr<render_msg> job_msg) {
+      chat_handler->callback(job_msg->client, job_msg->buffer);
+    };
+    if (webserv) webserv->execute(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
   }
 }

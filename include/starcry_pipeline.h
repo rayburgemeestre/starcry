@@ -3,6 +3,7 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 #pragma once
 
 #include <data/job.hpp>
@@ -10,26 +11,9 @@
 #include <memory>
 #include <mutex>
 
+#include "messages.hpp"
 #include "piper.h"
-
-#include "starcry.h"  // for render mode
-
-#include "seasocks/PrintfLogger.h"
-#include "seasocks/Response.h"
-#include "seasocks/Server.h"
-#include "seasocks/StringUtil.h"
-#include "seasocks/WebSocket.h"
-#include "seasocks/util/PathHandler.h"
-#include "seasocks/util/RootPageHandler.h"
-
 #include "png.hpp"
-
-class Handler;
-
-enum class instruction_type {
-  get_image,
-  get_video,
-};
 
 class sfml_window;
 class bitmap_wrapper;
@@ -37,48 +21,22 @@ class generator;
 class rendering_engine_wrapper;
 class ALLEGRO_BITMAP;
 class render_server;
+class webserver;
+class frame_streamer;
 
 namespace data {
 class job;
 }
 
-class instruction : public message_type {
-public:
-  seasocks::WebSocket *client;
-  instruction_type type;
-  size_t frame;
-  std::string script;
-  std::string output_file;
-  instruction(seasocks::WebSocket *client, instruction_type type, std::string script, size_t frame)
-      : client(client), type(type), frame(frame), script(script), output_file("") {}
-  instruction(seasocks::WebSocket *client, instruction_type type, std::string script, std::string output_file)
-      : client(client), type(type), frame(0), script(std::move(script)), output_file(std::move(output_file)) {}
-};
-
-class job_message : public message_type {
-public:
-  seasocks::WebSocket *client;
-  std::shared_ptr<data::job> job;
-  job_message(seasocks::WebSocket *client, std::shared_ptr<data::job> job) : client(client), job(job) {}
-};
-
-class render_msg : public message_type {
-public:
-  seasocks::WebSocket *client;
-  std::string buffer;
-  std::vector<uint32_t> pixels;
-  uint32_t width;
-  uint32_t height;
-  render_msg(seasocks::WebSocket *client, uint32_t width, uint32_t height, std::string buf)
-      : client(client), buffer(std::move(buf)), width(width), height(height) {}
-  render_msg(seasocks::WebSocket *client, uint32_t width, uint32_t height, std::vector<uint32_t> pixels)
-      : client(client), pixels(std::move(pixels)), width(width), height(height) {}
-};
+namespace seasocks {
+class WebSocket;
+}
 
 class starcry_pipeline {
+public:
+  enum class render_video_mode { generate_only, render_only, video_only, video_with_gui, gui_only };
+
 private:
-  std::shared_ptr<seasocks::Server> server;
-  std::shared_ptr<Handler> chat_handler;
   std::map<int, std::shared_ptr<bitmap_wrapper>> bitmaps;
   std::shared_ptr<generator> gen;
   std::map<int, std::shared_ptr<rendering_engine_wrapper>> engines;
@@ -89,7 +47,9 @@ private:
   std::shared_ptr<render_server> renderserver;
   std::shared_ptr<sfml_window> gui = nullptr;
   std::shared_ptr<frame_streamer> framer = nullptr;
-  starcry::render_video_mode mode;
+  std::shared_ptr<webserver> webserv = nullptr;
+  render_video_mode mode;
+  int64_t num_queue_per_worker = 1;
 
 public:
   starcry_pipeline(
@@ -97,7 +57,7 @@ public:
       bool enable_remote_workers,
       bool visualization_enabled,
       bool is_interactive,
-      starcry::render_video_mode mode,
+      render_video_mode mode,
       std::function<void(starcry_pipeline &sc)> on_pipeline_initialized = [](auto &) {});
 
   void add_command(seasocks::WebSocket *client, const std::string &script, int frame_num);
@@ -109,5 +69,9 @@ private:
                    uint32_t width,
                    uint32_t height,
                    png::image<png::rgb_pixel> &dest);
+
   void command_to_jobs(std::shared_ptr<instruction> cmd_def);
+  std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);
+  bool on_client_message(int sockfd, int type, size_t len, const std::string &data);
+  void handle_frame(std::shared_ptr<render_msg> job_msg);
 };

@@ -109,12 +109,21 @@ public:
         return starcry::render_video_mode::video_only;
     })();
 
+    auto p_mode = ([&]() {
+      if (vm.count("gui"))
+        return starcry_pipeline::render_video_mode::video_with_gui;
+      else if (vm.count("gui-only"))
+        return starcry_pipeline::render_video_mode::gui_only;
+      else
+        return starcry_pipeline::render_video_mode::video_only;
+    })();
+
     // render in pipeline mode (future default)
     if (vm.count("pipeline")) {
       auto create_video = [&](auto &sc) {
         sc.add_command(nullptr, script, output_file);
       };
-      starcry_pipeline sp(num_worker_threads, vm.count("server"), vm.count("vis"), false, mode, create_video);
+      starcry_pipeline sp(num_worker_threads, vm.count("server"), vm.count("vis"), false, p_mode, create_video);
       return;
     }
 
