@@ -44,7 +44,6 @@ include_directories(
     "/opt/cppse/build/v8pp/include/v8"  # for v8
     "/opt/cppse/build/v8pp/include/v8/include" # for v8
     "/opt/cppse/build/benchmarklib/include/"
-    "/opt/cppse/build/allegro5/include/"
     "/opt/cppse/build/boost/include/"
     "/opt/cppse/build/ffmpeg/include/"
     "/opt/cppse/build/fastpfor/include/"
@@ -57,10 +56,19 @@ include_directories(
 )
 
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "/opt/cppse/build/v8pp/include/v8pp/context.cpp" "libs/piper/src/**")
+list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/client.cpp")
+
+file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp")
 # (below) useful for testing v8 hello world in main.cpp
 #file(GLOB_RECURSE starcry_SOURCES "src/main.cpp" "/opt/cppse/build/v8pp/include/v8pp/context.cpp")
 
 add_executable(starcry ${starcry_SOURCES})
+#add_executable(sc_client ${sc_client_SOURCES})
+
+target_include_directories(starcry PUBLIC "/opt/cppse/build/allegro5/include/")
+#target_include_directories(sc_client PUBLIC "/opt/cppse/build/allegro5sdl/include/")
+#target_include_directories(sc_client PUBLIC "/emsdk/upstream/emscripten/system/include/")
+#target_include_directories(sc_client PUBLIC "/usr/include/SDL2")
 
 # Optional IPO. Do not use IPO if it's not supported by compiler.
 if (NOT DEBUG)
@@ -94,6 +102,9 @@ target_link_libraries(starcry ${Boost_LIBRARIES})
 
 # piper
 #target_link_libraries(starcry ${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/build/libpiper.a)
+
+# SDL
+# target_link_libraries(sc_client -lSDL2)
 
 # ffmpeg
 target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libswscale.a)
@@ -159,4 +170,6 @@ endif()
 
 install (TARGETS starcry DESTINATION bin)
 
-target_clangformat_setup(starcry)
+#install (TARGETS sc_client DESTINATION bin)
+
+clangformat_setup(${starcry_SOURCES} ${sc_client_SOURCES})

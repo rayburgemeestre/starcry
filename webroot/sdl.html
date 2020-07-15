@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+    <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    <script type='text/javascript'>
+        var Module = {
+            canvas: (function() { return document.getElementById('canvas'); })(),
+            onRuntimeInitialized: function() {
+              console.log('lerp result: ' + Module.lerp(1, 2, 0.5));
+              setTimeout(Module.start, 5000); // let's see if this will start a render loop in 5 seconds
+            }
+        };
+    </script>
+    <script src="client.js"></script>
+</body>
+</html>
+

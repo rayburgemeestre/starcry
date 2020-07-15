@@ -9,3 +9,4 @@ docs/_build/**
 docs/build_instructions/**
 .idea
 webroot/stream/*
+libs

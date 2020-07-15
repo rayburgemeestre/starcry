@@ -4,6 +4,10 @@ fast-docker-build:
 	# build starcry with tailored image so we can invoke the make command straight away
 	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core_"
 
+client:
+	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./include -I./libs/cereal/include -I/opt/cppse/build/allegro5sdl/include /opt/cppse/build/allegro5sdl/lib/liballegro-static.a "
+	# -I/usr/include -I/emsdk/upstream/emscripten/system/include/ -I/usr/include/x86_64-linux-gnu/
+
 ci:
 	# Only difference with above is: no -i flag
 	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core_"
@@ -45,7 +49,7 @@ deps:
 
 	sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5CE16B7B
 	sudo add-apt-repository "deb [arch=amd64] https://cppse.nl/repo/ $$(lsb_release -cs) main"
-	sudo apt-get install cppseffmpeg=1.1 v8pp=1.1 allegro5=1.1 caf=1.1 benchmarklib=1.1 fastpfor=1.1 boost=1.1 sfml=1.1 seasocks=1.1 pngpp=1.1
+	sudo apt-get install cppseffmpeg=1.1 v8pp=1.1 allegro5=1.1 allegro5sdl=1.1 benchmarklib=1.1 fastpfor=1.1 boost=1.1 sfml=1.1 seasocks=1.1 pngpp=1.1
 
 	# dependencies runtime
 	sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev \
@@ -64,6 +68,15 @@ deps:
 	# sfml self-compiled (2.5)
 	sudo apt-get install -y libudev-dev libopenal-dev libflac-dev libvorbis-dev
 
+client_deps:
+	sudo apt-get update
+	sudo apt-get install -y libsdl2-dev
+	git clone https://github.com/emscripten-core/emsdk.git || true
+	pushd emsdk && \
+	./emsdk install latest && \
+	./emsdk activate latest && \
+	sudo cp -prv ./emsdk_env.sh /etc/profile.d/
+
 prepare:
 	# switch to clang compiler
 	update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-10 50
@@ -78,13 +91,13 @@ prepare:
 core_:
 	pushd build && \
 	CXX=$(which c++) cmake .. && \
-	make -j $$(nproc) starcry && \
+	make -j $$(nproc) && \
 	strip --strip-debug starcry
 
 core_debug:
 	pushd build && \
 	CXX=$(which c++) cmake -DDEBUG=on .. && \
-	make VERBOSE=1 -j $$(nproc) starcry
+	make VERBOSE=1 -j $$(nproc)
 
 core_format:
 	cmake --build build --target clangformat
