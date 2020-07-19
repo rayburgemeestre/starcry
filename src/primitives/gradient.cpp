@@ -64,38 +64,6 @@ const color gradient::get(double index) {
   color &c = colors[counter - 1].second;
   return color(c.get_r(), c.get_g(), c.get_b(), c.get_a());
 }
-using namespace v8;
-Local<Array> gradient::get2(double index) {
-  v8::Isolate *isolate = v8::Isolate::GetCurrent();
-  EscapableHandleScope handle_scope(isolate);
-  Local<Array> array = Array::New(isolate, 4);
-  if (array.IsEmpty()) return Local<Array>();
-
-  color c = get(index);
-  auto _ = array->Set(isolate->GetCurrentContext(), 0, Number::New(isolate, c.get_r()));
-  _ = array->Set(isolate->GetCurrentContext(), 1, Number::New(isolate, c.get_g()));
-  _ = array->Set(isolate->GetCurrentContext(), 2, Number::New(isolate, c.get_b()));
-  _ = array->Set(isolate->GetCurrentContext(), 3, Number::New(isolate, c.get_a()));
-  return handle_scope.Escape(array);
-}
-using namespace v8;
-#include <sstream>
-#include <v8pp/convert.hpp>
-Local<Value> gradient::get3(double index) {
-  v8::Isolate *isolate = v8::Isolate::GetCurrent();
-  EscapableHandleScope scope(isolate);
-
-  color c = get(index);
-  std::stringstream ss;
-  ss << "new color(" << c.get_r() << ", " << c.get_g() << ", " << c.get_b() << ", " << c.get_a() << ")";
-  v8::Local<v8::Script> script_ =
-      v8::Script::Compile(isolate->GetCurrentContext(), v8pp::to_v8(isolate, ss.str())).ToLocalChecked();
-  v8::Local<v8::Value> result;
-  if (!script_.IsEmpty()) {
-    result = script_->Run(isolate->GetCurrentContext()).ToLocalChecked();
-  }
-  return scope.Escape(result);
-}
 
 // temporary test
 double gradient::get_r(double index) {

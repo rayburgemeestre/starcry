@@ -5,15 +5,10 @@
  */
 #pragma once
 
-#include <v8.h>
 #include <optional>
 #include <vector>
 #include "data/gradient.hpp"  // TODO: get rid of this dependency
 #include "data/shape.hpp"
-
-namespace v8pp {
-class context;
-}
 
 struct pos {
   double x_;
@@ -43,8 +38,6 @@ struct pos {
   void set_z(double z) {
     z_ = z;
   }
-
-  static void add_to_context(v8pp::context &ctx);
 };
 
 struct shape {
@@ -80,8 +73,6 @@ struct shape {
   void set_blending_type(int bt) {
     blending_type_ = bt;
   }
-
-  static void add_to_context(v8pp::context &ctx);
 };
 
 struct color {
@@ -100,8 +91,6 @@ struct color {
   void set_g(double g);
   void set_b(double b);
   void set_a(double a);
-
-  static void add_to_context(v8pp::context &ctx);
 };
 
 struct transparency {
@@ -144,8 +133,6 @@ public:
   }
 
   const color get(double index);
-  v8::Local<v8::Array> get2(double index);
-  v8::Local<v8::Value> get3(double index);
 
   // temporary test
   double get_r(double index);
@@ -165,8 +152,6 @@ public:
     }
     return grad;
   }
-
-  static void add_to_context(v8pp::context &ctx);
 };
 
 struct rectangle;
@@ -176,7 +161,6 @@ struct circle : shape {
   double radiussize_;
   gradient gradient_;
   bool assigned_ = false;
-  v8::Persistent<v8::Value, v8::CopyablePersistentTraits<v8::Value>> vec2d_;
 
   explicit circle(::pos p, double radius, double radiussize, gradient grad, int bt = data::blending_type::normal);
   double get_radius() const;
@@ -187,9 +171,6 @@ struct circle : shape {
   void set_gradient(gradient c);
   bool contains(const shape &point);
   bool intersects(const rectangle &range);
-  v8::Local<v8::Value> as_vec2d();
-
-  static void add_to_context(v8pp::context &ctx);
 };
 
 struct rectangle : shape {
@@ -206,8 +187,6 @@ struct rectangle : shape {
   gradient get_gradient() const;
   void set_gradient(gradient c);
   bool contains(const shape &point);
-
-  static void add_to_context(v8pp::context &ctx);
 };
 
 struct line : shape {
@@ -229,6 +208,4 @@ struct line : shape {
   void set_size(double size);
   gradient get_gradient() const;
   void set_gradient(gradient c);
-
-  static void add_to_context(v8pp::context &ctx);
 };

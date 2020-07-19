@@ -17,21 +17,21 @@ sfml_window::sfml_window()
 
   window.setActive(false);
 
-  //  font.loadFromFile("monaco.ttf");
-  //  text.setFont(font); // font is a sf::Font
-  //  text.setCharacterSize(24); // in pixels, not points!
-  //  text.setFillColor(sf::Color::Red);
-  //  text.setStyle(sf::Text::Bold | sf::Text::Underlined);
+  // font.loadFromFile("monaco.ttf");
+  // text.setFont(font);         // font is a sf::Font
+  // text.setCharacterSize(24);  // in pixels, not points!
+  // text.setFillColor(sf::Color::Red);
+  // text.setStyle(sf::Text::Bold | sf::Text::Underlined);
 
   sf::Clock clock, total_clock;
 }
 
 void sfml_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels) {
-  // ARGB -> ABGR
+  // alpha is inverted for SFML it seems
   for (auto &pixel : pixels) {
-    auto *R = (uint8_t *)&pixel;
-    auto *B = R + 2;
-    std::swap(*R, *B);
+    auto *ptr = (uint8_t *)&pixel;
+    auto *A = ptr + 3;  // RGBA
+    *A = 255.0 - *A;
   }
 
   sf::Context context;
@@ -53,7 +53,7 @@ void sfml_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ui
       }
     }
     // text.setString("Hello world");
-    window.clear(sf::Color(30, 30, 120));
+    // window.clear(sf::Color(30, 30, 120));
     // window.draw(text);
 
     sf::Vector2u windowSize = window.getSize();

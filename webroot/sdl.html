@@ -11,7 +11,7 @@
             canvas: (function() { return document.getElementById('canvas'); })(),
             onRuntimeInitialized: function() {
               console.log('lerp result: ' + Module.lerp(1, 2, 0.5));
-              setTimeout(Module.start, 5000); // let's see if this will start a render loop in 5 seconds
+              Module.start();
             }
         };
     </script>

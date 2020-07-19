@@ -139,10 +139,10 @@ void render_client::send_frame(data::job &job, data::pixel_data2 &dat, bool is_r
   cereal::BinaryOutputArchive archive(os);
   double compression_ratio = 0;
   job.shapes.clear();
-  if (job.compress) {
-    compress_vector<uint32_t> cv;
-    cv.compress(&dat.pixels, &compression_ratio);
-  }
+  //  if (job.compress) {
+  //    compress_vector<uint32_t> cv;
+  //    cv.compress(&dat.pixels, &compression_ratio);
+  //  }
   archive(job);
   archive(dat);
   archive(is_remote);

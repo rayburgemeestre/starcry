@@ -63,7 +63,7 @@ public:
     return *this;
   }
 
-  const int &type() {
+  const int &type() const {
     return type_;
   }
 

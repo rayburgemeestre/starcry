@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#if 1 == 0
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_memfile.h>
 #include <memory>
@@ -28,3 +29,4 @@ private:
   std::unique_ptr<ALLEGRO_FILE, decltype(&al_fclose)> allegro_file_;
   std::unique_ptr<ALLEGRO_FONT, decltype(&al_destroy_font)> allegro_font_;
 };
+#endif

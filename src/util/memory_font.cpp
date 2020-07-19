@@ -3,6 +3,7 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+#if 1 == 0
 #include "util/memory_font.h"
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_memfile.h>
@@ -41,3 +42,4 @@ void memory_font::initialize(unsigned char *font_data, size_t font_data_len, con
 const ALLEGRO_FONT *memory_font::font() const {
   return allegro_font_.get();
 }
+#endif

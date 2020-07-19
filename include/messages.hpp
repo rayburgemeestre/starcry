@@ -10,6 +10,8 @@
 
 #include "message_type.hpp"
 
+#include "data/color.hpp"
+
 enum class instruction_type {
   get_image,
   get_video,
@@ -45,13 +47,15 @@ public:
 
 class render_msg : public message_type {
 public:
+  size_t job_number;
   seasocks::WebSocket *client;
   std::string buffer;
   std::vector<uint32_t> pixels;
   uint32_t width;
   uint32_t height;
-  render_msg(seasocks::WebSocket *client, uint32_t width, uint32_t height, std::string buf)
-      : client(client), buffer(std::move(buf)), width(width), height(height) {}
-  render_msg(seasocks::WebSocket *client, uint32_t width, uint32_t height, std::vector<uint32_t> pixels)
-      : client(client), pixels(std::move(pixels)), width(width), height(height) {}
+  render_msg(seasocks::WebSocket *client, size_t job_number, uint32_t width, uint32_t height, std::string buf)
+      : job_number(job_number), client(client), buffer(std::move(buf)), width(width), height(height) {}
+  render_msg(
+      seasocks::WebSocket *client, size_t job_number, uint32_t width, uint32_t height, std::vector<uint32_t> &pixels)
+      : job_number(job_number), client(client), pixels(std::move(pixels)), width(width), height(height) {}
 };

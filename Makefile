@@ -5,7 +5,7 @@ fast-docker-build:
 	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core_"
 
 client:
-	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./include -I./libs/cereal/include -I/opt/cppse/build/allegro5sdl/include /opt/cppse/build/allegro5sdl/lib/liballegro-static.a "
+	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./include -I./libs/cereal/include -s TOTAL_MEMORY=1073741824"
 	# -I/usr/include -I/emsdk/upstream/emscripten/system/include/ -I/usr/include/x86_64-linux-gnu/
 
 ci:
@@ -23,7 +23,7 @@ format:
 	stat -c 'chown %u:%g . -R' CMakeLists.txt | sudo sh -
 
 profile:
-	valgrind --tool=callgrind ./starcry --no-rendering input/motion.js
+	valgrind --tool=callgrind ./build/starcry input/test.js -v
 	ls -althrst | tail -n 1
 
 pull:
@@ -97,6 +97,11 @@ core_:
 core_debug:
 	pushd build && \
 	CXX=$(which c++) cmake -DDEBUG=on .. && \
+	make VERBOSE=1 -j $$(nproc)
+
+core_debug_sanit:
+	pushd build && \
+	CXX=$(which c++) cmake -DSANITIZER=1 -DDEBUG=on .. && \
 	make VERBOSE=1 -j $$(nproc)
 
 core_format:

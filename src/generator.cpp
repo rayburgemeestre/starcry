@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "primitives.h"
+#include "primitives_v8.h"
 #include "scripting.h"
 #include "util/assistant.h"
 #include "util/image_splitter.hpp"
@@ -51,13 +52,13 @@ void generator::init(const std::string &filename) {
   if (context == nullptr) {
     context = std::make_shared<v8_wrapper>(filename);
 
-    context->add_class(shape::add_to_context);
-    context->add_class(circle::add_to_context);
-    context->add_class(rectangle::add_to_context);
-    context->add_class(line::add_to_context);
-    context->add_class(color::add_to_context);
-    context->add_class(pos::add_to_context);
-    context->add_class(gradient::add_to_context);
+    context->add_class(shapes::shape::add_to_context);
+    context->add_class(shapes::circle::add_to_context);
+    context->add_class(shapes::rectangle::add_to_context);
+    context->add_class(shapes::line::add_to_context);
+    context->add_class(shapes::color::add_to_context);
+    context->add_class(shapes::pos::add_to_context);
+    context->add_class(shapes::gradient::add_to_context);
 
     context->add_fun("version", &get_version);
     context->add_fun("output", &output);

@@ -5,7 +5,6 @@
  */
 #pragma once
 
-#include <allegro5/allegro_primitives.h>
 #include <algorithm>
 #include <data/shape.hpp>
 
@@ -124,10 +123,12 @@ public:
    * Constructor
    */
   draw_logic() {
+#if 1 == 0
     font_.reserve(1024);
     for (size_t i = 0; i < 1024; i++) {
       font_.push_back(nullptr);
     }
+#endif
   }
 
   /**
@@ -151,12 +152,13 @@ public:
    *   substract them.
    */
   template <typename double_type>
-  inline void render_circle(double_type circle_x,
+  inline void render_circle(image &bmp,
+                            double_type circle_x,
                             double_type circle_y,
                             double_type radius,
                             double_type radius_size,
-                            data::gradient &gradient_,
-                            data::blending_type &blending_) {
+                            const data::gradient &gradient_,
+                            const data::blending_type &blending_) {
     circle_x = ((circle_x * scale_) + center_x_) - offset_x_;
     circle_y = ((circle_y * scale_) + center_y_) - offset_y_;
     radius *= scale_;
@@ -189,11 +191,20 @@ public:
         double_type diff_from_center =
             reuse_sqrt ? distance<double_type>(abs_x_left, circle_x, abs_y_top, circle_y) : -1;
 
-        render_circle_pixel(
-            radius, radius_size, circle_x, circle_y, abs_x_left, abs_y_top, diff_from_center, gradient_, blending_);
+        render_circle_pixel(bmp,
+                            radius,
+                            radius_size,
+                            circle_x,
+                            circle_y,
+                            abs_x_left,
+                            abs_y_top,
+                            diff_from_center,
+                            gradient_,
+                            blending_);
 
         if (rel_y != 0)
-          render_circle_pixel(radius,
+          render_circle_pixel(bmp,
+                              radius,
                               radius_size,
                               circle_x,
                               circle_y,
@@ -203,10 +214,19 @@ public:
                               gradient_,
                               blending_);
         if (rel_x != 0)
-          render_circle_pixel(
-              radius, radius_size, circle_x, circle_y, abs_x_right, abs_y_top, diff_from_center, gradient_, blending_);
+          render_circle_pixel(bmp,
+                              radius,
+                              radius_size,
+                              circle_x,
+                              circle_y,
+                              abs_x_right,
+                              abs_y_top,
+                              diff_from_center,
+                              gradient_,
+                              blending_);
         if (rel_x != 0 && rel_y != 0)
-          render_circle_pixel(radius,
+          render_circle_pixel(bmp,
+                              radius,
                               radius_size,
                               circle_x,
                               circle_y,
@@ -223,6 +243,7 @@ public:
     textX = ((textX * scale_) + center_x_) - offset_x_;
     textY = ((textY * scale_) + center_y_) - offset_y_;
     size_t index = textsize * scale_;
+#if 1 == 0
     auto alignment =
         align == "center" ? ALLEGRO_ALIGN_CENTER : (align == "left" ? ALLEGRO_ALIGN_LEFT : ALLEGRO_ALIGN_RIGHT);
 
@@ -243,18 +264,20 @@ public:
                  textY - (index /*font height*/ / 2),
                  alignment,
                  text.c_str());
+#endif
   }
 
   template <typename double_type>
-  void render_circle_pixel(double_type radius,
+  void render_circle_pixel(image &bmp,
+                           double_type radius,
                            double_type radiussize,
                            double_type posX,
                            double_type posY,
                            int absX,
                            int absY,
                            double_type diffFromCenter,
-                           data::gradient &gradient_,
-                           data::blending_type &blending_) {
+                           const data::gradient &gradient_,
+                           const data::blending_type &blending_) {
     if (absX < 0 || absY < 0 || absX >= static_cast<int>(width_) || absY >= static_cast<int>(height_)) return;
 
     if (diffFromCenter == -1) diffFromCenter = distance<double_type>(absX, posX, absY, posY);
@@ -274,119 +297,121 @@ public:
     // auto & bg_opacity = Opacity;
     // auto fg_opacity = 1.0 - Opacity;
 
-    ALLEGRO_COLOR bg = al_get_pixel(al_get_target_bitmap(), absX, absY);
     data::color clr = gradient_.get(std::min(1.0, Opacity));  // TODO: opacity is more like distance index..
     switch (blending_.type()) {
       case data::blending_type::lighten:
-        blend_pixel<double_type, lighten>(absX, absY, bg, clr);
+        blend_pixel<double_type, lighten>(bmp, absX, absY, clr);
         break;
       case data::blending_type::darken:
-        blend_pixel<double_type, darken>(absX, absY, bg, clr);
+        blend_pixel<double_type, darken>(bmp, absX, absY, clr);
         break;
       case data::blending_type::multiply:
-        blend_pixel<double_type, multiply>(absX, absY, bg, clr);
+        blend_pixel<double_type, multiply>(bmp, absX, absY, clr);
         break;
       case data::blending_type::average:
-        blend_pixel<double_type, average>(absX, absY, bg, clr);
+        blend_pixel<double_type, average>(bmp, absX, absY, clr);
         break;
       case data::blending_type::add:
-        blend_pixel<double_type, add>(absX, absY, bg, clr);
+        blend_pixel<double_type, add>(bmp, absX, absY, clr);
         break;
       case data::blending_type::subtract:
-        blend_pixel<double_type, subtract>(absX, absY, bg, clr);
+        blend_pixel<double_type, subtract>(bmp, absX, absY, clr);
         break;
       case data::blending_type::difference:
-        blend_pixel<double_type, difference>(absX, absY, bg, clr);
+        blend_pixel<double_type, difference>(bmp, absX, absY, clr);
         break;
       case data::blending_type::negation_:
-        blend_pixel<double_type, negation_>(absX, absY, bg, clr);
+        blend_pixel<double_type, negation_>(bmp, absX, absY, clr);
         break;
       case data::blending_type::screen:
-        blend_pixel<double_type, screen>(absX, absY, bg, clr);
+        blend_pixel<double_type, screen>(bmp, absX, absY, clr);
         break;
       case data::blending_type::exclusion:
-        blend_pixel<double_type, exclusion>(absX, absY, bg, clr);
+        blend_pixel<double_type, exclusion>(bmp, absX, absY, clr);
         break;
       case data::blending_type::overlay:
-        blend_pixel<double_type, overlay>(absX, absY, bg, clr);
+        blend_pixel<double_type, overlay>(bmp, absX, absY, clr);
         break;
       case data::blending_type::softlight:
-        blend_pixel<double_type, softlight>(absX, absY, bg, clr);
+        blend_pixel<double_type, softlight>(bmp, absX, absY, clr);
         break;
       case data::blending_type::hardlight:
-        blend_pixel<double_type, hardlight>(absX, absY, bg, clr);
+        blend_pixel<double_type, hardlight>(bmp, absX, absY, clr);
         break;
       case data::blending_type::colordodge:
-        blend_pixel<double_type, colordodge>(absX, absY, bg, clr);
+        blend_pixel<double_type, colordodge>(bmp, absX, absY, clr);
         break;
       case data::blending_type::colorburn:
-        blend_pixel<double_type, colorburn>(absX, absY, bg, clr);
+        blend_pixel<double_type, colorburn>(bmp, absX, absY, clr);
         break;
       case data::blending_type::lineardodge:
-        blend_pixel<double_type, lineardodge>(absX, absY, bg, clr);
+        blend_pixel<double_type, lineardodge>(bmp, absX, absY, clr);
         break;
       case data::blending_type::linearburn:
-        blend_pixel<double_type, linearburn>(absX, absY, bg, clr);
+        blend_pixel<double_type, linearburn>(bmp, absX, absY, clr);
         break;
       case data::blending_type::linearlight:
-        blend_pixel<double_type, linearlight>(absX, absY, bg, clr);
+        blend_pixel<double_type, linearlight>(bmp, absX, absY, clr);
         break;
       case data::blending_type::vividlight:
-        blend_pixel<double_type, vividlight>(absX, absY, bg, clr);
+        blend_pixel<double_type, vividlight>(bmp, absX, absY, clr);
         break;
       case data::blending_type::pinlight:
-        blend_pixel<double_type, pinlight>(absX, absY, bg, clr);
+        blend_pixel<double_type, pinlight>(bmp, absX, absY, clr);
         break;
       case data::blending_type::hardmix:
-        blend_pixel<double_type, hardmix>(absX, absY, bg, clr);
+        blend_pixel<double_type, hardmix>(bmp, absX, absY, clr);
         break;
       case data::blending_type::reflect:
-        blend_pixel<double_type, reflect>(absX, absY, bg, clr);
+        blend_pixel<double_type, reflect>(bmp, absX, absY, clr);
         break;
       case data::blending_type::glow:
-        blend_pixel<double_type, glow>(absX, absY, bg, clr);
+        blend_pixel<double_type, glow>(bmp, absX, absY, clr);
         break;
       case data::blending_type::phoenix:
-        blend_pixel<double_type, phoenix>(absX, absY, bg, clr);
+        blend_pixel<double_type, phoenix>(bmp, absX, absY, clr);
         break;
       case data::blending_type::hue:
-        blend_pixel<double_type, hue>(absX, absY, bg, clr);
+        blend_pixel<double_type, hue>(bmp, absX, absY, clr);
         break;
       case data::blending_type::saturation:
-        blend_pixel<double_type, saturation>(absX, absY, bg, clr);
+        blend_pixel<double_type, saturation>(bmp, absX, absY, clr);
         break;
       case data::blending_type::color:
-        blend_pixel<double_type, color_blend>(absX, absY, bg, clr);
+        blend_pixel<double_type, color_blend>(bmp, absX, absY, clr);
         break;
       case data::blending_type::luminosity:
-        blend_pixel<double_type, luminosity>(absX, absY, bg, clr);
+        blend_pixel<double_type, luminosity>(bmp, absX, absY, clr);
         break;
       case data::blending_type::normal:
       default:
-        blend_pixel<double_type, normal>(absX, absY, bg, clr);
+        blend_pixel<double_type, normal>(bmp, absX, absY, clr);
         break;
     }
   }
 
   template <typename double_type, typename blending_type_>
-  void blend_pixel(const int &absX, const int &absY, const ALLEGRO_COLOR &bg, const data::color &clr) {
+  void blend_pixel(image &bmp, const int &absX, const int &absY, const data::color &clr) {
     // auto clr2 = blender<blending_type_>(color(bg.r * (1.0 - clr.a), bg.g * (1.0 - clr.a), bg.b * (1.0 - clr.a), 0.0),
     // color(clr.r * clr.a, clr.g * clr.a, clr.b * clr.a, 1.0));
+    auto &bg = bmp.get(absX, absY);
     auto clr2 = blender<blending_type_>(color(bg.r, bg.g, bg.b, bg.a), color(clr.r, clr.g, clr.b, clr.a));
     double r = (bg.r * (1.0 - clr2.get_a())) + (clr2.get_r() * clr2.get_a());
     double g = (bg.g * (1.0 - clr2.get_a())) + (clr2.get_g() * clr2.get_a());
     double b = (bg.b * (1.0 - clr2.get_a())) + (clr2.get_b() * clr2.get_a());
-    al_put_pixel(absX, absY, al_map_rgb_f(r, g, b));
+    double a = 0;
+    bmp.set(absX, absY, r, g, b, a);
   }
 
   template <typename double_type>
-  void render_line(double x1,
+  void render_line(image &bmp,
+                   double x1,
                    double y1,
                    double x2,
                    double y2,
                    double size,
-                   data::gradient &gradient_,
-                   data::blending_type &blending_) {
+                   const data::gradient &gradient_,
+                   const data::blending_type &blending_) {
     x1 = ((x1 * scale_) + center_x_) - offset_x_;
     y1 = ((y1 * scale_) + center_y_) - offset_y_;
     x2 = ((x2 * scale_) + center_x_) - offset_x_;
@@ -525,7 +550,7 @@ public:
             double normalized_dist_from_center = (dist_pixel / dist_max);
             double normalized_dist_from_line = (dist_from_center_line / aline.size);
             render_line_pixel<double_type>(
-                x, current_y, normalized_dist_from_center, normalized_dist_from_line, gradient_);
+                bmp, x, current_y, normalized_dist_from_center, normalized_dist_from_line, gradient_);
           }
         }
       }
@@ -537,11 +562,12 @@ public:
   }
 
   template <typename double_type>
-  void render_line_pixel(int absX,
+  void render_line_pixel(image &bmp,
+                         int absX,
                          int absY,
                          double normalized_dist_from_center,
                          double normalized_dist_from_line,
-                         data::gradient &gradient_) {
+                         const data::gradient &gradient_) {
     if (normalized_dist_from_center > 1.0 || normalized_dist_from_center < 0.0) {
       return;
     }
@@ -556,7 +582,8 @@ public:
     // LColor color = ptrGradient->getColor( num );
 
     // al_put_pixel(absX, absY, al_map_rgba_f(0, 0, (1.0 /*- test*/) * num, 0));
-    auto bg = al_get_pixel(al_get_target_bitmap(), absX, absY);
+    // auto bg = al_get_pixel(al_get_target_bitmap(), absX, absY);
+    auto &bg = bmp.get(absX, absY);
     // bg.b = (bg.b * num) + 1.0 * (1.0 - num); // we blend ourselves..
     // bg.r = min(1., bg.r + gradient_.get(num).r);
     // bg.g = min(1., bg.g + gradient_.get(num).g);
@@ -564,7 +591,7 @@ public:
     bg.r = gradient_.get(num).r;
     bg.g = gradient_.get(num).g;
     bg.b = gradient_.get(num).b;
-    al_put_pixel(absX, absY, al_map_rgba_f(bg.r, bg.g, bg.b, 0));
+    bmp.set(absX, absY, bg.r, bg.g, bg.b, bg.a);
   }
 
   void scale(double scale) {
@@ -593,7 +620,7 @@ private:
   double offset_y_;
   uint32_t width_;
   uint32_t height_;
-  std::vector<std::unique_ptr<memory_font>> font_;
+  // std::vector<std::unique_ptr<memory_font>> font_;
 };
 
 }  // namespace draw_logic

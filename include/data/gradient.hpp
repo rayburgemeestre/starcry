@@ -19,7 +19,7 @@ struct gradient {
 
   gradient() {}
 
-  color get(double index) {
+  color get(double index) const {
     // TODO: refactor, this COPY & PASTE from gradient.cpp
     size_t counter = 0;
     double processed_index = 0;
@@ -41,7 +41,7 @@ struct gradient {
       }
       counter++;
     }
-    color &c = std::get<1>(colors[counter - 1]);
+    const color &c = std::get<1>(colors[counter - 1]);
     return color{c.r, c.g, c.b, c.a};
   }
 
