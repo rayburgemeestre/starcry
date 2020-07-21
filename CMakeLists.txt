@@ -64,7 +64,7 @@ file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp")
 #file(GLOB_RECURSE starcry_SOURCES "src/main.cpp" "/opt/cppse/build/v8pp/include/v8pp/context.cpp")
 
 add_executable(starcry ${starcry_SOURCES})
-#add_executable(sc_client ${sc_client_SOURCES})
+add_executable(sc_client ${sc_client_SOURCES})
 
 # Optional IPO. Do not use IPO if it's not supported by compiler.
 if (NOT DEBUG)
@@ -88,7 +88,7 @@ target_link_libraries(starcry ${Boost_LIBRARIES})
 #target_link_libraries(starcry ${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/build/libpiper.a)
 
 # SDL
-# target_link_libraries(sc_client -lSDL2)
+target_link_libraries(sc_client -lSDL2)
 
 # SFML (seems broken for some reason now)
 #target_link_libraries(starcry ${SFML_LIBRARIES})

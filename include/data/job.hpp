@@ -22,16 +22,16 @@ struct job {
   uint32_t offset_y;
   uint32_t canvas_w;
   uint32_t canvas_h;
-  size_t job_number;
-  size_t frame_number;
+  uint32_t job_number;
+  uint32_t frame_number;
   bool rendered;
   bool last_frame;
-  size_t chunk;
-  size_t num_chunks;
+  uint32_t chunk;
+  uint32_t num_chunks;
   data::color background_color;
   std::vector<data::shape> shapes;
   double scale;
-  size_t bitrate;
+  uint32_t bitrate;
   bool compress;
   bool save_image;
 

@@ -11,6 +11,7 @@
 
 #include "bitmap_wrapper.hpp"
 #include "cereal/archives/binary.hpp"
+#include "cereal/archives/json.hpp"
 #include "framer.hpp"
 #include "generator.h"
 #include "render_client.h"
@@ -43,8 +44,8 @@ starcry::starcry(size_t num_local_engines,
       mode(mode),
       on_pipeline_initialized(on_pipeline_initialized) {}
 
-void starcry::add_command(seasocks::WebSocket *client, const std::string &script, int frame_num) {
-  cmds->push(std::make_shared<instruction>(client, instruction_type::get_image, script, frame_num));
+void starcry::add_command(seasocks::WebSocket *client, const std::string &script, instruction_type it, int frame_num) {
+  cmds->push(std::make_shared<instruction>(client, it, script, frame_num));
 }
 
 void starcry::add_command(seasocks::WebSocket *client, const std::string &script, const std::string &output_file) {
@@ -81,7 +82,7 @@ void starcry::copy_to_png(const std::vector<data::color> &source,
 }
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   std::shared_ptr<data::job> the_job;
-  if (cmd_def->type == instruction_type::get_image) {
+  if (cmd_def->type == instruction_type::get_image || cmd_def->type == instruction_type::get_shapes) {
     gen = std::make_shared<generator>([](size_t, int, int, int) {},
                                       [&](const data::job &job) {
                                         if (cmd_def->frame != job.frame_number) {
@@ -97,8 +98,8 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     gen->init(cmd_def->script);
     while (gen->generate_frame()) {
     }
-    the_job->job_number = std::numeric_limits<size_t>::max();
-    jobs->push(std::make_shared<job_message>(cmd_def->client, the_job));
+    the_job->job_number = std::numeric_limits<uint32_t>::max();
+    jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, the_job));
     if (cmd_def->client == nullptr) {  // cli thing
       cmds->check_terminate();
       jobs->check_terminate();
@@ -129,7 +130,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     gen->init(cmd_def->script);
     while (true) {
       auto ret = gen->generate_frame();
-      jobs->push(std::make_shared<job_message>(cmd_def->client, the_job));
+      jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, the_job));
       jobs->sleep_until_not_full();
       if (!ret) break;
     }
@@ -182,7 +183,8 @@ bool starcry::on_client_message(int sockfd, int type, size_t len, const std::str
       //   cv.decompress(&dat.pixels, job.width * job.height);
       // }
 
-      auto frame = std::make_shared<render_msg>(nullptr, job.job_number, job.width, job.height, dat.pixels);
+      auto frame = std::make_shared<render_msg>(
+          nullptr, instruction_type::get_image, job.job_number, job.width, job.height, dat.pixels);
       frames->push(frame);
     }
   }
@@ -191,9 +193,21 @@ bool starcry::on_client_message(int sockfd, int type, size_t len, const std::str
 
 std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_message> job_msg) {
   auto &job = *job_msg->job;
+  // no need to render in this case, client will do the rendering
+  if (job_msg->type == instruction_type::get_shapes) {
+    std::ostringstream os;
+    {
+      // cereal::BinaryOutputArchive archive(os);
+      cereal::JSONOutputArchive archive(os);
+      archive(job);
+    }
+    return std::make_shared<render_msg>(
+        job_msg->client, job_msg->type, job.job_number, job.width, job.height, os.str());
+  }
+
   auto &bmp = bitmaps[i]->get(job.width, job.height);
   render_job(*engines[i], job, bmp);
-  if (job.job_number == std::numeric_limits<size_t>::max()) {
+  if (job.job_number == std::numeric_limits<uint32_t>::max()) {
     engines[i]->write_image(bmp, "output.bmp");
   }
   if (job_msg->client == nullptr) {
@@ -213,14 +227,16 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
       transfer_pixels.push_back(color);
     }
 
-    return std::make_shared<render_msg>(job_msg->client, job.job_number, job.width, job.height, transfer_pixels);
+    return std::make_shared<render_msg>(
+        job_msg->client, job_msg->type, job.job_number, job.width, job.height, transfer_pixels);
   } else {
-    job.job_number = std::numeric_limits<size_t>::max();
+    job.job_number = std::numeric_limits<uint32_t>::max();
     png::image<png::rgb_pixel> image(job.width, job.height);
     copy_to_png(bmp.pixels(), job.width, job.height, image);
     std::ostringstream ss;
     image.write_stream(ss);
-    return std::make_shared<render_msg>(job_msg->client, job.job_number, job.width, job.height, ss.str());
+    return std::make_shared<render_msg>(
+        job_msg->client, job_msg->type, job.job_number, job.width, job.height, ss.str());
   }
 }
 
@@ -232,15 +248,22 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
         framer->add_frame(job_msg->pixels);
       }
     } else {
-      auto fun = [&](std::shared_ptr<Handler> chat_handler, std::shared_ptr<render_msg> job_msg) {
-        chat_handler->callback(job_msg->client, job_msg->buffer);
-      };
-      if (webserv) webserv->execute(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+      if (job_msg->type == instruction_type::get_image) {
+        auto fun = [&](std::shared_ptr<ImageHandler> chat_handler, std::shared_ptr<render_msg> job_msg) {
+          chat_handler->callback(job_msg->client, job_msg->buffer);
+        };
+        if (webserv) webserv->execute_image(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+      } else if (job_msg->type == instruction_type::get_shapes) {
+        auto fun = [&](std::shared_ptr<ShapesHandler> shapes_handler, std::shared_ptr<render_msg> job_msg) {
+          shapes_handler->callback(job_msg->client, job_msg->buffer);
+        };
+        if (webserv) webserv->execute_shapes(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+      }
     }
   };
 
   // handle individual frames immediately
-  if (job_msg->job_number == std::numeric_limits<size_t>::max()) {
+  if (job_msg->job_number == std::numeric_limits<uint32_t>::max()) {
     process(job_msg);
     return;
   }

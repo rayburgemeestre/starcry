@@ -76,6 +76,7 @@ class ball extends simple_shape
 
 function initialize()
 {
+    if (balls.length > 0) return;
     let view = new projection(canvas_w, canvas_h);
     for (let i=0; i<num_balls; i++) {
         balls.push(new ball(view, i == 0));

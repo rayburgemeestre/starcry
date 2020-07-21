@@ -72,7 +72,7 @@ public:
       render_video_mode mode,
       std::function<void(starcry &sc)> on_pipeline_initialized = [](auto &) {});
 
-  void add_command(seasocks::WebSocket *client, const std::string &script, int frame_num);
+  void add_command(seasocks::WebSocket *client, const std::string &script, instruction_type it, int frame_num);
   void add_command(seasocks::WebSocket *client, const std::string &script, const std::string &output_file);
 
   void run_server();
