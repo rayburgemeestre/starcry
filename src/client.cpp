@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <iostream>
 
-// #include "cereal/archives/binary.hpp"
+#include "cereal/archives/binary.hpp"
 #include "cereal/archives/json.hpp"
 
 #include "data/job.hpp"
@@ -202,7 +202,7 @@ void start() {
 void set_shapes(std::string data) {
   std::istringstream is(data);
   cereal::JSONInputArchive archive(is);
-  // cereal::BinaryInputArchive archive(is);
+  //cereal::BinaryInputArchive archive(is);
   data::job tmp;
   archive(tmp);
   std::swap(job, tmp);
@@ -210,6 +210,19 @@ void set_shapes(std::string data) {
   is.clear();
 
   render_shapes_to_texture();
+}
+
+void set_texture(std::string data) {
+  if (texture == nullptr && renderer == nullptr) {
+    return;
+  }
+  if (texture != nullptr) {
+    SDL_DestroyTexture(texture);
+    texture = nullptr;
+  }
+  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, job.width, job.height);
+  // todo, hardcoded
+  SDL_UpdateTexture(texture, NULL, (void *)&(data[0]), job.width * sizeof(Uint32));
 }
 
 int main() {
@@ -223,5 +236,6 @@ int main() {
 EMSCRIPTEN_BINDINGS(my_module) {
   emscripten::function("start", &start);
   emscripten::function("set_shapes", &set_shapes);
+  emscripten::function("set_texture", &set_texture);
 }
 #endif

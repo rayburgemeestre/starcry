@@ -38,6 +38,16 @@ struct ShapesHandler : seasocks::WebSocket::Handler {
   void callback(seasocks::WebSocket *recipient, std::string s);
 };
 
+struct BitmapHandler : seasocks::WebSocket::Handler {
+  starcry *sc;
+  std::set<seasocks::WebSocket *> _cons;
+  explicit BitmapHandler(starcry *sc);
+  void onConnect(seasocks::WebSocket *con) override;
+  void onDisconnect(seasocks::WebSocket *con) override;
+  void onData(seasocks::WebSocket *con, const char *data) override;
+  void callback(seasocks::WebSocket *recipient, std::string s);
+};
+
 struct DataHandler : seasocks::CrackedUriPageHandler {
   virtual std::shared_ptr<seasocks::Response> handle(const seasocks::CrackedUri & /*uri*/,
                                                      const seasocks::Request &request) override;
@@ -48,6 +58,7 @@ private:
   std::shared_ptr<seasocks::Server> server;
   std::shared_ptr<ImageHandler> image_handler;
   std::shared_ptr<ShapesHandler> shapes_handler;
+  std::shared_ptr<BitmapHandler> bitmap_handler;
 
 public:
   explicit webserver(starcry *sc);
@@ -64,6 +75,12 @@ public:
   void execute_shapes(T fun, std::shared_ptr<render_msg> job_msg) {
     if (server) {
       server->execute(std::bind(fun, shapes_handler, job_msg));
+    }
+  }
+  template <typename T>
+  void execute_bitmap(T fun, std::shared_ptr<render_msg> job_msg) {
+    if (server) {
+      server->execute(std::bind(fun, bitmap_handler, job_msg));
     }
   }
 };

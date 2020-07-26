@@ -82,7 +82,7 @@ void starcry::copy_to_png(const std::vector<data::color> &source,
 }
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   std::shared_ptr<data::job> the_job;
-  if (cmd_def->type == instruction_type::get_image || cmd_def->type == instruction_type::get_shapes) {
+  if (cmd_def->type == instruction_type::get_image || cmd_def->type == instruction_type::get_bitmap || cmd_def->type == instruction_type::get_shapes) {
     gen = std::make_shared<generator>([](size_t, int, int, int) {},
                                       [&](const data::job &job) {
                                         if (cmd_def->frame != job.frame_number) {
@@ -197,7 +197,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   if (job_msg->type == instruction_type::get_shapes) {
     std::ostringstream os;
     {
-      // cereal::BinaryOutputArchive archive(os);
+      //cereal::BinaryOutputArchive archive(os);
       cereal::JSONOutputArchive archive(os);
       archive(job);
     }
@@ -230,13 +230,35 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
     return std::make_shared<render_msg>(
         job_msg->client, job_msg->type, job.job_number, job.width, job.height, transfer_pixels);
   } else {
-    job.job_number = std::numeric_limits<uint32_t>::max();
-    png::image<png::rgb_pixel> image(job.width, job.height);
-    copy_to_png(bmp.pixels(), job.width, job.height, image);
-    std::ostringstream ss;
-    image.write_stream(ss);
-    return std::make_shared<render_msg>(
+    if (job_msg->type == instruction_type::get_image) {
+      job.job_number = std::numeric_limits<uint32_t>::max();
+      png::image<png::rgb_pixel> image(job.width, job.height);
+      copy_to_png(bmp.pixels(), job.width, job.height, image);
+      std::ostringstream ss;
+      image.write_stream(ss);
+      return std::make_shared<render_msg>(
         job_msg->client, job_msg->type, job.job_number, job.width, job.height, ss.str());
+    }
+    else if (job_msg->type == instruction_type::get_bitmap) {
+      job.job_number = std::numeric_limits<uint32_t>::max();
+      std::vector<uint32_t> transfer_pixels;
+      auto &pixels = bmp.pixels();
+      transfer_pixels.reserve(pixels.size());
+      for (const auto &pix : pixels) {
+        uint32_t color;
+        char *cptr = (char *)&color;
+        *cptr = (char)(pix.r * 255);
+        cptr++;
+        *cptr = (char)(pix.g * 255);
+        cptr++;
+        *cptr = (char)(pix.b * 255);
+        cptr++;
+        *cptr = (char)(pix.a * 255);
+        transfer_pixels.push_back(color);
+      }
+      return std::make_shared<render_msg>(
+        job_msg->client, job_msg->type, job.job_number, job.width, job.height, transfer_pixels);
+    }
   }
 }
 
@@ -253,6 +275,16 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
           chat_handler->callback(job_msg->client, job_msg->buffer);
         };
         if (webserv) webserv->execute_image(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+      } else if (job_msg->type == instruction_type::get_bitmap) {
+          auto fun = [&](std::shared_ptr<BitmapHandler> bmp_handler, std::shared_ptr<render_msg> job_msg) {
+            std::string buffer;
+            for (const auto &i : job_msg->pixels) {
+              buffer.append((char *)&i, sizeof(i));
+            }
+            std::cout << "sending: " << buffer.size() << std::endl;
+            bmp_handler->callback(job_msg->client, buffer);
+          };
+          if (webserv) webserv->execute_bitmap(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
       } else if (job_msg->type == instruction_type::get_shapes) {
         auto fun = [&](std::shared_ptr<ShapesHandler> shapes_handler, std::shared_ptr<render_msg> job_msg) {
           shapes_handler->callback(job_msg->client, job_msg->buffer);
