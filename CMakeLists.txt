@@ -57,6 +57,7 @@ include_directories(
 )
 
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "/opt/cppse/build/v8pp/include/v8pp/context.cpp" "libs/piper/src/**")
+#file(GLOB_RECURSE starcry_SOURCES "src/main.cpp")
 list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/client.cpp")
 
 file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp")
@@ -92,9 +93,9 @@ target_link_libraries(sc_client -lSDL2)
 
 # SFML (seems broken for some reason now)
 #target_link_libraries(starcry ${SFML_LIBRARIES})
-target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-system-s.a)
-target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-window-s.a)
 target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-graphics-s.a)
+target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-window-s.a)
+target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-system-s.a)
 # below can be made obsolete if we can get rid of some Joystick related stuff in libsfml-window-s.a
 target_link_libraries(starcry /lib/x86_64-linux-gnu/libudev.so)
 
@@ -107,18 +108,16 @@ target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libavcodec.a)
 target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libavutil.a)
 target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libavfilter.a)
 
-# X11
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXinerama.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXi.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXrandr.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXext.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXrender.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXcursor.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXfixes.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libX11.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libxcb.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXau.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libXdmcp.a)
+# X11 (statically linking causes SFML to segfault)
+# We could retry with SDL at some point, but for now let's use dynamic linking
+target_link_libraries(starcry -lXrandr)
+target_link_libraries(starcry -lXext)
+target_link_libraries(starcry -lXrender)
+target_link_libraries(starcry -lX11)
+target_link_libraries(starcry -lxcb)
+target_link_libraries(starcry -lXau)
+target_link_libraries(starcry -lXdmcp)
+target_link_libraries(starcry -lGL)
 
 # x264
 target_link_libraries(starcry /opt/cppse/build/x264/lib/libx264.a)
@@ -132,7 +131,6 @@ target_link_libraries(starcry -ldl)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libjpeg.a)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libpng16.a)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libGLU.a)
-target_link_libraries(starcry -lGL)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libfreetype.a)
 
 # fastpfor

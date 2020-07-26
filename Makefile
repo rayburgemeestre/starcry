@@ -22,7 +22,7 @@ ci:
 
 debug:
 	# build starcry with tailored image so we can invoke the make command straight away
-	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core_debug"
+	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_debug"
 
 format:
 	# build starcry with tailored image so we can invoke the make command straight away
@@ -109,7 +109,7 @@ core_:
 core_debug:
 	pushd build && \
 	CXX=$(which c++) cmake -DDEBUG=on .. && \
-	make VERBOSE=1 -j $$(nproc)
+	make VERBOSE=1 -j $$(nproc) starcry
 
 core_debug_sanit:
 	pushd build && \
