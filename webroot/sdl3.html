@@ -9,6 +9,7 @@
     <style>
         html { background-color: #333333; padding: 50px; }
         img { width: 100%; }
+        canvas { border: solid 1px blue; }
     </style>
 </head>
 <body>
@@ -17,7 +18,7 @@
     <vue-slider ref="slider" v-model="value" v-bind="options"></vue-slider>
     <h1>{{ value }}</h1>
     <h2>{{ websock_status }}</h2>
-    <img id="test" />
+    <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
 </div>
 
 
@@ -85,7 +86,7 @@
 
     function connect() {
         let protocol = document.location.protocol.replace('http', 'ws');
-        ws = new WebSocket(protocol + '//' + document.location.host + '/image', ['tag_test']);
+        ws = new WebSocket(protocol + '//' + document.location.host + '/bitmap', ['tag_test']);
         ws.onopen = function () {
             app.$data.websock_status = 'connected';
         };
@@ -94,10 +95,25 @@
             setTimeout(connect, 1000);
         };
         ws.onmessage = function (message) {
-            var urlCreator = window.URL || window.webkitURL;
-            var blob = new Blob([message.data], {name: 'test.png', type: 'image/png'});
-            var imageUrl = urlCreator.createObjectURL(blob);
-            document.querySelector("img").src = imageUrl;
+            console.log(message);
+            const reader = new FileReader();
+            reader.addEventListener('loadend', (e) => {
+                const text = e.srcElement.result;
+                console.log(text.length);
+                Module.set_texture(text);
+            });
+            reader.addEventListener('error', (e) => {
+                console.log(e);
+
+            });
+            //reader.readAsText(message.data);
+            // Module.set_texture(message.data);
+
+            message.data.arrayBuffer().then(buffer => {
+                console.log(buffer.length);
+                Module.set_texture(buffer);
+            });
+
         };
         ws.onerror = function (error) {
             console.log("ERROR: " + error);
@@ -105,6 +121,17 @@
     }
     connect();
 </script>
+
+<script type='text/javascript'>
+    var Module = {
+        canvas: (function() { return document.getElementById('canvas'); })(),
+        onRuntimeInitialized: function() {
+          Module.start();
+        }
+    };
+
+</script>
+<script src="client.js"></script>
 
 </body>
 </html>

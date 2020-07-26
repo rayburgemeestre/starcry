@@ -106,7 +106,7 @@ public:
       }
       if (frame_of_interest != std::numeric_limits<size_t>::max()) {
         // render still image
-        sc.add_command(nullptr, script, frame_of_interest);
+        sc.add_command(nullptr, script, instruction_type::get_image, frame_of_interest);
       } else {
         // render video
         sc.add_command(nullptr, script, output_file);

@@ -61,7 +61,7 @@ class ball extends simple_shape
     move() {
         this.circle_.x += this.velocity.x / resolution;
         this.circle_.y += this.velocity.y / resolution;
-        let new_vec = this.view.wrap_position(this.circle_.as_vec2d());
+        let new_vec = this.view.wrap_position(new vector2d(this.circle_.x, this.circle_.y));
         this.circle_.x = new_vec.x;
         this.circle_.y = new_vec.y;
     }
@@ -76,6 +76,7 @@ class ball extends simple_shape
 
 function initialize()
 {
+    if (balls.length > 0) return;
     let view = new projection(canvas_w, canvas_h);
     for (let i=0; i<num_balls; i++) {
         balls.push(new ball(view, i == 0));
@@ -116,7 +117,7 @@ function next()
             }
             // Excerpt from http://www.gamasutrballs[i].com/view/feature/3015/pool_hall_lessons_fast_accurate_.php?page=3
             // (got mine from http://wonderfl.net/c/rp7P)
-            const normal = unit_vector(subtract_vector(ball1shape.as_vec2d(), ball2shape.as_vec2d()));
+            const normal = unit_vector(subtract_vector(new vector2d(ball1shape.x, ball1shape.y), new vector2d(ball2shape.x, ball2shape.y)));
             const ta = dot_product(ball1.velocity, normal);
             const tb = dot_product(ball2.velocity, normal);
             const optimized_p = (2.0 * (ta - tb)) / 2.0;

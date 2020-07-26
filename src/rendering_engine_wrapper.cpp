@@ -5,7 +5,7 @@
  */
 
 #include "rendering_engine_wrapper.h"
-#include "primitives.h"
+#include "data/color.hpp"
 #include "rendering_engine.hpp"
 
 struct rendering_engine_wrapper_class_data {
@@ -18,9 +18,9 @@ void rendering_engine_wrapper::initialize() {
   data->engine.initialize();
 }
 
-void rendering_engine_wrapper::render(image bmp,
+void rendering_engine_wrapper::render(image &bmp,
                                       const data::color &bg_color,
-                                      const shapes_t &shapes,
+                                      const std::vector<data::shape> &shapes,
                                       uint32_t offset_x,
                                       uint32_t offset_y,
                                       uint32_t canvas_w,
@@ -31,15 +31,6 @@ void rendering_engine_wrapper::render(image bmp,
   return data->engine.render(bmp, bg_color, shapes, offset_x, offset_y, canvas_w, canvas_h, width, height, scale);
 }
 
-void rendering_engine_wrapper::write_image(image bmp, const std::string &filename) {
+void rendering_engine_wrapper::write_image(image &bmp, const std::string &filename) {
   return data->engine.write_image(bmp, filename);
-}
-
-std::vector<uint32_t> rendering_engine_wrapper::serialize_bitmap2(image bitmap, uint32_t width, uint32_t height) {
-  return data->engine.serialize_bitmap2(bitmap, width, height);
-}
-
-using image = ALLEGRO_BITMAP *;
-image rendering_engine_wrapper::unserialize_bitmap2(std::vector<uint32_t> &pixels, uint32_t width, uint32_t height) {
-  return data->engine.unserialize_bitmap2(pixels, width, height);
 }

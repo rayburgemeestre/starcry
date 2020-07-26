@@ -10,8 +10,12 @@
 
 #include "message_type.hpp"
 
+#include "data/color.hpp"
+
 enum class instruction_type {
   get_image,
+  get_shapes,
+  get_bitmap,
   get_video,
 };
 
@@ -39,19 +43,33 @@ public:
 class job_message : public message_type {
 public:
   seasocks::WebSocket *client;
+  instruction_type type;
   std::shared_ptr<data::job> job;
-  job_message(seasocks::WebSocket *client, std::shared_ptr<data::job> job) : client(client), job(job) {}
+  job_message(seasocks::WebSocket *client, instruction_type type, std::shared_ptr<data::job> job)
+      : client(client), type(type), job(job) {}
 };
 
 class render_msg : public message_type {
 public:
+  size_t job_number;
   seasocks::WebSocket *client;
+  instruction_type type;
   std::string buffer;
   std::vector<uint32_t> pixels;
   uint32_t width;
   uint32_t height;
-  render_msg(seasocks::WebSocket *client, uint32_t width, uint32_t height, std::string buf)
-      : client(client), buffer(std::move(buf)), width(width), height(height) {}
-  render_msg(seasocks::WebSocket *client, uint32_t width, uint32_t height, std::vector<uint32_t> pixels)
-      : client(client), pixels(std::move(pixels)), width(width), height(height) {}
+  render_msg(seasocks::WebSocket *client,
+             instruction_type type,
+             size_t job_number,
+             uint32_t width,
+             uint32_t height,
+             std::string buf)
+      : job_number(job_number), client(client), type(type), buffer(std::move(buf)), width(width), height(height) {}
+  render_msg(seasocks::WebSocket *client,
+             instruction_type type,
+             size_t job_number,
+             uint32_t width,
+             uint32_t height,
+             std::vector<uint32_t> &pixels)
+      : job_number(job_number), client(client), type(type), pixels(std::move(pixels)), width(width), height(height) {}
 };

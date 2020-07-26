@@ -11,6 +11,7 @@
 #include <memory>
 #include <mutex>
 
+#include "image.hpp"
 #include "messages.hpp"
 #include "piper.h"
 #include "png.hpp"
@@ -19,7 +20,6 @@ class sfml_window;
 class bitmap_wrapper;
 class generator;
 class rendering_engine_wrapper;
-struct ALLEGRO_BITMAP;
 class render_server;
 class webserver;
 class frame_streamer;
@@ -58,6 +58,9 @@ private:
   int64_t num_queue_per_worker = 1;
   std::function<void(starcry &sc)> on_pipeline_initialized;
 
+  std::map<size_t, std::shared_ptr<render_msg>> buffered_frames;
+  size_t current_frame = 0;
+
 public:
   starcry(
       size_t num_local_engines,
@@ -69,15 +72,15 @@ public:
       render_video_mode mode,
       std::function<void(starcry &sc)> on_pipeline_initialized = [](auto &) {});
 
-  void add_command(seasocks::WebSocket *client, const std::string &script, int frame_num);
+  void add_command(seasocks::WebSocket *client, const std::string &script, instruction_type it, int frame_num);
   void add_command(seasocks::WebSocket *client, const std::string &script, const std::string &output_file);
 
   void run_server();
   void run_client();
 
 private:
-  void render_job(rendering_engine_wrapper &engine, const data::job &job, ALLEGRO_BITMAP *bmp);
-  void copy_to_png(const std::vector<uint32_t> &source,
+  void render_job(rendering_engine_wrapper &engine, const data::job &job, image &bmp);
+  void copy_to_png(const std::vector<data::color> &source,
                    uint32_t width,
                    uint32_t height,
                    png::image<png::rgb_pixel> &dest);

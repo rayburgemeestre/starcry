@@ -18,17 +18,33 @@
 
 class starcry;
 
-struct Handler : seasocks::WebSocket::Handler {
+struct ImageHandler : seasocks::WebSocket::Handler {
   starcry *sc;
   std::set<seasocks::WebSocket *> _cons;
-
-  explicit Handler(starcry *sc);
-
+  explicit ImageHandler(starcry *sc);
   void onConnect(seasocks::WebSocket *con) override;
   void onDisconnect(seasocks::WebSocket *con) override;
-
   void onData(seasocks::WebSocket *con, const char *data) override;
+  void callback(seasocks::WebSocket *recipient, std::string s);
+};
 
+struct ShapesHandler : seasocks::WebSocket::Handler {
+  starcry *sc;
+  std::set<seasocks::WebSocket *> _cons;
+  explicit ShapesHandler(starcry *sc);
+  void onConnect(seasocks::WebSocket *con) override;
+  void onDisconnect(seasocks::WebSocket *con) override;
+  void onData(seasocks::WebSocket *con, const char *data) override;
+  void callback(seasocks::WebSocket *recipient, std::string s);
+};
+
+struct BitmapHandler : seasocks::WebSocket::Handler {
+  starcry *sc;
+  std::set<seasocks::WebSocket *> _cons;
+  explicit BitmapHandler(starcry *sc);
+  void onConnect(seasocks::WebSocket *con) override;
+  void onDisconnect(seasocks::WebSocket *con) override;
+  void onData(seasocks::WebSocket *con, const char *data) override;
   void callback(seasocks::WebSocket *recipient, std::string s);
 };
 
@@ -40,7 +56,9 @@ struct DataHandler : seasocks::CrackedUriPageHandler {
 class webserver {
 private:
   std::shared_ptr<seasocks::Server> server;
-  std::shared_ptr<Handler> image_handler;
+  std::shared_ptr<ImageHandler> image_handler;
+  std::shared_ptr<ShapesHandler> shapes_handler;
+  std::shared_ptr<BitmapHandler> bitmap_handler;
 
 public:
   explicit webserver(starcry *sc);
@@ -48,9 +66,21 @@ public:
   void run();
 
   template <typename T>
-  void execute(T fun, std::shared_ptr<render_msg> job_msg) {
+  void execute_image(T fun, std::shared_ptr<render_msg> job_msg) {
     if (server) {
       server->execute(std::bind(fun, image_handler, job_msg));
+    }
+  }
+  template <typename T>
+  void execute_shapes(T fun, std::shared_ptr<render_msg> job_msg) {
+    if (server) {
+      server->execute(std::bind(fun, shapes_handler, job_msg));
+    }
+  }
+  template <typename T>
+  void execute_bitmap(T fun, std::shared_ptr<render_msg> job_msg) {
+    if (server) {
+      server->execute(std::bind(fun, bitmap_handler, job_msg));
     }
   }
 };

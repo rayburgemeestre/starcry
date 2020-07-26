@@ -8,6 +8,8 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 
+#include "data/color.hpp"
+
 class sfml_window {
 public:
   sfml_window();

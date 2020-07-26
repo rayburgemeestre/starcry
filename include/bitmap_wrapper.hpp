@@ -5,37 +5,23 @@
  */
 #pragma once
 
-#include "allegro5/allegro5.h"
+#include "image.hpp"
 
 class bitmap_wrapper {
 private:
-  ALLEGRO_BITMAP *bitmap = nullptr;
+  image bitmap;
   int bitmap_w = 0;
   int bitmap_h = 0;
 
 public:
   bitmap_wrapper() = default;
-  ~bitmap_wrapper() {
-    if (bitmap != nullptr) {
-      al_destroy_bitmap(bitmap);
-    }
-  }
-  ALLEGRO_BITMAP *get(int width, int height) {
-    if (bitmap == nullptr) {
-      bitmap = al_create_bitmap(width, height);
+  ~bitmap_wrapper() = default;
+
+  image& get(int width, int height) {
+    if (width != bitmap_w || height != bitmap_h) {
+      bitmap.resize(width, height);
       bitmap_w = width;
       bitmap_h = height;
-    } else {
-      if (bitmap_w != width || bitmap_h != height) {
-        // TODO: we're dealing with a different size, print out warning as it maybe inefficient.
-        // or use a map for the various sizes..
-        if (bitmap != nullptr) al_destroy_bitmap(bitmap);
-
-        // for now recreate
-        bitmap = al_create_bitmap(width, height);
-        bitmap_w = width;
-        bitmap_h = height;
-      }
     }
     return bitmap;
   }
