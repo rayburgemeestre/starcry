@@ -54,6 +54,7 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/cereal/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/include/"
+    "/usr/include/SDL2/"
 )
 
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "/opt/cppse/build/v8pp/include/v8pp/context.cpp" "libs/piper/src/**")
