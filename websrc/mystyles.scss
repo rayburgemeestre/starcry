@@ -1,0 +1,57 @@
+@charset "utf-8";
+@import "~bulma/bulma";
+
+// One column
+iframe, textarea.textarea {
+    width: calc(100vw - ( 2.5rem) );
+    min-width: calc(100vw - ( 2.5rem) );
+}
+// Two columns
+@media screen and (min-width: 769px){
+    .is-fullheight.columns {
+        height: calc(100vh - ( 3.25rem - .75rem ) );
+    }
+
+    iframe, textarea.textarea {
+        width: calc(50vw - ( 2.5rem) );
+        min-width: calc(50vw - ( 2.5rem) );
+        height: calc(50vh - ( 8rem) );
+    }
+}
+
+.tags {
+    margin-left: 10px;
+    margin-top: 10px;
+}
+.tag {
+    margin: 0;
+    padding: 0;
+    position:relative;
+}
+.tag span {
+    margin-left: 5px;
+}
+
+.share {
+    padding-top: 8px;
+}
+.share input {
+    width: 370px;
+    font-size: 10px;
+    padding: 17px;
+    background-color: black;
+    color: white;
+}
+
+img.donate {
+    height: 36px;
+    margin-right: 10px;
+}
+
+.icon svg {
+    width: 24px;
+    height: 24px;
+}
+.button.github {
+    margin-right: 10px;
+}

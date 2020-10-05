@@ -1,0 +1,39 @@
+{
+  "name": "starcry",
+  "version": "1.0.0",
+  "description": "User Interface for Starcry rendering platform",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack",
+    "dev": "webpack-dev-server --config webpack-dev.config.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "bulma": "^0.7.2",
+    "css-loader": "^1.0.0",
+    "extract-text-webpack-plugin": "^4.0.0-beta.0",
+    "html-webpack-plugin": "^3.2.0",
+    "node-sass": "^4.9.4",
+    "sass-loader": "^7.1.0",
+    "style-loader": "^0.23.1",
+    "vue-loader": "^15.4.2",
+    "vue-style-loader": "^4.1.2",
+    "vue-template-compiler": "^2.5.17",
+    "webpack": "^4.21.0",
+    "webpack-cli": "^3.1.2",
+    "webpack-dev-server": ">=3.1.11"
+  },
+  "dependencies": {
+    "axios": "^0.18.1",
+    "lodash": "^4.17.15",
+    "monaco-editor": "^0.20.0",
+    "monaco-editor-webpack-plugin": "^1.5.4",
+    "monaco-themes": "^0.2.5",
+    "monaco-vim": "0.0.7",
+    "vue": "^2.5.17",
+    "vue-router": "^3.0.1",
+    "vue-shortkey": "^3.1.6"
+  }
+}
