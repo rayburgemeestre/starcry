@@ -31,7 +31,11 @@ module.exports = {
             {
                 test: /\.vue$/,
                 use: 'vue-loader'
-            }
+            },
+            {
+                test: /\.ttf$/,
+                use: ['file-loader'],
+            },
         ]
     },
     plugins: [

@@ -40,7 +40,7 @@ void mainloop(void *arg) {
   renderer = static_cast<SDL_Renderer *>(arg);
 #endif
 
-  SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255);
+  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
   SDL_RenderClear(renderer);
 
   SDL_Rect r, r2;
@@ -158,6 +158,10 @@ void start() {
   SDL_Init(SDL_INIT_VIDEO);
   SDL_Window *window;
 #ifdef EMSCRIPTEN
+  SDL_EventState(SDL_TEXTINPUT, SDL_DISABLE);
+  SDL_EventState(SDL_KEYDOWN, SDL_DISABLE);
+  SDL_EventState(SDL_KEYUP, SDL_DISABLE);
+
   SDL_Renderer *renderer;
   SDL_CreateWindowAndRenderer(job.width, job.height, 0, &window, &renderer);
   context ctx;
@@ -185,12 +189,14 @@ void start() {
 #else
   render_shapes_to_texture();
   while (true) {
+    /*
     SDL_Event event;
     if (SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
         break;
       }
     }
+    */
     mainloop((void *)renderer);
   }
 #endif

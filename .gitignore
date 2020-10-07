@@ -10,3 +10,11 @@ docs/build_instructions/**
 .idea
 webroot/stream/*
 libs
+webroot/*.main.js
+webroot/*.worker.js
+webroot/main.js
+cmake-build-debug
+build
+webroot/client.js
+webroot/client.wasm
+node_modules

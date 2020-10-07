@@ -14,6 +14,7 @@
     "bulma": "^0.7.2",
     "css-loader": "^1.0.0",
     "extract-text-webpack-plugin": "^4.0.0-beta.0",
+    "file-loader": "^6.1.0",
     "html-webpack-plugin": "^3.2.0",
     "node-sass": "^4.9.4",
     "sass-loader": "^7.1.0",
@@ -27,8 +28,9 @@
   },
   "dependencies": {
     "axios": "^0.18.1",
+    "buefy": "^0.9.3",
     "lodash": "^4.17.15",
-    "monaco-editor": "^0.20.0",
+    "monaco-editor": "^0.14.3",
     "monaco-editor-webpack-plugin": "^1.5.4",
     "monaco-themes": "^0.2.5",
     "monaco-vim": "0.0.7",
