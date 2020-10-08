@@ -9,6 +9,7 @@
 #include "starcry.h"
 
 #include <memory>
+#include <sstream>
 
 ImageHandler::ImageHandler(starcry *sc) : sc(sc) {}
 
@@ -84,6 +85,30 @@ void BitmapHandler::callback(seasocks::WebSocket *recipient, std::string s) {
   }
 }
 
+ScriptHandler::ScriptHandler(starcry *sc) : sc(sc) {}
+
+void ScriptHandler::onConnect(seasocks::WebSocket *con) {
+  _cons.insert(con);
+}
+
+void ScriptHandler::onDisconnect(seasocks::WebSocket *con) {
+  _cons.erase(con);
+}
+
+void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
+  std::ifstream ifs(data);
+  std::ostringstream ss;
+  ss << ifs.rdbuf();
+  con->send((const uint8_t *)ss.str().c_str(), ss.str().size() * sizeof(uint8_t));
+}
+
+void ScriptHandler::callback(seasocks::WebSocket *recipient, std::string s) {
+  if (_cons.find(recipient) != _cons.end()) {
+    recipient->send((const uint8_t *)s.c_str(), s.size() * sizeof(uint8_t));
+  }
+}
+
+
 std::shared_ptr<seasocks::Response> DataHandler::handle(const seasocks::CrackedUri & /*uri*/,
                                                         const seasocks::Request &request) {
   return seasocks::Response::jsonResponse("{}");
@@ -94,7 +119,9 @@ webserver::webserver(starcry *sc)
           std::make_shared<seasocks::PrintfLogger>(seasocks::PrintfLogger::Level::Info))),
       image_handler(std::make_shared<ImageHandler>(sc)),
       shapes_handler(std::make_shared<ShapesHandler>(sc)),
-      bitmap_handler(std::make_shared<BitmapHandler>(sc)) {
+      bitmap_handler(std::make_shared<BitmapHandler>(sc)),
+      script_handler(std::make_shared<ScriptHandler>(sc))
+{
   auto root = std::make_shared<seasocks::RootPageHandler>();
   root->add(std::make_shared<seasocks::PathHandler>("data", std::make_shared<DataHandler>()));
   server->addPageHandler(root);
@@ -102,6 +129,7 @@ webserver::webserver(starcry *sc)
   server->addWebSocketHandler("/image", image_handler);
   server->addWebSocketHandler("/shapes", shapes_handler);
   server->addWebSocketHandler("/bitmap", bitmap_handler);
+  server->addWebSocketHandler("/script", script_handler);
 };
 
 void webserver::run() {

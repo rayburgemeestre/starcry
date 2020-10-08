@@ -48,6 +48,16 @@ struct BitmapHandler : seasocks::WebSocket::Handler {
   void callback(seasocks::WebSocket *recipient, std::string s);
 };
 
+struct ScriptHandler : seasocks::WebSocket::Handler {
+  starcry *sc;
+  std::set<seasocks::WebSocket *> _cons;
+  explicit ScriptHandler(starcry *sc);
+  void onConnect(seasocks::WebSocket *con) override;
+  void onDisconnect(seasocks::WebSocket *con) override;
+  void onData(seasocks::WebSocket *con, const char *data) override;
+  void callback(seasocks::WebSocket *recipient, std::string s);
+};
+
 struct DataHandler : seasocks::CrackedUriPageHandler {
   virtual std::shared_ptr<seasocks::Response> handle(const seasocks::CrackedUri & /*uri*/,
                                                      const seasocks::Request &request) override;
@@ -59,6 +69,7 @@ private:
   std::shared_ptr<ImageHandler> image_handler;
   std::shared_ptr<ShapesHandler> shapes_handler;
   std::shared_ptr<BitmapHandler> bitmap_handler;
+  std::shared_ptr<ScriptHandler> script_handler;
 
 public:
   explicit webserver(starcry *sc);

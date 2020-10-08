@@ -28,52 +28,33 @@
         </div>
         <div class="columns main-columns">
             <div class="column is-narrow">
-                First column
                 <b-menu>
                     <b-menu-list label="Menu">
-                        <b-menu-item icon="information-outline" label="Info"></b-menu-item>
-                        <b-menu-item icon="settings" :active="isActive" expanded>
-                            <template slot="label" slot-scope="props">
-                                Administrator
-                                <b-icon class="is-pulled-right" :icon="props.expanded ? 'menu-down' : 'menu-up'"></b-icon>
-                            </template>
-                            <b-menu-item icon="account" label="Users"></b-menu-item>
-                            <b-menu-item icon="cellphone-link">
-                                <template slot="label">
-                                    Devices
-                                    <b-dropdown aria-role="list" class="is-pulled-right" position="is-bottom-left">
-                                        <b-icon icon="dots-vertical" slot="trigger"></b-icon>
-                                        <b-dropdown-item aria-role="listitem">Action</b-dropdown-item>
-                                        <b-dropdown-item aria-role="listitem">Another action</b-dropdown-item>
-                                        <b-dropdown-item aria-role="listitem">Something else</b-dropdown-item>
-                                    </b-dropdown>
-                                </template>
-                            </b-menu-item>
-                            <b-menu-item icon="cash-multiple" label="Payments" disabled></b-menu-item>
-                        </b-menu-item>
-                        <b-menu-item icon="account" label="My Account">
-                            <b-menu-item label="Account data"></b-menu-item>
-                            <b-menu-item label="Addresses"></b-menu-item>
-                        </b-menu-item>
+                        <b-menu-item icon="information-outline" label="Files" :active="menu == 'files'" v-on:click="menu = menu == 'files' ? '' : 'files'"></b-menu-item>
+                        <b-menu-item icon="cash-multiple" label="Script" :active="menu == 'script'" v-on:click="menu = menu == 'script' ? '' : 'script'"></b-menu-item>
                     </b-menu-list>
-                    <b-menu-list>
-                        <b-menu-item icon="cash-multiple" label="Payments" ></b-menu-item>
-                    </b-menu-list>
+                    <!--
                     <b-menu-list label="Actions">
                         <b-menu-item label="Logout"></b-menu-item>
                     </b-menu-list>
+                    -->
                 </b-menu>
             </div>
-            <div class="column" style="background-color: #c0c0c0; width: 100%;">
+            <div v-if="menu == 'files'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
+                <scripts-component width="100%" height="100vh - 60px"/>
+            </div>
+            <div v-if="menu == 'script'" class="column" style="background-color: #c0c0c0; width: 38%;">
                 <editor-component v-model="cpp_code" name="js" language="javascript" width="100%" height="100vh - 60px"/>
             </div>
-            <div class="column" style="background-color: black;">
-                <canvas id="canvas" oncontextmenu="event.preventDefault()" style="width: 100%; height: auto;"></canvas>
+            <div class="column" style="background-color: black; max-height: calc(100vh - 120px);">
+                <canvas id="canvas" oncontextmenu="event.preventDefault()" style="width: 100%; max-height: calc(100vh - 120px);"></canvas>
             </div>
             <div class="column is-narrow">
                 Third column
                 <h1>{{ ticks }}</h1>
                 <h2>{{ websock_status }}</h2>
+                <button v-shortkey="['ctrl', 's']" @shortkey="menu = menu == 'script' ? '' : 'script'">_</button>
+                <button v-shortkey="['ctrl', 'f']" @shortkey="menu = menu == 'files' ? '' : 'files'">_</button>
             </div>
         </div>
         <div class="columns" style="margin: 0px 20px">
@@ -84,18 +65,21 @@
 
 <script>
     import EditorComponent from './components/EditorComponent.vue'
+    import ScriptsComponent from './components/ScriptsComponent.vue'
     let ws;
+    let ws_script;
     export default {
         data() {
             return {
                 cpp_code: 'Hello world',
                 ticks: 0,
                 websock_status: '',
-                isActive: true,
+                menu: 'files',
             };
         },
         components: {
             EditorComponent,
+            ScriptsComponent
         },
         methods: {
             connect: function() {
@@ -103,14 +87,24 @@
                 let protocol = document.location.protocol.replace('http', 'ws');
                 if (document.location.href.indexOf('localhost')) {
                     ws = new WebSocket(protocol + '//' + document.location.host.replace(':8080', ':18080') + '/bitmap', ['tag_test']);
+                    ws_script = new WebSocket(protocol + '//' + document.location.host.replace(':8080', ':18080') + '/script', ['tag_test']);
                     console.log(document.location.host.replace(':8080', ':18080'));
                 } else {
                     ws = new WebSocket(protocol + '//' + document.location.host + '/bitmap', ['tag_test']);
+                    ws_script = new WebSocket(protocol + '//' + document.location.host + '/script', ['tag_test']);
                 }
                 ws.onopen = function () {
                     this.$data.websock_status = 'connected';
                 }.bind(this);
                 ws.onclose = function () {
+                    this.$data.websock_status = 'disconnected';
+                    setTimeout(connect, 1000);
+                }.bind(this);
+                ws_script.onopen = function () {
+                    this.$data.websock_status = 'connected';
+                    ws_script.send("input/test.js");
+                }.bind(this);
+                ws_script.onclose = function () {
                     this.$data.websock_status = 'disconnected';
                     setTimeout(connect, 1000);
                 }.bind(this);
@@ -131,6 +125,25 @@
                     });
 
                 };
+                ws_script.onmessage = function (message) {
+                    const reader = new FileReader();
+                    reader.addEventListener('loadend', (e) => {
+                        const text = e.srcElement.result;
+                        console.log('this is one');
+                        console.log(text);
+                        console.log(text.length);
+                        //Module.set_texture(text);
+                    });
+                    reader.addEventListener('error', (e) => {
+                        console.log(e);
+                    });
+                    message.data.arrayBuffer().then(function(buffer) {
+                        //Module.set_texture(buffer);
+                        let str = String.fromCharCode.apply(null, new Uint8Array(buffer));
+                        this.$data.cpp_code = str;
+                        console.log(str);
+                    }.bind(this));
+                }.bind(this);
                 ws.onerror = function (error) {
                     console.log("ERROR: " + error);
                 };
