@@ -98,7 +98,7 @@
                 }.bind(this);
                 ws.onclose = function () {
                     this.$data.websock_status = 'disconnected';
-                    setTimeout(connect, 1000);
+                    setTimeout(this.connect, 1000);
                 }.bind(this);
                 ws_script.onopen = function () {
                     this.$data.websock_status = 'connected';
@@ -106,7 +106,7 @@
                 }.bind(this);
                 ws_script.onclose = function () {
                     this.$data.websock_status = 'disconnected';
-                    setTimeout(connect, 1000);
+                    setTimeout(this.connect, 1000);
                 }.bind(this);
                 ws.onmessage = function (message) {
                     const reader = new FileReader();
