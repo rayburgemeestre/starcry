@@ -68,6 +68,8 @@
     import ScriptsComponent from './components/ScriptsComponent.vue'
     let ws;
     let ws_script;
+    let retry;
+    let retry2;
     export default {
         data() {
             return {
@@ -94,19 +96,21 @@
                     ws_script = new WebSocket(protocol + '//' + document.location.host + '/script', ['tag_test']);
                 }
                 ws.onopen = function () {
+                    clearTimeout(retry);
                     this.$data.websock_status = 'connected';
                 }.bind(this);
                 ws.onclose = function () {
                     this.$data.websock_status = 'disconnected';
-                    setTimeout(this.connect, 1000);
+                    retry = setTimeout(this.connect, 1000);
                 }.bind(this);
                 ws_script.onopen = function () {
+                    clearTimeout(retry2);
                     this.$data.websock_status = 'connected';
-                    ws_script.send("input/test.js");
+                    ws_script.send("open input/test.js");
                 }.bind(this);
                 ws_script.onclose = function () {
                     this.$data.websock_status = 'disconnected';
-                    setTimeout(this.connect, 1000);
+                    retry2 = setTimeout(this.connect, 1000);
                 }.bind(this);
                 ws.onmessage = function (message) {
                     const reader = new FileReader();

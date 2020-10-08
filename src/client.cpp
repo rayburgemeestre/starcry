@@ -208,7 +208,7 @@ void start() {
 void set_shapes(std::string data) {
   std::istringstream is(data);
   cereal::JSONInputArchive archive(is);
-  //cereal::BinaryInputArchive archive(is);
+  // cereal::BinaryInputArchive archive(is);
   data::job tmp;
   archive(tmp);
   std::swap(job, tmp);
