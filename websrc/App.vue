@@ -51,14 +51,13 @@
             </div>
             <div class="column is-narrow">
                 Third column
-                <h1>{{ ticks }}</h1>
                 <h2>{{ websock_status }}</h2>
                 <button v-shortkey="['ctrl', 's']" @shortkey="menu = menu == 'script' ? '' : 'script'">_</button>
                 <button v-shortkey="['ctrl', 'f']" @shortkey="menu = menu == 'files' ? '' : 'files'">_</button>
             </div>
         </div>
         <div class="columns" style="margin: 0px 20px">
-            <b-slider :min="0" :max="250" v-model="ticks" ticks></b-slider>
+            <playback-component />
         </div>
     </div>
 </template>
@@ -66,6 +65,7 @@
 <script>
     import EditorComponent from './components/EditorComponent.vue'
     import ScriptsComponent from './components/ScriptsComponent.vue'
+    import PlaybackComponent from './components/PlaybackComponent.vue'
     let ws;
     let ws_script;
     let retry;
@@ -74,14 +74,14 @@
         data() {
             return {
                 cpp_code: 'Hello world',
-                ticks: 0,
                 websock_status: '',
                 menu: 'files',
             };
         },
         components: {
             EditorComponent,
-            ScriptsComponent
+            ScriptsComponent,
+            PlaybackComponent,
         },
         methods: {
             connect: function() {
@@ -154,9 +154,6 @@
             }
         },
         watch: {
-            ticks: function(frame) {
-                ws.send("input/test.js " + frame);
-            },
         },
         mounted: function() {
             this.connect();
