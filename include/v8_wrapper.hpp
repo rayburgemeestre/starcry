@@ -26,6 +26,8 @@ public:
 
   ~v8_wrapper();
 
+  void reset();
+
   template <typename T = void>
   T run(std::string const& source);
 
@@ -44,6 +46,7 @@ public:
 
   void rethrow_as_runtime_error(v8::Isolate* isolate, v8::TryCatch& try_catch);
 
+  v8::Isolate* isolate = nullptr;
   v8pp::context* context;
   std::unique_ptr<v8::Platform> platform;
   std::string filename_;  // for error messages
@@ -59,7 +62,18 @@ v8_wrapper::v8_wrapper(std::string filename) : context(nullptr), platform(nullpt
 #endif
   v8::V8::InitializePlatform(platform.get());
   v8::V8::Initialize();
-  context = new v8pp::context();  // Making it unique_ptr breaks it!
+
+  v8::Isolate::CreateParams create_params;
+  create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+  isolate = v8::Isolate::New(create_params);
+  isolate->Enter();
+
+  context = new v8pp::context(isolate);  // Making it unique_ptr breaks it!
+}
+
+void v8_wrapper::reset() {
+  delete (context);
+  context = new v8pp::context(isolate);
 }
 
 template <typename T>

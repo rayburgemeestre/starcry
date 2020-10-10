@@ -55,6 +55,7 @@
       },
       play : function () {
         for (let i=0; i<250; i++) {
+          // TODO: via this.$parent, or link filename as property
           ws.send("input/test.js " + i);
         }
         this.$data.ticks = 250;
@@ -62,6 +63,7 @@
     },
     watch: {
       ticks: function (frame) {
+        // TODO: via this.$parent, or link filename as property
         ws.send("input/test.js " + frame);
       },
     },

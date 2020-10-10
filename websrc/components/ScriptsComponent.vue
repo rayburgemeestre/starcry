@@ -1,6 +1,6 @@
 <template>
   <div>
-    <b-table :data="data" :columns="columns"></b-table>
+    <b-table focusable :data="data" :columns="columns" :selected.sync="selected"></b-table>
   </div>
 </template>
 
@@ -27,6 +27,7 @@
             label: 'Modified',
           },
         ],
+        selected: null,
         websock_status: "",
       }
     },
@@ -60,6 +61,11 @@
         ws.onerror = function (error) {
           console.log("ERROR: " + error);
         };
+      }
+    },
+    watch: {
+      selected: function (new_value) {
+        this.$parent.open(new_value['filename']);
       }
     },
     mounted: function() {

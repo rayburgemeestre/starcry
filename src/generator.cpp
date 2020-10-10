@@ -48,39 +48,40 @@ generator::~generator() {
 
 void generator::init(const std::string &filename) {
   //  bool use_stdin = false;  // TODO: now hardcoded
-
   if (context == nullptr) {
     context = std::make_shared<v8_wrapper>(filename);
-
-    context->add_class(shapes::shape::add_to_context);
-    context->add_class(shapes::circle::add_to_context);
-    context->add_class(shapes::rectangle::add_to_context);
-    context->add_class(shapes::line::add_to_context);
-    context->add_class(shapes::color::add_to_context);
-    context->add_class(shapes::pos::add_to_context);
-    context->add_class(shapes::gradient::add_to_context);
-
-    context->add_fun("version", &get_version);
-    context->add_fun("output", &output);
-    context->add_fun("write_frame", &write_frame_fun);
-    context->add_fun("close", &close_fun);
-    context->add_fun("add_text", &add_text);
-    context->add_fun("set_background_color", &set_background_color);
-    context->add_fun("add_circle", &add_circle);
-    context->add_fun("add_line", &add_line);
-    context->add_fun("rand", &rand_fun);
-    // TODO: context->add_fun("add_rectangle", &add_rectangle);
-
-    context->add_include_fun();
-
-    // evaluate input script file in V8 context
-    std::ifstream stream(filename.c_str());
-    if (!stream && filename != "-") {
-      throw std::runtime_error("could not locate file " + filename);
-    }
-    std::istreambuf_iterator<char> begin(filename == "-" ? std::cin : stream), end;
-    context->run(std::string(begin, end));
   }
+
+  context->reset();
+
+  context->add_class(shapes::shape::add_to_context);
+  context->add_class(shapes::circle::add_to_context);
+  context->add_class(shapes::rectangle::add_to_context);
+  context->add_class(shapes::line::add_to_context);
+  context->add_class(shapes::color::add_to_context);
+  context->add_class(shapes::pos::add_to_context);
+  context->add_class(shapes::gradient::add_to_context);
+
+  context->add_fun("version", &get_version);
+  context->add_fun("output", &output);
+  context->add_fun("write_frame", &write_frame_fun);
+  context->add_fun("close", &close_fun);
+  context->add_fun("add_text", &add_text);
+  context->add_fun("set_background_color", &set_background_color);
+  context->add_fun("add_circle", &add_circle);
+  context->add_fun("add_line", &add_line);
+  context->add_fun("rand", &rand_fun);
+  // TODO: context->add_fun("add_rectangle", &add_rectangle);
+  context->add_include_fun();
+
+  // evaluate input script file in V8 context
+  std::ifstream stream(filename.c_str());
+  if (!stream && filename != "-") {
+    throw std::runtime_error("could not locate file " + filename);
+  }
+  std::istreambuf_iterator<char> begin(filename == "-" ? std::cin : stream), end;
+  context->run(std::string(begin, end));
+
   context->run("var current_frame = 0;");
   if (context->run<bool>("typeof initialize != 'undefined'")) {
     call_print_exception("initialize");

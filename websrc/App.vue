@@ -76,6 +76,7 @@
                 cpp_code: 'Hello world',
                 websock_status: '',
                 menu: 'files',
+                filename: 'input/test.js',
             };
         },
         components: {
@@ -89,11 +90,8 @@
                 let protocol = document.location.protocol.replace('http', 'ws');
                 if (document.location.href.indexOf('localhost')) {
                     ws = new WebSocket(protocol + '//' + document.location.host.replace(':8080', ':18080') + '/bitmap', ['tag_test']);
-                    ws_script = new WebSocket(protocol + '//' + document.location.host.replace(':8080', ':18080') + '/script', ['tag_test']);
-                    console.log(document.location.host.replace(':8080', ':18080'));
                 } else {
                     ws = new WebSocket(protocol + '//' + document.location.host + '/bitmap', ['tag_test']);
-                    ws_script = new WebSocket(protocol + '//' + document.location.host + '/script', ['tag_test']);
                 }
                 ws.onopen = function () {
                     clearTimeout(retry);
@@ -103,60 +101,55 @@
                     this.$data.websock_status = 'disconnected';
                     retry = setTimeout(this.connect, 1000);
                 }.bind(this);
-                ws_script.onopen = function () {
-                    clearTimeout(retry2);
-                    this.$data.websock_status = 'connected';
-                    ws_script.send("open input/test.js");
-                }.bind(this);
-                ws_script.onclose = function () {
-                    this.$data.websock_status = 'disconnected';
-                    retry2 = setTimeout(this.connect, 1000);
-                }.bind(this);
                 ws.onmessage = function (message) {
-                    const reader = new FileReader();
-                    reader.addEventListener('loadend', (e) => {
-                        const text = e.srcElement.result;
-                        console.log(text.length);
-                        Module.set_texture(text);
-                    });
-                    reader.addEventListener('error', (e) => {
-                        console.log(e);
-                    });
-                    //reader.readAsText(message.data);
-                    // Module.set_texture(message.data);
                     message.data.arrayBuffer().then(buffer => {
                         Module.set_texture(buffer);
                     });
-
                 };
+                ws.onerror = function (error) {
+                    console.log("ERROR: " + error);
+                };
+            },
+            connect2: function () {
+                this.$data.websock_status = 'connecting';
+                let protocol = document.location.protocol.replace('http', 'ws');
+                if (document.location.href.indexOf('localhost')) {
+                    ws_script = new WebSocket(protocol + '//' + document.location.host.replace(':8080', ':18080') + '/script', ['tag_test']);
+                    console.log(document.location.host.replace(':8080', ':18080'));
+                } else {
+                    ws_script = new WebSocket(protocol + '//' + document.location.host + '/script', ['tag_test']);
+                }
+                ws_script.onopen = function () {
+                    clearTimeout(retry2);
+                    this.$data.websock_status = 'connected';
+                    ws_script.send("open " + this.$data.filename);
+                }.bind(this);
+                ws_script.onclose = function () {
+                    this.$data.websock_status = 'disconnected';
+                    retry2 = setTimeout(this.connect2, 1000);
+                }.bind(this);
                 ws_script.onmessage = function (message) {
-                    const reader = new FileReader();
-                    reader.addEventListener('loadend', (e) => {
-                        const text = e.srcElement.result;
-                        console.log('this is one');
-                        console.log(text);
-                        console.log(text.length);
-                        //Module.set_texture(text);
-                    });
-                    reader.addEventListener('error', (e) => {
-                        console.log(e);
-                    });
                     message.data.arrayBuffer().then(function(buffer) {
-                        //Module.set_texture(buffer);
                         let str = String.fromCharCode.apply(null, new Uint8Array(buffer));
                         this.$data.cpp_code = str;
                         console.log(str);
                     }.bind(this));
                 }.bind(this);
-                ws.onerror = function (error) {
+                ws_script.onerror = function (error) {
                     console.log("ERROR: " + error);
                 };
+            },
+            open: function(filename) {
+               this.$data.filename = filename;
+               ws_script.send("open " + filename);
+               ws.send(filename + " 0");
             }
         },
         watch: {
         },
         mounted: function() {
             this.connect();
+            this.connect2();
         }
     }
 
