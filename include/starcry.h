@@ -23,6 +23,7 @@ class rendering_engine_wrapper;
 class render_server;
 class webserver;
 class frame_streamer;
+class render_client;
 
 namespace data {
 struct job;
@@ -88,5 +89,14 @@ private:
   void command_to_jobs(std::shared_ptr<instruction> cmd_def);
   std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);
   bool on_client_message(int sockfd, int type, size_t len, const std::string &data);
+  bool on_server_message(render_client &client,
+                         rendering_engine_wrapper &engine,
+                         bitmap_wrapper &bitmap,
+                         int sockfd,
+                         int type,
+                         size_t len,
+                         const std::string &data);
   void handle_frame(std::shared_ptr<render_msg> job_msg);
+
+  std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in) const;
 };

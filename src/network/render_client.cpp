@@ -6,11 +6,12 @@
 
 #include <stdexcept>
 
-#include "render_client.h"
+#include "network/render_client.h"
 
 #include "cereal/archives/binary.hpp"
 #include "cereal/types/vector.hpp"
-#include "util/compress_vector.h"
+#include "network/messages.h"
+// #include "util/compress_vector.h"
 
 render_client::render_client() {
   memset(&hints, 0, sizeof hints);
@@ -120,7 +121,7 @@ void render_client::process() {
 }
 
 void render_client::register_me() {
-  send_msg(sockfd, 10, "", 0);
+  send_msg(sockfd, starcry_msgs::register_me, "", 0);
 }
 
 void render_client::pull_job(bool is_remote, int64_t timestamp) {
@@ -131,7 +132,7 @@ void render_client::pull_job(bool is_remote, int64_t timestamp) {
   p++;
   int64_t *p2 = (int64_t *)p;
   *p2 = timestamp;
-  send_msg(sockfd, 20, msg, len);
+  send_msg(sockfd, starcry_msgs::pull_job, msg, len);
 }
 
 void render_client::send_frame(data::job &job, data::pixel_data2 &dat, bool is_remote) {
@@ -146,7 +147,7 @@ void render_client::send_frame(data::job &job, data::pixel_data2 &dat, bool is_r
   archive(job);
   archive(dat);
   archive(is_remote);
-  send_msg(sockfd, 30, os.str().c_str(), os.str().size());
+  send_msg(sockfd, starcry_msgs::send_frame, os.str().c_str(), os.str().size());
 }
 
 int render_client::send_msg(int fd, int type, const char *data, int len_data) {

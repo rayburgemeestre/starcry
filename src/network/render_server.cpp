@@ -11,7 +11,8 @@
 #endif  // __clang__
 #include "cereal/archives/json.hpp"
 
-#include "render_server.h"
+#include "network/render_server.h"
+#include "network/messages.h"
 
 #define PORT "10000"
 
@@ -270,5 +271,5 @@ void render_server::send_job(int fd, bool to_files, int64_t timestamp, const dat
   }
   int len = os.str().length();
 
-  this->send_msg(fd, 21, os.str().c_str(), len);
+  this->send_msg(fd, starcry_msgs::pull_job_response, os.str().c_str(), len);
 }

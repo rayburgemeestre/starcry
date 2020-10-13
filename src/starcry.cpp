@@ -14,12 +14,13 @@
 #include "cereal/archives/json.hpp"
 #include "framer.hpp"
 #include "generator.h"
-#include "render_client.h"
-#include "render_server.h"
 #include "rendering_engine_wrapper.h"
 #include "streamer_output/sfml_window.h"
 #include "util/compress_vector.h"
 #include "webserver.h"
+#include "network/messages.h"
+#include "network/render_client.h"
+#include "network/render_server.h"
 
 starcry::starcry(size_t num_local_engines,
                  bool enable_remote_workers,
@@ -80,6 +81,7 @@ void starcry::copy_to_png(const std::vector<data::color> &source,
     }
   }
 }
+
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   std::shared_ptr<data::job> the_job;
   if (cmd_def->type == instruction_type::get_image || cmd_def->type == instruction_type::get_bitmap ||
@@ -141,57 +143,6 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   }
 }
 
-bool starcry::on_client_message(int sockfd, int type, size_t len, const std::string &data) {
-  switch (type) {
-    case 10:  // register_me
-    {
-      renderserver->send_msg(sockfd, type + 1, (const char *)&num_queue_per_worker, sizeof(num_queue_per_worker));
-      break;
-    }
-    case 20:  // pull_job
-    {
-      while (true) {
-        if (!jobs->has_items(0)) {
-          jobs->sleep_until_items_available(0);
-          if (!jobs->active) {
-            frames->check_terminate();
-            return false;  // shutdown server
-          }
-        }
-        auto job = std::dynamic_pointer_cast<job_message>(jobs->pop(0));
-        if (job) {  // can be nullptr if someone else took it faster than us
-          std::ostringstream os;
-          cereal::BinaryOutputArchive archive(os);
-          archive(*(job->job));
-          renderserver->send_msg(sockfd, type + 1, os.str().c_str(), os.str().size());
-          break;
-        }
-      }
-      break;
-    }
-    case 30: {
-      std::istringstream is(data);
-      cereal::BinaryInputArchive archive(is);
-      data::job job;
-      data::pixel_data2 dat;
-      bool is_remote;
-      archive(job);
-      archive(dat);
-      archive(is_remote);
-
-      // if (job.compress) {
-      //   compress_vector<uint32_t> cv;
-      //   cv.decompress(&dat.pixels, job.width * job.height);
-      // }
-
-      auto frame = std::make_shared<render_msg>(
-          nullptr, instruction_type::get_image, job.job_number, job.width, job.height, dat.pixels);
-      frames->push(frame);
-    }
-  }
-  return true;
-}
-
 std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_message> job_msg) {
   auto &job = *job_msg->job;
   // no need to render in this case, client will do the rendering
@@ -212,22 +163,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
     engines[i]->write_image(bmp, "output.bmp");
   }
   if (job_msg->client == nullptr) {
-    std::vector<uint32_t> transfer_pixels;
-    auto &pixels = bmp.pixels();
-    transfer_pixels.reserve(pixels.size());
-    for (const auto &pix : pixels) {
-      uint32_t color;
-      char *cptr = (char *)&color;
-      *cptr = (char)(pix.r * 255);
-      cptr++;
-      *cptr = (char)(pix.g * 255);
-      cptr++;
-      *cptr = (char)(pix.b * 255);
-      cptr++;
-      *cptr = (char)(pix.a * 255);
-      transfer_pixels.push_back(color);
-    }
-
+    auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels());
     return std::make_shared<render_msg>(
         job_msg->client, job_msg->type, job.job_number, job.width, job.height, transfer_pixels);
   } else {
@@ -241,21 +177,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
           job_msg->client, job_msg->type, job.job_number, job.width, job.height, ss.str());
     } else if (job_msg->type == instruction_type::get_bitmap) {
       job.job_number = std::numeric_limits<uint32_t>::max();
-      std::vector<uint32_t> transfer_pixels;
-      auto &pixels = bmp.pixels();
-      transfer_pixels.reserve(pixels.size());
-      for (const auto &pix : pixels) {
-        uint32_t color;
-        char *cptr = (char *)&color;
-        *cptr = (char)(pix.r * 255);
-        cptr++;
-        *cptr = (char)(pix.g * 255);
-        cptr++;
-        *cptr = (char)(pix.b * 255);
-        cptr++;
-        *cptr = (char)(pix.a * 255);
-        transfer_pixels.push_back(color);
-      }
+      auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels());
       return std::make_shared<render_msg>(
           job_msg->client, job_msg->type, job.job_number, job.width, job.height, transfer_pixels);
     }
@@ -347,8 +269,8 @@ void starcry::run_server() {
   system->start(false);
   on_pipeline_initialized(*this);
   if (start_webserver) {
-    webserv = std::make_shared<webserver>(this);  // blocks
-    webserv->run();
+    webserv = std::make_shared<webserver>(this);
+    webserv->run();  // blocks
   }
   system->explicit_join();
   if (gui) gui->finalize();
@@ -356,56 +278,121 @@ void starcry::run_server() {
 }
 
 void starcry::run_client() {
-  rendering_engine_wrapper engine;
-  engine.initialize();
-  bitmap_wrapper bitmap;
-  int64_t num_queue_per_worker = 0;  // currently not used..
   render_client client;
+  rendering_engine_wrapper engine;
+  bitmap_wrapper bitmap;
+  engine.initialize();
 
-  client.set_message_fun([&](int sockfd, int type, size_t len, const std::string &data) {
-    switch (type) {
-      case 11:  // register_me response
-      {
-        if (len == sizeof(num_queue_per_worker)) {
-          memcpy(&num_queue_per_worker, data.c_str(), sizeof(num_queue_per_worker));
-        }
-        client.pull_job(true, 0);
-        break;
-      }
-      case 21:  // pull_job answer
-      {
-        std::istringstream is(data);
-        cereal::BinaryInputArchive archive(is);
-        data::job job;
-        archive(job);
-        auto &bmp = bitmap.get(job.width, job.height);
-        render_job(engine, job, bmp);
-
-        data::pixel_data2 dat;
-        auto &pixels = bmp.pixels();
-
-        dat.pixels.reserve(pixels.size());
-        for (const auto &pix : pixels) {
-          uint32_t color;
-          char *cptr = (char *)&color;
-          *cptr = (char)(pix.r * 255);
-          cptr++;
-          *cptr = (char)(pix.g * 255);
-          cptr++;
-          *cptr = (char)(pix.b * 255);
-          cptr++;
-          *cptr = (char)(pix.a * 255);
-          dat.pixels.push_back(color);
-        }
-
-        client.send_frame(job, dat, true);
-        client.pull_job(true, 0);
-        break;
-      }
-    }
-  });
+  client.set_message_fun(std::bind(&starcry::on_server_message,
+                                   this,
+                                   client,
+                                   engine,
+                                   bitmap,
+                                   std::placeholders::_1,
+                                   std::placeholders::_2,
+                                   std::placeholders::_3,
+                                   std::placeholders::_4));
   client.register_me();
   while (client.poll()) {
     std::cout << "client poll.." << std::endl;
   }
+}
+
+bool starcry::on_server_message(render_client &client,
+                                rendering_engine_wrapper &engine,
+                                bitmap_wrapper &bitmap,
+                                int sockfd,
+                                int type,
+                                size_t len,
+                                const std::string &data) {
+  switch (type) {
+    case starcry_msgs::register_me_response: {
+      if (len == sizeof(num_queue_per_worker)) {
+        memcpy(&num_queue_per_worker, data.c_str(), sizeof(num_queue_per_worker));
+      }
+      client.pull_job(true, 0);
+      break;
+    }
+    case starcry_msgs::pull_job_response: {
+      std::istringstream is(data);
+      cereal::BinaryInputArchive archive(is);
+      data::job job;
+      archive(job);
+      auto &bmp = bitmap.get(job.width, job.height);
+      render_job(engine, job, bmp);
+      data::pixel_data2 dat;
+      dat.pixels = pixels_vec_to_pixel_data(bmp.pixels());
+      client.send_frame(job, dat, true);
+      client.pull_job(true, 0);
+      break;
+    }
+  }
+}
+
+bool starcry::on_client_message(int sockfd, int type, size_t len, const std::string &data) {
+  switch (type) {
+    case starcry_msgs::register_me: {
+      renderserver->send_msg(sockfd,
+                             starcry_msgs::register_me_response,
+                             (const char *)&num_queue_per_worker,
+                             sizeof(num_queue_per_worker));
+      break;
+    }
+    case starcry_msgs::pull_job: {
+      while (true) {
+        if (!jobs->has_items(0)) {
+          jobs->sleep_until_items_available(0);
+          if (!jobs->active) {
+            frames->check_terminate();
+            return false;  // shutdown server
+          }
+        }
+        auto job = std::dynamic_pointer_cast<job_message>(jobs->pop(0));
+        if (job) {  // can be nullptr if someone else took it faster than us
+          std::ostringstream os;
+          cereal::BinaryOutputArchive archive(os);
+          archive(*(job->job));
+          renderserver->send_msg(sockfd, starcry_msgs::pull_job_response, os.str().c_str(), os.str().size());
+          break;
+        }
+      }
+      break;
+    }
+    case starcry_msgs::send_frame: {
+      std::istringstream is(data);
+      cereal::BinaryInputArchive archive(is);
+      data::job job;
+      data::pixel_data2 dat;
+      bool is_remote;
+      archive(job);
+      archive(dat);
+      archive(is_remote);
+      // if (job.compress) {
+      //   compress_vector<uint32_t> cv;
+      //   cv.decompress(&dat.pixels, job.width * job.height);
+      // }
+      auto frame = std::make_shared<render_msg>(
+          nullptr, instruction_type::get_image, job.job_number, job.width, job.height, dat.pixels);
+      frames->push(frame);
+    }
+  }
+  return true;
+}
+
+std::vector<uint32_t> starcry::pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in) const {
+  std::vector<uint32_t> pixels_out;
+  pixels_out.reserve(pixels_in.size());
+  for (const auto &pix : pixels_in) {
+    uint32_t color;
+    char *cptr = (char *)&color;
+    *cptr = (char)(pix.r * 255);
+    cptr++;
+    *cptr = (char)(pix.g * 255);
+    cptr++;
+    *cptr = (char)(pix.b * 255);
+    cptr++;
+    *cptr = (char)(pix.a * 255);
+    pixels_out.push_back(color);
+  }
+  return pixels_out;
 }
