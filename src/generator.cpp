@@ -102,6 +102,10 @@ void generator::init(const std::string &filename) {
   assistant = std::make_unique<assistant_>();
   assistant->generator = this;
   auto &job = assistant->the_job;
+  job.background_color.r = 0;
+  job.background_color.g = 0;
+  job.background_color.b = 0;
+  job.background_color.a = 0;
   job.width = canvas_w;
   job.height = canvas_h;
   job.frame_number = assistant->current_frame;
