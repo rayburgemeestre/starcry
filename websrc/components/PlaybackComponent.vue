@@ -1,6 +1,7 @@
 <template>
   <div style="width: 100%">
-    <b-slider style="width: calc(100% - 80px); margin-right: 10px; float: left;" :min="0" :max="250" v-model="ticks" ticks></b-slider>
+    <b-slider style="width: calc(100% - 160px); margin-right: 10px; float: left;" :min="0" :max="250" v-model="ticks" ticks></b-slider>
+    <b-button @click="stop">Stop</b-button>
     <b-button @click="play">Play</b-button>
   </div>
 </template>
@@ -55,16 +56,17 @@
       },
       play : function () {
         for (let i=0; i<250; i++) {
-          // TODO: via this.$parent, or link filename as property
-          ws.send("input/test.js " + i);
+          this.$parent.queue_frame(i);
         }
         this.$data.ticks = 250;
+      },
+      stop : function () {
+        this.$parent.stop();
       }
     },
     watch: {
       ticks: function (frame) {
-        // TODO: via this.$parent, or link filename as property
-        ws.send("input/test.js " + frame);
+        this.$parent.queue_frame(frame);
       },
     },
     mounted: function() {

@@ -16,6 +16,8 @@
 #include "piper.h"
 #include "png.hpp"
 
+#include "util/limited_executor.hpp"
+
 class sfml_window;
 class bitmap_wrapper;
 class generator;
@@ -61,6 +63,7 @@ private:
 
   std::map<size_t, std::shared_ptr<render_msg>> buffered_frames;
   size_t current_frame = 0;
+  limited_executor le;
 
 public:
   starcry(
@@ -72,6 +75,7 @@ public:
       bool enable_compression,
       render_video_mode mode,
       std::function<void(starcry &sc)> on_pipeline_initialized = [](auto &) {});
+  ~starcry();
 
   void add_command(seasocks::WebSocket *client, const std::string &script, instruction_type it, int frame_num);
   void add_command(seasocks::WebSocket *client, const std::string &script, const std::string &output_file);

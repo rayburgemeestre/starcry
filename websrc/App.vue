@@ -77,6 +77,8 @@
                 websock_status: '',
                 menu: 'files',
                 filename: 'input/test.js',
+                queued_frames: [],
+                rendering: false,
             };
         },
         components: {
@@ -104,8 +106,10 @@
                 ws.onmessage = function (message) {
                     message.data.arrayBuffer().then(buffer => {
                         Module.set_texture(buffer);
+                        this.$data.rendering = false;
+                        this.process_queue();
                     });
-                };
+                }.bind(this);
                 ws.onerror = function (error) {
                     console.log("ERROR: " + error);
                 };
@@ -143,9 +147,28 @@
                this.$data.filename = filename;
                ws_script.send("open " + filename);
                ws.send(filename + " 0");
+            },
+            queue_frame: function(frame) {
+                this.$data.queued_frames.push(frame);
+            },
+            process_queue: function () {
+                if (this.$data.rendering)
+                    return;
+                console.log(this.$data.queued_frames.length)
+                if (this.$data.queued_frames.length === 0)
+                    return;
+                let item = this.$data.queued_frames.shift();
+                this.$data.rendering = true;
+                ws.send(this.$data.filename + " " + item);
+            },
+            stop: function () {
+                this.$data.queued_frames = [];
             }
         },
         watch: {
+            queued_frames(new_value) {
+                this.process_queue();
+            }
         },
         mounted: function() {
             this.connect();

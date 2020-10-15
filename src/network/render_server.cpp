@@ -11,8 +11,8 @@
 #endif  // __clang__
 #include "cereal/archives/json.hpp"
 
-#include "network/render_server.h"
 #include "network/messages.h"
+#include "network/render_server.h"
 
 #define PORT "10000"
 

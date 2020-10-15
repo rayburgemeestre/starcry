@@ -9,18 +9,20 @@
 #include <cstring>
 #include <sstream>
 
+// #include <coz.h>
+
 #include "bitmap_wrapper.hpp"
 #include "cereal/archives/binary.hpp"
 #include "cereal/archives/json.hpp"
 #include "framer.hpp"
 #include "generator.h"
+#include "network/messages.h"
+#include "network/render_client.h"
+#include "network/render_server.h"
 #include "rendering_engine_wrapper.h"
 #include "streamer_output/sfml_window.h"
 #include "util/compress_vector.h"
 #include "webserver.h"
-#include "network/messages.h"
-#include "network/render_client.h"
-#include "network/render_server.h"
 
 starcry::starcry(size_t num_local_engines,
                  bool enable_remote_workers,
@@ -43,10 +45,20 @@ starcry::starcry(size_t num_local_engines,
       jobs(system->create_queue("jobs", 10)),
       frames(system->create_queue("frames", 10)),
       mode(mode),
-      on_pipeline_initialized(on_pipeline_initialized) {}
+      on_pipeline_initialized(on_pipeline_initialized),
+      le(std::chrono::milliseconds(1000)) {}
+
+starcry::~starcry() {
+  le.cancel();
+}
 
 void starcry::add_command(seasocks::WebSocket *client, const std::string &script, instruction_type it, int frame_num) {
   cmds->push(std::make_shared<instruction>(client, it, script, frame_num));
+  le.run([=]() {
+    if (webserv) {
+      webserv->send_stats(system->stats());
+    }
+  });
 }
 
 void starcry::add_command(seasocks::WebSocket *client, const std::string &script, const std::string &output_file) {
@@ -185,6 +197,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 }
 
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
+  // COZ_PROGRESS;
   auto process = [&](std::shared_ptr<render_msg> job_msg) {
     if (job_msg->client == nullptr) {
       if (gui) gui->add_frame(job_msg->width, job_msg->height, job_msg->pixels);
@@ -203,7 +216,6 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
           for (const auto &i : job_msg->pixels) {
             buffer.append((char *)&i, sizeof(i));
           }
-          std::cout << "sending: " << buffer.size() << std::endl;
           bmp_handler->callback(job_msg->client, buffer);
         };
         if (webserv) webserv->execute_bitmap(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
@@ -240,7 +252,8 @@ void starcry::run_server() {
   if (mode == starcry::render_video_mode::video_with_gui || mode == starcry::render_video_mode::gui_only)
     gui = std::make_unique<sfml_window>();
 
-  system->spawn_consumer<instruction>(std::bind(&starcry::command_to_jobs, this, std::placeholders::_1), cmds);
+  system->spawn_consumer<instruction>(
+      "generator", std::bind(&starcry::command_to_jobs, this, std::placeholders::_1), cmds);
 
   if (enable_remote_workers) {
     renderserver = std::make_shared<render_server>(jobs, frames);
@@ -256,7 +269,7 @@ void starcry::run_server() {
     engines[i] = std::make_shared<rendering_engine_wrapper>();
     engines[i]->initialize();
     bitmaps[i] = std::make_shared<bitmap_wrapper>();
-    system->spawn_transformer<job_message>("renderer " + std::to_string(i),
+    system->spawn_transformer<job_message>("renderer-" + std::to_string(i),
                                            std::bind(&starcry::job_to_frame, this, i, std::placeholders::_1),
                                            jobs,
                                            frames,
@@ -264,7 +277,7 @@ void starcry::run_server() {
   }
 
   system->spawn_consumer<render_msg>(
-      "** client **", std::bind(&starcry::handle_frame, this, std::placeholders::_1), frames);
+      "streamer", std::bind(&starcry::handle_frame, this, std::placeholders::_1), frames);
 
   system->start(false);
   on_pipeline_initialized(*this);

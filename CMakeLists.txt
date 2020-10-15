@@ -57,7 +57,7 @@ include_directories(
     "/usr/include/SDL2/"
 )
 
-file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.h*" "/opt/cppse/build/v8pp/include/v8pp/context.cpp" "libs/piper/src/**")
+file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.hpp"  "include/**.h" "/opt/cppse/build/v8pp/include/v8pp/context.cpp" "libs/piper/src/**")
 #file(GLOB_RECURSE starcry_SOURCES "src/main.cpp")
 list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/client.cpp")
 

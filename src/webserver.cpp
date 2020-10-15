@@ -7,6 +7,7 @@
 #include "webserver.h"
 
 #include "starcry.h"
+#include "stats.h"  // piper
 
 #include <filesystem>
 #include <memory>
@@ -174,4 +175,29 @@ webserver::webserver(starcry *sc)
 
 void webserver::run() {
   server->serve("webroot", 18080);
+}
+
+void webserver::send_stats(const stats &stats_) {
+  std::stringstream ss;
+  const auto stats_map = stats_.get_raw();
+  for (const auto it : stats_map) {
+    const auto s = it.first;
+    const auto node_stats = it.second;
+    ss << "first: " << s << std::endl;
+    ss << "name: " << node_stats.name << std::endl;
+    ss << "is_storage: " << std::boolalpha << node_stats.is_storage << std::endl;
+    ss << "is_sleeping_until_not_full: " << std::boolalpha << node_stats.is_sleeping_until_not_full << std::endl;
+    ss << "is_sleeping_until_not_empty: " << std::boolalpha << node_stats.is_sleeping_until_not_empty << std::endl;
+    ss << "size: " << std::boolalpha << node_stats.size << std::endl;
+    ss << "counter: " << std::boolalpha << node_stats.counter << std::endl;
+    ss << "last_counter: " << std::boolalpha << node_stats.last_counter << std::endl;
+  }
+  for (const auto &con : script_handler->_cons) {
+    if (server) {
+      const auto str = ss.str();
+      server->execute([=]() {
+        con->send((const uint8_t *)str.c_str(), str.size() * sizeof(uint8_t));
+      });
+    }
+  }
 }
