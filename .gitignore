@@ -9,7 +9,6 @@ docs/_build/**
 docs/build_instructions/**
 .idea
 webroot/stream/*
-libs
 webroot/*.main.js
 webroot/*.worker.js
 webroot/main.js

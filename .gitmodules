@@ -7,3 +7,6 @@
 [submodule "libs/piper"]
 	path = libs/piper
 	url = https://github.com/rayburgemeestre/piper
+[submodule "libs/json"]
+	path = libs/json
+	url = https://github.com/nlohmann/json.git
