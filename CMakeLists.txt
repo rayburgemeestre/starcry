@@ -53,6 +53,7 @@ include_directories(
     "/opt/cppse/build/png++/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/cereal/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libs/json/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/include/"
     "/usr/include/SDL2/"
 )
