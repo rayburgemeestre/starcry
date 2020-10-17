@@ -82,6 +82,7 @@
                 filename: 'input/test.js',
                 queued_frames: [],
                 rendering: false,
+                max_queued: 10,
             };
         },
         components: {
@@ -110,7 +111,7 @@
                 ws.onmessage = function (message) {
                     message.data.arrayBuffer().then(buffer => {
                         Module.set_texture(buffer);
-                        this.$data.rendering = false;
+                        this.$data.rendering--;
                         this.process_queue();
                     });
                 }.bind(this);
@@ -156,14 +157,13 @@
                 this.$data.queued_frames.push(frame);
             },
             process_queue: function () {
-                if (this.$data.rendering)
-                    return;
-                console.log(this.$data.queued_frames.length)
-                if (this.$data.queued_frames.length === 0)
-                    return;
-                let item = this.$data.queued_frames.shift();
-                this.$data.rendering = true;
-                ws.send(this.$data.filename + " " + item);
+                while (this.$data.rendering < this.$data.max_queued) {
+                    if (this.$data.queued_frames.length === 0)
+                        return;
+                    let item = this.$data.queued_frames.shift();
+                    this.$data.rendering++;
+                    ws.send(this.$data.filename + " " + item);
+                }
             },
             stop: function () {
                 this.$data.queued_frames = [];
