@@ -54,6 +54,8 @@
                 <h2>{{ websock_status }}</h2>
                 <button v-shortkey="['ctrl', 's']" @shortkey="menu = menu == 'script' ? '' : 'script'">_</button>
                 <button v-shortkey="['ctrl', 'f']" @shortkey="menu = menu == 'files' ? '' : 'files'">_</button>
+                <hr>
+                <stats-component />
             </div>
         </div>
         <div class="columns" style="margin: 0px 20px">
@@ -66,6 +68,7 @@
     import EditorComponent from './components/EditorComponent.vue'
     import ScriptsComponent from './components/ScriptsComponent.vue'
     import PlaybackComponent from './components/PlaybackComponent.vue'
+    import StatsComponent from './components/StatsComponent.vue'
     let ws;
     let ws_script;
     let retry;
@@ -85,6 +88,7 @@
             EditorComponent,
             ScriptsComponent,
             PlaybackComponent,
+            StatsComponent,
         },
         methods: {
             connect: function() {

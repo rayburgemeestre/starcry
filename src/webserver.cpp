@@ -9,6 +9,9 @@
 #include "starcry.h"
 #include "stats.h"  // piper
 
+#include "nlohmann/json.hpp"
+using json = nlohmann::json;
+
 #include <filesystem>
 #include <memory>
 #include <sstream>
@@ -151,6 +154,15 @@ void ScriptHandler::callback(seasocks::WebSocket *recipient, std::string s) {
   }
 }
 
+StatsHandler::StatsHandler(starcry *sc) : sc(sc) {}
+void StatsHandler::onConnect(seasocks::WebSocket *con) {
+  _cons.insert(con);
+}
+void StatsHandler::onDisconnect(seasocks::WebSocket *con) {
+  _cons.erase(con);
+}
+void StatsHandler::onData(seasocks::WebSocket *con, const char *data) {}
+
 std::shared_ptr<seasocks::Response> DataHandler::handle(const seasocks::CrackedUri & /*uri*/,
                                                         const seasocks::Request &request) {
   return seasocks::Response::jsonResponse("{}");
@@ -162,7 +174,8 @@ webserver::webserver(starcry *sc)
       image_handler(std::make_shared<ImageHandler>(sc)),
       shapes_handler(std::make_shared<ShapesHandler>(sc)),
       bitmap_handler(std::make_shared<BitmapHandler>(sc)),
-      script_handler(std::make_shared<ScriptHandler>(sc)) {
+      script_handler(std::make_shared<ScriptHandler>(sc)),
+      stats_handler(std::make_shared<StatsHandler>(sc)) {
   auto root = std::make_shared<seasocks::RootPageHandler>();
   root->add(std::make_shared<seasocks::PathHandler>("data", std::make_shared<DataHandler>()));
   server->addPageHandler(root);
@@ -171,6 +184,7 @@ webserver::webserver(starcry *sc)
   server->addWebSocketHandler("/shapes", shapes_handler);
   server->addWebSocketHandler("/bitmap", bitmap_handler);
   server->addWebSocketHandler("/script", script_handler);
+  server->addWebSocketHandler("/stats", stats_handler);
 };
 
 void webserver::run() {
@@ -178,23 +192,22 @@ void webserver::run() {
 }
 
 void webserver::send_stats(const stats &stats_) {
-  std::stringstream ss;
+  json result = {};
+  std::string str;
   const auto stats_map = stats_.get_raw();
+
   for (const auto it : stats_map) {
     const auto s = it.first;
     const auto node_stats = it.second;
-    ss << "first: " << s << std::endl;
-    ss << "name: " << node_stats.name << std::endl;
-    ss << "is_storage: " << std::boolalpha << node_stats.is_storage << std::endl;
-    ss << "is_sleeping_until_not_full: " << std::boolalpha << node_stats.is_sleeping_until_not_full << std::endl;
-    ss << "is_sleeping_until_not_empty: " << std::boolalpha << node_stats.is_sleeping_until_not_empty << std::endl;
-    ss << "size: " << std::boolalpha << node_stats.size << std::endl;
-    ss << "counter: " << std::boolalpha << node_stats.counter << std::endl;
-    ss << "last_counter: " << std::boolalpha << node_stats.last_counter << std::endl;
+    json j = {
+        {"name", node_stats.name},
+        {"counter", node_stats.counter},
+    };
+    result.push_back(j);
   }
-  for (const auto &con : script_handler->_cons) {
+  str = result.dump();
+  for (const auto &con : stats_handler->_cons) {
     if (server) {
-      const auto str = ss.str();
       server->execute([=]() {
         con->send((const uint8_t *)str.c_str(), str.size() * sizeof(uint8_t));
       });

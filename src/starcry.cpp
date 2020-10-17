@@ -9,7 +9,7 @@
 #include <cstring>
 #include <sstream>
 
-// #include <coz.h>
+#include <coz.h>
 
 #include "bitmap_wrapper.hpp"
 #include "cereal/archives/binary.hpp"
@@ -197,7 +197,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 }
 
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
-  // COZ_PROGRESS;
+  COZ_PROGRESS;
   auto process = [&](std::shared_ptr<render_msg> job_msg) {
     if (job_msg->client == nullptr) {
       if (gui) gui->add_frame(job_msg->width, job_msg->height, job_msg->pixels);
