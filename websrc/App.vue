@@ -59,7 +59,7 @@
             </div>
         </div>
         <div class="columns" style="margin: 0px 20px">
-            <playback-component />
+            <playback-component v-bind:value="current_frame" />
         </div>
     </div>
 </template>
@@ -80,9 +80,10 @@
                 websock_status: '',
                 menu: 'files',
                 filename: 'input/test.js',
-                queued_frames: [],
-                rendering: false,
+                current_frame : 0,
+                rendering: 0,
                 max_queued: 10,
+                _play: false,
             };
         },
         components: {
@@ -153,20 +154,33 @@
                ws_script.send("open " + filename);
                ws.send(filename + " 0");
             },
-            queue_frame: function(frame) {
-                this.$data.queued_frames.push(frame);
-            },
             process_queue: function () {
-                while (this.$data.rendering < this.$data.max_queued) {
-                    if (this.$data.queued_frames.length === 0)
-                        return;
-                    let item = this.$data.queued_frames.shift();
-                    this.$data.rendering++;
-                    ws.send(this.$data.filename + " " + item);
-                }
+                this._schedule_frames();
+            },
+            // playback
+            play: function () {
+                this.$data._play = true;
+                this._schedule_frames();
             },
             stop: function () {
-                this.$data.queued_frames = [];
+                this.$data._play = false;
+            },
+            set_frame: function (frame) {
+                this.$data.current_frame = frame;
+                if (!this.$data._play) {
+                    this._schedule_frame();
+                }
+            },
+            _schedule_frames: function () {
+                if (!this.$data._play) return;
+                while (this.$data.rendering < this.$data.max_queued) {
+                    this._schedule_frame();
+                    this.$data.current_frame++;
+                }
+            },
+            _schedule_frame: function () {
+                this.$data.rendering++;
+                ws.send(this.$data.filename + " " + this.$data.current_frame);
             }
         },
         watch: {
