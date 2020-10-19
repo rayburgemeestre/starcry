@@ -3,6 +3,7 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+#pragma once
 
 #include <experimental/filesystem>
 #include <memory>
@@ -31,10 +32,20 @@ public:
   template <typename T = void>
   T run(std::string const& source);
 
-  void call(std::string const& function_name);
+  inline void run_array(std::string const& source, std::function<void(v8::Isolate*, v8::Local<v8::Value>)> callback);
 
-  template <typename T>
-  void call(std::string const& function_name, T param);
+  inline void call_array(std::string const& function_name,
+                         std::function<void(v8::Isolate*, v8::Local<v8::Value>)> callback);
+
+  v8::Local<v8::Value> call_raw(std::string const& function_name);
+
+  v8::Handle<v8::Value> run_raw(std::string const& source);
+
+  template <typename T = void>
+  T call(std::string const& function_name,
+         v8::Handle<v8::Value>* args,
+         size_t args_len,
+         std::function<void(v8::Isolate*)> initialize_args);
 
   template <typename T>
   inline void add_fun(const std::string& name, T func);
@@ -53,9 +64,9 @@ public:
   std::mutex mut;
 };
 
-v8_wrapper::v8_wrapper(std::string filename) : context(nullptr), platform(nullptr), filename_(filename) {
+inline v8_wrapper::v8_wrapper(std::string filename) : context(nullptr), platform(nullptr), filename_(filename) {
   v8::V8::InitializeExternalStartupData("starcry");
-#if V8_MAJOR_VERSION >= 7
+#if V8_MAJOR_VERSION >= 6
   platform = v8::platform::NewDefaultPlatform();
 #else
   platform = v8::platform::CreateDefaultPlatform();
@@ -71,13 +82,13 @@ v8_wrapper::v8_wrapper(std::string filename) : context(nullptr), platform(nullpt
   context = new v8pp::context(isolate);  // Making it unique_ptr breaks it!
 }
 
-void v8_wrapper::reset() {
+inline void v8_wrapper::reset() {
   delete (context);
   context = new v8pp::context(isolate);
 }
 
 template <typename T>
-T v8_wrapper::run(std::string const& source) {
+inline T v8_wrapper::run(std::string const& source) {
   v8::Isolate* isolate = context->isolate();
   v8::HandleScope scope(isolate);
   v8::TryCatch try_catch(isolate);
@@ -90,8 +101,22 @@ T v8_wrapper::run(std::string const& source) {
   return v8pp::from_v8<T>(isolate, result);
 }
 
+inline v8::Handle<v8::Value> v8_wrapper::run_raw(std::string const& source) {
+  v8::Isolate* isolate = context->isolate();
+  v8::HandleScope scope(isolate);
+  v8::TryCatch try_catch(isolate);
+  try_catch.SetVerbose(false);
+  try_catch.SetCaptureMessage(true);
+  v8::Handle<v8::Value> result = context->run_script(source, filename_);
+  if (try_catch.HasCaught()) {
+    rethrow_as_runtime_error(isolate, try_catch);
+  }
+  std::cout << "Returning result yo: " << result->IsString() << std::endl;
+  return result;
+}
+
 template <>
-void v8_wrapper::run<void>(std::string const& source) {
+inline void v8_wrapper::run<void>(std::string const& source) {
   v8::Isolate* isolate = context->isolate();
   v8::HandleScope scope(isolate);
   v8::TryCatch try_catch(isolate);
@@ -103,8 +128,106 @@ void v8_wrapper::run<void>(std::string const& source) {
   }
 }
 
+void v8_wrapper::call_array(std::string const& function_name,
+                            std::function<void(v8::Isolate*, v8::Local<v8::Value>)> callback) {
+  if (run<bool>("typeof " + function_name + " == 'undefined'")) {
+    return;
+  }
+  v8::Isolate* isolate = context->isolate();
+  v8::HandleScope scope(isolate);
+  v8::TryCatch try_catch(isolate);
+  try_catch.SetVerbose(false);
+  try_catch.SetCaptureMessage(true);
+
+  v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
+  v8::Local<v8::Function> func = global->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, function_name.c_str()))
+                                     .ToLocalChecked()
+                                     .As<v8::Function>();
+
+  v8::Local<v8::Array> result =
+      func->Call(isolate->GetCurrentContext(), global, 0, {}).ToLocalChecked().As<v8::Array>();
+  if (try_catch.HasCaught()) {
+    rethrow_as_runtime_error(isolate, try_catch);
+  }
+  for (size_t i = 0; i < result->Length(); i++) {
+    callback(isolate, result->Get(isolate->GetCurrentContext(), i).ToLocalChecked());
+  }
+}
+
+inline void v8_wrapper::run_array(std::string const& source,
+                                  std::function<void(v8::Isolate*, v8::Local<v8::Value>)> callback) {
+  v8::Isolate* isolate = context->isolate();
+  v8::HandleScope scope(isolate);
+  v8::TryCatch try_catch(isolate);
+  try_catch.SetVerbose(false);
+  try_catch.SetCaptureMessage(true);
+  // v8::Handle<v8::Array> result = context->run_script(source, filename_).As<v8::Array>();
+  v8::Handle<v8::Value> result = context->run_script(source, filename_);
+  if (try_catch.HasCaught()) {
+    rethrow_as_runtime_error(isolate, try_catch);
+  }
+  callback(isolate, result);
+}
+
 // TODO: replace call(fn) and call(fn, T) with a template function
-void v8_wrapper::call(std::string const& function_name) {
+inline v8::Local<v8::Value> v8_wrapper::call_raw(std::string const& function_name) {
+  v8::Isolate* isolate = context->isolate();
+  v8::HandleScope scope(isolate);
+  v8::TryCatch try_catch(isolate);
+  try_catch.SetVerbose(false);
+  try_catch.SetCaptureMessage(true);
+
+  v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
+  v8::Local<v8::Function> func = global->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, function_name.c_str()))
+                                     .ToLocalChecked()
+                                     .As<v8::Function>();
+
+  auto result = func->Call(isolate->GetCurrentContext(), global, 0, {}).ToLocalChecked();
+
+  if (try_catch.HasCaught()) {
+    rethrow_as_runtime_error(isolate, try_catch);
+  }
+  // return v8pp::from_v8<T>(isolate, result);
+  return result;
+}
+
+template <typename T>
+T v8_wrapper::call(std::string const& function_name,
+                   v8::Handle<v8::Value>* args,
+                   size_t args_len,
+                   std::function<void(v8::Isolate*)> initialize_args) {
+  v8::Isolate* isolate = context->isolate();
+  v8::HandleScope scope(isolate);
+  v8::TryCatch try_catch(isolate);
+  try_catch.SetVerbose(false);
+  try_catch.SetCaptureMessage(true);
+
+  v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
+
+#if V8_MAJOR_VERSION >= 7
+  v8::Local<v8::Function> func =
+      global
+          ->Get(isolate->GetCurrentContext(), v8::String::NewFromUtf8(isolate, function_name.c_str()).ToLocalChecked())
+          .ToLocalChecked()
+          .As<v8::Function>();
+#elif V8_MAJOR_VERSION >= 6
+  v8::Local<v8::Function> func =
+      global->Get(isolate->GetCurrentContext(), v8::String::NewFromUtf8(isolate, function_name.c_str()))
+          .ToLocalChecked()
+          .As<v8::Function>();
+#endif
+
+  initialize_args(isolate);
+  auto result = func->Call(isolate->GetCurrentContext(), global, args_len, args).ToLocalChecked();
+
+  if (try_catch.HasCaught()) {
+    rethrow_as_runtime_error(isolate, try_catch);
+  }
+  return v8pp::from_v8<T>(isolate, result);
+}
+/* backup
+// TODO: replace call(fn) and call(fn, T) with a template function
+inline void v8_wrapper::call(std::string const& function_name) {
   v8::Isolate* isolate = context->isolate();
   v8::HandleScope scope(isolate);
   v8::TryCatch try_catch(isolate);
@@ -124,8 +247,9 @@ void v8_wrapper::call(std::string const& function_name) {
   return;  // v8pp::from_v8<T>(isolate, result);
 }
 
+
 template <typename T>
-void v8_wrapper::call(std::string const& function_name, T param) {
+inline void v8_wrapper::call(std::string const& function_name, T param) {
   v8::Isolate* isolate = context->isolate();
   v8::HandleScope scope(isolate);
   v8::TryCatch try_catch(isolate);
@@ -148,6 +272,7 @@ void v8_wrapper::call(std::string const& function_name, T param) {
   }
   return;  // v8pp::from_v8<T>(isolate, result);
 }
+*/
 
 template <typename T>
 inline void v8_wrapper::add_fun(const std::string& name, T func) {
@@ -198,17 +323,17 @@ inline void v8_wrapper::add_include_fun() {
           }));
 }
 
-v8_wrapper::~v8_wrapper() {
+inline v8_wrapper::~v8_wrapper() {
   // context' ownership is probably taken over by someone else.
   // delete(context);
   v8::V8::Dispose();
   v8::V8::ShutdownPlatform();
 }
 
-const char* ToCString(const v8::String::Utf8Value& value) {
+inline const char* ToCString(const v8::String::Utf8Value& value) {
   return *value ? *value : "<string conversion failed>";
 }
-void v8_wrapper::rethrow_as_runtime_error(v8::Isolate* isolate, v8::TryCatch& try_catch) {
+inline void v8_wrapper::rethrow_as_runtime_error(v8::Isolate* isolate, v8::TryCatch& try_catch) {
   auto ex = try_catch.Exception();
   v8::Local<v8::Context> context(isolate->GetCurrentContext());
 

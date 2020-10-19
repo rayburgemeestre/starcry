@@ -17,6 +17,8 @@
 
 #include "starcry.h"
 
+#include "generator_v2.h"
+
 namespace po = ::boost::program_options;
 
 class main_program {
@@ -36,6 +38,7 @@ public:
     // clang-format off
     desc.add_options()
       ("help", "produce help message")
+      ("dev", "temporary generator v2 development mode execution")
       ("script,s", po::value<std::string>(&script), "javascript file to use for processing")
       ("output,o", po::value<std::string>(&output_file), "filename for video output (default output.h264)")
       ("frame,f", po::value<size_t>(&frame_of_interest), "specific frame to render and save as BMP file")
@@ -112,6 +115,13 @@ public:
         sc.add_command(nullptr, script, output_file);
       }
     };
+
+    if (vm.count("dev")) {
+      std::cout << "temporary dev mode" << std::endl;
+      generator_v2 gen;
+      gen.init("input/test2.js");
+      return;
+    }
     starcry sc(num_worker_threads,
                vm.count("server"),
                vm.count("vis"),

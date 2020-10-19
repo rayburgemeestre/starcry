@@ -138,7 +138,7 @@ bool generator::generate_frame() {
 
 void call_print_exception(const std::string &fn) {
   try {
-    context->call(fn);
+    context->call_raw(fn);
   } catch (std::runtime_error &ex) {
     a(std::cout) << "Runtime error caused during execution of " << fn << "() in javascript:" << std::endl
                  << std::string(ex.what()) << std::endl;
