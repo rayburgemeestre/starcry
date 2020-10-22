@@ -119,6 +119,7 @@ core_debug_sanit:
 
 core_format:
 	cmake --build build --target clangformat
+	find ./input -name '*.js' -type f -exec clang-format-10 -i {} \;
 
 core_experimental:
 	# switch to clang compiler
