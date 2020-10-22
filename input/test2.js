@@ -44,6 +44,7 @@ x = {
   },
   'objects': {
     'obj1': {
+      'test': 1000,
       'props': {
         'maxradius': 250.0,
       },
@@ -57,7 +58,8 @@ x = {
       'radiussize': 5.0,
       'init': function() {
         this.subobj.push({'object': 'obj2', 'x': 0, 'y': 0, 'z': 0});
-        this.subobj.push({'object': 'obj2', 'x': 0, 'y': 0, 'z': 0});
+        this.subobj.push({'object': 'obj2', 'x': 50, 'y': 0, 'z': 0});
+        this.test += 100;
       },
       'time': function(t) {
         this.radius = t * this.props.maxradius;
@@ -72,10 +74,14 @@ x = {
       }
     },
     'obj2': {
+      'test': 1001,
+      'type': 'circle',
       'gradient': 'ce475a6c-2427-420c-85de-6316f3027313',
       'radius': 0,
       'radiussize': 5.0,
-      'init': function() {},
+      'init': function() {
+        this.test += 200;
+      },
       'time': function(t) {},
       'proximity': function(t) {
         this.radiussize = 5.0 + (5.0 * t);
@@ -84,10 +90,9 @@ x = {
   },
   'video': {'frames': 250},
   'scenes': [{
-    'scene1': {
-      'objects': [
-        {'object': 'obj1', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 250}},
-      ],
-    }
+    'name': 'scene1',
+    'objects': [
+      {'id': 'obj1', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 250}},
+    ],
   }]
 };

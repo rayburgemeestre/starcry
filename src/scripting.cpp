@@ -18,10 +18,10 @@ double get_version() {
 }
 
 void set_background_color(color clr) {
-  assistant->the_job.background_color.r = clr.get_r();
-  assistant->the_job.background_color.g = clr.get_g();
-  assistant->the_job.background_color.b = clr.get_b();
-  assistant->the_job.background_color.a = clr.get_a();
+  assistant->the_job->background_color.r = clr.get_r();
+  assistant->the_job->background_color.g = clr.get_g();
+  assistant->the_job->background_color.b = clr.get_b();
+  assistant->the_job->background_color.a = clr.get_a();
 }
 
 void add_circle(circle circ) {
@@ -34,7 +34,7 @@ void add_circle(circle circ) {
   new_shape.radius_size = circ.get_radiussize();
   new_shape.gradient_ = circ.get_gradient().to_data_gradient();
   new_shape.blending_ = circ.blending_type_;
-  assistant->the_job.shapes.push_back(new_shape);
+  assistant->the_job->shapes.push_back(new_shape);
 }
 
 void add_line(line l) {
@@ -49,7 +49,7 @@ void add_line(line l) {
   new_shape.blending_ = l.blending_type_;
   new_shape.type = data::shape_type::line;
   new_shape.radius_size = l.get_size();
-  assistant->the_job.shapes.push_back(new_shape);
+  assistant->the_job->shapes.push_back(new_shape);
 }
 
 void add_text(double x, double y, double z, double textsize, string text, string align) {
@@ -61,7 +61,7 @@ void add_text(double x, double y, double z, double textsize, string text, string
   new_shape.type = data::shape_type::text;
   new_shape.text = text;
   new_shape.align = align;
-  assistant->the_job.shapes.push_back(new_shape);
+  assistant->the_job->shapes.push_back(new_shape);
 }
 
 void output(string s) {
@@ -80,17 +80,17 @@ void close_fun() {
 // deprecated
 
 bool write_frame_fun_impl(bool last_frame) {
-  if (!assistant->the_job.last_frame) {
-    assistant->the_job.last_frame =
+  if (!assistant->the_job->last_frame) {
+    assistant->the_job->last_frame =
         last_frame || (assistant->max_frames && assistant->max_frames == assistant->current_frame);
   }
-  assistant->the_job.frame_number = assistant->current_frame++;
-  assistant->the_job.job_number = assistant->current_job++;
+  assistant->the_job->frame_number = assistant->current_frame++;
+  assistant->the_job->job_number = assistant->current_job++;
   // assistant->cache->take(assistant->the_job);
   // assistant->job_generator->send(assistant->job_generator, write_frame_v, assistant->the_job);
-  assistant->generator->on_write_frame(assistant->the_job);
-  assistant->the_job.shapes.clear();
-  return assistant->the_job.last_frame;
+  assistant->generator->on_write_frame(*assistant->the_job);
+  assistant->the_job->shapes.clear();
+  return assistant->the_job->last_frame;
 }
 
 std::mt19937 mt;  // no custom seeding for now

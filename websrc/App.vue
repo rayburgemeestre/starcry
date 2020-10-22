@@ -79,7 +79,7 @@
                 cpp_code: 'Hello world',
                 websock_status: '',
                 menu: 'files',
-                filename: 'input/test.js',
+                filename: 'input/test2.js',
                 current_frame : 0,
                 rendering: 0,
                 max_queued: 10,

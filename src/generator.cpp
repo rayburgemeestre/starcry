@@ -101,7 +101,7 @@ void generator::init(const std::string &filename) {
   // prepare job object
   assistant = std::make_unique<assistant_>();
   assistant->generator = this;
-  auto &job = assistant->the_job;
+  auto &job = *assistant->the_job;
   job.background_color.r = 0;
   job.background_color.g = 0;
   job.background_color.b = 0;

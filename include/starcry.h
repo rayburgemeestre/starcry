@@ -20,7 +20,7 @@
 
 class sfml_window;
 class bitmap_wrapper;
-class generator;
+class generator_v2;
 class rendering_engine_wrapper;
 class render_server;
 class webserver;
@@ -47,7 +47,7 @@ private:
   bool enable_compression;
 
   std::map<int, std::shared_ptr<bitmap_wrapper>> bitmaps;
-  std::shared_ptr<generator> gen;
+  std::shared_ptr<generator_v2> gen;
   std::map<int, std::shared_ptr<rendering_engine_wrapper>> engines;
   std::shared_ptr<pipeline_system> system;
   std::shared_ptr<queue> cmds;

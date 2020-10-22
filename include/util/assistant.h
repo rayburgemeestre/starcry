@@ -21,8 +21,8 @@ class assistant_ {
 public:
   assistant_();
 
-  data::job the_job;
-  data::job the_previous_job;
+  std::shared_ptr<data::job> the_job;
+  std::shared_ptr<data::job> the_previous_job;
   // stateful_actor<job_generator_data> *job_generator;
   generator *generator;
   size_t max_frames;

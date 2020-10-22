@@ -15,7 +15,7 @@
 #include "cereal/archives/binary.hpp"
 #include "cereal/archives/json.hpp"
 #include "framer.hpp"
-#include "generator.h"
+#include "generator_v2.h"
 #include "network/messages.h"
 #include "network/render_client.h"
 #include "network/render_server.h"
@@ -95,10 +95,9 @@ void starcry::copy_to_png(const std::vector<data::color> &source,
 }
 
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
-  std::shared_ptr<data::job> the_job;
   if (cmd_def->type == instruction_type::get_image || cmd_def->type == instruction_type::get_bitmap ||
       cmd_def->type == instruction_type::get_shapes) {
-    gen = std::make_shared<generator>([](size_t, int, int, int) {},
+    gen = std::make_shared<generator_v2>(/*[](size_t, int, int, int) {},
                                       [&](const data::job &job) {
                                         if (cmd_def->frame != job.frame_number) {
                                           return true;  // fast forward
@@ -109,10 +108,11 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
                                           the_job->compress = true;
                                         }
                                         return false;
-                                      });
+                                      }*/);
     gen->init(cmd_def->script);
     while (gen->generate_frame()) {
     }
+    auto the_job = gen->get_job();
     the_job->job_number = std::numeric_limits<uint32_t>::max();
     jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, the_job));
     if (cmd_def->client == nullptr) {  // cli thing
@@ -134,18 +134,19 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       framer = std::make_unique<frame_streamer>(cmd_def->output_file, stream_mode);
     }
 
-    gen = std::make_shared<generator>(
-        [&](size_t bitrate, int width, int height, int fps) {
-          if (framer) framer->initialize(bitrate, width, height, use_fps ? *use_fps : fps);
-        },
-        [&](const data::job &job) {
-          the_job = std::make_shared<data::job>(job);
-          return true;
-        });
+    gen = std::make_shared<generator_v2>(
+        /*
+[&](size_t bitrate, int width, int height, int fps) {
+if (framer) framer->initialize(bitrate, width, height, use_fps ? *use_fps : fps);
+},
+[&](const data::job &job) {
+the_job = std::make_shared<data::job>(job);
+return true;
+}*/);
     gen->init(cmd_def->script);
     while (true) {
       auto ret = gen->generate_frame();
-      jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, the_job));
+      jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, gen->get_job()));
       jobs->sleep_until_not_full();
       if (!ret) break;
     }

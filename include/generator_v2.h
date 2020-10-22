@@ -5,8 +5,7 @@
  */
 #pragma once
 
-// class MeasureInterval;
-
+#include <memory>
 #include <string>
 
 #include <cstddef>
@@ -21,6 +20,8 @@ public:
   ~generator_v2() = default;
 
   void init(const std::string &filename);
+  bool generate_frame();
+  std::shared_ptr<data::job> get_job() const;
 };
 
 void call_print_exception(const std::string &fn);
