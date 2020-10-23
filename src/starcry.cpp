@@ -97,20 +97,13 @@ void starcry::copy_to_png(const std::vector<data::color> &source,
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   if (cmd_def->type == instruction_type::get_image || cmd_def->type == instruction_type::get_bitmap ||
       cmd_def->type == instruction_type::get_shapes) {
-    gen = std::make_shared<generator_v2>(/*[](size_t, int, int, int) {},
-                                      [&](const data::job &job) {
-                                        if (cmd_def->frame != job.frame_number) {
-                                          return true;  // fast forward
-                                        }
-                                        // copy the job here
-                                        the_job = std::make_shared<data::job>(job);
-                                        if (enable_compression) {
-                                          the_job->compress = true;
-                                        }
-                                        return false;
-                                      }*/);
+    gen = std::make_shared<generator_v2>();
     gen->init(cmd_def->script);
+    size_t idx = 0;
     while (gen->generate_frame()) {
+      if (++idx >= cmd_def->frame) {
+        break;
+      }
     }
     auto the_job = gen->get_job();
     the_job->job_number = std::numeric_limits<uint32_t>::max();
@@ -134,15 +127,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       framer = std::make_unique<frame_streamer>(cmd_def->output_file, stream_mode);
     }
 
-    gen = std::make_shared<generator_v2>(
-        /*
-[&](size_t bitrate, int width, int height, int fps) {
-if (framer) framer->initialize(bitrate, width, height, use_fps ? *use_fps : fps);
-},
-[&](const data::job &job) {
-the_job = std::make_shared<data::job>(job);
-return true;
-}*/);
+    gen = std::make_shared<generator_v2>();
     gen->init(cmd_def->script);
     while (true) {
       auto ret = gen->generate_frame();

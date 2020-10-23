@@ -15,6 +15,8 @@
 
 class generator_v2 {
 private:
+  size_t max_frames = 0;
+
 public:
   generator_v2();
   ~generator_v2() = default;
