@@ -83,7 +83,7 @@ _ = {
         this.radius = 0;
       },
       'time': function(t) {
-        this.radius++;
+        this.radius += 4;
         this.radius %= this.props.maxradius;
       },
       'proximity': function(t) {
@@ -95,8 +95,8 @@ _ = {
   'scenes': [{
     'name': 'scene1',
     'objects': [
-      {'id': 'obj1', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 250}},
-      {'id': 'obj2', 'x': 0, 'y': -50, 'z': 0, 'props': {'maxradius': 250}},
+      {'id': 'obj1', 'x': 1, 'y': 0, 'z': 0, 'props': {'maxradius': 250}},
+      {'id': 'obj2', 'x': 1, 'y': -50, 'z': 0, 'props': {'maxradius': 500}},
     ],
   }]
 };

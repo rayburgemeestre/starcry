@@ -115,7 +115,7 @@ void generator_v2::init(const std::string& filename) {
 void handle_object(v8::Isolate* isolate,
                    v8::Local<v8::Value> objects,
                    v8::Local<v8::Object>& obj_def,
-                   v8::Local<v8::Object>* obj_def2 = nullptr) {
+                   v8::Local<v8::Object>& obj_def2) {
   const auto type = v8_str(isolate, v8_index_object(context, obj_def, "type").As<v8::String>());
   if (type == "circle") {
     auto radius = v8_index_object(context, obj_def, "radius")
@@ -123,23 +123,31 @@ void handle_object(v8::Isolate* isolate,
                       ->NumberValue(isolate->GetCurrentContext())
                       .ToChecked();
     data::shape new_shape;
-    if (obj_def2 != nullptr) {
-      auto x = v8_index_object(context, *obj_def2, "x")
-                   .As<v8::Number>()
-                   ->NumberValue(isolate->GetCurrentContext())
-                   .ToChecked();
-      auto y = v8_index_object(context, *obj_def2, "y")
-                   .As<v8::Number>()
-                   ->NumberValue(isolate->GetCurrentContext())
-                   .ToChecked();
-      new_shape.x = x;
-      new_shape.y = y;
-      new_shape.z = 0;  // circ.get_z();
-    } else {
-      new_shape.x = 0;  // circ.get_x();
-      new_shape.y = 0;  // circ.get_y();
-      new_shape.z = 0;  // circ.get_z();
+    auto x =
+        v8_index_object(context, obj_def2, "x").As<v8::Number>()->NumberValue(isolate->GetCurrentContext()).ToChecked();
+    auto y =
+        v8_index_object(context, obj_def2, "y").As<v8::Number>()->NumberValue(isolate->GetCurrentContext()).ToChecked();
+    auto props1obj = v8_index_object(context, obj_def, "props").As<v8::Object>();
+    auto props1 = props1obj.As<v8::Object>();
+    auto props = v8_index_object(context, obj_def2, "props").As<v8::Object>();
+    if (props->IsObject()) {
+      v8::Local<v8::Array> propz = props->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
+      for (size_t i = 0; i < propz->Length(); i++) {
+        auto prop_obj = props->Get(isolate->GetCurrentContext(), i).ToLocalChecked();
+        std::string prop_name(
+            v8_str(isolate, propz->Get(isolate->GetCurrentContext(), i).ToLocalChecked().As<v8::String>()));
+        auto the_value = v8_index_object(context, props, prop_name);
+        if (prop_name == "maxradius") {
+          if (props1->IsObject()) {
+            props1obj->Set(isolate->GetCurrentContext(), v8_str(context, "maxradius"), the_value.As<v8::Number>());
+          }
+        }
+      }
     }
+
+    new_shape.x = x;
+    new_shape.y = y;
+    new_shape.z = 0;  // circ.get_z();
     new_shape.type = data::shape_type::circle;
     new_shape.radius = radius;    // 10.0;//circ.get_radius();
     new_shape.radius_size = 5.0;  // circ.get_radiussize();
@@ -157,7 +165,7 @@ void handle_object(v8::Isolate* isolate,
     auto sub_obj_def = v8_index_object(context, objects, v8_str(isolate, obj_id)).As<v8::Object>();
     if (!sub_obj_def->IsObject()) continue;
     auto tmp = sub_obj.As<v8::Object>();
-    handle_object(isolate, objects, sub_obj_def, &tmp);
+    handle_object(isolate, objects, sub_obj_def, tmp);
   }
 };
 
@@ -203,7 +211,7 @@ bool generator_v2::generate_frame() {
         auto obj_def = v8_index_object(context, objects, v8_str(isolate, id)).As<v8::Object>();
         if (!obj_def->IsObject()) continue;
         auto tmp = current_obj.As<v8::Object>();
-        handle_object(isolate, objects, obj_def, &tmp);
+        handle_object(isolate, objects, obj_def, tmp);
       }
     }
   });
