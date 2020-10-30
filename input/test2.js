@@ -95,8 +95,9 @@ _ = {
   'scenes': [{
     'name': 'scene1',
     'objects': [
-      {'id': 'obj1', 'x': 1, 'y': 0, 'z': 0, 'props': {'maxradius': 250}},
-      {'id': 'obj2', 'x': 1, 'y': -50, 'z': 0, 'props': {'maxradius': 500}},
+      {'id': 'obj2', 'x': -100, 'y': 0, 'z': 0, 'props': {'maxradius': 100}},
+      {'id': 'obj2', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 200}},
+      {'id': 'obj2', 'x': 100, 'y': 0, 'z': 0, 'props': {'maxradius': 300}},
     ],
   }]
 };

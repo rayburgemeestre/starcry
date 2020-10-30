@@ -36,11 +36,67 @@ v8::Local<v8::Value> v8_index_object(std::shared_ptr<v8_wrapper> context,
   return val.As<v8::Object>()->Get(context->isolate->GetCurrentContext(), v8_str(context, str)).ToLocalChecked();
 }
 
+/*
+ 157 i::Handle<i::String> v8_str(i::Isolate* isolate, const char* str) {¬
+ 158   return isolate->factory()->NewStringFromAsciiChecked(str);¬
+ 159 }¬
+ 160 Local<String> v8_str(Isolate* isolate, const char* str) {¬
+ 161   return Utils::ToLocal(v8_str(reinterpret_cast<i::Isolate*>(isolate), str));¬
+ 162 }¬
+ */
+class v8_interact {
+private:
+  v8::Isolate* isolate;
+  v8::Local<v8::Context> ctx;
+
+public:
+  v8_interact(v8::Isolate* isolate) : isolate(isolate), ctx(isolate->GetCurrentContext()) {}
+
+  v8::Local<v8::Object> v8_obj(v8::Local<v8::Object>& obj, const std::string& field) {
+    return v8_index_object(context, obj, field).As<v8::Object>();
+  }
+
+  v8::Local<v8::Array> v8_array(v8::Local<v8::Object>& obj, const std::string& field) {
+    return v8_index_object(context, obj, field).As<v8::Array>();
+  }
+
+  v8::Local<v8::Number> v8_number(v8::Local<v8::Object>& obj, const std::string& field) {
+    return v8_index_object(context, obj, field).As<v8::Number>();
+  }
+
+  v8::Local<v8::String> v8_string(v8::Local<v8::Object>& obj, const std::string& field) {
+    return v8_index_object(context, obj, field).As<v8::String>();
+  }
+
+  double double_number(v8::Local<v8::Object>& obj, const std::string& field) {
+    return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext()).ToChecked();
+  }
+
+  std::string str(v8::Local<v8::Object>& obj, const std::string& field) {
+    return v8_str(isolate, v8_string(obj, field));
+  }
+};
+
 generator_v2::generator_v2() {
   static std::once_flag once;
   std::call_once(once, []() {
     context = nullptr;
   });
+}
+
+void copy_object(v8::Isolate* isolate, v8::Local<v8::Object> obj_def, v8::Local<v8::Object> new_instance) {
+  auto obj_fields = obj_def->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
+  for (size_t k = 0; k < obj_fields->Length(); k++) {
+    auto field_name = obj_fields->Get(isolate->GetCurrentContext(), k).ToLocalChecked();
+    auto field_value = obj_def->Get(isolate->GetCurrentContext(), field_name).ToLocalChecked();
+    if (field_value->IsObject() && !field_value->IsFunction()) {
+      v8::Local<v8::Object> new_sub_instance = v8::Object::New(isolate);
+      copy_object(isolate, field_value.As<v8::Object>(), new_sub_instance);
+      new_instance->Set(isolate->GetCurrentContext(), field_name, new_sub_instance);
+    } else {
+      new_instance->Set(isolate->GetCurrentContext(), field_name, field_value);
+    }
+  }
 }
 
 void generator_v2::init(const std::string& filename) {
@@ -110,115 +166,92 @@ void generator_v2::init(const std::string& filename) {
       fun->Call(isolate->GetCurrentContext(), the_object, 1, args).ToLocalChecked();
     }
   });
-}
 
-void handle_object(v8::Isolate* isolate,
-                   v8::Local<v8::Value> objects,
-                   v8::Local<v8::Object>& obj_def,
-                   v8::Local<v8::Object>& obj_def2) {
-  const auto type = v8_str(isolate, v8_index_object(context, obj_def, "type").As<v8::String>());
-  if (type == "circle") {
-    auto radius = v8_index_object(context, obj_def, "radius")
-                      .As<v8::Number>()
-                      ->NumberValue(isolate->GetCurrentContext())
-                      .ToChecked();
-    data::shape new_shape;
-    auto x =
-        v8_index_object(context, obj_def2, "x").As<v8::Number>()->NumberValue(isolate->GetCurrentContext()).ToChecked();
-    auto y =
-        v8_index_object(context, obj_def2, "y").As<v8::Number>()->NumberValue(isolate->GetCurrentContext()).ToChecked();
-    auto props1obj = v8_index_object(context, obj_def, "props").As<v8::Object>();
-    auto props1 = props1obj.As<v8::Object>();
-    auto props = v8_index_object(context, obj_def2, "props").As<v8::Object>();
-    if (props->IsObject()) {
-      v8::Local<v8::Array> propz = props->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
-      for (size_t i = 0; i < propz->Length(); i++) {
-        auto prop_obj = props->Get(isolate->GetCurrentContext(), i).ToLocalChecked();
-        std::string prop_name(
-            v8_str(isolate, propz->Get(isolate->GetCurrentContext(), i).ToLocalChecked().As<v8::String>()));
-        auto the_value = v8_index_object(context, props, prop_name);
-        if (prop_name == "maxradius") {
-          if (props1->IsObject()) {
-            props1obj->Set(isolate->GetCurrentContext(), v8_str(context, "maxradius"), the_value.As<v8::Number>());
-          }
-        }
+  context->run_array("script", [](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+    v8_interact i(isolate);
+    auto obj = val.As<v8::Object>();
+    auto scenes = i.v8_array(obj, "scenes");
+    auto objects = i.v8_array(obj, "objects");
+    for (size_t I = 0; I < scenes->Length(); I++) {
+      auto current_scene = scenes->Get(isolate->GetCurrentContext(), I).ToLocalChecked();
+      if (!current_scene->IsObject()) continue;
+      auto sceneobj = current_scene.As<v8::Object>();
+      auto scene_objects = i.v8_array(sceneobj, "objects");
+      auto scene_instances = i.v8_array(sceneobj, "instances");
+      if (!scene_instances->IsArray()) {
+        sceneobj->Set(isolate->GetCurrentContext(), v8_str(context, "instances"), v8::Array::New(isolate));
+      }
+      scene_instances = i.v8_array(sceneobj, "instances");
+      size_t scene_instances_idx = scene_instances->Length();
+      for (size_t j = 0; j < scene_objects->Length(); j++) {
+        auto scene_obj = scene_objects->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
+        auto id = i.str(scene_obj, "id");
+        auto x = i.str(scene_obj, "x");
+        auto y = i.str(scene_obj, "y");
+        auto v8_x = i.v8_number(scene_obj, "x");
+        auto v8_y = i.v8_number(scene_obj, "y");
+        auto scene_props = i.v8_obj(scene_obj, "props");
+        auto maxradius_prop = i.v8_number(scene_props, "maxradius");
+        auto obj_def = v8_index_object(context, objects, id).As<v8::Object>();
+        if (!obj_def->IsObject()) continue;
+        auto type = i.str(obj_def, "type");
+        v8::Local<v8::Object> new_instance = v8::Object::New(isolate);
+        copy_object(isolate, obj_def, new_instance);
+        new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8_x);
+        new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8_y);
+        auto props = i.v8_obj(new_instance, "props");
+        props->Set(isolate->GetCurrentContext(), v8_str(context, "maxradius"), maxradius_prop);
+        scene_instances->Set(isolate->GetCurrentContext(), scene_instances_idx++, new_instance);
       }
     }
-
-    new_shape.x = x;
-    new_shape.y = y;
-    new_shape.z = 0;  // circ.get_z();
-    new_shape.type = data::shape_type::circle;
-    new_shape.radius = radius;    // 10.0;//circ.get_radius();
-    new_shape.radius_size = 5.0;  // circ.get_radiussize();
-    // new_shape.gradient_ = circ.get_gradient().to_data_gradient();
-    new_shape.gradient_.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
-    new_shape.gradient_.colors.emplace_back(std::make_tuple(1.0, data::color{0.0, 0, 0, 1}));
-    new_shape.blending_ = data::blending_type::add;  // circ.blending_type_;
-    assistant->the_job->shapes.push_back(new_shape);
-  }
-  // iterate over the sub object and recurse into them
-  auto sub_objects = v8_index_object(context, obj_def, "subobj").As<v8::Array>();
-  for (size_t k = 0; k < sub_objects->Length(); k++) {
-    auto sub_obj = sub_objects->Get(isolate->GetCurrentContext(), k).ToLocalChecked();
-    auto obj_id = v8_index_object(context, sub_obj, "object").As<v8::String>();
-    auto sub_obj_def = v8_index_object(context, objects, v8_str(isolate, obj_id)).As<v8::Object>();
-    if (!sub_obj_def->IsObject()) continue;
-    auto tmp = sub_obj.As<v8::Object>();
-    handle_object(isolate, objects, sub_obj_def, tmp);
-  }
-};
+  });
+}
 
 bool generator_v2::generate_frame() {
   assistant->the_previous_job = assistant->the_job;
-
-  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    auto objects = v8_index_object(context, val, "objects");
-    v8::Local<v8::Array> object =
-        objects.As<v8::Object>()->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
-    for (size_t i = 0; i < object->Length(); i++) {
-      std::string obj_name(
-          v8_str(isolate, object->Get(isolate->GetCurrentContext(), i).ToLocalChecked().As<v8::String>()));
-      auto the_object = v8_index_object(context, objects, obj_name);
-      if (!object->IsObject()) continue;
-      if (!the_object->IsObject()) continue;
-      // call time function
-      v8::Local<v8::Function> fun = the_object.As<v8::Object>()
-                                        ->Get(isolate->GetCurrentContext(), v8_str(context, "time"))
-                                        .ToLocalChecked()
-                                        .As<v8::Function>();
-      v8::Handle<v8::Value> args[1];
-      args[0] = v8pp::to_v8(isolate, 0.5);
-      fun->Call(isolate->GetCurrentContext(), the_object, 1, args).ToLocalChecked();
-    }
-  });
-
   assistant->the_job->shapes.clear();
 
   context->run_array("script", [](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    auto scenes = v8_index_object(context, val, "scenes").As<v8::Array>();
-    auto objects = v8_index_object(context, val, "objects").As<v8::Array>();
-    for (size_t i = 0; i < scenes->Length(); i++) {
-      auto current_scene = scenes->Get(isolate->GetCurrentContext(), i).ToLocalChecked();
+    v8_interact i(isolate);
+    auto obj = val.As<v8::Object>();
+    auto scenes = i.v8_array(obj, "scenes");
+    for (size_t I = 0; I < scenes->Length(); I++) {
+      auto current_scene = scenes->Get(isolate->GetCurrentContext(), I).ToLocalChecked();
       if (!current_scene->IsObject()) continue;
-      auto name = v8_index_object(context, current_scene, "name").As<v8::String>();
-      auto scene_objects = v8_index_object(context, current_scene, "objects").As<v8::Array>();
-      for (size_t j = 0; j < scene_objects->Length(); j++) {
-        auto current_obj = scene_objects->Get(isolate->GetCurrentContext(), j).ToLocalChecked();
-        // recurse this stuff into function handling the object
-        if (!current_obj->IsObject()) continue;
-        auto id = v8_index_object(context, current_obj, "id").As<v8::String>();
-        auto obj_def = v8_index_object(context, objects, v8_str(isolate, id)).As<v8::Object>();
-        if (!obj_def->IsObject()) continue;
-        auto tmp = current_obj.As<v8::Object>();
-        handle_object(isolate, objects, obj_def, tmp);
+      auto sceneobj = current_scene.As<v8::Object>();
+      auto scene_instances = i.v8_array(sceneobj, "instances");
+      if (!scene_instances->IsArray()) continue;
+      for (size_t j = 0; j < scene_instances->Length(); j++) {
+        auto instance = scene_instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
+        if (!instance->IsObject()) {
+          continue;
+        }
+        v8::Local<v8::Function> fun2 = instance.As<v8::Object>()
+                                           ->Get(isolate->GetCurrentContext(), v8_str(context, "time"))
+                                           .ToLocalChecked()
+                                           .As<v8::Function>();
+        v8::Handle<v8::Value> args[1];
+        args[0] = v8pp::to_v8(isolate, 0.5);
+        fun2->Call(isolate->GetCurrentContext(), instance, 1, args).ToLocalChecked();
+        auto x = i.str(instance, "x");
+        auto y = i.str(instance, "y");
+        auto radius = i.str(instance, "radius");
+        data::shape new_shape;
+        new_shape.x = i.double_number(instance, "x");
+        new_shape.y = i.double_number(instance, "y");
+        new_shape.z = 0;
+        new_shape.type = data::shape_type::circle;
+        new_shape.radius = i.double_number(instance, "radius");
+        new_shape.radius_size = 5.0;
+        new_shape.gradient_.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
+        new_shape.gradient_.colors.emplace_back(std::make_tuple(1.0, data::color{0.0, 0, 0, 1}));
+        new_shape.blending_ = data::blending_type::add;
+        assistant->the_job->shapes.push_back(new_shape);
       }
     }
   });
-
   // assistant->the_job.shapes[0] = assistant->the_previous_job.shapes[0];
   // assistant->the_job.shapes[0].reset( assistant->the_previous_job.shapes[0] );
-
   return true;  // false;
   // return !write_frame_fun();
 }
