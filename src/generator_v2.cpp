@@ -23,7 +23,7 @@ void output_fun(const std::string& s) {
 
 v8::Local<v8::String> v8_str(std::shared_ptr<v8_wrapper> context, const std::string& str) {
   return v8::String::NewFromUtf8(context->isolate, str.c_str()).ToLocalChecked();
-};
+}
 
 std::string v8_str(v8::Isolate* isolate, const v8::Local<v8::String>& str) {
   v8::String::Utf8Value out(isolate, str);
@@ -156,14 +156,14 @@ void generator_v2::init(const std::string& filename) {
       auto the_object = v8_index_object(context, objects, obj_name);
       if (!object->IsObject()) continue;
       if (!the_object->IsObject()) continue;
-      // call init function
-      v8::Local<v8::Function> fun = the_object.As<v8::Object>()
-                                        ->Get(isolate->GetCurrentContext(), v8_str(context, "init"))
-                                        .ToLocalChecked()
-                                        .As<v8::Function>();
-      v8::Handle<v8::Value> args[1];
-      args[0] = v8pp::to_v8(isolate, 0.5);
-      fun->Call(isolate->GetCurrentContext(), the_object, 1, args).ToLocalChecked();
+      // // call init function
+      // v8::Local<v8::Function> fun = the_object.As<v8::Object>()
+      //                                   ->Get(isolate->GetCurrentContext(), v8_str(context, "init"))
+      //                                   .ToLocalChecked()
+      //                                   .As<v8::Function>();
+      // v8::Handle<v8::Value> args[1];
+      // args[0] = v8pp::to_v8(isolate, 0.5);
+      // fun->Call(isolate->GetCurrentContext(), the_object, 1, args).ToLocalChecked();
     }
   });
 
@@ -233,9 +233,6 @@ bool generator_v2::generate_frame() {
         v8::Handle<v8::Value> args[1];
         args[0] = v8pp::to_v8(isolate, 0.5);
         fun2->Call(isolate->GetCurrentContext(), instance, 1, args).ToLocalChecked();
-        auto x = i.str(instance, "x");
-        auto y = i.str(instance, "y");
-        auto radius = i.str(instance, "radius");
         data::shape new_shape;
         new_shape.x = i.double_number(instance, "x");
         new_shape.y = i.double_number(instance, "y");
