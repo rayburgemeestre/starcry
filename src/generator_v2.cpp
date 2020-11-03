@@ -118,6 +118,7 @@ void generator_v2::init(const std::string& filename) {
   job.background_color.a = 0;
   job.width = 1920;   // canvas_w;
   job.height = 1080;  // canvas_h;
+  job.job_number = 0;
   job.frame_number = assistant->current_frame;
   job.rendered = false;
   job.last_frame = false;
@@ -247,6 +248,12 @@ bool generator_v2::generate_frame() {
       }
     }
   });
+  assistant->the_job->job_number++;
+  assistant->the_job->frame_number++;
+  // TEST
+  if (assistant->the_job->frame_number == 250) {
+    return false;
+  }
   // assistant->the_job.shapes[0] = assistant->the_previous_job.shapes[0];
   // assistant->the_job.shapes[0].reset( assistant->the_previous_job.shapes[0] );
   return true;  // false;

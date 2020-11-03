@@ -62,7 +62,7 @@ private:
   std::function<void(starcry &sc)> on_pipeline_initialized;
 
   std::map<size_t, std::shared_ptr<render_msg>> buffered_frames;
-  size_t current_frame = 0;
+  size_t current_frame = 1;
   limited_executor le;
 
 public:

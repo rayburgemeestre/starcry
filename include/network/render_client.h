@@ -49,6 +49,12 @@ public:
   render_client();
   ~render_client();
 
+  // disable copy and move
+  render_client(const render_client &) = delete;
+  void operator=(const render_client &) = delete;
+  render_client(const render_client &&) = delete;
+  void operator=(const render_client &&) = delete;
+
   void set_message_fun(std::function<void(int fd, int type, size_t len, const std::string &msg)> fn);
   bool poll();
   void process();

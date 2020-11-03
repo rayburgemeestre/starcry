@@ -17,6 +17,12 @@ public:
   bitmap_wrapper() = default;
   ~bitmap_wrapper() = default;
 
+  // disable copy and move
+  bitmap_wrapper(const bitmap_wrapper&) = delete;
+  void operator=(const bitmap_wrapper&) = delete;
+  bitmap_wrapper(const bitmap_wrapper&&) = delete;
+  void operator=(const bitmap_wrapper&&) = delete;
+
   image& get(int width, int height) {
     if (width != bitmap_w || height != bitmap_h) {
       bitmap.resize(width, height);

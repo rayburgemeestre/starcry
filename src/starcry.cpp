@@ -129,9 +129,17 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
 
     gen = std::make_shared<generator_v2>();
     gen->init(cmd_def->script);
+    // old generator:
+    // bitrate = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");
+    size_t bitrate = (500 * 1024 * 8);
+    int width = 1920;
+    int height = 1080;
+    int fps = 25;
+    framer->initialize(bitrate, width, height, fps);
     while (true) {
       auto ret = gen->generate_frame();
-      jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, gen->get_job()));
+      auto job_copy = std::make_shared<data::job>(*gen->get_job());
+      jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, job_copy));
       jobs->sleep_until_not_full();
       if (!ret) break;
     }
@@ -183,7 +191,8 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 }
 
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
-  COZ_PROGRESS;
+  std::cout << job_msg->job_number << " " << std::flush;
+  // COZ_PROGRESS;
   auto process = [&](std::shared_ptr<render_msg> job_msg) {
     if (job_msg->client == nullptr) {
       if (gui) gui->add_frame(job_msg->width, job_msg->height, job_msg->pixels);
@@ -274,6 +283,7 @@ void starcry::run_server() {
   system->explicit_join();
   if (gui) gui->finalize();
   if (framer) framer->finalize();
+  std::cout << std::endl;
 }
 
 void starcry::run_client() {
@@ -282,15 +292,10 @@ void starcry::run_client() {
   bitmap_wrapper bitmap;
   engine.initialize();
 
-  client.set_message_fun(std::bind(&starcry::on_server_message,
-                                   this,
-                                   client,
-                                   engine,
-                                   bitmap,
-                                   std::placeholders::_1,
-                                   std::placeholders::_2,
-                                   std::placeholders::_3,
-                                   std::placeholders::_4));
+  client.set_message_fun([&](int fd, int type, size_t len, const std::string &msg) {
+    on_server_message(client, engine, bitmap, fd, type, len, msg);
+  });
+
   client.register_me();
   while (client.poll()) {
     std::cout << "client poll.." << std::endl;
@@ -326,6 +331,7 @@ bool starcry::on_server_message(render_client &client,
       break;
     }
   }
+  return true;
 }
 
 bool starcry::on_client_message(int sockfd, int type, size_t len, const std::string &data) {

@@ -22,6 +22,12 @@ class rendering_engine_wrapper {
 public:
   rendering_engine_wrapper();
 
+  // disable copy and move
+  rendering_engine_wrapper(const rendering_engine_wrapper &) = delete;
+  void operator=(const rendering_engine_wrapper &) = delete;
+  rendering_engine_wrapper(const rendering_engine_wrapper &&) = delete;
+  void operator=(const rendering_engine_wrapper &&) = delete;
+
   void initialize();
 
   void render(image &bmp,
