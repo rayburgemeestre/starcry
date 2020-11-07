@@ -44,6 +44,8 @@ _ = {
   },
   'objects': {
     'obj1': {
+      'x': 0,
+      'y': 0,
       'props': {
         'maxradius': 250.0,
       },
@@ -56,8 +58,9 @@ _ = {
       'radius': 0,
       'radiussize': 5.0,
       'init': function() {
-        this.subobj.push({'object': 'obj2', 'x': 0, 'y': 0, 'z': 0});
-        this.subobj.push({'object': 'obj2', 'x': 50, 'y': 0, 'z': 0});
+        this.subobj.push({'id': 'obj2', 'x': this.x + -100, 'y': this.y + 0, 'z': 0, 'props': {'maxradius': 100}});
+        this.subobj.push({'id': 'obj2', 'x': this.x + 0, 'y': this.y + 0, 'z': 0, 'props': {'maxradius': 200}});
+        this.subobj.push({'id': 'obj2', 'x': this.x + 100, 'y': this.y + 0, 'z': 0, 'props': {'maxradius': 300}});
       },
       'time': function(t) {
         this.radius = t * this.props.maxradius;
@@ -91,13 +94,24 @@ _ = {
       }
     },
   },
-  'video': {'frames': 250},
+  'video': {
+    'frames': 250,
+    'width': 1920,
+    'height': 1080,
+  },
   'scenes': [{
     'name': 'scene1',
     'objects': [
-      {'id': 'obj2', 'x': -100, 'y': 0, 'z': 0, 'props': {'maxradius': 100}},
-      {'id': 'obj2', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 200}},
-      {'id': 'obj2', 'x': 100, 'y': 0, 'z': 0, 'props': {'maxradius': 300}},
+      // similar to a single "obj1"
+      // {'id': 'obj2', 'x': -100, 'y': 0, 'z': 0, 'props': {'maxradius': 100}},
+      // {'id': 'obj2', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 200}},
+      // {'id': 'obj2', 'x': 100, 'y': 0, 'z': 0, 'props': {'maxradius': 300}},
+
+      // multiple instances of "obj1"s
+      {'id': 'obj1', 'x': -300, 'y': 0, 'z': 0, 'props': {}},
+      {'id': 'obj1', 'x': 300, 'y': 0, 'z': 0, 'props': {}},
+      {'id': 'obj1', 'x': 0, 'y': -300, 'z': 0, 'props': {}},
+      {'id': 'obj1', 'x': 0, 'y': +300, 'z': 0, 'props': {}},
     ],
   }]
 };

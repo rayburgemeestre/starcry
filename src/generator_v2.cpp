@@ -99,6 +99,69 @@ void copy_object(v8::Isolate* isolate, v8::Local<v8::Object> obj_def, v8::Local<
   }
 }
 
+void process_object(v8_interact& i,
+                    v8::Isolate* isolate,
+                    v8::Local<v8::Array>& objects,
+                    v8::Local<v8::Array>& scene_instances,
+                    size_t& scene_instances_idx,
+                    v8::Local<v8::Object>& scene_obj) {
+  // The object from the scene
+  auto id = i.str(scene_obj, "id");
+  auto x = i.str(scene_obj, "x");
+  auto y = i.str(scene_obj, "y");
+  auto v8_x = i.v8_number(scene_obj, "x");
+  auto v8_y = i.v8_number(scene_obj, "y");
+  auto scene_props = i.v8_obj(scene_obj, "props");
+
+  // The object definition that will be instantiated
+  auto obj_def = v8_index_object(context, objects, id).template As<v8::Object>();
+  auto init_fun = obj_def->Get(isolate->GetCurrentContext(), v8_str(context, "init"))
+                      .ToLocalChecked()
+                      .As<v8::Function>();
+  if (!obj_def->IsObject()) return;
+  auto v8_type = i.v8_string(obj_def, "type");
+  auto type = i.str(obj_def, "type");
+
+  // The new object instantiation as specified by the scene object
+  v8::Local<v8::Object> new_instance = v8::Object::New(isolate);
+  copy_object(isolate, obj_def, new_instance);
+  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8_x);
+  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8_y);
+  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "subobj"), v8::Array::New(isolate));
+  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "type"), v8_type);
+  // TODO: investigate if we can simply do the following
+  // new_instance->SetPrototype(isolate->GetCurrentContext(), scene_obj);
+  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "init"), init_fun);
+
+  // Copy over scene properties to instance properties
+  auto props = i.v8_obj(new_instance, "props");
+  auto obj_fields = scene_props->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
+  for (size_t k = 0; k < obj_fields->Length(); k++) {
+    auto field_name = obj_fields->Get(isolate->GetCurrentContext(), k).ToLocalChecked();
+    auto field_value = scene_props->Get(isolate->GetCurrentContext(), field_name).ToLocalChecked();
+    props->Set(isolate->GetCurrentContext(), field_name, field_value);
+  }
+
+  // Call init function on new instance
+  v8::Local<v8::Function> fun = new_instance.As<v8::Object>()
+                                    ->Get(isolate->GetCurrentContext(), v8_str(context, "init"))
+                                    .ToLocalChecked()
+                                    .As<v8::Function>();
+  v8::Handle<v8::Value> args[1];
+  args[0] = v8pp::to_v8(isolate, 0.5);
+  fun->Call(isolate->GetCurrentContext(), new_instance, 1, args).ToLocalChecked();
+
+  // Recurse for the sub objects the init function populated.
+  auto subobjs = i.v8_array(new_instance, "subobj");
+  for (size_t k = 0; k < subobjs->Length(); k++) {
+    auto subobj = subobjs->Get(isolate->GetCurrentContext(), k).ToLocalChecked().As<v8::Object>();
+    process_object(i, isolate, objects, scene_instances, scene_instances_idx, subobj);
+  }
+
+  // Add the instance to the scene for later rendering.
+  scene_instances->Set(isolate->GetCurrentContext(), scene_instances_idx++, new_instance);
+}
+
 void generator_v2::init(const std::string& filename) {
   if (context == nullptr) {
     context = std::make_shared<v8_wrapper>(filename);
@@ -142,12 +205,14 @@ void generator_v2::init(const std::string& filename) {
   std::istreambuf_iterator<char> begin(filename == "-" ? std::cin : stream), end;
   const auto source = std::string("script = ") + std::string(begin, end);
   context->run_array(source, [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    auto video = v8_index_object(context, val, "video");
-    auto frames = v8_index_object(context, video, "frames")
-                      .As<v8::Number>()
-                      ->NumberValue(isolate->GetCurrentContext())
-                      .ToChecked();
+    v8_interact i(isolate);
+    auto video = v8_index_object(context, val, "video").As<v8::Object>();
+    auto frames = i.double_number(video, "frames");
+    auto width = i.double_number(video, "width");
+    auto height = i.double_number(video, "height");
     max_frames = frames;
+    job.width = width;
+    job.height = height;
     auto objects = v8_index_object(context, val, "objects");
     v8::Local<v8::Array> object =
         objects.As<v8::Object>()->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
@@ -186,23 +251,7 @@ void generator_v2::init(const std::string& filename) {
       size_t scene_instances_idx = scene_instances->Length();
       for (size_t j = 0; j < scene_objects->Length(); j++) {
         auto scene_obj = scene_objects->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-        auto id = i.str(scene_obj, "id");
-        auto x = i.str(scene_obj, "x");
-        auto y = i.str(scene_obj, "y");
-        auto v8_x = i.v8_number(scene_obj, "x");
-        auto v8_y = i.v8_number(scene_obj, "y");
-        auto scene_props = i.v8_obj(scene_obj, "props");
-        auto maxradius_prop = i.v8_number(scene_props, "maxradius");
-        auto obj_def = v8_index_object(context, objects, id).As<v8::Object>();
-        if (!obj_def->IsObject()) continue;
-        auto type = i.str(obj_def, "type");
-        v8::Local<v8::Object> new_instance = v8::Object::New(isolate);
-        copy_object(isolate, obj_def, new_instance);
-        new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8_x);
-        new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8_y);
-        auto props = i.v8_obj(new_instance, "props");
-        props->Set(isolate->GetCurrentContext(), v8_str(context, "maxradius"), maxradius_prop);
-        scene_instances->Set(isolate->GetCurrentContext(), scene_instances_idx++, new_instance);
+        process_object(i, isolate, objects, scene_instances, scene_instances_idx, scene_obj);
       }
     }
   });
@@ -238,25 +287,24 @@ bool generator_v2::generate_frame() {
         new_shape.x = i.double_number(instance, "x");
         new_shape.y = i.double_number(instance, "y");
         new_shape.z = 0;
+        std::string type = i.str(instance, "type");
         new_shape.type = data::shape_type::circle;
         new_shape.radius = i.double_number(instance, "radius");
         new_shape.radius_size = 5.0;
         new_shape.gradient_.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
         new_shape.gradient_.colors.emplace_back(std::make_tuple(1.0, data::color{0.0, 0, 0, 1}));
         new_shape.blending_ = data::blending_type::add;
-        assistant->the_job->shapes.push_back(new_shape);
+        if (type == "circle") {
+          assistant->the_job->shapes.push_back(new_shape);
+        }
       }
     }
   });
   assistant->the_job->job_number++;
   assistant->the_job->frame_number++;
-  // TEST
-  if (assistant->the_job->frame_number == 250) {
-    return false;
-  }
+  return assistant->the_job->frame_number != max_frames;
   // assistant->the_job.shapes[0] = assistant->the_previous_job.shapes[0];
   // assistant->the_job.shapes[0].reset( assistant->the_previous_job.shapes[0] );
-  return true;  // false;
   // return !write_frame_fun();
 }
 
