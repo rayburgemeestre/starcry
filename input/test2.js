@@ -64,9 +64,8 @@ _ = {
       },
       'time': function(t) {
         this.radius = t * this.props.maxradius;
-        // TODO: this should work
-        this.x += Math.random();
-        this.y += Math.random();
+        // this.x += Math.random() * 10.0 - 5.0;
+        // this.y += Math.random() * 10.0 - 5.0;
         this.gradients[0] = 1.0 - t;
         this.gradients[1] = t;
         this.gradients[2] = 0;

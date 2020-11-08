@@ -72,6 +72,10 @@ public:
     return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext()).ToChecked();
   }
 
+  int64_t integer_number(v8::Local<v8::Object>& obj, const std::string& field) {
+    return v8_number(obj, field)->IntegerValue(isolate->GetCurrentContext()).ToChecked();
+  }
+
   std::string str(v8::Local<v8::Object>& obj, const std::string& field) {
     return v8_str(isolate, v8_string(obj, field));
   }
@@ -107,42 +111,31 @@ void process_object(v8_interact& i,
                     v8::Local<v8::Object>& scene_obj,
                     v8::Local<v8::Object>* parent_object = nullptr) {
   // Parent object
-  // TODO: just a test, will get rid of this eventually
-  double offset_x = 0;
-  double offset_y = 0;
+  int64_t level = 0;
   if (parent_object != nullptr) {
-    offset_x = i.double_number(*parent_object, "x");
-    offset_y = i.double_number(*parent_object, "y");
+    level = i.integer_number(*parent_object, "level") + 1;
   }
 
   // The object from the scene
   auto id = i.str(scene_obj, "id");
-  auto x = i.double_number(scene_obj, "x");
-  auto y = i.double_number(scene_obj, "y");
-  auto v8_x = v8::Number::New(isolate, x + offset_x);
-  auto v8_y = v8::Number::New(isolate, y + offset_y);
+  auto v8_x = i.v8_number(scene_obj, "x");
+  auto v8_y = i.v8_number(scene_obj, "y");
   auto scene_props = i.v8_obj(scene_obj, "props");
 
   // The object definition that will be instantiated
   auto obj_def = v8_index_object(context, objects, id).template As<v8::Object>();
-  auto init_fun =
-      obj_def->Get(isolate->GetCurrentContext(), v8_str(context, "init")).ToLocalChecked().As<v8::Function>();
   if (!obj_def->IsObject()) {
     return;
   }
-  auto v8_type = i.v8_string(obj_def, "type");
-  auto type = i.str(obj_def, "type");
 
   // The new object instantiation as specified by the scene object
   v8::Local<v8::Object> new_instance = v8::Object::New(isolate);
   copy_object(isolate, obj_def, new_instance);
+  new_instance->SetPrototype(isolate->GetCurrentContext(), scene_obj);
   new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8_x);
   new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8_y);
   new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "subobj"), v8::Array::New(isolate));
-  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "type"), v8_type);
-  // TODO: investigate if we can simply do the following
-  // new_instance->SetPrototype(isolate->GetCurrentContext(), scene_obj);
-  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "init"), init_fun);
+  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "level"), v8::Number::New(isolate, level));
 
   // Copy over scene properties to instance properties
   auto props = i.v8_obj(new_instance, "props");
@@ -162,15 +155,15 @@ void process_object(v8_interact& i,
   args[0] = v8pp::to_v8(isolate, 0.5);
   fun->Call(isolate->GetCurrentContext(), new_instance, 1, args).ToLocalChecked();
 
+  // Add the instance to the scene for later rendering.
+  scene_instances->Set(isolate->GetCurrentContext(), scene_instances_idx++, new_instance);
+
   // Recurse for the sub objects the init function populated.
   auto subobjs = i.v8_array(new_instance, "subobj");
   for (size_t k = 0; k < subobjs->Length(); k++) {
     auto subobj = subobjs->Get(isolate->GetCurrentContext(), k).ToLocalChecked().As<v8::Object>();
     process_object(i, isolate, objects, scene_instances, scene_instances_idx, subobj, &scene_obj);
   }
-
-  // Add the instance to the scene for later rendering.
-  scene_instances->Set(isolate->GetCurrentContext(), scene_instances_idx++, new_instance);
 }
 
 void generator_v2::init(const std::string& filename) {
@@ -224,24 +217,6 @@ void generator_v2::init(const std::string& filename) {
     max_frames = frames;
     job.width = width;
     job.height = height;
-    auto objects = v8_index_object(context, val, "objects");
-    v8::Local<v8::Array> object =
-        objects.As<v8::Object>()->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
-    for (size_t i = 0; i < object->Length(); i++) {
-      std::string obj_name(
-          v8_str(isolate, object->Get(isolate->GetCurrentContext(), i).ToLocalChecked().As<v8::String>()));
-      auto the_object = v8_index_object(context, objects, obj_name);
-      if (!object->IsObject()) continue;
-      if (!the_object->IsObject()) continue;
-      // // call init function
-      // v8::Local<v8::Function> fun = the_object.As<v8::Object>()
-      //                                   ->Get(isolate->GetCurrentContext(), v8_str(context, "init"))
-      //                                   .ToLocalChecked()
-      //                                   .As<v8::Function>();
-      // v8::Handle<v8::Value> args[1];
-      // args[0] = v8pp::to_v8(isolate, 0.5);
-      // fun->Call(isolate->GetCurrentContext(), the_object, 1, args).ToLocalChecked();
-    }
   });
 
   context->run_array("script", [](v8::Isolate* isolate, v8::Local<v8::Value> val) {
@@ -282,11 +257,14 @@ bool generator_v2::generate_frame() {
       auto sceneobj = current_scene.As<v8::Object>();
       auto scene_instances = i.v8_array(sceneobj, "instances");
       if (!scene_instances->IsArray()) continue;
+      std::unordered_map<int64_t, v8::Local<v8::Object>> parents;
       for (size_t j = 0; j < scene_instances->Length(); j++) {
         auto instance = scene_instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
         if (!instance->IsObject()) {
           continue;
         }
+        int64_t level = i.integer_number(instance, "level");
+        parents[level] = instance;
         v8::Local<v8::Function> fun2 = instance.As<v8::Object>()
                                            ->Get(isolate->GetCurrentContext(), v8_str(context, "time"))
                                            .ToLocalChecked()
@@ -297,6 +275,11 @@ bool generator_v2::generate_frame() {
         data::shape new_shape;
         new_shape.x = i.double_number(instance, "x");
         new_shape.y = i.double_number(instance, "y");
+        while (level > 0) {
+          level--;
+          new_shape.x += i.double_number(parents[level], "x");
+          new_shape.y += i.double_number(parents[level], "y");
+        }
         new_shape.z = 0;
         std::string type = i.str(instance, "type");
         new_shape.type = data::shape_type::circle;
