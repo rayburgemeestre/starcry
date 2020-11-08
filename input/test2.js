@@ -58,12 +58,15 @@ _ = {
       'radius': 0,
       'radiussize': 5.0,
       'init': function() {
-        this.subobj.push({'id': 'obj2', 'x': this.x + -100, 'y': this.y + 0, 'z': 0, 'props': {'maxradius': 100}});
-        this.subobj.push({'id': 'obj2', 'x': this.x + 0, 'y': this.y + 0, 'z': 0, 'props': {'maxradius': 200}});
-        this.subobj.push({'id': 'obj2', 'x': this.x + 100, 'y': this.y + 0, 'z': 0, 'props': {'maxradius': 300}});
+        this.subobj.push({'id': 'obj2', 'x': -100, 'y': 0, 'z': 0, 'props': {'maxradius': 100}});
+        this.subobj.push({'id': 'obj2', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 200}});
+        this.subobj.push({'id': 'obj2', 'x': 100, 'y': 0, 'z': 0, 'props': {'maxradius': 300}});
       },
       'time': function(t) {
         this.radius = t * this.props.maxradius;
+        // TODO: this should work
+        this.x += Math.random();
+        this.y += Math.random();
         this.gradients[0] = 1.0 - t;
         this.gradients[1] = t;
         this.gradients[2] = 0;

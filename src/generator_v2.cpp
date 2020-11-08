@@ -104,21 +104,32 @@ void process_object(v8_interact& i,
                     v8::Local<v8::Array>& objects,
                     v8::Local<v8::Array>& scene_instances,
                     size_t& scene_instances_idx,
-                    v8::Local<v8::Object>& scene_obj) {
+                    v8::Local<v8::Object>& scene_obj,
+                    v8::Local<v8::Object>* parent_object = nullptr) {
+  // Parent object
+  // TODO: just a test, will get rid of this eventually
+  double offset_x = 0;
+  double offset_y = 0;
+  if (parent_object != nullptr) {
+    offset_x = i.double_number(*parent_object, "x");
+    offset_y = i.double_number(*parent_object, "y");
+  }
+
   // The object from the scene
   auto id = i.str(scene_obj, "id");
-  auto x = i.str(scene_obj, "x");
-  auto y = i.str(scene_obj, "y");
-  auto v8_x = i.v8_number(scene_obj, "x");
-  auto v8_y = i.v8_number(scene_obj, "y");
+  auto x = i.double_number(scene_obj, "x");
+  auto y = i.double_number(scene_obj, "y");
+  auto v8_x = v8::Number::New(isolate, x + offset_x);
+  auto v8_y = v8::Number::New(isolate, y + offset_y);
   auto scene_props = i.v8_obj(scene_obj, "props");
 
   // The object definition that will be instantiated
   auto obj_def = v8_index_object(context, objects, id).template As<v8::Object>();
-  auto init_fun = obj_def->Get(isolate->GetCurrentContext(), v8_str(context, "init"))
-                      .ToLocalChecked()
-                      .As<v8::Function>();
-  if (!obj_def->IsObject()) return;
+  auto init_fun =
+      obj_def->Get(isolate->GetCurrentContext(), v8_str(context, "init")).ToLocalChecked().As<v8::Function>();
+  if (!obj_def->IsObject()) {
+    return;
+  }
   auto v8_type = i.v8_string(obj_def, "type");
   auto type = i.str(obj_def, "type");
 
@@ -155,7 +166,7 @@ void process_object(v8_interact& i,
   auto subobjs = i.v8_array(new_instance, "subobj");
   for (size_t k = 0; k < subobjs->Length(); k++) {
     auto subobj = subobjs->Get(isolate->GetCurrentContext(), k).ToLocalChecked().As<v8::Object>();
-    process_object(i, isolate, objects, scene_instances, scene_instances_idx, subobj);
+    process_object(i, isolate, objects, scene_instances, scene_instances_idx, subobj, &scene_obj);
   }
 
   // Add the instance to the scene for later rendering.
