@@ -103,13 +103,13 @@ void copy_object(v8::Isolate* isolate, v8::Local<v8::Object> obj_def, v8::Local<
   }
 }
 
-void process_object(v8_interact& i,
-                    v8::Isolate* isolate,
-                    v8::Local<v8::Array>& objects,
-                    v8::Local<v8::Array>& scene_instances,
-                    size_t& scene_instances_idx,
-                    v8::Local<v8::Object>& scene_obj,
-                    v8::Local<v8::Object>* parent_object = nullptr) {
+v8::Local<v8::Object> process_object(v8_interact& i,
+                                     v8::Isolate* isolate,
+                                     v8::Local<v8::Array>& objects,
+                                     v8::Local<v8::Array>& scene_instances,
+                                     size_t& scene_instances_idx,
+                                     v8::Local<v8::Object>& scene_obj,
+                                     v8::Local<v8::Object>* parent_object = nullptr) {
   // Parent object
   int64_t level = 0;
   if (parent_object != nullptr) {
@@ -125,7 +125,7 @@ void process_object(v8_interact& i,
   // The object definition that will be instantiated
   auto obj_def = v8_index_object(context, objects, id).template As<v8::Object>();
   if (!obj_def->IsObject()) {
-    return;
+    return {};
   }
 
   // The new object instantiation as specified by the scene object
@@ -162,8 +162,10 @@ void process_object(v8_interact& i,
   auto subobjs = i.v8_array(new_instance, "subobj");
   for (size_t k = 0; k < subobjs->Length(); k++) {
     auto subobj = subobjs->Get(isolate->GetCurrentContext(), k).ToLocalChecked().As<v8::Object>();
-    process_object(i, isolate, objects, scene_instances, scene_instances_idx, subobj, &scene_obj);
+    auto instance = process_object(i, isolate, objects, scene_instances, scene_instances_idx, subobj, &scene_obj);
+    subobjs->Set(isolate->GetCurrentContext(), k, instance);
   }
+  return new_instance;
 }
 
 void generator_v2::init(const std::string& filename) {
@@ -219,6 +221,28 @@ void generator_v2::init(const std::string& filename) {
     job.height = height;
   });
 
+  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+    v8_interact i(isolate);
+    auto obj = val.As<v8::Object>();
+    auto gradient_objects = i.v8_obj(obj, "gradients");
+    auto gradient_fields = gradient_objects->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
+    for (size_t k = 0; k < gradient_fields->Length(); k++) {
+      auto gradient_id = gradient_fields->Get(isolate->GetCurrentContext(), k).ToLocalChecked();
+      auto positions =
+          gradient_objects->Get(isolate->GetCurrentContext(), gradient_id).ToLocalChecked().As<v8::Array>();
+      auto id = v8_str(isolate, gradient_id.As<v8::String>());
+      for (size_t l = 0; l < positions->Length(); l++) {
+        auto position = positions->Get(isolate->GetCurrentContext(), l).ToLocalChecked().As<v8::Object>();
+        auto pos = i.double_number(position, "position");
+        auto r = i.double_number(position, "r");
+        auto g = i.double_number(position, "g");
+        auto b = i.double_number(position, "b");
+        auto a = i.double_number(position, "a");
+        gradients[id].colors.emplace_back(std::make_tuple(pos, data::color{r, g, b, a}));
+      }
+    }
+  });
+
   context->run_array("script", [](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
@@ -237,7 +261,8 @@ void generator_v2::init(const std::string& filename) {
       size_t scene_instances_idx = scene_instances->Length();
       for (size_t j = 0; j < scene_objects->Length(); j++) {
         auto scene_obj = scene_objects->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-        process_object(i, isolate, objects, scene_instances, scene_instances_idx, scene_obj);
+        auto instance = process_object(i, isolate, objects, scene_instances, scene_instances_idx, scene_obj);
+        scene_objects->Set(isolate->GetCurrentContext(), j, instance);
       }
     }
   });
@@ -247,7 +272,7 @@ bool generator_v2::generate_frame() {
   assistant->the_previous_job = assistant->the_job;
   assistant->the_job->shapes.clear();
 
-  context->run_array("script", [](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
     auto scenes = i.v8_array(obj, "scenes");
@@ -273,20 +298,34 @@ bool generator_v2::generate_frame() {
         args[0] = v8pp::to_v8(isolate, 0.5);
         fun2->Call(isolate->GetCurrentContext(), instance, 1, args).ToLocalChecked();
         data::shape new_shape;
+        std::string type = i.str(instance, "type");
+        std::string gradient_id = i.str(instance, "gradient");
         new_shape.x = i.double_number(instance, "x");
         new_shape.y = i.double_number(instance, "y");
+        if (new_shape.gradient_.colors.empty()) {
+          if (gradients.find(gradient_id) != gradients.end()) {
+            new_shape.gradient_ = gradients[gradient_id];
+          }
+        }
         while (level > 0) {
           level--;
           new_shape.x += i.double_number(parents[level], "x");
           new_shape.y += i.double_number(parents[level], "y");
+          gradient_id = i.str(parents[level], "gradient");
+          if (new_shape.gradient_.colors.empty()) {
+            if (gradients.find(gradient_id) != gradients.end()) {
+              new_shape.gradient_ = gradients[gradient_id];
+            }
+          }
+        }
+        if (new_shape.gradient_.colors.empty()) {
+          new_shape.gradient_.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
+          new_shape.gradient_.colors.emplace_back(std::make_tuple(1.0, data::color{0.0, 0, 0, 1}));
         }
         new_shape.z = 0;
-        std::string type = i.str(instance, "type");
         new_shape.type = data::shape_type::circle;
         new_shape.radius = i.double_number(instance, "radius");
         new_shape.radius_size = 5.0;
-        new_shape.gradient_.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
-        new_shape.gradient_.colors.emplace_back(std::make_tuple(1.0, data::color{0.0, 0, 0, 1}));
         new_shape.blending_ = data::blending_type::add;
         if (type == "circle") {
           assistant->the_job->shapes.push_back(new_shape);

@@ -22,6 +22,7 @@ private:
   size_t num_chunks = 0;
   size_t bitrate = 0;
   size_t use_fps = 25;
+  std::unordered_map<std::string, data::gradient> gradients;
 
 public:
   generator_v2();
