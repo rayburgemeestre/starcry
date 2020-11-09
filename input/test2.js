@@ -49,7 +49,7 @@ _ = {
       'props': {
         'maxradius': 250.0,
       },
-      'gradient': 'cd35b59b-bae9-4bef-b689-dcc8720e6be9',
+      //'gradient': 'cd35b59b-bae9-4bef-b689-dcc8720e6be9',
       'gradients': [
         [1.0, 'ce475a6c-2427-420c-85de-6316f3027313'],
         [0.0, 'cd35b59b-bae9-4bef-b689-dcc8720e6be9'],
@@ -65,17 +65,13 @@ _ = {
       },
       'time': function(t) {
         this.radius = t * this.props.maxradius;
-        // this.x += Math.random() * 10.0 - 5.0;
-        // this.y += Math.random() * 10.0 - 5.0;
-        this.gradients[0] = 1.0 - t;
-        this.gradients[1] = t;
-        this.gradients[2] = 0;
-        // this.subobj[0].x += 10;
+        this.gradients[0][0] = 1.0 - t;
+        this.gradients[2][0] = t;
       },
       'proximity': function(t) {
-        this.gradients[0] *= t / 2.0;
-        this.gradients[1] *= t / 2.0;
-        this.gradients[2] = t;
+        // this.gradients[0] *= t / 2.0;
+        // this.gradients[1] *= t / 2.0;
+        // this.gradients[2] = t;
       }
     },
     'obj2': {

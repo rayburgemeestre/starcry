@@ -80,11 +80,11 @@ public:
     for (const auto &shape : shapes) {
       if (shape.type == data::shape_type::circle) {
         draw_logic_.render_circle<double>(
-            bmp, shape.x, shape.y, shape.radius, shape.radius_size, shape.gradient_, shape.blending_);
+            bmp, shape.x, shape.y, shape.radius, shape.radius_size, shape.gradients_, shape.blending_);
 
       } else if (shape.type == data::shape_type::line)
         draw_logic_.render_line<double>(
-            bmp, shape.x, shape.y, shape.x2, shape.y2, shape.radius_size, shape.gradient_, shape.blending_);
+            bmp, shape.x, shape.y, shape.x2, shape.y2, shape.radius_size, shape.gradients_, shape.blending_);
       else if (shape.type == data::shape_type::text)
         draw_logic_.render_text<double>(shape.x, shape.y, shape.text_size, shape.text, shape.align);
     }

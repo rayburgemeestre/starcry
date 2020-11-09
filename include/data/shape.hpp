@@ -9,6 +9,8 @@
 #include <string>
 
 #include "cereal/types/string.hpp"
+#include "cereal/types/utility.hpp"  // for std::pair
+#include "cereal/types/vector.hpp"
 
 #include "data/gradient.hpp"
 
@@ -92,12 +94,12 @@ struct shape {
   double text_size;
   std::string text;
   std::string align;
-  gradient gradient_;
+  std::vector<std::pair<double, gradient>> gradients_;
   blending_type blending_;
 
   template <class Archive>
   void serialize(Archive &ar) {
-    ar(x, y, z, x2, y2, z2, type, r, g, b, radius, text_size, radius_size, text, align, gradient_, blending_);
+    ar(x, y, z, x2, y2, z2, type, r, g, b, radius, text_size, radius_size, text, align, gradients_, blending_);
   }
 };
 

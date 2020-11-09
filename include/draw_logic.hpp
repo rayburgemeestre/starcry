@@ -157,7 +157,7 @@ public:
                             double_type circle_y,
                             double_type radius,
                             double_type radius_size,
-                            const data::gradient &gradient_,
+                            const std::vector<std::pair<double, data::gradient>> &gradients_,
                             const data::blending_type &blending_) {
     circle_x = ((circle_x * scale_) + center_x_) - offset_x_;
     circle_y = ((circle_y * scale_) + center_y_) - offset_y_;
@@ -199,7 +199,7 @@ public:
                             abs_x_left,
                             abs_y_top,
                             diff_from_center,
-                            gradient_,
+                            gradients_,
                             blending_);
 
         if (rel_y != 0)
@@ -211,7 +211,7 @@ public:
                               abs_x_left,
                               abs_y_bottom,
                               diff_from_center,
-                              gradient_,
+                              gradients_,
                               blending_);
         if (rel_x != 0)
           render_circle_pixel(bmp,
@@ -222,7 +222,7 @@ public:
                               abs_x_right,
                               abs_y_top,
                               diff_from_center,
-                              gradient_,
+                              gradients_,
                               blending_);
         if (rel_x != 0 && rel_y != 0)
           render_circle_pixel(bmp,
@@ -233,7 +233,7 @@ public:
                               abs_x_right,
                               abs_y_bottom,
                               diff_from_center,
-                              gradient_,
+                              gradients_,
                               blending_);
       }
     }
@@ -276,7 +276,7 @@ public:
                            int absX,
                            int absY,
                            double_type diffFromCenter,
-                           const data::gradient &gradient_,
+                           const std::vector<std::pair<double, data::gradient>> &gradients_,
                            const data::blending_type &blending_) {
     if (absX < 0 || absY < 0 || absX >= static_cast<int>(width_) || absY >= static_cast<int>(height_)) return;
 
@@ -297,7 +297,19 @@ public:
     // auto & bg_opacity = Opacity;
     // auto fg_opacity = 1.0 - Opacity;
 
-    data::color clr = gradient_.get(std::min(1.0, Opacity));  // TODO: opacity is more like distance index..
+    if (gradients_.empty()) {
+      throw std::runtime_error("gradients cannot not be empty");
+    }
+    data::color clr{0, 0, 0, 0};
+    for (const auto &grad : gradients_) {
+      double gradient_opacity = grad.first;
+      const auto the_gradient = grad.second;
+      const auto tmp = the_gradient.get(std::min(1.0, Opacity));  // TODO: opacity is more like distance index..
+      clr.r += gradient_opacity * tmp.r;
+      clr.g += gradient_opacity * tmp.g;
+      clr.b += gradient_opacity * tmp.b;
+      clr.a += gradient_opacity * tmp.a;
+    }
     switch (blending_.type()) {
       case data::blending_type::lighten:
         blend_pixel<double_type, lighten>(bmp, absX, absY, clr);
@@ -410,7 +422,7 @@ public:
                    double x2,
                    double y2,
                    double size,
-                   const data::gradient &gradient_,
+                   const std::vector<std::pair<double, data::gradient>> &gradients_,
                    const data::blending_type &blending_) {
     x1 = ((x1 * scale_) + center_x_) - offset_x_;
     y1 = ((y1 * scale_) + center_y_) - offset_y_;
@@ -550,7 +562,7 @@ public:
             double normalized_dist_from_center = (dist_pixel / dist_max);
             double normalized_dist_from_line = (dist_from_center_line / aline.size);
             render_line_pixel<double_type>(
-                bmp, x, current_y, normalized_dist_from_center, normalized_dist_from_line, gradient_);
+                bmp, x, current_y, normalized_dist_from_center, normalized_dist_from_line, gradients_);
           }
         }
       }
@@ -567,7 +579,7 @@ public:
                          int absY,
                          double normalized_dist_from_center,
                          double normalized_dist_from_line,
-                         const data::gradient &gradient_) {
+                         const std::vector<std::pair<double, data::gradient>> &gradients_) {
     if (normalized_dist_from_center > 1.0 || normalized_dist_from_center < 0.0) {
       return;
     }
@@ -588,9 +600,20 @@ public:
     // bg.r = min(1., bg.r + gradient_.get(num).r);
     // bg.g = min(1., bg.g + gradient_.get(num).g);
     // bg.b = min(1., bg.b + gradient_.get(num).b);
-    bg.r = gradient_.get(num).r;
-    bg.g = gradient_.get(num).g;
-    bg.b = gradient_.get(num).b;
+
+    data::color clr;
+    for (const auto &grad : gradients_) {
+      double gradient_opacity = grad.first;
+      const auto &the_gradient = grad.second;
+      const auto tmp = the_gradient.get(num);
+      clr.r += gradient_opacity * tmp.r;
+      clr.g += gradient_opacity * tmp.g;
+      clr.b += gradient_opacity * tmp.b;
+      clr.a += gradient_opacity * tmp.a;
+    }
+    bg.r = clr.r;  // gradient_.get(num).r;
+    bg.g = clr.g;  // gradient_.get(num).g;
+    bg.b = clr.b;  // gradient_.get(num).b;
     bmp.set(absX, absY, bg.r, bg.g, bg.b, bg.a);
   }
 

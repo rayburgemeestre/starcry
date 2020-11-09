@@ -142,7 +142,7 @@ void initialize() {
   color2.a = 1.0;
   gradient.colors.emplace_back(std::make_tuple(0.0, color1));
   gradient.colors.emplace_back(std::make_tuple(1.0, color2));
-  circle.gradient_ = gradient;
+  circle.gradients_.push_back(std::make_pair(1.0, gradient));
   circle.x = 0;
   circle.y = 0;
   circle.z = 0;

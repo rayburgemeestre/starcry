@@ -124,6 +124,7 @@ v8::Local<v8::Object> process_object(v8_interact& i,
 
   // The object definition that will be instantiated
   auto obj_def = v8_index_object(context, objects, id).template As<v8::Object>();
+  auto v8_gradients = v8_index_object(context, obj_def, "gradients").As<v8::Array>();
   if (!obj_def->IsObject()) {
     return {};
   }
@@ -136,6 +137,9 @@ v8::Local<v8::Object> process_object(v8_interact& i,
   new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8_y);
   new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "subobj"), v8::Array::New(isolate));
   new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "level"), v8::Number::New(isolate, level));
+  if (v8_gradients->IsArray() && v8_gradients->Length() > 0) {
+    new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "gradients"), v8_gradients);
+  }
 
   // Copy over scene properties to instance properties
   auto props = i.v8_obj(new_instance, "props");
@@ -295,16 +299,36 @@ bool generator_v2::generate_frame() {
                                            .ToLocalChecked()
                                            .As<v8::Function>();
         v8::Handle<v8::Value> args[1];
-        args[0] = v8pp::to_v8(isolate, 0.5);
+        args[0] = v8pp::to_v8(isolate, static_cast<double>(assistant->the_job->frame_number) / max_frames);
         fun2->Call(isolate->GetCurrentContext(), instance, 1, args).ToLocalChecked();
         data::shape new_shape;
         std::string type = i.str(instance, "type");
         std::string gradient_id = i.str(instance, "gradient");
         new_shape.x = i.double_number(instance, "x");
         new_shape.y = i.double_number(instance, "y");
-        if (new_shape.gradient_.colors.empty()) {
-          if (gradients.find(gradient_id) != gradients.end()) {
-            new_shape.gradient_ = gradients[gradient_id];
+        if (!gradient_id.empty()) {
+          if (new_shape.gradients_.empty()) {
+            if (gradients.find(gradient_id) != gradients.end()) {
+              new_shape.gradients_.emplace_back(1.0, gradients[gradient_id]);
+            }
+          }
+        }
+        new_shape.gradients_.clear();
+        auto gradient_array = i.v8_array(instance, "gradients");
+        if (new_shape.gradients_.empty()) {
+          for (size_t k = 0; k < gradient_array->Length(); k++) {
+            auto gradient_data = gradient_array->Get(isolate->GetCurrentContext(), k).ToLocalChecked().As<v8::Array>();
+            if (!gradient_data->IsArray()) {
+              continue;
+            }
+            auto opacity = gradient_data->Get(isolate->GetCurrentContext(), 0)
+                               .ToLocalChecked()
+                               .As<v8::Number>()
+                               ->NumberValue(isolate->GetCurrentContext())
+                               .ToChecked();
+            auto gradient_id =
+                v8_str(isolate, gradient_data->Get(isolate->GetCurrentContext(), 1).ToLocalChecked().As<v8::String>());
+            new_shape.gradients_.emplace_back(opacity, gradients[gradient_id]);
           }
         }
         while (level > 0) {
@@ -312,20 +336,45 @@ bool generator_v2::generate_frame() {
           new_shape.x += i.double_number(parents[level], "x");
           new_shape.y += i.double_number(parents[level], "y");
           gradient_id = i.str(parents[level], "gradient");
-          if (new_shape.gradient_.colors.empty()) {
-            if (gradients.find(gradient_id) != gradients.end()) {
-              new_shape.gradient_ = gradients[gradient_id];
+          if (!gradient_id.empty()) {
+            if (new_shape.gradients_.empty()) {
+              if (gradients.find(gradient_id) != gradients.end()) {
+                new_shape.gradients_.emplace_back(1.0, gradients[gradient_id]);
+              }
+            }
+          }
+          if (new_shape.gradients_.empty()) {
+            auto gradient_array = i.v8_array(parents[level], "gradients");
+            if (gradient_array->Length() > 0) {
+              // TODO: literal copy & paste from few lines up
+              for (size_t k = 0; k < gradient_array->Length(); k++) {
+                auto gradient_data =
+                    gradient_array->Get(isolate->GetCurrentContext(), k).ToLocalChecked().As<v8::Array>();
+                if (!gradient_data->IsArray()) {
+                  continue;
+                }
+                auto opacity = gradient_data->Get(isolate->GetCurrentContext(), 0)
+                                   .ToLocalChecked()
+                                   .As<v8::Number>()
+                                   ->NumberValue(isolate->GetCurrentContext())
+                                   .ToChecked();
+                auto gradient_id = v8_str(
+                    isolate, gradient_data->Get(isolate->GetCurrentContext(), 1).ToLocalChecked().As<v8::String>());
+                new_shape.gradients_.emplace_back(opacity, gradients[gradient_id]);
+              }
             }
           }
         }
-        if (new_shape.gradient_.colors.empty()) {
-          new_shape.gradient_.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
-          new_shape.gradient_.colors.emplace_back(std::make_tuple(1.0, data::color{0.0, 0, 0, 1}));
+        if (new_shape.gradients_.empty()) {
+          new_shape.gradients_.emplace_back(1.0, data::gradient{});
+          new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
+          new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
+          new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(1.0, data::color{0.0, 0, 0, 1}));
         }
         new_shape.z = 0;
         new_shape.type = data::shape_type::circle;
         new_shape.radius = i.double_number(instance, "radius");
-        new_shape.radius_size = 5.0;
+        new_shape.radius_size = i.double_number(instance, "radiussize");
         new_shape.blending_ = data::blending_type::add;
         if (type == "circle") {
           assistant->the_job->shapes.push_back(new_shape);
