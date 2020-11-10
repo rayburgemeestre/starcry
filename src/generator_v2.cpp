@@ -52,6 +52,10 @@ private:
 public:
   v8_interact(v8::Isolate* isolate) : isolate(isolate), ctx(isolate->GetCurrentContext()) {}
 
+  v8::Isolate* get_isolate() {
+    return isolate;
+  }
+
   v8::Local<v8::Object> v8_obj(v8::Local<v8::Object>& obj, const std::string& field) {
     return v8_index_object(context, obj, field).As<v8::Object>();
   }
@@ -71,6 +75,10 @@ public:
   double double_number(v8::Local<v8::Object>& obj, const std::string& field) {
     return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext()).ToChecked();
   }
+
+  //  v8::Maybe<double> maybe_double_number(v8::Local<v8::Object>& obj, const std::string& field) {
+  //    return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext());
+  //  }
 
   int64_t integer_number(v8::Local<v8::Object>& obj, const std::string& field) {
     return v8_number(obj, field)->IntegerValue(isolate->GetCurrentContext()).ToChecked();
@@ -99,6 +107,38 @@ void copy_object(v8::Isolate* isolate, v8::Local<v8::Object> obj_def, v8::Local<
       new_instance->Set(isolate->GetCurrentContext(), field_name, new_sub_instance);
     } else {
       new_instance->Set(isolate->GetCurrentContext(), field_name, field_value);
+    }
+  }
+}
+
+void transfer_gradient(v8_interact& i,
+                       v8::Local<v8::Object>& instance,
+                       data::shape& new_shape,
+                       std::unordered_map<std::string, data::gradient>& gradients) {
+  auto isolate = i.get_isolate();
+  std::string gradient_id = i.str(instance, "gradient");
+  if (!gradient_id.empty()) {
+    if (new_shape.gradients_.empty()) {
+      if (gradients.find(gradient_id) != gradients.end()) {
+        new_shape.gradients_.emplace_back(1.0, gradients[gradient_id]);
+      }
+    }
+  }
+  auto gradient_array = i.v8_array(instance, "gradients");
+  if (new_shape.gradients_.empty()) {
+    for (size_t k = 0; k < gradient_array->Length(); k++) {
+      auto gradient_data = gradient_array->Get(isolate->GetCurrentContext(), k).ToLocalChecked().As<v8::Array>();
+      if (!gradient_data->IsArray()) {
+        continue;
+      }
+      auto opacity = gradient_data->Get(isolate->GetCurrentContext(), 0)
+                         .ToLocalChecked()
+                         .As<v8::Number>()
+                         ->NumberValue(isolate->GetCurrentContext())
+                         .ToChecked();
+      auto gradient_id =
+          v8_str(isolate, gradient_data->Get(isolate->GetCurrentContext(), 1).ToLocalChecked().As<v8::String>());
+      new_shape.gradients_.emplace_back(opacity, gradients[gradient_id]);
     }
   }
 }
@@ -163,6 +203,7 @@ v8::Local<v8::Object> process_object(v8_interact& i,
   scene_instances->Set(isolate->GetCurrentContext(), scene_instances_idx++, new_instance);
 
   // Recurse for the sub objects the init function populated.
+  scene_obj->Set(isolate->GetCurrentContext(), v8_str(context, "level"), v8::Number::New(isolate, level));
   auto subobjs = i.v8_array(new_instance, "subobj");
   for (size_t k = 0; k < subobjs->Length(); k++) {
     auto subobj = subobjs->Get(isolate->GetCurrentContext(), k).ToLocalChecked().As<v8::Object>();
@@ -303,67 +344,15 @@ bool generator_v2::generate_frame() {
         fun2->Call(isolate->GetCurrentContext(), instance, 1, args).ToLocalChecked();
         data::shape new_shape;
         std::string type = i.str(instance, "type");
-        std::string gradient_id = i.str(instance, "gradient");
         new_shape.x = i.double_number(instance, "x");
         new_shape.y = i.double_number(instance, "y");
-        if (!gradient_id.empty()) {
-          if (new_shape.gradients_.empty()) {
-            if (gradients.find(gradient_id) != gradients.end()) {
-              new_shape.gradients_.emplace_back(1.0, gradients[gradient_id]);
-            }
-          }
-        }
         new_shape.gradients_.clear();
-        auto gradient_array = i.v8_array(instance, "gradients");
-        if (new_shape.gradients_.empty()) {
-          for (size_t k = 0; k < gradient_array->Length(); k++) {
-            auto gradient_data = gradient_array->Get(isolate->GetCurrentContext(), k).ToLocalChecked().As<v8::Array>();
-            if (!gradient_data->IsArray()) {
-              continue;
-            }
-            auto opacity = gradient_data->Get(isolate->GetCurrentContext(), 0)
-                               .ToLocalChecked()
-                               .As<v8::Number>()
-                               ->NumberValue(isolate->GetCurrentContext())
-                               .ToChecked();
-            auto gradient_id =
-                v8_str(isolate, gradient_data->Get(isolate->GetCurrentContext(), 1).ToLocalChecked().As<v8::String>());
-            new_shape.gradients_.emplace_back(opacity, gradients[gradient_id]);
-          }
-        }
+        transfer_gradient(i, instance, new_shape, gradients);
         while (level > 0) {
           level--;
           new_shape.x += i.double_number(parents[level], "x");
           new_shape.y += i.double_number(parents[level], "y");
-          gradient_id = i.str(parents[level], "gradient");
-          if (!gradient_id.empty()) {
-            if (new_shape.gradients_.empty()) {
-              if (gradients.find(gradient_id) != gradients.end()) {
-                new_shape.gradients_.emplace_back(1.0, gradients[gradient_id]);
-              }
-            }
-          }
-          if (new_shape.gradients_.empty()) {
-            auto gradient_array = i.v8_array(parents[level], "gradients");
-            if (gradient_array->Length() > 0) {
-              // TODO: literal copy & paste from few lines up
-              for (size_t k = 0; k < gradient_array->Length(); k++) {
-                auto gradient_data =
-                    gradient_array->Get(isolate->GetCurrentContext(), k).ToLocalChecked().As<v8::Array>();
-                if (!gradient_data->IsArray()) {
-                  continue;
-                }
-                auto opacity = gradient_data->Get(isolate->GetCurrentContext(), 0)
-                                   .ToLocalChecked()
-                                   .As<v8::Number>()
-                                   ->NumberValue(isolate->GetCurrentContext())
-                                   .ToChecked();
-                auto gradient_id = v8_str(
-                    isolate, gradient_data->Get(isolate->GetCurrentContext(), 1).ToLocalChecked().As<v8::String>());
-                new_shape.gradients_.emplace_back(opacity, gradients[gradient_id]);
-              }
-            }
-          }
+          transfer_gradient(i, parents[level], new_shape, gradients);
         }
         if (new_shape.gradients_.empty()) {
           new_shape.gradients_.emplace_back(1.0, data::gradient{});

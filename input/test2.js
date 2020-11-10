@@ -43,13 +43,27 @@ _ = {
     ]
   },
   'objects': {
+    'obj0': {
+      'x': 0,
+      'y': 0,
+      'props': {},
+      'subobj': [],
+      'radius': 0,
+      'radiussize': 5.0,
+      'init': function() {
+        this.subobj.push({'id': 'obj1', 'x': -300, 'y': 0, 'z': 0, 'props': {}});
+        this.subobj.push({'id': 'obj1', 'x': 300, 'y': 0, 'z': 0, 'props': {}});
+        this.subobj.push({'id': 'obj1', 'x': 0, 'y': -300, 'z': 0, 'props': {}});
+        this.subobj.push({'id': 'obj1', 'x': 0, 'y': +300, 'z': 0, 'props': {}});
+      },
+      'time': function(t) {},
+    },
     'obj1': {
       'x': 0,
       'y': 0,
       'props': {
         'maxradius': 250.0,
       },
-      //'gradient': 'cd35b59b-bae9-4bef-b689-dcc8720e6be9',
       'gradients': [
         [1.0, 'ce475a6c-2427-420c-85de-6316f3027313'],
         [0.0, 'cd35b59b-bae9-4bef-b689-dcc8720e6be9'],
@@ -68,11 +82,7 @@ _ = {
         this.gradients[0][0] = 1.0 - t;
         this.gradients[2][0] = t;
       },
-      'proximity': function(t) {
-        // this.gradients[0] *= t / 2.0;
-        // this.gradients[1] *= t / 2.0;
-        // this.gradients[2] = t;
-      }
+      'proximity': function(t) {}
     },
     'obj2': {
       'type': 'circle',
@@ -108,10 +118,12 @@ _ = {
       // {'id': 'obj2', 'x': 100, 'y': 0, 'z': 0, 'props': {'maxradius': 300}},
 
       // multiple instances of "obj1"s
-      {'id': 'obj1', 'x': -300, 'y': 0, 'z': 0, 'props': {}},
-      {'id': 'obj1', 'x': 300, 'y': 0, 'z': 0, 'props': {}},
-      {'id': 'obj1', 'x': 0, 'y': -300, 'z': 0, 'props': {}},
-      {'id': 'obj1', 'x': 0, 'y': +300, 'z': 0, 'props': {}},
+      // {'id': 'obj1', 'x': -300, 'y': 0, 'z': 0, 'props': {}},
+      // {'id': 'obj1', 'x': 300, 'y': 0, 'z': 0, 'props': {}},
+      // {'id': 'obj1', 'x': 0, 'y': -300, 'z': 0, 'props': {}},
+      // {'id': 'obj1', 'x': 0, 'y': +300, 'z': 0, 'props': {}},
+
+      {'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
     ],
   }]
 };
