@@ -33,11 +33,13 @@ class simple_shape {
     this.velocity.rotate(rand() * 360);
 
     this.gradient_ = new gradient();
-    this.gradient_.add(0.0, new color(1, 1, 1, 1)) this.gradient_.add(0.9, new color(1, 1, 1, 1));
+    this.gradient_.add(0.0, new color(1, 1, 1, 1));
+    this.gradient_.add(0.9, new color(1, 1, 1, 1));
     this.gradient_.add(1.0, new color(0, 1, 0, 0));
 
     this.red_gradient_ = new gradient();
-    this.red_gradient_.add(0.0, new color(1, 0, 0, 1)) this.red_gradient_.add(0.9, new color(1, 0, 0, 1));
+    this.red_gradient_.add(0.0, new color(1, 0, 0, 1));
+    this.red_gradient_.add(0.9, new color(1, 0, 0, 1));
     this.red_gradient_.add(1.0, new color(0, 1, 0, 0));
   }
 }

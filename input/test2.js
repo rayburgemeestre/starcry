@@ -51,12 +51,38 @@ _ = {
       'radius': 0,
       'radiussize': 5.0,
       'init': function() {
-        this.subobj.push({'id': 'obj1', 'x': -300, 'y': 0, 'z': 0, 'props': {}});
-        this.subobj.push({'id': 'obj1', 'x': 300, 'y': 0, 'z': 0, 'props': {}});
-        this.subobj.push({'id': 'obj1', 'x': 0, 'y': -300, 'z': 0, 'props': {}});
-        this.subobj.push({'id': 'obj1', 'x': 0, 'y': +300, 'z': 0, 'props': {}});
+        class vector2d {
+          constructor(x = 0, y = 0) {
+            this.x = x;
+            this.y = y;
+          }
+          rotate(degrees) {
+            const radian = this.degrees_to_radian(degrees);
+            const sine = Math.sin(radian);
+            const cosine = Math.cos(radian);
+            this.x = this.x * cosine - this.y * sine;
+            this.y = this.x * sine + this.y * cosine;
+          }
+          degrees_to_radian(degrees) {
+            const pi = 3.14159265358979323846;
+            return degrees * pi / 180.0;
+          }
+        }
+        let velocity = new vector2d(rand(), 0);
+        velocity.rotate(rand() * 360);
+        this.subobj.push(
+            {'id': 'obj1', 'x': -300, 'y': 0, 'z': 0, 'vel_x': velocity.x, 'vel_y': velocity.y, 'props': {}});
+        velocity.rotate(rand() * 360);
+        this.subobj.push(
+            {'id': 'obj1', 'x': 300, 'y': 0, 'z': 0, 'vel_x': velocity.x, 'vel_y': velocity.y, 'props': {}});
+        velocity.rotate(rand() * 360);
+        this.subobj.push(
+            {'id': 'obj1', 'x': 0, 'y': -300, 'z': 0, 'vel_x': velocity.x, 'vel_y': velocity.y, 'props': {}});
+        velocity.rotate(rand() * 360);
+        this.subobj.push(
+            {'id': 'obj1', 'x': 0, 'y': +300, 'z': 0, 'vel_x': velocity.x, 'vel_y': velocity.y, 'props': {}});
       },
-      'time': function(t) {},
+      'time': function(t, e) {},
     },
     'obj1': {
       'x': 0,
@@ -77,7 +103,7 @@ _ = {
         this.subobj.push({'id': 'obj2', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 200}});
         this.subobj.push({'id': 'obj2', 'x': 100, 'y': 0, 'z': 0, 'props': {'maxradius': 300}});
       },
-      'time': function(t) {
+      'time': function(t, e) {
         this.radius = t * this.props.maxradius;
         this.gradients[0][0] = 1.0 - t;
         this.gradients[2][0] = t;
@@ -88,15 +114,15 @@ _ = {
       'type': 'circle',
       // 'gradient': 'ce475a6c-2427-420c-85de-6316f3027313',
       'radius': 100,
-      'radiussize': 5.0,
+      'radiussize': 10.0,
       'props': {
         'maxradius': 250.0,
       },
       'init': function() {
         this.radius = 0;
       },
-      'time': function(t) {
-        this.radius += 4;
+      'time': function(t, elapsed) {
+        this.radius += 100.0 * elapsed;  // 25 pixels per second
         this.radius %= this.props.maxradius;
       },
       'proximity': function(t) {
@@ -105,9 +131,12 @@ _ = {
     },
   },
   'video': {
-    'frames': 250,
+    'duration': 10,
+    'fps': 60,
     'width': 1920,
     'height': 1080,
+    'scale': 1,
+    'rand_seed': 5,
   },
   'scenes': [{
     'name': 'scene1',

@@ -52,8 +52,7 @@ _ = {
       'props': {
         'maxradius': 250.0,
       },
-      'init': function() {
-      },
+      'init': function() {},
       'time': function(t) {
         this.radius += 5;
         this.radius %= this.props.maxradius;

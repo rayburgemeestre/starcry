@@ -115,14 +115,14 @@ void render_shapes_to_texture() {
   SDL_UpdateTexture(texture, NULL, (void *)&(transfer_pixels[0]), job.width * sizeof(Uint32));
 }
 
-void initialize() {
+void initialize(uint32_t width, uint32_t height) {
   engine.initialize();
 
   memset(&job, 0x00, sizeof(job));
-  job.width = 1920;
-  job.height = 1080;
-  job.canvas_w = 1920;
-  job.canvas_h = 1080;
+  job.width = width;
+  job.height = height;
+  job.canvas_w = width;
+  job.canvas_h = height;
   job.scale = 1;
 
   data::shape circle;
@@ -150,9 +150,9 @@ void initialize() {
   job.shapes.push_back(circle);
 }
 
-void start() {
+void start(uint32_t width, uint32_t height) {
   if (!initialized) {
-    initialize();
+    initialize(width, height);
   }
 
   SDL_Init(SDL_INIT_VIDEO);
@@ -163,7 +163,7 @@ void start() {
   SDL_EventState(SDL_KEYUP, SDL_DISABLE);
 
   SDL_Renderer *renderer;
-  SDL_CreateWindowAndRenderer(job.width, job.height, 0, &window, &renderer);
+  SDL_CreateWindowAndRenderer(width, height, 0, &window, &renderer);
   context ctx;
   ctx.renderer = renderer;
   ctx.iteration = 0;
@@ -233,7 +233,7 @@ void set_texture(std::string data) {
 
 int main() {
 #ifndef EMSCRIPTEN
-  start();
+  start(1920, 1080);
 #endif
   return EXIT_SUCCESS;
 }

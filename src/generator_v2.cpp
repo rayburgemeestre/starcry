@@ -5,8 +5,10 @@
  */
 #include "generator_v2.h"
 
+#include <cmath>
 #include <memory>
 #include <mutex>
+#include <random>
 
 #include "primitives.h"
 #include "primitives_v8.h"
@@ -160,6 +162,8 @@ v8::Local<v8::Object> process_object(v8_interact& i,
   auto id = i.str(scene_obj, "id");
   auto v8_x = i.v8_number(scene_obj, "x");
   auto v8_y = i.v8_number(scene_obj, "y");
+  auto v8_vel_x = i.v8_number(scene_obj, "vel_x");
+  auto v8_vel_y = i.v8_number(scene_obj, "vel_y");
   auto scene_props = i.v8_obj(scene_obj, "props");
 
   // The object definition that will be instantiated
@@ -175,6 +179,8 @@ v8::Local<v8::Object> process_object(v8_interact& i,
   new_instance->SetPrototype(isolate->GetCurrentContext(), scene_obj);
   new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8_x);
   new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8_y);
+  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8_vel_x);
+  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8_vel_y);
   new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "subobj"), v8::Array::New(isolate));
   new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "level"), v8::Number::New(isolate, level));
   if (v8_gradients->IsArray() && v8_gradients->Length() > 0) {
@@ -213,12 +219,16 @@ v8::Local<v8::Object> process_object(v8_interact& i,
   return new_instance;
 }
 
+// TODO: expose this via a function instead
+extern std::mt19937 mt;
+
 void generator_v2::init(const std::string& filename) {
   if (context == nullptr) {
     context = std::make_shared<v8_wrapper>(filename);
   }
   context->reset();
   context->add_fun("output", &output_fun);
+  context->add_fun("rand", &rand_fun);
   context->add_include_fun();
 
   // prepare job object
@@ -258,12 +268,19 @@ void generator_v2::init(const std::string& filename) {
   context->run_array(source, [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto video = v8_index_object(context, val, "video").As<v8::Object>();
-    auto frames = i.double_number(video, "frames");
-    auto width = i.double_number(video, "width");
-    auto height = i.double_number(video, "height");
-    max_frames = frames;
-    job.width = width;
-    job.height = height;
+    auto duration = i.double_number(video, "duration");
+    use_fps = i.double_number(video, "fps");
+    canvas_w = i.double_number(video, "width");
+    canvas_h = i.double_number(video, "height");
+    auto seed = i.double_number(video, "rand_seed");
+    mt.seed(seed);
+
+    max_frames = duration * use_fps;
+    job.width = canvas_w;
+    job.height = canvas_h;
+    job.canvas_w = canvas_w;
+    job.canvas_h = canvas_h;
+    job.scale = std::max(i.double_number(video, "scale"), static_cast<double>(1));
   });
 
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
@@ -339,13 +356,30 @@ bool generator_v2::generate_frame() {
                                            ->Get(isolate->GetCurrentContext(), v8_str(context, "time"))
                                            .ToLocalChecked()
                                            .As<v8::Function>();
-        v8::Handle<v8::Value> args[1];
+        v8::Handle<v8::Value> args[2];
         args[0] = v8pp::to_v8(isolate, static_cast<double>(assistant->the_job->frame_number) / max_frames);
-        fun2->Call(isolate->GetCurrentContext(), instance, 1, args).ToLocalChecked();
+        args[1] = v8pp::to_v8(isolate, static_cast<double>(1.0) / static_cast<double>(use_fps));
+        fun2->Call(isolate->GetCurrentContext(), instance, 2, args).ToLocalChecked();
         data::shape new_shape;
         std::string type = i.str(instance, "type");
-        new_shape.x = i.double_number(instance, "x");
-        new_shape.y = i.double_number(instance, "y");
+
+        auto x = i.double_number(instance, "x");
+        auto y = i.double_number(instance, "y");
+        auto vel_x = i.double_number(instance, "vel_x");
+        auto vel_y = i.double_number(instance, "vel_y");
+
+        if (!std::isnan(vel_x)) {
+          x += vel_x;
+        }
+        if (!std::isnan(vel_y)) {
+          y += vel_y;
+        }
+        instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8::Number::New(isolate, x));
+        instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8::Number::New(isolate, y));
+
+        new_shape.x = x;
+        new_shape.y = y;
+
         new_shape.gradients_.clear();
         transfer_gradient(i, instance, new_shape, gradients);
         while (level > 0) {

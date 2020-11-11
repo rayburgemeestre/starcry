@@ -53,7 +53,6 @@
         ws.onmessage = function (message) {
           message.data.arrayBuffer().then(function(buffer) {
             let str = String.fromCharCode.apply(null, new Uint8Array(buffer));
-            console.log(str);
             console.log(JSON.parse(str));
             this.$data.data = JSON.parse(str);
           }.bind(this));

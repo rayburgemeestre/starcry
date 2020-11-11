@@ -73,6 +73,20 @@
     let ws_script;
     let retry;
     let retry2;
+
+    /*
+    TODO: need to figure this out
+    window.Module = {
+        canvas: (function() { return document.getElementById('canvas'); })(),
+        initialized: false,
+        onRuntimeInitialized: function() {
+            this.initialized = true;
+            // console.log("Setting 4K dimensions");
+            // Module.start(3840, 2160);
+        }
+    };
+    */
+
     export default {
         data() {
             return {
@@ -93,6 +107,17 @@
             StatsComponent,
         },
         methods: {
+            // TODO: need to figure this out
+            set_dimensions: function() {
+                //if (!window.Module || !window.Module.initialized) {
+                //    setTimeout(this.set_dimensions, 1000);
+                //    return;
+                //}
+                //console.log("Setting 4K dimensions");
+                // Module.start(3840, 2160);
+                //console.log("Setting Full HD dimensions");
+                //Module.start(1920, 1080);
+            },
             connect: function() {
                 this.$data.websock_status = 'connecting';
                 let protocol = document.location.protocol.replace('http', 'ws');
@@ -104,6 +129,8 @@
                 ws.onopen = function () {
                     clearTimeout(retry);
                     this.$data.websock_status = 'connected';
+                    // TODO: need to figure this out
+                    this.set_dimensions();
                 }.bind(this);
                 ws.onclose = function () {
                     this.$data.websock_status = 'disconnected';
@@ -142,7 +169,6 @@
                     message.data.arrayBuffer().then(function(buffer) {
                         let str = String.fromCharCode.apply(null, new Uint8Array(buffer));
                         this.$data.cpp_code = str;
-                        console.log(str);
                     }.bind(this));
                 }.bind(this);
                 ws_script.onerror = function (error) {

@@ -132,10 +132,8 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     // old generator:
     // bitrate = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");
     size_t bitrate = (500 * 1024 * 8);
-    int width = 1920;
-    int height = 1080;
-    int fps = 25;
-    framer->initialize(bitrate, width, height, fps);
+    framer->initialize(bitrate, gen->width(), gen->height(), gen->fps());
+
     while (true) {
       auto ret = gen->generate_frame();
       auto job_copy = std::make_shared<data::job>(*gen->get_job());

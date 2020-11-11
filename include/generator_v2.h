@@ -31,6 +31,15 @@ public:
   void init(const std::string &filename);
   bool generate_frame();
   std::shared_ptr<data::job> get_job() const;
+  double fps() const {
+    return use_fps;
+  }
+  uint32_t width() const {
+    return canvas_w;
+  }
+  uint32_t height() const {
+    return canvas_h;
+  }
 };
 
 void call_print_exception(const std::string &fn);

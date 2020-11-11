@@ -11,10 +11,14 @@
 <div id="app"></div>
 <script type="text/javascript" src="main.js"></script></body>
 <script type='text/javascript'>
+    // TODO: figure out how we can do this from App.vue
 	var Module = {
 		canvas: (function() { return document.getElementById('canvas'); })(),
 		onRuntimeInitialized: function() {
-			Module.start();
+            // console.log("Setting 4K dimensions");
+			// Module.start(3840, 2160);
+            console.log("Setting Full HD dimensions");
+            Module.start(1920, 1080);
 		}
 	};
 </script>
