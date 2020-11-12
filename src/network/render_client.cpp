@@ -138,7 +138,7 @@ void render_client::pull_job(bool is_remote, int64_t timestamp) {
 void render_client::send_frame(data::job &job, data::pixel_data2 &dat, bool is_remote) {
   std::ostringstream os;
   cereal::BinaryOutputArchive archive(os);
-  double compression_ratio = 0;
+  //  double compression_ratio = 0;
   job.shapes.clear();
   //  if (job.compress) {
   //    compress_vector<uint32_t> cv;

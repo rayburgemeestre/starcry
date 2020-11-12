@@ -196,7 +196,7 @@ void webserver::send_stats(const stats &stats_) {
   std::string str;
   const auto stats_map = stats_.get_raw();
 
-  for (const auto it : stats_map) {
+  for (const auto &it : stats_map) {
     const auto s = it.first;
     const auto node_stats = it.second;
     json j = {

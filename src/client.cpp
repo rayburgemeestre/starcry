@@ -65,7 +65,7 @@ void mainloop(void *arg) {
 
   end_time = std::chrono::high_resolution_clock::now();
 
-  std::chrono::duration<double, std::milli> idle = end_time - begin_time;
+  // std::chrono::duration<double, std::milli> idle = end_time - begin_time;
 
 #ifdef EMSCRIPTEN
   // std::cout << "Frame: " << ctx->iteration << " " << ((double)ctx->iteration / (idle.count() / 1000)) << std::endl;

@@ -186,6 +186,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
           job_msg->client, job_msg->type, job.job_number, job.width, job.height, transfer_pixels);
     }
   }
+  return nullptr;
 }
 
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {

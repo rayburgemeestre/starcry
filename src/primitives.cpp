@@ -46,7 +46,7 @@ void add_to_context(v8pp::context &context) {
 }  // namespace shapes::shape
 
 namespace shapes::circle {
-void circle::add_to_context(v8pp::context &context) {
+void add_to_context(v8pp::context &context) {
   v8pp::class_<::circle> circle_class(context.isolate());
   circle_class
       .ctor<::pos, double, double, ::gradient>()  // TODO: try point or something
@@ -73,7 +73,7 @@ void add_to_context(v8pp::context &context) {
 }  // namespace shapes::rectangle
 
 namespace shapes::line {
-void line::add_to_context(v8pp::context &context) {
+void add_to_context(v8pp::context &context) {
   v8pp::class_<::line> line_class(context.isolate());
   line_class
       .ctor<::pos, ::pos, double, ::gradient>()  // TODO: try point or something
@@ -86,7 +86,7 @@ void line::add_to_context(v8pp::context &context) {
 }  // namespace shapes::line
 
 namespace shapes::color {
-void color::add_to_context(v8pp::context &context) {
+void add_to_context(v8pp::context &context) {
   v8pp::class_<::color> color_class(context.isolate());
   color_class.ctor<double, double, double, double>()
       .set("r", v8pp::property(&::color::get_r, &::color::set_r))

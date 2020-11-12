@@ -37,6 +37,12 @@ generator_v2::generator_v2() {
   });
 }
 
+void handle_error(v8::Maybe<bool> res) {
+  if (res.ToChecked() == false) {
+    std::cout << "Failed to set value" << std::endl;
+  }
+}
+
 void copy_object(v8::Isolate* isolate, v8::Local<v8::Object> obj_def, v8::Local<v8::Object> new_instance) {
   auto obj_fields = obj_def->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
   for (size_t k = 0; k < obj_fields->Length(); k++) {
@@ -45,9 +51,9 @@ void copy_object(v8::Isolate* isolate, v8::Local<v8::Object> obj_def, v8::Local<
     if (field_value->IsObject() && !field_value->IsFunction()) {
       v8::Local<v8::Object> new_sub_instance = v8::Object::New(isolate);
       copy_object(isolate, field_value.As<v8::Object>(), new_sub_instance);
-      new_instance->Set(isolate->GetCurrentContext(), field_name, new_sub_instance);
+      handle_error(new_instance->Set(isolate->GetCurrentContext(), field_name, new_sub_instance));
     } else {
-      new_instance->Set(isolate->GetCurrentContext(), field_name, field_value);
+      handle_error(new_instance->Set(isolate->GetCurrentContext(), field_name, field_value));
     }
   }
 }
@@ -115,15 +121,16 @@ v8::Local<v8::Object> process_object(v8_interact& i,
   // The new object instantiation as specified by the scene object
   v8::Local<v8::Object> new_instance = v8::Object::New(isolate);
   copy_object(isolate, obj_def, new_instance);
-  new_instance->SetPrototype(isolate->GetCurrentContext(), scene_obj);
-  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8_x);
-  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8_y);
-  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8_vel_x);
-  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8_vel_y);
-  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "subobj"), v8::Array::New(isolate));
-  new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "level"), v8::Number::New(isolate, level));
+  handle_error(new_instance->SetPrototype(isolate->GetCurrentContext(), scene_obj));
+  handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8_x));
+  handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8_y));
+  handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8_vel_x));
+  handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8_vel_y));
+  handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "subobj"), v8::Array::New(isolate)));
+  handle_error(
+      new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "level"), v8::Number::New(isolate, level)));
   if (v8_gradients->IsArray() && v8_gradients->Length() > 0) {
-    new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "gradients"), v8_gradients);
+    handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "gradients"), v8_gradients));
   }
 
   // Copy over scene properties to instance properties
@@ -132,7 +139,7 @@ v8::Local<v8::Object> process_object(v8_interact& i,
   for (size_t k = 0; k < obj_fields->Length(); k++) {
     auto field_name = obj_fields->Get(isolate->GetCurrentContext(), k).ToLocalChecked();
     auto field_value = scene_props->Get(isolate->GetCurrentContext(), field_name).ToLocalChecked();
-    props->Set(isolate->GetCurrentContext(), field_name, field_value);
+    handle_error(props->Set(isolate->GetCurrentContext(), field_name, field_value));
   }
 
   // Call init function on new instance
@@ -145,15 +152,15 @@ v8::Local<v8::Object> process_object(v8_interact& i,
   fun->Call(isolate->GetCurrentContext(), new_instance, 1, args).ToLocalChecked();
 
   // Add the instance to the scene for later rendering.
-  scene_instances->Set(isolate->GetCurrentContext(), scene_instances_idx++, new_instance);
+  handle_error(scene_instances->Set(isolate->GetCurrentContext(), scene_instances_idx++, new_instance));
 
   // Recurse for the sub objects the init function populated.
-  scene_obj->Set(isolate->GetCurrentContext(), v8_str(context, "level"), v8::Number::New(isolate, level));
+  handle_error(scene_obj->Set(isolate->GetCurrentContext(), v8_str(context, "level"), v8::Number::New(isolate, level)));
   auto subobjs = i.v8_array(new_instance, "subobj");
   for (size_t k = 0; k < subobjs->Length(); k++) {
     auto subobj = subobjs->Get(isolate->GetCurrentContext(), k).ToLocalChecked().As<v8::Object>();
     auto instance = process_object(i, isolate, objects, scene_instances, scene_instances_idx, subobj, &scene_obj);
-    subobjs->Set(isolate->GetCurrentContext(), k, instance);
+    handle_error(subobjs->Set(isolate->GetCurrentContext(), k, instance));
   }
   return new_instance;
 }
@@ -256,14 +263,15 @@ void generator_v2::init(const std::string& filename) {
       auto scene_objects = i.v8_array(sceneobj, "objects");
       auto scene_instances = i.v8_array(sceneobj, "instances");
       if (!scene_instances->IsArray()) {
-        sceneobj->Set(isolate->GetCurrentContext(), v8_str(context, "instances"), v8::Array::New(isolate));
+        handle_error(
+            sceneobj->Set(isolate->GetCurrentContext(), v8_str(context, "instances"), v8::Array::New(isolate)));
       }
       scene_instances = i.v8_array(sceneobj, "instances");
       size_t scene_instances_idx = scene_instances->Length();
       for (size_t j = 0; j < scene_objects->Length(); j++) {
         auto scene_obj = scene_objects->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
         auto instance = process_object(i, isolate, objects, scene_instances, scene_instances_idx, scene_obj);
-        scene_objects->Set(isolate->GetCurrentContext(), j, instance);
+        handle_error(scene_objects->Set(isolate->GetCurrentContext(), j, instance));
       }
     }
   });
@@ -317,10 +325,12 @@ bool generator_v2::generate_frame() {
         if (!std::isnan(vel_y)) {
           y += vel_y;
         }
-        instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8::Number::New(isolate, x));
-        instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8::Number::New(isolate, y));
-        instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8::Number::New(isolate, vel_x));
-        instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8::Number::New(isolate, vel_y));
+        handle_error(instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8::Number::New(isolate, x)));
+        handle_error(instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8::Number::New(isolate, y)));
+        handle_error(
+            instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8::Number::New(isolate, vel_x)));
+        handle_error(
+            instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8::Number::New(isolate, vel_y)));
 
         new_shape.x = x;
         new_shape.y = y;
@@ -353,9 +363,9 @@ bool generator_v2::generate_frame() {
         }
         if (type == "circle") {
           qt.insert(point_type(position(x, y), assistant->the_job->shapes.size()));
-          instance->Set(isolate->GetCurrentContext(),
-                        v8_str(context, "index"),
-                        v8::Number::New(isolate, assistant->the_job->shapes.size()));
+          handle_error(instance->Set(isolate->GetCurrentContext(),
+                                     v8_str(context, "index"),
+                                     v8::Number::New(isolate, assistant->the_job->shapes.size())));
           assistant->the_job->shapes.push_back(new_shape);
         }
       }
@@ -402,25 +412,25 @@ bool generator_v2::generate_frame() {
           const auto optimized_p = (2.0 * (ta - tb)) / 2.0;
 
           auto updated_vel1 = subtract_vector(vector2d(vel_x, vel_y), multiply_vector(normal, optimized_p));
-          instance->Set(
-              isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8::Number::New(isolate, updated_vel1.x));
-          instance->Set(
-              isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8::Number::New(isolate, updated_vel1.y));
+          handle_error(instance->Set(
+              isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8::Number::New(isolate, updated_vel1.x)));
+          handle_error(instance->Set(
+              isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8::Number::New(isolate, updated_vel1.y)));
           auto updated_vel2 = add_vector(vector2d(vel_x2, vel_y2), multiply_vector(normal, optimized_p));
-          instance2->Set(
-              isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8::Number::New(isolate, updated_vel2.x));
-          instance2->Set(
-              isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8::Number::New(isolate, updated_vel2.y));
+          handle_error(instance2->Set(
+              isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8::Number::New(isolate, updated_vel2.x)));
+          handle_error(instance2->Set(
+              isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8::Number::New(isolate, updated_vel2.y)));
 
           // save collision
           shape.last_collide = index2;
           shape2.last_collide = index;
-          instance->Set(isolate->GetCurrentContext(),
-                        v8_str(context, "last_collide"),
-                        v8::Number::New(isolate, shape.last_collide));
-          instance2->Set(isolate->GetCurrentContext(),
-                         v8_str(context, "last_collide"),
-                         v8::Number::New(isolate, shape2.last_collide));
+          handle_error(instance->Set(isolate->GetCurrentContext(),
+                                     v8_str(context, "last_collide"),
+                                     v8::Number::New(isolate, shape.last_collide)));
+          handle_error(instance2->Set(isolate->GetCurrentContext(),
+                                      v8_str(context, "last_collide"),
+                                      v8::Number::New(isolate, shape2.last_collide)));
         }
       }
     }

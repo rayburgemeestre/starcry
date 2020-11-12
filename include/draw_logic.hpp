@@ -242,8 +242,8 @@ public:
   inline void render_text(double_type textX, double_type textY, double_type textsize, string text, string align) {
     textX = ((textX * scale_) + center_x_) - offset_x_;
     textY = ((textY * scale_) + center_y_) - offset_y_;
-    size_t index = textsize * scale_;
 #if 1 == 0
+    size_t index = textsize * scale_;
     auto alignment =
         align == "center" ? ALLEGRO_ALIGN_CENTER : (align == "left" ? ALLEGRO_ALIGN_LEFT : ALLEGRO_ALIGN_RIGHT);
 
