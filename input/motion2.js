@@ -1,9 +1,14 @@
 _ = {
   'gradients': {
+    'red': [
+      {'position': 0.0, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
+      {'position': 0.9, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+    ],
     'white': [
       {'position': 0.0, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
       {'position': 0.9, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
-      {'position': 1.0, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
     ]
   },
   'objects': {
@@ -41,10 +46,17 @@ _ = {
           let y = (rand() - 0.5) * 2 * height / 2;
           let velocity = new vector2d(rand(), 0);
           velocity.rotate(rand() * 360);
-          // velocity.x *= 10;
-          // velocity.y *= 10;
-          this.subobj.push(
-              {'id': 'ball', 'x': x, 'y': y, 'z': 0, 'vel_x': velocity.x, 'vel_y': velocity.y, 'props': {}});
+          velocity.x *= 20;
+          velocity.y *= 20;
+          this.subobj.push({
+            'id': 'ball',
+            'x': x,
+            'y': y,
+            'z': 0,
+            'vel_x': velocity.x,
+            'vel_y': velocity.y,
+            'props': {'grad': i === 0 ? 'red' : 'white'}
+          });
           velocity.rotate(rand() * 360);
         }
       },
@@ -55,9 +67,16 @@ _ = {
       'gradient': 'white',
       'radius': 0,
       'radiussize': 10.0,
-      'props': {},
-      'init': function() {},
-      'time': function(t, elapsed) {},
+      'props': {'grad': 'white'},
+      'init': function() {
+        this.gradient = this.props.grad;
+      },
+      'time': function(t, elapsed) {
+        while (this.x + (1920 / 2) < 0) this.x += 1920;
+        while (this.y + (1080 / 2) < 0) this.y += 1080;
+        while (this.x + (1920 / 2) > 1920) this.x -= 1920;
+        while (this.y + (1080 / 2) > 1080) this.y -= 1080;
+      },
     },
   },
   'video': {
@@ -66,7 +85,7 @@ _ = {
     'width': 1920,
     'height': 1080,
     'scale': 1,
-    'rand_seed': 5,
+    'rand_seed': 1,
   },
   'scenes': [{
     'name': 'scene1',
