@@ -68,17 +68,18 @@ _ = {
             return degrees * pi / 180.0;
           }
         }
-        let velocity = new vector2d(rand(), 0);
-        velocity.rotate(rand() * 360);
+        let velocity = new vector2d(0, 0);
+        // let velocity = new vector2d(rand(), 0);
+        // velocity.rotate(rand() * 360);
         this.subobj.push(
             {'id': 'obj1', 'x': -300, 'y': 0, 'z': 0, 'vel_x': velocity.x, 'vel_y': velocity.y, 'props': {}});
-        velocity.rotate(rand() * 360);
+        // velocity.rotate(rand() * 360);
         this.subobj.push(
             {'id': 'obj1', 'x': 300, 'y': 0, 'z': 0, 'vel_x': velocity.x, 'vel_y': velocity.y, 'props': {}});
-        velocity.rotate(rand() * 360);
+        // velocity.rotate(rand() * 360);
         this.subobj.push(
             {'id': 'obj1', 'x': 0, 'y': -300, 'z': 0, 'vel_x': velocity.x, 'vel_y': velocity.y, 'props': {}});
-        velocity.rotate(rand() * 360);
+        // velocity.rotate(rand() * 360);
         this.subobj.push(
             {'id': 'obj1', 'x': 0, 'y': +300, 'z': 0, 'vel_x': velocity.x, 'vel_y': velocity.y, 'props': {}});
       },
@@ -130,14 +131,7 @@ _ = {
       }
     },
   },
-  'video': {
-    'duration': 10,
-    'fps': 60,
-    'width': 1920,
-    'height': 1080,
-    'scale': 1,
-    'rand_seed': 5,
-  },
+  'video': {'duration': 10, 'fps': 60, 'width': 1920, 'height': 1080, 'scale': 1, 'rand_seed': 5},
   'scenes': [{
     'name': 'scene1',
     'objects': [

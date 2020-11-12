@@ -96,6 +96,8 @@ struct shape {
   std::string align;
   std::vector<std::pair<double, gradient>> gradients_;
   blending_type blending_;
+  size_t instance_index;  // V8 index
+  size_t last_collide;    // index of other shape
 
   template <class Archive>
   void serialize(Archive &ar) {

@@ -16,7 +16,7 @@
 #include "scripting.h"
 #include "util/assistant.h"
 #include "util/image_splitter.hpp"
-#include "v8_wrapper.hpp"
+#include "util/v8_wrapper.hpp"
 
 // TODO: find a better home for this?
 std::shared_ptr<v8_wrapper> context;

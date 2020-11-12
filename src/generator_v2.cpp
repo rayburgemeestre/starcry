@@ -14,7 +14,14 @@
 #include "primitives_v8.h"
 #include "scripting.h"
 #include "util/assistant.h"
-#include "v8_wrapper.hpp"
+#include "util/quadtree.h"
+#include "util/v8_interact.hpp"
+#include "util/v8_wrapper.hpp"
+#include "util/vector_logic.hpp"
+
+#include "shapes/circle_v2.h"
+#include "shapes/position.h"
+#include "shapes/rectangle_v2.h"
 
 extern std::unique_ptr<assistant_> assistant;
 extern std::shared_ptr<v8_wrapper> context;
@@ -22,74 +29,6 @@ extern std::shared_ptr<v8_wrapper> context;
 void output_fun(const std::string& s) {
   std::cout << s << std::endl;
 }
-
-v8::Local<v8::String> v8_str(std::shared_ptr<v8_wrapper> context, const std::string& str) {
-  return v8::String::NewFromUtf8(context->isolate, str.c_str()).ToLocalChecked();
-}
-
-std::string v8_str(v8::Isolate* isolate, const v8::Local<v8::String>& str) {
-  v8::String::Utf8Value out(isolate, str);
-  return std::string(*out);
-}
-
-v8::Local<v8::Value> v8_index_object(std::shared_ptr<v8_wrapper> context,
-                                     v8::Local<v8::Value> val,
-                                     const std::string& str) {
-  return val.As<v8::Object>()->Get(context->isolate->GetCurrentContext(), v8_str(context, str)).ToLocalChecked();
-}
-
-/*
- 157 i::Handle<i::String> v8_str(i::Isolate* isolate, const char* str) {¬
- 158   return isolate->factory()->NewStringFromAsciiChecked(str);¬
- 159 }¬
- 160 Local<String> v8_str(Isolate* isolate, const char* str) {¬
- 161   return Utils::ToLocal(v8_str(reinterpret_cast<i::Isolate*>(isolate), str));¬
- 162 }¬
- */
-class v8_interact {
-private:
-  v8::Isolate* isolate;
-  v8::Local<v8::Context> ctx;
-
-public:
-  v8_interact(v8::Isolate* isolate) : isolate(isolate), ctx(isolate->GetCurrentContext()) {}
-
-  v8::Isolate* get_isolate() {
-    return isolate;
-  }
-
-  v8::Local<v8::Object> v8_obj(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(context, obj, field).As<v8::Object>();
-  }
-
-  v8::Local<v8::Array> v8_array(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(context, obj, field).As<v8::Array>();
-  }
-
-  v8::Local<v8::Number> v8_number(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(context, obj, field).As<v8::Number>();
-  }
-
-  v8::Local<v8::String> v8_string(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(context, obj, field).As<v8::String>();
-  }
-
-  double double_number(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext()).ToChecked();
-  }
-
-  //  v8::Maybe<double> maybe_double_number(v8::Local<v8::Object>& obj, const std::string& field) {
-  //    return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext());
-  //  }
-
-  int64_t integer_number(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_number(obj, field)->IntegerValue(isolate->GetCurrentContext()).ToChecked();
-  }
-
-  std::string str(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_str(isolate, v8_string(obj, field));
-  }
-};
 
 generator_v2::generator_v2() {
   static std::once_flag once;
@@ -338,6 +277,7 @@ bool generator_v2::generate_frame() {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
     auto scenes = i.v8_array(obj, "scenes");
+    quadtree qt(rectangle_v2(position(-width() / 2, -height() / 2), width(), height()), 32);
     for (size_t I = 0; I < scenes->Length(); I++) {
       auto current_scene = scenes->Get(isolate->GetCurrentContext(), I).ToLocalChecked();
       if (!current_scene->IsObject()) continue;
@@ -367,6 +307,9 @@ bool generator_v2::generate_frame() {
         auto y = i.double_number(instance, "y");
         auto vel_x = i.double_number(instance, "vel_x");
         auto vel_y = i.double_number(instance, "vel_y");
+        auto radius = i.double_number(instance, "radius");
+        auto radiussize = i.double_number(instance, "radiussize");
+        auto last_collide = i.double_number(instance, "last_collide");
 
         if (!std::isnan(vel_x)) {
           x += vel_x;
@@ -376,6 +319,8 @@ bool generator_v2::generate_frame() {
         }
         instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8::Number::New(isolate, x));
         instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8::Number::New(isolate, y));
+        instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8::Number::New(isolate, vel_x));
+        instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8::Number::New(isolate, vel_y));
 
         new_shape.x = x;
         new_shape.y = y;
@@ -396,11 +341,86 @@ bool generator_v2::generate_frame() {
         }
         new_shape.z = 0;
         new_shape.type = data::shape_type::circle;
-        new_shape.radius = i.double_number(instance, "radius");
-        new_shape.radius_size = i.double_number(instance, "radiussize");
+        new_shape.radius = radius;
+        new_shape.radius_size = radiussize;
         new_shape.blending_ = data::blending_type::add;
+        new_shape.instance_index = j;
+
+        if (std::isnan(last_collide)) {
+          new_shape.last_collide = std::numeric_limits<size_t>::max();
+        } else {
+          new_shape.last_collide = last_collide;
+        }
         if (type == "circle") {
+          qt.insert(point_type(position(x, y), assistant->the_job->shapes.size()));
+          instance->Set(isolate->GetCurrentContext(),
+                        v8_str(context, "index"),
+                        v8::Number::New(isolate, assistant->the_job->shapes.size()));
           assistant->the_job->shapes.push_back(new_shape);
+        }
+      }
+      // second iteration
+      for (size_t j = 0; j < scene_instances->Length(); j++) {
+        auto instance = scene_instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
+        if (!instance->IsObject()) {
+          continue;
+        }
+        // TODO: change type to size_t, probably isnan cannot be used in that case
+        double index = i.double_number(instance, "index");
+        if (std::isnan(index)) {
+          continue;
+        }
+        auto& shape = assistant->the_job->shapes[index];
+
+        std::vector<point_type> found;
+        qt.query(index, circle_v2(position(shape.x, shape.y), shape.radius, shape.radius_size), found);
+        for (const auto& collide : found) {
+          const auto index2 = collide.userdata;
+          if (index2 <= index) {
+            continue;
+          }
+          auto& shape2 = assistant->the_job->shapes[index2];
+          auto instance2 = scene_instances->Get(isolate->GetCurrentContext(), shape2.instance_index)
+                               .ToLocalChecked()
+                               .As<v8::Object>();
+          if (!instance2->IsObject()) {
+            continue;
+          }
+          if (shape.last_collide == index2) {
+            continue;
+          }
+
+          // handle collision
+          auto vel_x = i.double_number(instance, "vel_x");
+          auto vel_y = i.double_number(instance, "vel_y");
+          auto vel_x2 = i.double_number(instance2, "vel_x");
+          auto vel_y2 = i.double_number(instance2, "vel_y");
+
+          const auto normal = unit_vector(subtract_vector(vector2d(shape.x, shape.y), vector2d(shape2.x, shape2.y)));
+          const auto ta = dot_product(vector2d(vel_x, vel_y), normal);
+          const auto tb = dot_product(vector2d(vel_x2, vel_y2), normal);
+          const auto optimized_p = (2.0 * (ta - tb)) / 2.0;
+
+          auto updated_vel1 = subtract_vector(vector2d(vel_x, vel_y), multiply_vector(normal, optimized_p));
+          instance->Set(
+              isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8::Number::New(isolate, updated_vel1.x));
+          instance->Set(
+              isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8::Number::New(isolate, updated_vel1.y));
+          auto updated_vel2 = add_vector(vector2d(vel_x2, vel_y2), multiply_vector(normal, optimized_p));
+          instance2->Set(
+              isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8::Number::New(isolate, updated_vel2.x));
+          instance2->Set(
+              isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8::Number::New(isolate, updated_vel2.y));
+
+          // save collision
+          shape.last_collide = index2;
+          shape2.last_collide = index;
+          instance->Set(isolate->GetCurrentContext(),
+                        v8_str(context, "last_collide"),
+                        v8::Number::New(isolate, shape.last_collide));
+          instance2->Set(isolate->GetCurrentContext(),
+                         v8_str(context, "last_collide"),
+                         v8::Number::New(isolate, shape2.last_collide));
         }
       }
     }
