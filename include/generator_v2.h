@@ -16,8 +16,8 @@
 class generator_v2 {
 private:
   size_t max_frames = 0;
-  uint32_t canvas_w = 0;
-  uint32_t canvas_h = 0;
+  int32_t canvas_w = 0;
+  int32_t canvas_h = 0;
   size_t current_job = 0;
   size_t num_chunks = 0;
   size_t bitrate = 0;
@@ -34,10 +34,10 @@ public:
   double fps() const {
     return use_fps;
   }
-  uint32_t width() const {
+  int32_t width() const {
     return canvas_w;
   }
-  uint32_t height() const {
+  int32_t height() const {
     return canvas_h;
   }
 };
