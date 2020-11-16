@@ -131,7 +131,7 @@ _ = {
       }
     },
   },
-  'video': {'duration': 10, 'fps': 60, 'width': 1920, 'height': 1080, 'scale': 1, 'rand_seed': 5},
+  'video': {'duration': 10, 'fps': 60, 'width': 1920, 'height': 1080, 'scale': 1, 'rand_seed': 5, 'granularity': 1},
   'scenes': [{
     'name': 'scene1',
     'objects': [

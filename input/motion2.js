@@ -41,13 +41,13 @@ _ = {
         // todo create width() and height() functions
         const width = 1920;
         const height = 1080;
-        for (var i = 0; i < 300; i++) {
+        for (var i = 0; i < 100; i++) {
           let x = (rand() - 0.5) * 2 * width / 2;
           let y = (rand() - 0.5) * 2 * height / 2;
           let velocity = new vector2d(rand(), 0);
           velocity.rotate(rand() * 360);
-          velocity.x *= 20;
-          velocity.y *= 20;
+          velocity.x *= 50;
+          velocity.y *= 50;
           this.subobj.push({
             'id': 'ball',
             'x': x,
@@ -59,6 +59,15 @@ _ = {
           });
           velocity.rotate(rand() * 360);
         }
+        // this.subobj.push({
+        //   'id': 'ball',
+        //   'x': 0,
+        //   'y': 0,
+        //   'z': 0,
+        //   'vel_x': undefined,
+        //   'vel_y': undefined,
+        //   'props': {'grad': i === 0 ? 'red' : 'white'}
+        // });
       },
       'time': function(t, e) {},
     },
@@ -86,6 +95,7 @@ _ = {
     'height': 1080,
     'scale': 1,
     'rand_seed': 1,
+    'granularity': 1,
   },
   'scenes': [{
     'name': 'scene1',

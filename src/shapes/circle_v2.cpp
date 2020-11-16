@@ -13,8 +13,8 @@ circle_v2::circle_v2(position pos, double radius, double radiussize)
     : pos(pos), radius(radius), radiussize(radiussize) {}
 
 bool circle_v2::contains(const position& point) const {
-  const auto d = pow((point.x - pos.x), 2.0) + pow((point.y - pos.y), 2.0);
-  return d <= pow((radius * 2 + radiussize * 2), 2.0);
+  auto rad = radius + radiussize;
+  return ((point.x - pos.x) * (point.x - pos.x) + (point.y - pos.y) * (point.y - pos.y) <= rad * rad);
 }
 
 // source https://stackoverflow.com/questions/401847/circle-rectangle-collision-detection-intersection/1879223#1879223

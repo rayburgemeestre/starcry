@@ -34,7 +34,10 @@ void add_circle(circle circ) {
   new_shape.radius_size = circ.get_radiussize();
   new_shape.gradients_.emplace_back(1.0, circ.get_gradient().to_data_gradient());
   new_shape.blending_ = circ.blending_type_;
-  assistant->the_job->shapes.push_back(new_shape);
+  if (assistant->the_job->shapes.empty()) {
+    assistant->the_job->shapes.emplace_back();
+  }
+  assistant->the_job->shapes[0].push_back(new_shape);
 }
 
 void add_line(line l) {
@@ -49,7 +52,10 @@ void add_line(line l) {
   new_shape.blending_ = l.blending_type_;
   new_shape.type = data::shape_type::line;
   new_shape.radius_size = l.get_size();
-  assistant->the_job->shapes.push_back(new_shape);
+  if (assistant->the_job->shapes.empty()) {
+    assistant->the_job->shapes.emplace_back();
+  }
+  assistant->the_job->shapes[0].push_back(new_shape);
 }
 
 void add_text(double x, double y, double z, double textsize, string text, string align) {
@@ -61,7 +67,10 @@ void add_text(double x, double y, double z, double textsize, string text, string
   new_shape.type = data::shape_type::text;
   new_shape.text = text;
   new_shape.align = align;
-  assistant->the_job->shapes.push_back(new_shape);
+  if (assistant->the_job->shapes.empty()) {
+    assistant->the_job->shapes.emplace_back();
+  }
+  assistant->the_job->shapes[0].push_back(new_shape);
 }
 
 void output(string s) {

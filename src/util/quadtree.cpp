@@ -50,7 +50,7 @@ void quadtree::query(size_t index, const circle_v2& range, std::vector<point_typ
   }
   for (const auto& p : points) {
     if (p.userdata == index) {
-      // skip collision with itself
+      // skip collision with self
       continue;
     }
     if (range.contains(p.pos)) {

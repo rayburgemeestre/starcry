@@ -158,7 +158,8 @@ public:
                             double_type radius,
                             double_type radius_size,
                             const std::vector<std::pair<double, data::gradient>> &gradients_,
-                            const data::blending_type &blending_) {
+                            const data::blending_type &blending_,
+                            double opacity) {
     circle_x = ((circle_x * scale_) + center_x_) - offset_x_;
     circle_y = ((circle_y * scale_) + center_y_) - offset_y_;
     radius *= scale_;
@@ -200,7 +201,8 @@ public:
                             abs_y_top,
                             diff_from_center,
                             gradients_,
-                            blending_);
+                            blending_,
+                            opacity);
 
         if (rel_y != 0)
           render_circle_pixel(bmp,
@@ -212,7 +214,8 @@ public:
                               abs_y_bottom,
                               diff_from_center,
                               gradients_,
-                              blending_);
+                              blending_,
+                              opacity);
         if (rel_x != 0)
           render_circle_pixel(bmp,
                               radius,
@@ -223,7 +226,8 @@ public:
                               abs_y_top,
                               diff_from_center,
                               gradients_,
-                              blending_);
+                              blending_,
+                              opacity);
         if (rel_x != 0 && rel_y != 0)
           render_circle_pixel(bmp,
                               radius,
@@ -234,7 +238,8 @@ public:
                               abs_y_bottom,
                               diff_from_center,
                               gradients_,
-                              blending_);
+                              blending_,
+                              opacity);
       }
     }
   }
@@ -277,7 +282,8 @@ public:
                            int absY,
                            double_type diffFromCenter,
                            const std::vector<std::pair<double, data::gradient>> &gradients_,
-                           const data::blending_type &blending_) {
+                           const data::blending_type &blending_,
+                           double opacity) {
     if (absX < 0 || absY < 0 || absX >= static_cast<int>(width_) || absY >= static_cast<int>(height_)) return;
 
     if (diffFromCenter == -1) diffFromCenter = distance<double_type>(absX, posX, absY, posY);
@@ -310,6 +316,10 @@ public:
       clr.b += gradient_opacity * tmp.b;
       clr.a += gradient_opacity * tmp.a;
     }
+
+    // motion blur
+    clr.a *= opacity;
+
     switch (blending_.type()) {
       case data::blending_type::lighten:
         blend_pixel<double_type, lighten>(bmp, absX, absY, clr);

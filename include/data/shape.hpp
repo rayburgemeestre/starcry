@@ -6,6 +6,7 @@
 #pragma once
 
 #include <algorithm>
+#include <map>
 #include <string>
 
 #include "cereal/types/string.hpp"
@@ -17,6 +18,7 @@
 namespace data {
 
 enum class shape_type {
+  none,
   text,
   circle,
   line,
@@ -96,12 +98,11 @@ struct shape {
   std::string align;
   std::vector<std::pair<double, gradient>> gradients_;
   blending_type blending_;
-  size_t instance_index;  // V8 index
-  size_t last_collide;    // index of other shape
+  std::map<int, size_t> indexes;
 
   template <class Archive>
   void serialize(Archive &ar) {
-    ar(x, y, z, x2, y2, z2, type, r, g, b, radius, text_size, radius_size, text, align, gradients_, blending_);
+    ar(x, y, z, x2, y2, z2, type, r, g, b, radius, text_size, radius_size, text, align, gradients_, blending_, indexes);
   }
 };
 

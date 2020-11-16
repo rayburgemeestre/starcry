@@ -52,7 +52,7 @@ public:
 
   void render(image &bmp,
               const data::color &bg_color,
-              const std::vector<data::shape> &shapes,
+              const std::vector<std::vector<data::shape>> &shapes,
               uint32_t offset_x,
               uint32_t offset_y,
               uint32_t canvas_w,
@@ -77,16 +77,32 @@ public:
     draw_logic_.height(height);
     draw_logic_.center(canvas_w / 2, canvas_h / 2);
     draw_logic_.offset(offset_x, offset_y);
-    for (const auto &shape : shapes) {
-      if (shape.type == data::shape_type::circle) {
-        draw_logic_.render_circle<double>(
-            bmp, shape.x, shape.y, shape.radius, shape.radius_size, shape.gradients_, shape.blending_);
 
-      } else if (shape.type == data::shape_type::line)
+    for (const auto &shape : shapes[shapes.size() - 1]) {
+      if (shape.type == data::shape_type::circle) {
+        // first one
+        double opacity = 1.0;
+        if (shape.indexes.size() > 0) {
+          opacity /= (shape.indexes.size() + 1);
+        }
+        draw_logic_.render_circle<double>(
+            bmp, shape.x, shape.y, shape.radius, shape.radius_size, shape.gradients_, shape.blending_, opacity);
+
+        // the rest...
+        for (const auto &index_data : shape.indexes) {
+          const auto &step = index_data.first;
+          const auto &index = index_data.second;
+          const auto &shape = shapes[step][index];
+          draw_logic_.render_circle<double>(
+              bmp, shape.x, shape.y, shape.radius, shape.radius_size, shape.gradients_, shape.blending_, opacity);
+        }
+
+      } else if (shape.type == data::shape_type::line) {
         draw_logic_.render_line<double>(
             bmp, shape.x, shape.y, shape.x2, shape.y2, shape.radius_size, shape.gradients_, shape.blending_);
-      else if (shape.type == data::shape_type::text)
+      } else if (shape.type == data::shape_type::text) {
         draw_logic_.render_text<double>(shape.x, shape.y, shape.text_size, shape.text, shape.align);
+      }
     }
 
     // if (false) {  // TODO: debug chunks flag

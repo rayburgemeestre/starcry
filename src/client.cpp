@@ -147,7 +147,10 @@ void initialize(uint32_t width, uint32_t height) {
   circle.y = 0;
   circle.z = 0;
   circle.type = data::shape_type::circle;
-  job.shapes.push_back(circle);
+  if (job.shapes.empty()) {
+    job.shapes.emplace_back();
+  }
+  job.shapes[0].push_back(circle);
 }
 
 void start(uint32_t width, uint32_t height) {

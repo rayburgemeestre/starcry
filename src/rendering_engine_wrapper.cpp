@@ -20,7 +20,7 @@ void rendering_engine_wrapper::initialize() {
 
 void rendering_engine_wrapper::render(image &bmp,
                                       const data::color &bg_color,
-                                      const std::vector<data::shape> &shapes,
+                                      const std::vector<std::vector<data::shape>> &shapes,
                                       uint32_t offset_x,
                                       uint32_t offset_y,
                                       uint32_t canvas_w,

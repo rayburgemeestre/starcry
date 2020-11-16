@@ -6,6 +6,7 @@
 #pragma once
 
 // #include "caf/meta/type_name.hpp"
+#include "cereal/types/map.hpp"
 #include "cereal/types/vector.hpp"
 
 #include "color.hpp"
@@ -29,7 +30,8 @@ struct job {
   uint32_t chunk;
   uint32_t num_chunks;
   data::color background_color;
-  std::vector<data::shape> shapes;
+  // for each rendering pass the list of shapes
+  std::vector<std::vector<data::shape>> shapes;
   double scale;
   uint32_t bitrate;
   bool compress;

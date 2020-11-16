@@ -18,6 +18,7 @@ private:
   size_t max_frames = 0;
   int32_t canvas_w = 0;
   int32_t canvas_h = 0;
+  double granularity = 1;
   //  size_t current_job = 0;
   //  size_t num_chunks = 0;
   //  size_t bitrate = 0;
