@@ -149,6 +149,12 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
 
 std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_message> job_msg) {
   auto &job = *job_msg->job;
+
+  if (mode == starcry::render_video_mode::javascript_only) {
+    std::vector<uint32_t> transfer_pixels;
+    return std::make_shared<render_msg>(job_msg->client, job_msg->type, job.job_number, 0, 0, transfer_pixels);
+  }
+
   // no need to render in this case, client will do the rendering
   if (job_msg->type == instruction_type::get_shapes) {
     std::ostringstream os;
@@ -191,6 +197,9 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   std::cout << job_msg->job_number << " " << std::flush;
+  if (mode == starcry::render_video_mode::javascript_only) {
+    return;
+  }
   // COZ_PROGRESS;
   auto process = [&](std::shared_ptr<render_msg> job_msg) {
     if (job_msg->client == nullptr) {

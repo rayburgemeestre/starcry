@@ -338,8 +338,8 @@ bool generator_v2::generate_frame() {
       if (!current_scene->IsObject()) continue;
       auto sceneobj = current_scene.As<v8::Object>();
       auto intermediates = i.v8_array(sceneobj, "instances_intermediate");
-      auto scene_instances = i.v8_array(sceneobj, "instances_next");
-      if (!scene_instances->IsArray()) continue;
+      auto next_instances = i.v8_array(sceneobj, "instances_next");
+      if (!next_instances->IsArray()) continue;
       std::unordered_map<int64_t, v8::Local<v8::Object>> parents;
 
       int max_step = 1;
@@ -361,10 +361,9 @@ bool generator_v2::generate_frame() {
           // Copy instance values to instance_next values (resetting all instance next values)
           {
             auto instances = i.v8_array(sceneobj, "instances");
-            auto nextinstances = i.v8_array(sceneobj, "instances_next");
-            for (size_t j = 0; j < scene_instances->Length(); j++) {
+            for (size_t j = 0; j < next_instances->Length(); j++) {
               auto instance = instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-              auto next = nextinstances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
+              auto next = next_instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
 
               handle_error(
                   next->Set(isolate->GetCurrentContext(),
@@ -401,7 +400,7 @@ bool generator_v2::generate_frame() {
           {
             auto instances = i.v8_array(sceneobj, "instances");
             auto intermediateinstances = i.v8_array(sceneobj, "instances_intermediate");
-            for (size_t j = 0; j < scene_instances->Length(); j++) {
+            for (size_t j = 0; j < next_instances->Length(); j++) {
               auto instance = instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
               auto intermediate =
                   intermediateinstances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
@@ -475,13 +474,11 @@ bool generator_v2::generate_frame() {
           // For each scene instance, let time progress and update it's x, y and velocity and also add to quadtree
           // We manipulate only the "next" instance, not the current instance, as we might choose to revert these
           // changes if the granularity is not sufficient.
-          for (size_t j = 0; j < scene_instances->Length(); j++) {
-            auto instance = scene_instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
+          for (size_t j = 0; j < next_instances->Length(); j++) {
+            auto instance = next_instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
             if (!instance->IsObject()) {
               continue;
             }
-            int64_t level = i.integer_number(instance, "level");
-            parents[level] = instance;
             v8::Local<v8::Function> fun2 = instance.As<v8::Object>()
                                                ->Get(isolate->GetCurrentContext(), v8_str(context, "time"))
                                                .ToLocalChecked()
@@ -503,7 +500,8 @@ bool generator_v2::generate_frame() {
             }
 
             // For now we only care about circles
-            if (type == "circle") {
+            if (type == "circle" &&
+                i.double_number(instance, "radiussize") < 1900 /* todo create property of course */) {
               qt.insert(point_type(position(x, y), j));
             }
             handle_error(
@@ -524,8 +522,8 @@ bool generator_v2::generate_frame() {
 
           // For each instance determine how far the object has travelled and if it's within the allowed granularity,
           //  also do the collision detection efficiently using the quadtree we just created
-          for (size_t j = 0; j < scene_instances->Length(); j++) {
-            auto instance = scene_instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
+          for (size_t j = 0; j < next_instances->Length(); j++) {
+            auto instance = next_instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
             if (!instance->IsObject()) {
               continue;
             }
@@ -561,14 +559,15 @@ bool generator_v2::generate_frame() {
             // TODO: for different sizes of circle collision detection, we need to somehow adjust the interface to this
             // lookup somehow.
             qt.query(index, circle_v2(position(x, y), radius * 2.0, radiussize * 2.0), found);
-            if (type == "circle") {
+            if (type == "circle" &&
+                i.double_number(instance, "radiussize") < 1900 /* todo create property of course */) {
               for (const auto& collide : found) {
                 const auto index2 = collide.userdata;
                 if (index2 <= index) {
                   continue;
                 }
                 auto instance2 =
-                    scene_instances->Get(isolate->GetCurrentContext(), index2).ToLocalChecked().As<v8::Object>();
+                    next_instances->Get(isolate->GetCurrentContext(), index2).ToLocalChecked().As<v8::Object>();
                 auto x2 = i.double_number(instance2, "x");
                 auto y2 = i.double_number(instance2, "y");
                 if (!instance2->IsObject()) {
@@ -620,8 +619,8 @@ bool generator_v2::generate_frame() {
 
           // Risking doing this for nothing, as this may still be discarded, we'll translate all the instances to
           // objects ready for rendering Note that we save object states for multiple "steps" per frame if needed.
-          for (size_t j = 0; j < scene_instances->Length(); j++) {
-            auto instance = scene_instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
+          for (size_t j = 0; j < next_instances->Length(); j++) {
+            auto instance = next_instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
             if (!instance->IsObject()) {
               continue;
             }
@@ -636,6 +635,8 @@ bool generator_v2::generate_frame() {
             auto level = i.double_number(instance, "level");
             auto type = i.str(instance, "type");
 
+            parents[level] = instance;
+
             data::shape new_shape;
             new_shape.x = x;
             new_shape.y = y;
@@ -648,6 +649,7 @@ bool generator_v2::generate_frame() {
               new_shape.y += i.double_number(parents[level], "y");
               transfer_gradient(i, parents[level], new_shape, gradients);
             }
+
             if (new_shape.gradients_.empty()) {
               new_shape.gradients_.emplace_back(1.0, data::gradient{});
               new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
@@ -678,7 +680,7 @@ bool generator_v2::generate_frame() {
           {
             auto instances = i.v8_array(sceneobj, "instances_next");
             auto intermediateinstances = i.v8_array(sceneobj, "instances_intermediate");
-            for (size_t j = 0; j < scene_instances->Length(); j++) {
+            for (size_t j = 0; j < next_instances->Length(); j++) {
               auto instance = instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
               auto intermediate =
                   intermediateinstances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
@@ -723,7 +725,7 @@ bool generator_v2::generate_frame() {
       {
         auto instances = i.v8_array(sceneobj, "instances");
         auto nextinstances = i.v8_array(sceneobj, "instances_next");
-        for (size_t j = 0; j < scene_instances->Length(); j++) {
+        for (size_t j = 0; j < next_instances->Length(); j++) {
           auto instance = instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
           auto next = nextinstances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
           handle_error(instance->Set(isolate->GetCurrentContext(),

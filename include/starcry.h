@@ -37,7 +37,7 @@ class WebSocket;
 
 class starcry {
 public:
-  enum class render_video_mode { generate_only, render_only, video_only, video_with_gui, gui_only };
+  enum class render_video_mode { generate_only, render_only, video_only, video_with_gui, gui_only, javascript_only };
 
 private:
   size_t num_local_engines;

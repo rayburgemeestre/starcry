@@ -47,6 +47,7 @@ public:
       ("client", "start client renderer, connects to hardcoded address")
       ("gui", "render to graphical window")
       ("gui-only", "render to graphical window only (no video)")
+      ("javascript-only", "render only the jobs, nothing graphical")
       ("spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")
       ("stream", "start embedded webserver and stream HLS to webroot")
       ("interactive,i", "start embedded webserver and launch in interactive mode")
@@ -98,6 +99,8 @@ public:
         return starcry::render_video_mode::video_with_gui;
       else if (vm.count("gui-only"))
         return starcry::render_video_mode::gui_only;
+      else if (vm.count("javascript-only"))
+        return starcry::render_video_mode::javascript_only;
       else
         return starcry::render_video_mode::video_only;
     })();

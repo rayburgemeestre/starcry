@@ -1,5 +1,13 @@
 _ = {
   'gradients': {
+    'blue': [
+      {'position': 0.0, 'r': 0, 'g': 0, 'b': 1, 'a': 1},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+    ],
+    'yellow': [
+      {'position': 0.0, 'r': 1, 'g': 1, 'b': 0, 'a': 1},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+    ],
     'red': [
       {'position': 0.0, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
       {'position': 0.9, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
@@ -46,8 +54,8 @@ _ = {
           let y = (rand() - 0.5) * 2 * height / 2;
           let velocity = new vector2d(rand(), 0);
           velocity.rotate(rand() * 360);
-          velocity.x *= 50;
-          velocity.y *= 50;
+          velocity.x *= 30;
+          velocity.y *= 30;
           this.subobj.push({
             'id': 'ball',
             'x': x,
@@ -75,7 +83,7 @@ _ = {
       'type': 'circle',
       'gradient': 'white',
       'radius': 0,
-      'radiussize': 10.0,
+      'radiussize': 20.0,
       'props': {'grad': 'white'},
       'init': function() {
         this.gradient = this.props.grad;
@@ -85,6 +93,20 @@ _ = {
         while (this.y + (1080 / 2) < 0) this.y += 1080;
         while (this.x + (1920 / 2) > 1920) this.x -= 1920;
         while (this.y + (1080 / 2) > 1080) this.y -= 1080;
+      },
+    },
+    'bg': {
+      'type': 'circle',
+      'gradients': [
+        [1.0, 'blue'],
+        [0.0, 'yellow'],
+      ],
+      'radius': 0,
+      'radiussize': 1920,
+      'init': function() {},
+      'time': function(t, elapsed) {
+        // this.gradients[0][0] = 1.0 - t;
+        // this.gradients[1][0] = t;
       },
     },
   },
@@ -100,6 +122,7 @@ _ = {
   'scenes': [{
     'name': 'scene1',
     'objects': [
+      {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
       {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
     ],
   }]
