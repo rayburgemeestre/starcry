@@ -107,6 +107,7 @@ v8::Local<v8::Object> process_object(v8_interact& i,
 
   // The object from the scene
   auto id = i.str(scene_obj, "id");
+  auto v8_id = i.v8_string(scene_obj, "id");
   auto v8_x = i.v8_number(scene_obj, "x");
   auto v8_y = i.v8_number(scene_obj, "y");
   auto v8_vel_x = i.v8_number(scene_obj, "vel_x");
@@ -128,6 +129,7 @@ v8::Local<v8::Object> process_object(v8_interact& i,
   auto copy_object_and_initialize = [&](v8::Local<v8::Object> new_instance, const std::string& annotation) {
     copy_object(isolate, obj_def, new_instance);
     handle_error(new_instance->SetPrototype(isolate->GetCurrentContext(), scene_obj));
+    handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "id"), v8_id));
     handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8_x));
     handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8_y));
     handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8_vel_x));
@@ -495,7 +497,8 @@ bool generator_v2::generate_frame() {
                                                .As<v8::Function>();
             v8::Handle<v8::Value> args[2];
             args[0] = v8pp::to_v8(isolate, static_cast<double>(assistant->the_job->frame_number) / max_frames);
-            args[1] = v8pp::to_v8(isolate, static_cast<double>(1.0) / static_cast<double>(use_fps));
+            args[1] = v8pp::to_v8(
+                isolate, static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(max_step));
             fun2->Call(isolate->GetCurrentContext(), instance, 2, args).ToLocalChecked();
             std::string type = i.str(instance, "type");
             auto x = i.double_number(instance, "x");
@@ -511,7 +514,7 @@ bool generator_v2::generate_frame() {
 
             // For now we only care about circles
             if (type == "circle" &&
-                i.double_number(instance, "radiussize") < 1900 /* todo create property of course */) {
+                i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
               qt.insert(point_type(position(x, y), j));
             }
             handle_error(
@@ -550,7 +553,8 @@ bool generator_v2::generate_frame() {
                                                .As<v8::Function>();
             v8::Handle<v8::Value> args[2];
             args[0] = v8pp::to_v8(isolate, static_cast<double>(assistant->the_job->frame_number) / max_frames);
-            args[1] = v8pp::to_v8(isolate, static_cast<double>(1.0) / static_cast<double>(use_fps));
+            args[1] = v8pp::to_v8(
+                isolate, static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(max_step));
             fun2->Call(isolate->GetCurrentContext(), instance, 2, args).ToLocalChecked();
 
             auto type = i.str(instance, "type");
@@ -581,7 +585,7 @@ bool generator_v2::generate_frame() {
             // lookup somehow.
             qt.query(index, circle_v2(position(x, y), radius * 2.0, radiussize * 2.0), found);
             if (type == "circle" &&
-                i.double_number(instance, "radiussize") < 1900 /* todo create property of course */) {
+                i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
               for (const auto& collide : found) {
                 const auto index2 = collide.userdata;
                 if (index2 <= index) {
@@ -646,18 +650,21 @@ bool generator_v2::generate_frame() {
             if (!instance->IsObject()) {
               continue;
             }
+            // Update level for all objects
+            auto level = i.double_number(instance, "level");
+            parents[level] = instance;
+
+            // See if we require this step for this object
             auto steps = i.integer_number(instance, "steps");
             if (!do_step(steps, current_step + 1)) {
               continue;
             }
+            auto id = i.str(instance, "id");
             auto x = i.double_number(instance, "x");
             auto y = i.double_number(instance, "y");
             auto radius = i.double_number(instance, "radius");
             auto radiussize = i.double_number(instance, "radiussize");
-            auto level = i.double_number(instance, "level");
             auto type = i.str(instance, "type");
-
-            parents[level] = instance;
 
             data::shape new_shape;
             new_shape.x = x;

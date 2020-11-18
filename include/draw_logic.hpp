@@ -318,7 +318,18 @@ public:
     }
 
     // motion blur
-    clr.a *= opacity;
+    auto max = 10.0;  // TODO: tweak this a bit, or make configurable at least.
+    auto maxexp = log(max + 1.0) / log(2.0);
+
+    auto linear = opacity;
+    auto expf = ((pow(2.0, (linear)*maxexp)) - 1.0) / max;
+
+    auto maxpow = pow(2.0, maxexp);
+    auto logn = (maxpow - (pow(2.0, (1.0 - linear) * maxexp))) / max;
+
+    // clr.a *= opacity;
+    // clr.a *= expf;
+    clr.a *= logn;
 
     switch (blending_.type()) {
       case data::blending_type::lighten:

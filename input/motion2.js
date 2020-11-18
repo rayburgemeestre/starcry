@@ -8,6 +8,10 @@ _ = {
       {'position': 0.0, 'r': 1, 'g': 1, 'b': 0, 'a': 1},
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
     ],
+    'red_bg': [
+      {'position': 0.0, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+    ],
     'red': [
       {'position': 0.0, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
       {'position': 0.9, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
@@ -15,6 +19,12 @@ _ = {
     ],
     'white': [
       {'position': 0.0, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
+      {'position': 0.9, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+    ],
+    'white_2': [
+      {'position': 0.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 0.8, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
       {'position': 0.9, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
     ]
@@ -36,7 +46,7 @@ _ = {
           [-stepsize, 0],  // left
         ];
         let x = 0;
-        let y = 0;
+        let y = stepsize / 2;
         for (let i = 0; i < 210; i++) {
           x += directions[this.props.direction][0];
           y += directions[this.props.direction][1];
@@ -54,13 +64,13 @@ _ = {
           this.props.step++;
 
           this.subobj.push({
-            'id': 'ball',
+            'id': i === 0 || i === 3 ? 'red_ball' : 'ball',
             'x': x,
             'y': y,
             'z': 0,
             'vel_x': 0,
             'vel_y': 0,
-            'props': {'grad': i === 0 ? 'red' : 'white'}
+            'props': {'grad': i === 0 || i === 3 ? 'red' : 'white'}
           });
         }
         // this.subobj.push({
@@ -74,7 +84,7 @@ _ = {
         // });
       },
       'time': function(t, e) {
-        if (!this.props.start && t > 0.05) {
+        if (!this.props.start && t > 0.1) {
           this.props.start = true;
 
           class vector2d {
@@ -104,17 +114,63 @@ _ = {
             obj.vel_y = velocity.y;
           }
         }
+        if (t > 0.75) {
+          var ss = 0.25 / 25.0;
+          for (let obj of this.subobj) {
+            if (obj.vel_x > ss) obj.vel_x -= ss;
+            if (obj.vel_x < -ss) obj.vel_x += ss;
+            if (obj.vel_y > ss) obj.vel_y -= ss;
+            if (obj.vel_y < -ss) obj.vel_y += ss;
+          }
+        }
+        if (t > 0) {
+          for (let obj of this.subobj) {
+            if (obj.radiussize < 20) obj.radiussize += 5 * e;
+          }
+        }
+        if (t > 0.5) {
+          for (let obj of this.subobj) {
+            if (obj.radiussize < 200) obj.radiussize += 10 * e;
+          }
+        }
+        // TODO: manipulating sub object gradients does not propagate
+        // either via gradients or props
       },
     },
     'ball': {
       'type': 'circle',
-      'gradient': 'white',
+      'gradients': [
+        [1.0, 'white'],
+        [0.0, 'white_2'],
+      ],
       'radius': 0,
-      'radiussize': 20.0,
-      'props': {'grad': 'white'},
+      'radiussize': 0.0,
+      'props': {'grad': 'white', 'grad1': 1.0, 'grad2': 0.0},
       'init': function() {
-        this.gradient = this.props.grad;
+        this.gradients[0][1] = this.props.grad;
       },
+      'time': function(t, elapsed) {
+        if (t > 0.5 && this.props.grad != 'red') {
+          let q = (t - 0.5) / 0.1;
+          if (q > 1.0) q = 1.0;
+          this.gradients[0][0] = 1.0 - q;
+          this.gradients[1][0] = q;
+        }
+        while (this.x + (1920 / 2) < 0) this.x += 1920;
+        while (this.y + (1080 / 2) < 0) this.y += 1080;
+        while (this.x + (1920 / 2) > 1920) this.x -= 1920;
+        while (this.y + (1080 / 2) > 1080) this.y -= 1080;
+      },
+    },
+    'red_ball': {
+      'type': 'circle',
+      'gradients': [
+        [1.0, 'red'],
+      ],
+      'radius': 0,
+      'radiussize': 0.0,
+      'props': {'grad': 'white', 'grad1': 1.0, 'grad2': 0.0},
+      'init': function() {},
       'time': function(t, elapsed) {
         while (this.x + (1920 / 2) < 0) this.x += 1920;
         while (this.y + (1080 / 2) < 0) this.y += 1080;
@@ -129,27 +185,43 @@ _ = {
         [0.0, 'yellow'],
       ],
       'radius': 0,
-      'radiussize': 1920,
+      'radiussize': 2500,
       'init': function() {},
       'time': function(t, elapsed) {
         // this.gradients[0][0] = 1.0 - t;
         // this.gradients[1][0] = t;
       },
     },
+    'bg2': {
+      'type': 'circle',
+      'gradients': [
+        [1.0, 'yellow'],
+        [0.0, 'red'],
+      ],
+      'radius': 0,
+      'radiussize': 2500,
+      'init': function() {},
+      'time': function(t, elapsed) {
+        // this.x = (-1920/2.0) - (1920 * t);
+        this.gradients[0][0] = 1.0 - t;
+        this.gradients[1][0] = t;
+      },
+    },
   },
   'video': {
-    'duration': 20,
-    'fps': 30,
+    'duration': 10,
+    'fps': 25,
     'width': 1920,
     'height': 1080,
     'scale': 1,
-    'rand_seed': 1,
+    'rand_seed': 2,
     'granularity': 1,
   },
   'scenes': [{
     'name': 'scene1',
     'objects': [
       {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+      // {'id': 'bg2', 'x': -1920 / 2.0, 'y': 0, 'z': 0, 'props': {}},
       {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
     ],
   }]
