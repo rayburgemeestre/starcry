@@ -23,49 +23,45 @@ _ = {
     'balls': {
       'x': 0,
       'y': 0,
-      'props': {},
+      'props': {'direction': 0, 'steps': 1, 'step': 1, 'times': 0, 'start': false},
       'subobj': [],
       'radius': 0,
       'radiussize': 10.0,
       'init': function() {
-        class vector2d {
-          constructor(x = 0, y = 0) {
-            this.x = x;
-            this.y = y;
+        const stepsize = 70;
+        let directions = [
+          [0, -stepsize],  // up
+          [stepsize, 0],   // right
+          [0, stepsize],   // down
+          [-stepsize, 0],  // left
+        ];
+        let x = 0;
+        let y = 0;
+        for (let i = 0; i < 210; i++) {
+          x += directions[this.props.direction][0];
+          y += directions[this.props.direction][1];
+          if (this.props.step === this.props.steps) {
+            this.props.step = 0;
+            this.props.times += 1;
+            this.props.direction += 1;
+            this.props.direction %= 4;
           }
-          rotate(degrees) {
-            const radian = this.degrees_to_radian(degrees);
-            const sine = Math.sin(radian);
-            const cosine = Math.cos(radian);
-            this.x = this.x * cosine - this.y * sine;
-            this.y = this.x * sine + this.y * cosine;
+          if (this.props.times === 2) {
+            this.props.steps += 1;
+            this.props.times = 0;
+            this.props.step += 1;
           }
-          degrees_to_radian(degrees) {
-            const pi = 3.14159265358979323846;
-            return degrees * pi / 180.0;
-          }
-        }
+          this.props.step++;
 
-        // todo create width() and height() functions
-        const width = 1920;
-        const height = 1080;
-        for (var i = 0; i < 100; i++) {
-          let x = (rand() - 0.5) * 2 * width / 2;
-          let y = (rand() - 0.5) * 2 * height / 2;
-          let velocity = new vector2d(rand(), 0);
-          velocity.rotate(rand() * 360);
-          velocity.x *= 30;
-          velocity.y *= 30;
           this.subobj.push({
             'id': 'ball',
             'x': x,
             'y': y,
             'z': 0,
-            'vel_x': velocity.x,
-            'vel_y': velocity.y,
+            'vel_x': 0,
+            'vel_y': 0,
             'props': {'grad': i === 0 ? 'red' : 'white'}
           });
-          velocity.rotate(rand() * 360);
         }
         // this.subobj.push({
         //   'id': 'ball',
@@ -77,7 +73,38 @@ _ = {
         //   'props': {'grad': i === 0 ? 'red' : 'white'}
         // });
       },
-      'time': function(t, e) {},
+      'time': function(t, e) {
+        if (!this.props.start && t > 0.05) {
+          this.props.start = true;
+
+          class vector2d {
+            constructor(x = 0, y = 0) {
+              this.x = x;
+              this.y = y;
+            }
+            rotate(degrees) {
+              const radian = this.degrees_to_radian(degrees);
+              const sine = Math.sin(radian);
+              const cosine = Math.cos(radian);
+              this.x = this.x * cosine - this.y * sine;
+              this.y = this.x * sine + this.y * cosine;
+            }
+            degrees_to_radian(degrees) {
+              const pi = 3.14159265358979323846;
+              return degrees * pi / 180.0;
+            }
+          }
+
+          for (let obj of this.subobj) {
+            let velocity = new vector2d(rand(), 0);
+            velocity.rotate(rand() * 360);
+            velocity.x *= 50;
+            velocity.y *= 50;
+            obj.vel_x = velocity.x;
+            obj.vel_y = velocity.y;
+          }
+        }
+      },
     },
     'ball': {
       'type': 'circle',
@@ -111,8 +138,8 @@ _ = {
     },
   },
   'video': {
-    'duration': 10,
-    'fps': 25,
+    'duration': 20,
+    'fps': 30,
     'width': 1920,
     'height': 1080,
     'scale': 1,

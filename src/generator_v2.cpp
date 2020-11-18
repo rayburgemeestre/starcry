@@ -125,7 +125,7 @@ v8::Local<v8::Object> process_object(v8_interact& i,
   v8::Local<v8::Object> new_instance_next = v8::Object::New(isolate);
   v8::Local<v8::Object> new_instance_intermediate = v8::Object::New(isolate);
 
-  auto copy_object_and_initialize = [&](v8::Local<v8::Object> new_instance) {
+  auto copy_object_and_initialize = [&](v8::Local<v8::Object> new_instance, const std::string& annotation) {
     copy_object(isolate, obj_def, new_instance);
     handle_error(new_instance->SetPrototype(isolate->GetCurrentContext(), scene_obj));
     handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8_x));
@@ -133,6 +133,7 @@ v8::Local<v8::Object> process_object(v8_interact& i,
     handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8_vel_x));
     handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8_vel_y));
     handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "subobj"), v8::Array::New(isolate)));
+    handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "meta"), v8_str(context, annotation)));
     handle_error(
         new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "level"), v8::Number::New(isolate, level)));
     if (v8_gradients->IsArray() && v8_gradients->Length() > 0) {
@@ -157,9 +158,9 @@ v8::Local<v8::Object> process_object(v8_interact& i,
     args[0] = v8pp::to_v8(isolate, 0.5);
     fun->Call(isolate->GetCurrentContext(), new_instance, 1, args).ToLocalChecked();
   };
-  copy_object_and_initialize(new_instance);
-  copy_object_and_initialize(new_instance_next);
-  copy_object_and_initialize(new_instance_intermediate);
+  copy_object_and_initialize(new_instance, "instance");
+  copy_object_and_initialize(new_instance_next, "next");
+  copy_object_and_initialize(new_instance_intermediate, "intermediate");
 
   // Add the instance to the scene for later rendering.
   handle_error(scene_instances->Set(isolate->GetCurrentContext(), scene_instances_idx, new_instance));
@@ -171,6 +172,8 @@ v8::Local<v8::Object> process_object(v8_interact& i,
   // Recurse for the sub objects the init function populated.
   handle_error(scene_obj->Set(isolate->GetCurrentContext(), v8_str(context, "level"), v8::Number::New(isolate, level)));
   auto subobjs = i.v8_array(new_instance, "subobj");
+  auto subobjs2 = i.v8_array(new_instance_next, "subobj");
+  auto subobjs3 = i.v8_array(new_instance_intermediate, "subobj");
   for (size_t k = 0; k < subobjs->Length(); k++) {
     auto subobj = subobjs->Get(isolate->GetCurrentContext(), k).ToLocalChecked().As<v8::Object>();
     auto instance = process_object(i,
@@ -183,6 +186,8 @@ v8::Local<v8::Object> process_object(v8_interact& i,
                                    subobj,
                                    &scene_obj);
     handle_error(subobjs->Set(isolate->GetCurrentContext(), k, instance));
+    handle_error(subobjs2->Set(isolate->GetCurrentContext(), k, instance));
+    handle_error(subobjs3->Set(isolate->GetCurrentContext(), k, instance));
   }
 
   // This is the object that will be also placed as a pointer in the subobject array for the object
@@ -380,6 +385,11 @@ bool generator_v2::generate_frame() {
                             instance->Get(isolate->GetCurrentContext(), v8_str(context, "vel_x")).ToLocalChecked()));
               handle_error(
                   next->Set(isolate->GetCurrentContext(),
+                            v8_str(context, "props"),
+                            instance->Get(isolate->GetCurrentContext(), v8_str(context, "props")).ToLocalChecked()));
+
+              handle_error(
+                  next->Set(isolate->GetCurrentContext(),
                             v8_str(context, "vel_y"),
                             instance->Get(isolate->GetCurrentContext(), v8_str(context, "vel_y")).ToLocalChecked()));
               handle_error(next->Set(
@@ -532,6 +542,17 @@ bool generator_v2::generate_frame() {
             if (!previous_instance->IsObject()) {
               continue;
             }
+
+            // Update time here again
+            v8::Local<v8::Function> fun2 = instance.As<v8::Object>()
+                                               ->Get(isolate->GetCurrentContext(), v8_str(context, "time"))
+                                               .ToLocalChecked()
+                                               .As<v8::Function>();
+            v8::Handle<v8::Value> args[2];
+            args[0] = v8pp::to_v8(isolate, static_cast<double>(assistant->the_job->frame_number) / max_frames);
+            args[1] = v8pp::to_v8(isolate, static_cast<double>(1.0) / static_cast<double>(use_fps));
+            fun2->Call(isolate->GetCurrentContext(), instance, 2, args).ToLocalChecked();
+
             auto type = i.str(instance, "type");
             auto x = i.double_number(instance, "x");
             auto y = i.double_number(instance, "y");
@@ -564,7 +585,8 @@ bool generator_v2::generate_frame() {
               for (const auto& collide : found) {
                 const auto index2 = collide.userdata;
                 if (index2 <= index) {
-                  continue;
+                  // TODO: can we uncomment this one again, if not, why-not?
+                  // continue;
                 }
                 auto instance2 =
                     next_instances->Get(isolate->GetCurrentContext(), index2).ToLocalChecked().As<v8::Object>();
