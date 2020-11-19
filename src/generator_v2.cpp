@@ -567,10 +567,15 @@ bool generator_v2::generate_frame() {
             // Calculate how many pixels are maximally covered by this instance, this is currently very simplified
             auto prev_x = i.double_number(previous_instance, "x");
             auto prev_y = i.double_number(previous_instance, "y");
+            auto prev_radius = i.double_number(previous_instance, "radius");
+            auto prev_radiussize = i.double_number(previous_instance, "radiussize");
+            auto prev_rad = prev_radius + prev_radiussize;
+            auto rad = radius + radiussize;
             auto dist = sqrt(pow(x - prev_x, 2) + pow(y - prev_y, 2));
             // TODO: stupid warp hack
             while (dist >= 1920 * 0.9) dist -= 1920;
             while (dist >= 1080 * 0.9) dist -= 1080;
+            dist = std::max(dist, fabs(prev_rad - rad));
             auto steps = (int)std::max(1.0, fabs(dist) / granularity);
             max_step = std::max(max_step, steps);
             current_step_max = std::max(current_step_max, steps);

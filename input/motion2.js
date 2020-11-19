@@ -128,9 +128,9 @@ _ = {
             if (obj.radiussize < 20) obj.radiussize += 5 * e;
           }
         }
-        if (t > 0.5) {
+        if (t > 0.7) {
           for (let obj of this.subobj) {
-            if (obj.radiussize < 200) obj.radiussize += 10 * e;
+            obj.radiussize += 20 * e;
           }
         }
         // TODO: manipulating sub object gradients does not propagate
@@ -150,12 +150,13 @@ _ = {
         this.gradients[0][1] = this.props.grad;
       },
       'time': function(t, elapsed) {
-        if (t > 0.5 && this.props.grad != 'red') {
+        if (t > 0.5) {
           let q = (t - 0.5) / 0.1;
           if (q > 1.0) q = 1.0;
           this.gradients[0][0] = 1.0 - q;
           this.gradients[1][0] = q;
         }
+        if (t >= 0.5) return;
         while (this.x + (1920 / 2) < 0) this.x += 1920;
         while (this.y + (1080 / 2) < 0) this.y += 1080;
         while (this.x + (1920 / 2) > 1920) this.x -= 1920;
@@ -214,7 +215,7 @@ _ = {
     'width': 1920,
     'height': 1080,
     'scale': 1,
-    'rand_seed': 2,
+    'rand_seed': 3,
     'granularity': 1,
   },
   'scenes': [{
