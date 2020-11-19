@@ -63,6 +63,13 @@ struct job {
        compress,
        save_image);
   }
+
+  inline void resize_for_num_steps(int steps) {
+    for (int current_step = 0; current_step < steps; current_step++) {
+      // make sure we have shapes vectors for each step we plan to create
+      shapes.emplace_back();
+    }
+  }
 };
 
 inline bool operator==(const job &lhs, const job &rhs) {

@@ -13,21 +13,22 @@
 
 #include "data/job.hpp"
 
+#include "util/v8_interact.hpp"
+#include "util/v8_wrapper.hpp"
+
 class generator_v2 {
 private:
   std::shared_ptr<data::job> job;
-  std::shared_ptr<data::job> previous_job;
   uint32_t frame_number;
 
   size_t max_frames = 0;
   int32_t canvas_w = 0;
   int32_t canvas_h = 0;
   double granularity = 1;
-  //  size_t current_job = 0;
-  //  size_t num_chunks = 0;
-  //  size_t bitrate = 0;
   size_t use_fps = 25;
   std::unordered_map<std::string, data::gradient> gradients;
+  std::unordered_map<size_t, std::map<int, size_t>> indexes;
+  int current_step_max = std::numeric_limits<int>::max();
 
 public:
   generator_v2();
@@ -42,6 +43,11 @@ public:
   void init_object_instances();
 
   bool generate_frame();
+  void cleanup_previous_attempt(v8_interact &i,
+                                v8::Local<v8::Array> &instances,
+                                v8::Local<v8::Array> &next_instances,
+                                v8::Local<v8::Array> &intermediates);
+
   std::shared_ptr<data::job> get_job() const;
   double fps() const {
     return use_fps;

@@ -14,8 +14,7 @@
 #include "scripting_v2.h"
 #include "util/generator.h"
 #include "util/quadtree.h"
-#include "util/v8_interact.hpp"
-#include "util/v8_wrapper.hpp"
+#include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
 
 #include "shapes/circle_v2.h"
@@ -136,27 +135,14 @@ void generator_v2::init_object_instances() {
       if (!current_scene->IsObject()) continue;
       auto sceneobj = current_scene.As<v8::Object>();
       auto scene_objects = i.v8_array(sceneobj, "objects");
-      auto scene_instances = i.v8_array(sceneobj, "instances");
-      auto scene_instances_next = i.v8_array(sceneobj, "instances_next");
-      auto scene_instances_intermediate = i.v8_array(sceneobj, "instances_intermediate");
-      if (!scene_instances->IsArray()) {
-        i.set_field(sceneobj, "instances", v8::Array::New(isolate));
-        i.set_field(sceneobj, "instances_next", v8::Array::New(isolate));
-        i.set_field(sceneobj, "instances_intermediate", v8::Array::New(isolate));
-      }
-      scene_instances = i.v8_array(sceneobj, "instances");
-      scene_instances_next = i.v8_array(sceneobj, "instances_next");
-      scene_instances_intermediate = i.v8_array(sceneobj, "instances_intermediate");
-      size_t scene_instances_idx = scene_instances->Length();
+      auto instances = i.v8_array(sceneobj, "instances", v8::Array::New(isolate));
+      auto instances_next = i.v8_array(sceneobj, "instances_next", v8::Array::New(isolate));
+      auto instances_temp = i.v8_array(sceneobj, "instances_intermediate", v8::Array::New(isolate));
+      size_t scene_instances_idx = instances->Length();
       for (size_t j = 0; j < scene_objects->Length(); j++) {
         auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
-        auto created_instance = util::generator::instantiate_objects(i,
-                                                                     objects,
-                                                                     scene_instances,
-                                                                     scene_instances_next,
-                                                                     scene_instances_intermediate,
-                                                                     scene_instances_idx,
-                                                                     scene_obj);
+        auto created_instance = util::generator::instantiate_objects(
+            i, objects, instances, instances_next, instances_temp, scene_instances_idx, scene_obj);
         i.set_field(scene_objects, j, created_instance);
       }
     }
@@ -164,7 +150,6 @@ void generator_v2::init_object_instances() {
 }
 
 bool generator_v2::generate_frame() {
-  previous_job = job;
   job->shapes.clear();
 
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
@@ -173,142 +158,32 @@ bool generator_v2::generate_frame() {
     auto scenes = i.v8_array(obj, "scenes");
     auto video = i.v8_obj(obj, "video");
     for (size_t I = 0; I < scenes->Length(); I++) {
-      auto current_scene = scenes->Get(isolate->GetCurrentContext(), I).ToLocalChecked();
+      auto current_scene = i.get_index(scenes, I);
       if (!current_scene->IsObject()) continue;
       auto sceneobj = current_scene.As<v8::Object>();
+      auto instances = i.v8_array(sceneobj, "instances");
       auto intermediates = i.v8_array(sceneobj, "instances_intermediate");
       auto next_instances = i.v8_array(sceneobj, "instances_next");
       if (!next_instances->IsArray()) continue;
+
       std::unordered_map<int64_t, v8::Local<v8::Object>> parents;
-
       int max_step = 1;
-      int current_step_max = 1;
       int attempt = 0;
+      current_step_max = std::numeric_limits<int>::max();
 
-      // TODO: consider also unordered map for the steps?
-      std::unordered_map<size_t, std::map<int, size_t>> indexes;
+      while (current_step_max > granularity) {
+        if (++attempt != 1) {
+          // TODO: figure out why this doesn't work??
+          // cleanup_previous_attempt(i, instances, next_instances, intermediates);
 
-      // Endless loop: Continue as long as we discover we need more granularity to render motion blur properly
-      do {
-        attempt++;
-
-        // First iteration failed, step size was larger than specified granularity allowed, reset state first to start
-        // over with a clean slate
-        if (attempt > 1) {
           job->shapes.clear();
           indexes.clear();
-          // Copy instance values to instance_next values (resetting all instance next values)
-          {
-            auto instances = i.v8_array(sceneobj, "instances");
-            for (size_t j = 0; j < next_instances->Length(); j++) {
-              auto instance = instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-              auto next = next_instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-
-              handle_error(
-                  next->Set(isolate->GetCurrentContext(),
-                            v8_str(context, "x"),
-                            instance->Get(isolate->GetCurrentContext(), v8_str(context, "x")).ToLocalChecked()));
-              handle_error(
-                  next->Set(isolate->GetCurrentContext(),
-                            v8_str(context, "y"),
-                            instance->Get(isolate->GetCurrentContext(), v8_str(context, "y")).ToLocalChecked()));
-              // undo collisions
-              handle_error(
-                  next->Set(isolate->GetCurrentContext(),
-                            v8_str(context, "vel_x"),
-                            instance->Get(isolate->GetCurrentContext(), v8_str(context, "vel_x")).ToLocalChecked()));
-              handle_error(
-                  next->Set(isolate->GetCurrentContext(),
-                            v8_str(context, "props"),
-                            instance->Get(isolate->GetCurrentContext(), v8_str(context, "props")).ToLocalChecked()));
-
-              handle_error(
-                  next->Set(isolate->GetCurrentContext(),
-                            v8_str(context, "vel_y"),
-                            instance->Get(isolate->GetCurrentContext(), v8_str(context, "vel_y")).ToLocalChecked()));
-              handle_error(next->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "last_collide"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "last_collide")).ToLocalChecked()));
-              handle_error(
-                  next->Set(isolate->GetCurrentContext(),
-                            v8_str(context, "radius"),
-                            instance->Get(isolate->GetCurrentContext(), v8_str(context, "radius")).ToLocalChecked()));
-              handle_error(next->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "radiussize"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "radiussize")).ToLocalChecked()));
-            }
-          }
-          // Copy instance values to instance_intermediate (resetting all intermediate values)
-          {
-            auto instances = i.v8_array(sceneobj, "instances");
-            auto intermediateinstances = i.v8_array(sceneobj, "instances_intermediate");
-            for (size_t j = 0; j < next_instances->Length(); j++) {
-              auto instance = instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-              auto intermediate =
-                  intermediateinstances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-              handle_error(intermediate->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "x"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "x")).ToLocalChecked()));
-              handle_error(intermediate->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "y"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "y")).ToLocalChecked()));
-              // undo collisions
-              handle_error(intermediate->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "vel_x"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "vel_x")).ToLocalChecked()));
-              handle_error(intermediate->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "vel_y"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "vel_y")).ToLocalChecked()));
-              handle_error(intermediate->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "last_collide"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "last_collide")).ToLocalChecked()));
-              handle_error(intermediate->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "radius"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "radius")).ToLocalChecked()));
-              handle_error(intermediate->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "radiussize"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "radiussize")).ToLocalChecked()));
-            }
-          }
+          // reset next and intermediate instances
+          util::generator::copy_instances(i, next_instances, instances);
+          util::generator::copy_instances(i, intermediates, instances);
         }
-
-        // For the current granularity update the Javascript objects (at attempt zero, this is 1 step)
-        for (int current_step = 0; current_step < max_step; current_step++) {
-          // make sure we have shapes vectors for each step we plan to create
-          job->shapes.emplace_back();
-        }
-        // pre-calculate step map for fast determination of whether an object should be part of the step
-        // TODO: extract into helper object
-        std::unordered_map<int, std::unordered_map<int, bool>> step_map;
-        for (int i = 1; i <= max_step; i++) {
-          int diff = max_step / i;
-          int frame = max_step;
-          step_map[i][frame] = true;
-          for (int j = 1; j < i; j++) {
-            frame = max_step - (diff * j);
-            step_map[i][frame] = true;
-          }
-        }
-        // helper function
-        auto do_step = [&](int step_value, int current_step) {
-          const auto& step_map_c = step_map;
-          if (step_map_c.find(step_value) != step_map_c.end()) {
-            const auto val = step_map_c.at(step_value).find(current_step);
-            if (val != step_map_c.at(step_value).end()) {
-              return val->second;
-            }
-          }
-          return false;
-        };
+        job->resize_for_num_steps(max_step);
+        step_calculator sc(max_step);
 
         // For each steps (i.e., this frame could be divided into 10 steps)
         for (int current_step = 0; current_step < max_step; current_step++) {
@@ -319,19 +194,13 @@ bool generator_v2::generate_frame() {
           // We manipulate only the "next" instance, not the current instance, as we might choose to revert these
           // changes if the granularity is not sufficient.
           for (size_t j = 0; j < next_instances->Length(); j++) {
-            auto instance = next_instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-            if (!instance->IsObject()) {
-              continue;
-            }
-            v8::Local<v8::Function> fun2 = instance.As<v8::Object>()
-                                               ->Get(isolate->GetCurrentContext(), v8_str(context, "time"))
-                                               .ToLocalChecked()
-                                               .As<v8::Function>();
-            v8::Handle<v8::Value> args[2];
-            args[0] = v8pp::to_v8(isolate, static_cast<double>(job->frame_number) / max_frames);
-            args[1] = v8pp::to_v8(
-                isolate, static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(max_step));
-            fun2->Call(isolate->GetCurrentContext(), instance, 2, args).ToLocalChecked();
+            auto instance = i.get_index(next_instances, j).As<v8::Object>();
+            if (!instance->IsObject()) continue;
+            const auto t = static_cast<double>(job->frame_number) / max_frames;
+            const auto elapsed =
+                static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(max_step);
+            i.call_fun(instance, "time", t, elapsed);
+
             std::string type = i.str(instance, "type");
             auto x = i.double_number(instance, "x");
             auto y = i.double_number(instance, "y");
@@ -349,14 +218,10 @@ bool generator_v2::generate_frame() {
                 i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
               qt.insert(point_type(position(x, y), j));
             }
-            handle_error(
-                instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8::Number::New(isolate, x)));
-            handle_error(
-                instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8::Number::New(isolate, y)));
-            handle_error(
-                instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8::Number::New(isolate, vel_x)));
-            handle_error(
-                instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8::Number::New(isolate, vel_y)));
+            i.set_field(instance, "x", v8::Number::New(isolate, x));
+            i.set_field(instance, "y", v8::Number::New(isolate, y));
+            i.set_field(instance, "vel_x", v8::Number::New(isolate, vel_x));
+            i.set_field(instance, "vel_y", v8::Number::New(isolate, vel_y));
           }
 
           // Now that we're going over all the instances a second time, at smaller steps potentially, we'll still keep
@@ -368,26 +233,15 @@ bool generator_v2::generate_frame() {
           // For each instance determine how far the object has travelled and if it's within the allowed granularity,
           //  also do the collision detection efficiently using the quadtree we just created
           for (size_t j = 0; j < next_instances->Length(); j++) {
-            auto instance = next_instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-            if (!instance->IsObject()) {
-              continue;
-            }
-            auto previous_instance =
-                intermediates->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-            if (!previous_instance->IsObject()) {
-              continue;
-            }
+            auto instance = i.get_index(next_instances, j).As<v8::Object>();
+            if (!instance->IsObject()) continue;
+            auto previous_instance = i.get_index(intermediates, j).As<v8::Object>();
+            if (!previous_instance->IsObject()) continue;
 
             // Update time here again
-            v8::Local<v8::Function> fun2 = instance.As<v8::Object>()
-                                               ->Get(isolate->GetCurrentContext(), v8_str(context, "time"))
-                                               .ToLocalChecked()
-                                               .As<v8::Function>();
-            v8::Handle<v8::Value> args[2];
-            args[0] = v8pp::to_v8(isolate, static_cast<double>(job->frame_number) / max_frames);
-            args[1] = v8pp::to_v8(
-                isolate, static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(max_step));
-            fun2->Call(isolate->GetCurrentContext(), instance, 2, args).ToLocalChecked();
+            const auto t = static_cast<double>(job->frame_number) / max_frames;
+            const auto e = static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(max_step);
+            i.call_fun(instance, "time", t, e);
 
             auto type = i.str(instance, "type");
             auto x = i.double_number(instance, "x");
@@ -429,18 +283,13 @@ bool generator_v2::generate_frame() {
                   // TODO: can we uncomment this one again, if not, why-not?
                   // continue;
                 }
-                auto instance2 =
-                    next_instances->Get(isolate->GetCurrentContext(), index2).ToLocalChecked().As<v8::Object>();
+                auto instance2 = i.get_index(next_instances, index2).As<v8::Object>();
                 auto x2 = i.double_number(instance2, "x");
                 auto y2 = i.double_number(instance2, "y");
-                if (!instance2->IsObject()) {
-                  continue;
-                }
+                if (!instance2->IsObject()) continue;
 
                 // they already collided, no need to let them collide again
-                if (last_collide == index2) {
-                  continue;
-                }
+                if (last_collide == index2) continue;
 
                 // handle collision
                 auto vel_x = i.double_number(instance, "vel_x");
@@ -455,21 +304,15 @@ bool generator_v2::generate_frame() {
 
                 // save velocities
                 auto updated_vel1 = subtract_vector(vector2d(vel_x, vel_y), multiply_vector(normal, optimized_p));
-                handle_error(instance->Set(
-                    isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8::Number::New(isolate, updated_vel1.x)));
-                handle_error(instance->Set(
-                    isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8::Number::New(isolate, updated_vel1.y)));
+                i.set_field(instance, "vel_x", v8::Number::New(isolate, updated_vel1.x));
+                i.set_field(instance, "vel_y", v8::Number::New(isolate, updated_vel1.y));
                 auto updated_vel2 = add_vector(vector2d(vel_x2, vel_y2), multiply_vector(normal, optimized_p));
-                handle_error(instance2->Set(
-                    isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8::Number::New(isolate, updated_vel2.x)));
-                handle_error(instance2->Set(
-                    isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8::Number::New(isolate, updated_vel2.y)));
+                i.set_field(instance2, "vel_x", v8::Number::New(isolate, updated_vel2.x));
+                i.set_field(instance2, "vel_y", v8::Number::New(isolate, updated_vel2.y));
 
                 // save collision
-                handle_error(instance->Set(
-                    isolate->GetCurrentContext(), v8_str(context, "last_collide"), v8::Number::New(isolate, index2)));
-                handle_error(instance2->Set(
-                    isolate->GetCurrentContext(), v8_str(context, "last_collide"), v8::Number::New(isolate, index)));
+                i.set_field(instance, "last_collide", v8::Number::New(isolate, index2));
+                i.set_field(instance2, "last_collide", v8::Number::New(isolate, index));
               }
             }
 
@@ -493,7 +336,7 @@ bool generator_v2::generate_frame() {
 
             // See if we require this step for this object
             auto steps = i.integer_number(instance, "steps");
-            if (!do_step(steps, current_step + 1)) {
+            if (!sc.do_step(steps, current_step + 1)) {
               continue;
             }
             auto id = i.str(instance, "id");
@@ -545,93 +388,33 @@ bool generator_v2::generate_frame() {
 
           // Copy our "next" instances to intermediate instances, which will serve as a "previous" instance for the next
           // step.
-          {
-            auto instances = i.v8_array(sceneobj, "instances_next");
-            auto intermediateinstances = i.v8_array(sceneobj, "instances_intermediate");
-            for (size_t j = 0; j < next_instances->Length(); j++) {
-              auto instance = instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-              auto intermediate =
-                  intermediateinstances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-              handle_error(intermediate->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "x"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "x")).ToLocalChecked()));
-              handle_error(intermediate->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "y"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "y")).ToLocalChecked()));
-              handle_error(intermediate->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "vel_x"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "vel_x")).ToLocalChecked()));
-              handle_error(intermediate->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "vel_y"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "vel_y")).ToLocalChecked()));
-              handle_error(intermediate->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "last_collide"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "last_collide")).ToLocalChecked()));
-              handle_error(intermediate->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "radius"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "radius")).ToLocalChecked()));
-              handle_error(intermediate->Set(
-                  isolate->GetCurrentContext(),
-                  v8_str(context, "radiussize"),
-                  instance->Get(isolate->GetCurrentContext(), v8_str(context, "radiussize")).ToLocalChecked()));
-            }
-          }
+          util::generator::copy_instances(i, intermediates, next_instances);
+
           if (job->shapes.size() != max_step) {
             break;
           }
         }
-      } while (current_step_max > 2);
+      }
 
       // At this point we are sure that we've handled the frame with sufficiently fine-grained granularity, and we can
       // commit to saving the "next" instances over the current instances.
-      {
-        auto instances = i.v8_array(sceneobj, "instances");
-        auto nextinstances = i.v8_array(sceneobj, "instances_next");
-        for (size_t j = 0; j < next_instances->Length(); j++) {
-          auto instance = instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-          auto next = nextinstances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-          handle_error(instance->Set(isolate->GetCurrentContext(),
-                                     v8_str(context, "x"),
-                                     next->Get(isolate->GetCurrentContext(), v8_str(context, "x")).ToLocalChecked()));
-          handle_error(instance->Set(isolate->GetCurrentContext(),
-                                     v8_str(context, "y"),
-                                     next->Get(isolate->GetCurrentContext(), v8_str(context, "y")).ToLocalChecked()));
-          handle_error(
-              instance->Set(isolate->GetCurrentContext(),
-                            v8_str(context, "vel_x"),
-                            next->Get(isolate->GetCurrentContext(), v8_str(context, "vel_x")).ToLocalChecked()));
-          handle_error(
-              instance->Set(isolate->GetCurrentContext(),
-                            v8_str(context, "vel_y"),
-                            next->Get(isolate->GetCurrentContext(), v8_str(context, "vel_y")).ToLocalChecked()));
-          handle_error(
-              instance->Set(isolate->GetCurrentContext(),
-                            v8_str(context, "last_collide"),
-                            next->Get(isolate->GetCurrentContext(), v8_str(context, "last_collide")).ToLocalChecked()));
-          handle_error(
-              instance->Set(isolate->GetCurrentContext(),
-                            v8_str(context, "radius"),
-                            next->Get(isolate->GetCurrentContext(), v8_str(context, "radius")).ToLocalChecked()));
-          handle_error(
-              instance->Set(isolate->GetCurrentContext(),
-                            v8_str(context, "radiussize"),
-                            next->Get(isolate->GetCurrentContext(), v8_str(context, "radiussize")).ToLocalChecked()));
-        }
-      }
+      util::generator::copy_instances(i, instances, next_instances, true);
     }
   });
   job->job_number++;
   job->frame_number++;
   return job->frame_number != max_frames;
-  // assistant->the_job->shapes[0] = assistant->the_previous_job->shapes[0];
-  // assistant->the_job->shapes[0].reset( assistant->the_previous_job->shapes[0] );
-  // return !write_frame_fun();
+}
+
+void generator_v2::cleanup_previous_attempt(v8_interact& i,
+                                            v8::Local<v8::Array>& instances,
+                                            v8::Local<v8::Array>& next_instances,
+                                            v8::Local<v8::Array>& intermediates) {
+  job->shapes.clear();
+  indexes.clear();
+  // reset next and intermediate instances
+  util::generator::copy_instances(i, next_instances, instances);
+  util::generator::copy_instances(i, intermediates, instances);
 }
 
 std::shared_ptr<data::job> generator_v2::get_job() const {

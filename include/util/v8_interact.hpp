@@ -70,6 +70,17 @@ public:
     return v8_index_object(context, obj, field).As<v8::Array>();
   }
 
+  v8::Local<v8::Array> v8_array(v8::Local<v8::Object>& obj,
+                                const std::string& field,
+                                v8::Local<v8::Array> default_val) {
+    auto tmp = v8_index_object(context, obj, field).As<v8::Array>();
+    if (!tmp->IsArray()) {
+      set_field(obj, field, default_val);
+      tmp = v8_index_object(context, obj, field).As<v8::Array>();
+    }
+    return tmp;
+  }
+
   v8::Local<v8::Number> v8_number(v8::Local<v8::Object>& obj, const std::string& field) {
     return v8_index_object(context, obj, field).As<v8::Number>();
   }
