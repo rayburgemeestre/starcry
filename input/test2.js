@@ -125,13 +125,14 @@ _ = {
       'time': function(t, elapsed) {
         this.radius += 100.0 * elapsed;  // 25 pixels per second
         this.radius %= this.props.maxradius;
+        // video.scale += 0.001;
       },
       'proximity': function(t) {
         this.radiussize = 5.0 + (5.0 * t);
       }
     },
   },
-  'video': {'duration': 10, 'fps': 60, 'width': 1920, 'height': 1080, 'scale': 1, 'rand_seed': 5, 'granularity': 1},
+  'video': {'duration': 10, 'fps': 60, 'width': 1920, 'height': 1080, 'scale': 1, 'rand_seed': 5, 'granularity': 1000},
   'scenes': [{
     'name': 'scene1',
     'objects': [

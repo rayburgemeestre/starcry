@@ -111,7 +111,6 @@ inline v8::Handle<v8::Value> v8_wrapper::run_raw(std::string const& source) {
   if (try_catch.HasCaught()) {
     rethrow_as_runtime_error(isolate, try_catch);
   }
-  std::cout << "Returning result yo: " << result->IsString() << std::endl;
   return result;
 }
 

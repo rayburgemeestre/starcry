@@ -8,12 +8,11 @@
 #include <cmath>
 #include <memory>
 #include <mutex>
-#include <random>
 
 #include "primitives.h"
 #include "primitives_v8.h"
-#include "scripting.h"
-#include "util/assistant.h"
+#include "scripting_v2.h"
+#include "util/generator.h"
 #include "util/quadtree.h"
 #include "util/v8_interact.hpp"
 #include "util/v8_wrapper.hpp"
@@ -23,12 +22,7 @@
 #include "shapes/position.h"
 #include "shapes/rectangle_v2.h"
 
-extern std::unique_ptr<assistant_> assistant;
 extern std::shared_ptr<v8_wrapper> context;
-
-void output_fun(const std::string& s) {
-  std::cout << s << std::endl;
-}
 
 generator_v2::generator_v2() {
   static std::once_flag once;
@@ -37,215 +31,58 @@ generator_v2::generator_v2() {
   });
 }
 
-void handle_error(v8::Maybe<bool> res) {
-  if (res.ToChecked() == false) {
-    std::cout << "Failed to set value" << std::endl;
-  }
-}
-
-void copy_object(v8::Isolate* isolate, v8::Local<v8::Object> obj_def, v8::Local<v8::Object> new_instance) {
-  auto obj_fields = obj_def->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
-  for (size_t k = 0; k < obj_fields->Length(); k++) {
-    auto field_name = obj_fields->Get(isolate->GetCurrentContext(), k).ToLocalChecked();
-    auto field_value = obj_def->Get(isolate->GetCurrentContext(), field_name).ToLocalChecked();
-    if (field_value->IsObject() && !field_value->IsFunction()) {
-      v8::Local<v8::Object> new_sub_instance = v8::Object::New(isolate);
-      copy_object(isolate, field_value.As<v8::Object>(), new_sub_instance);
-      handle_error(new_instance->Set(isolate->GetCurrentContext(), field_name, new_sub_instance));
-    } else {
-      handle_error(new_instance->Set(isolate->GetCurrentContext(), field_name, field_value));
-    }
-  }
-}
-
-void transfer_gradient(v8_interact& i,
-                       v8::Local<v8::Object>& instance,
-                       data::shape& new_shape,
-                       std::unordered_map<std::string, data::gradient>& gradients) {
-  auto isolate = i.get_isolate();
-  std::string gradient_id = i.str(instance, "gradient");
-  if (!gradient_id.empty()) {
-    if (new_shape.gradients_.empty()) {
-      if (gradients.find(gradient_id) != gradients.end()) {
-        new_shape.gradients_.emplace_back(1.0, gradients[gradient_id]);
-      }
-    }
-  }
-  auto gradient_array = i.v8_array(instance, "gradients");
-  if (new_shape.gradients_.empty()) {
-    for (size_t k = 0; k < gradient_array->Length(); k++) {
-      auto gradient_data = gradient_array->Get(isolate->GetCurrentContext(), k).ToLocalChecked().As<v8::Array>();
-      if (!gradient_data->IsArray()) {
-        continue;
-      }
-      auto opacity = gradient_data->Get(isolate->GetCurrentContext(), 0)
-                         .ToLocalChecked()
-                         .As<v8::Number>()
-                         ->NumberValue(isolate->GetCurrentContext())
-                         .ToChecked();
-      auto gradient_id =
-          v8_str(isolate, gradient_data->Get(isolate->GetCurrentContext(), 1).ToLocalChecked().As<v8::String>());
-      new_shape.gradients_.emplace_back(opacity, gradients[gradient_id]);
-    }
-  }
-}
-
-v8::Local<v8::Object> process_object(v8_interact& i,
-                                     v8::Isolate* isolate,
-                                     v8::Local<v8::Array>& objects,
-                                     v8::Local<v8::Array>& scene_instances,
-                                     v8::Local<v8::Array>& scene_instances_next,
-                                     v8::Local<v8::Array>& scene_instances_intermediate,
-                                     size_t& scene_instances_idx,
-                                     v8::Local<v8::Object>& scene_obj,
-                                     v8::Local<v8::Object>* parent_object = nullptr) {
-  // Parent object
-  int64_t level = 0;
-  if (parent_object != nullptr) {
-    level = i.integer_number(*parent_object, "level") + 1;
-  }
-
-  // The object from the scene
-  auto id = i.str(scene_obj, "id");
-  auto v8_id = i.v8_string(scene_obj, "id");
-  auto v8_x = i.v8_number(scene_obj, "x");
-  auto v8_y = i.v8_number(scene_obj, "y");
-  auto v8_vel_x = i.v8_number(scene_obj, "vel_x");
-  auto v8_vel_y = i.v8_number(scene_obj, "vel_y");
-  auto scene_props = i.v8_obj(scene_obj, "props");
-
-  // The object definition that will be instantiated
-  auto obj_def = v8_index_object(context, objects, id).template As<v8::Object>();
-  auto v8_gradients = v8_index_object(context, obj_def, "gradients").As<v8::Array>();
-  if (!obj_def->IsObject()) {
-    return {};
-  }
-
-  // The new object instantiation as specified by the scene object
-  v8::Local<v8::Object> new_instance = v8::Object::New(isolate);
-  v8::Local<v8::Object> new_instance_next = v8::Object::New(isolate);
-  v8::Local<v8::Object> new_instance_intermediate = v8::Object::New(isolate);
-
-  auto copy_object_and_initialize = [&](v8::Local<v8::Object> new_instance, const std::string& annotation) {
-    copy_object(isolate, obj_def, new_instance);
-    handle_error(new_instance->SetPrototype(isolate->GetCurrentContext(), scene_obj));
-    handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "id"), v8_id));
-    handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "x"), v8_x));
-    handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "y"), v8_y));
-    handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_x"), v8_vel_x));
-    handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "vel_y"), v8_vel_y));
-    handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "subobj"), v8::Array::New(isolate)));
-    handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "meta"), v8_str(context, annotation)));
-    handle_error(
-        new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "level"), v8::Number::New(isolate, level)));
-    if (v8_gradients->IsArray() && v8_gradients->Length() > 0) {
-      handle_error(new_instance->Set(isolate->GetCurrentContext(), v8_str(context, "gradients"), v8_gradients));
-    }
-
-    // Copy over scene properties to instance properties
-    auto props = i.v8_obj(new_instance, "props");
-    auto obj_fields = scene_props->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
-    for (size_t k = 0; k < obj_fields->Length(); k++) {
-      auto field_name = obj_fields->Get(isolate->GetCurrentContext(), k).ToLocalChecked();
-      auto field_value = scene_props->Get(isolate->GetCurrentContext(), field_name).ToLocalChecked();
-      handle_error(props->Set(isolate->GetCurrentContext(), field_name, field_value));
-    }
-
-    // Call init function on new instance
-    v8::Local<v8::Function> fun = new_instance.As<v8::Object>()
-                                      ->Get(isolate->GetCurrentContext(), v8_str(context, "init"))
-                                      .ToLocalChecked()
-                                      .As<v8::Function>();
-    v8::Handle<v8::Value> args[1];
-    args[0] = v8pp::to_v8(isolate, 0.5);
-    fun->Call(isolate->GetCurrentContext(), new_instance, 1, args).ToLocalChecked();
-  };
-  copy_object_and_initialize(new_instance, "instance");
-  copy_object_and_initialize(new_instance_next, "next");
-  copy_object_and_initialize(new_instance_intermediate, "intermediate");
-
-  // Add the instance to the scene for later rendering.
-  handle_error(scene_instances->Set(isolate->GetCurrentContext(), scene_instances_idx, new_instance));
-  handle_error(scene_instances_next->Set(isolate->GetCurrentContext(), scene_instances_idx, new_instance_next));
-  handle_error(
-      scene_instances_intermediate->Set(isolate->GetCurrentContext(), scene_instances_idx, new_instance_intermediate));
-  scene_instances_idx++;
-
-  // Recurse for the sub objects the init function populated.
-  handle_error(scene_obj->Set(isolate->GetCurrentContext(), v8_str(context, "level"), v8::Number::New(isolate, level)));
-  auto subobjs = i.v8_array(new_instance, "subobj");
-  auto subobjs2 = i.v8_array(new_instance_next, "subobj");
-  auto subobjs3 = i.v8_array(new_instance_intermediate, "subobj");
-  for (size_t k = 0; k < subobjs->Length(); k++) {
-    auto subobj = subobjs->Get(isolate->GetCurrentContext(), k).ToLocalChecked().As<v8::Object>();
-    auto instance = process_object(i,
-                                   isolate,
-                                   objects,
-                                   scene_instances,
-                                   scene_instances_next,
-                                   scene_instances_intermediate,
-                                   scene_instances_idx,
-                                   subobj,
-                                   &scene_obj);
-    handle_error(subobjs->Set(isolate->GetCurrentContext(), k, instance));
-    handle_error(subobjs2->Set(isolate->GetCurrentContext(), k, instance));
-    handle_error(subobjs3->Set(isolate->GetCurrentContext(), k, instance));
-  }
-
-  // This is the object that will be also placed as a pointer in the subobject array for the object
-  // return new_instance_next;
-  return new_instance_next;
-}
-
-// TODO: expose this via a function instead
-extern std::mt19937 mt;
-
 void generator_v2::init(const std::string& filename) {
-  // Initialize Javascript Context
+  init_context(filename);
+  init_user_script(filename);
+  init_job();
+  init_video_meta_info();
+  init_gradients();
+  init_object_instances();
+}
+
+void generator_v2::init_context(const std::string& filename) {
   if (context == nullptr) {
     context = std::make_shared<v8_wrapper>(filename);
   }
   context->reset();
   context->add_fun("output", &output_fun);
-  context->add_fun("rand", &rand_fun);
+  context->add_fun("rand", &rand_fun_v2);
   context->add_include_fun();
+}
 
-  // Prepare job object
-  assistant = std::make_unique<assistant_>();
-  assistant->the_job = std::make_unique<data::job>();
-  auto& job = *assistant->the_job;
-  job.background_color.r = 0;
-  job.background_color.g = 0;
-  job.background_color.b = 0;
-  job.background_color.a = 0;
-  job.width = 1920;   // canvas_w;
-  job.height = 1080;  // canvas_h;
-  job.job_number = 0;
-  job.frame_number = assistant->current_frame;
-  job.rendered = false;
-  job.last_frame = false;
-  job.num_chunks = 1;    // num_chunks;
-  job.canvas_w = 1920;   // canvas_w;
-  job.canvas_h = 1080;   // canvas_h;
-  job.scale = 1.0;       // scale;
-  job.compress = false;  // TODO: hardcoded
-  job.save_image = false;
-  assistant->max_frames = 250;  // max_frames;
-  // if (custom_max_frames) {
-  //   assistant->max_frames = *custom_max_frames;
-  // }
-  // assistant->realtime = realtime;
-
-  // Evaluate the user defined javascript project
+void generator_v2::init_user_script(const std::string& filename) {
   std::ifstream stream(filename.c_str());
   if (!stream && filename != "-") {
     throw std::runtime_error("could not locate file " + filename);
   }
-
-  // Extract video meta information
   std::istreambuf_iterator<char> begin(filename == "-" ? std::cin : stream), end;
   const auto source = std::string("script = ") + std::string(begin, end);
-  context->run_array(source, [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  context->run(source);
+  context->run("var video = script.video;");
+}
+
+void generator_v2::init_job() {
+  job = std::make_shared<data::job>();
+  job->background_color.r = 0;
+  job->background_color.g = 0;
+  job->background_color.b = 0;
+  job->background_color.a = 0;
+  job->width = 1920;   // canvas_w;
+  job->height = 1080;  // canvas_h;
+  job->job_number = 0;
+  job->frame_number = frame_number;
+  job->rendered = false;
+  job->last_frame = false;
+  job->num_chunks = 1;    // num_chunks;
+  job->canvas_w = 1920;   // canvas_w;
+  job->canvas_h = 1080;   // canvas_h;
+  job->scale = 1.0;       // scale;
+  job->compress = false;  // TODO: hardcoded
+  job->save_image = false;
+}
+
+void generator_v2::init_video_meta_info() {
+  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto video = v8_index_object(context, val, "video").As<v8::Object>();
     auto duration = i.double_number(video, "duration");
@@ -254,29 +91,29 @@ void generator_v2::init(const std::string& filename) {
     canvas_h = i.double_number(video, "height");
     auto seed = i.double_number(video, "rand_seed");
     granularity = i.double_number(video, "granularity");
-    mt.seed(seed);
+    set_rand_seed(seed);
 
     max_frames = duration * use_fps;
-    job.width = canvas_w;
-    job.height = canvas_h;
-    job.canvas_w = canvas_w;
-    job.canvas_h = canvas_h;
-    job.scale = std::max(i.double_number(video, "scale"), static_cast<double>(1));
+    job->width = canvas_w;
+    job->height = canvas_h;
+    job->canvas_w = canvas_w;
+    job->canvas_h = canvas_h;
+    job->scale = std::max(i.double_number(video, "scale"), static_cast<double>(1));
   });
+}
 
-  // Extract all the gradients defined by the project
+void generator_v2::init_gradients() {
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
     auto gradient_objects = i.v8_obj(obj, "gradients");
-    auto gradient_fields = gradient_objects->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
+    auto gradient_fields = gradient_objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
     for (size_t k = 0; k < gradient_fields->Length(); k++) {
-      auto gradient_id = gradient_fields->Get(isolate->GetCurrentContext(), k).ToLocalChecked();
-      auto positions =
-          gradient_objects->Get(isolate->GetCurrentContext(), gradient_id).ToLocalChecked().As<v8::Array>();
+      auto gradient_id = i.get_index(gradient_fields, k);
+      auto positions = i.get(gradient_objects, gradient_id).As<v8::Array>();
       auto id = v8_str(isolate, gradient_id.As<v8::String>());
       for (size_t l = 0; l < positions->Length(); l++) {
-        auto position = positions->Get(isolate->GetCurrentContext(), l).ToLocalChecked().As<v8::Object>();
+        auto position = i.get_index(positions, l).As<v8::Object>();
         auto pos = i.double_number(position, "position");
         auto r = i.double_number(position, "r");
         auto g = i.double_number(position, "g");
@@ -286,60 +123,55 @@ void generator_v2::init(const std::string& filename) {
       }
     }
   });
+}
 
-  // Instantiate all the objects defined in the scene recursively, three times(!)
+void generator_v2::init_object_instances() {
   context->run_array("script", [](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
     auto scenes = i.v8_array(obj, "scenes");
     auto objects = i.v8_array(obj, "objects");
     for (size_t I = 0; I < scenes->Length(); I++) {
-      auto current_scene = scenes->Get(isolate->GetCurrentContext(), I).ToLocalChecked();
+      auto current_scene = i.get_index(scenes, I);
       if (!current_scene->IsObject()) continue;
       auto sceneobj = current_scene.As<v8::Object>();
       auto scene_objects = i.v8_array(sceneobj, "objects");
-      // current instances
       auto scene_instances = i.v8_array(sceneobj, "instances");
-      // current'
       auto scene_instances_next = i.v8_array(sceneobj, "instances_next");
-      // current' intermediate state per step
       auto scene_instances_intermediate = i.v8_array(sceneobj, "instances_intermediate");
       if (!scene_instances->IsArray()) {
-        handle_error(
-            sceneobj->Set(isolate->GetCurrentContext(), v8_str(context, "instances"), v8::Array::New(isolate)));
-        handle_error(
-            sceneobj->Set(isolate->GetCurrentContext(), v8_str(context, "instances_next"), v8::Array::New(isolate)));
-        handle_error(sceneobj->Set(
-            isolate->GetCurrentContext(), v8_str(context, "instances_intermediate"), v8::Array::New(isolate)));
+        i.set_field(sceneobj, "instances", v8::Array::New(isolate));
+        i.set_field(sceneobj, "instances_next", v8::Array::New(isolate));
+        i.set_field(sceneobj, "instances_intermediate", v8::Array::New(isolate));
       }
       scene_instances = i.v8_array(sceneobj, "instances");
       scene_instances_next = i.v8_array(sceneobj, "instances_next");
       scene_instances_intermediate = i.v8_array(sceneobj, "instances_intermediate");
       size_t scene_instances_idx = scene_instances->Length();
       for (size_t j = 0; j < scene_objects->Length(); j++) {
-        auto scene_obj = scene_objects->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-        auto instance = process_object(i,
-                                       isolate,
-                                       objects,
-                                       scene_instances,
-                                       scene_instances_next,
-                                       scene_instances_intermediate,
-                                       scene_instances_idx,
-                                       scene_obj);
-        handle_error(scene_objects->Set(isolate->GetCurrentContext(), j, instance));
+        auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
+        auto created_instance = util::generator::instantiate_objects(i,
+                                                                     objects,
+                                                                     scene_instances,
+                                                                     scene_instances_next,
+                                                                     scene_instances_intermediate,
+                                                                     scene_instances_idx,
+                                                                     scene_obj);
+        i.set_field(scene_objects, j, created_instance);
       }
     }
   });
 }
 
 bool generator_v2::generate_frame() {
-  assistant->the_previous_job = assistant->the_job;
-  assistant->the_job->shapes.clear();
+  previous_job = job;
+  job->shapes.clear();
 
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
     auto scenes = i.v8_array(obj, "scenes");
+    auto video = i.v8_obj(obj, "video");
     for (size_t I = 0; I < scenes->Length(); I++) {
       auto current_scene = scenes->Get(isolate->GetCurrentContext(), I).ToLocalChecked();
       if (!current_scene->IsObject()) continue;
@@ -363,7 +195,7 @@ bool generator_v2::generate_frame() {
         // First iteration failed, step size was larger than specified granularity allowed, reset state first to start
         // over with a clean slate
         if (attempt > 1) {
-          assistant->the_job->shapes.clear();
+          job->shapes.clear();
           indexes.clear();
           // Copy instance values to instance_next values (resetting all instance next values)
           {
@@ -452,7 +284,7 @@ bool generator_v2::generate_frame() {
         // For the current granularity update the Javascript objects (at attempt zero, this is 1 step)
         for (int current_step = 0; current_step < max_step; current_step++) {
           // make sure we have shapes vectors for each step we plan to create
-          assistant->the_job->shapes.emplace_back();
+          job->shapes.emplace_back();
         }
         // pre-calculate step map for fast determination of whether an object should be part of the step
         // TODO: extract into helper object
@@ -496,7 +328,7 @@ bool generator_v2::generate_frame() {
                                                .ToLocalChecked()
                                                .As<v8::Function>();
             v8::Handle<v8::Value> args[2];
-            args[0] = v8pp::to_v8(isolate, static_cast<double>(assistant->the_job->frame_number) / max_frames);
+            args[0] = v8pp::to_v8(isolate, static_cast<double>(job->frame_number) / max_frames);
             args[1] = v8pp::to_v8(
                 isolate, static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(max_step));
             fun2->Call(isolate->GetCurrentContext(), instance, 2, args).ToLocalChecked();
@@ -552,7 +384,7 @@ bool generator_v2::generate_frame() {
                                                .ToLocalChecked()
                                                .As<v8::Function>();
             v8::Handle<v8::Value> args[2];
-            args[0] = v8pp::to_v8(isolate, static_cast<double>(assistant->the_job->frame_number) / max_frames);
+            args[0] = v8pp::to_v8(isolate, static_cast<double>(job->frame_number) / max_frames);
             args[1] = v8pp::to_v8(
                 isolate, static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(max_step));
             fun2->Call(isolate->GetCurrentContext(), instance, 2, args).ToLocalChecked();
@@ -670,18 +502,19 @@ bool generator_v2::generate_frame() {
             auto radius = i.double_number(instance, "radius");
             auto radiussize = i.double_number(instance, "radiussize");
             auto type = i.str(instance, "type");
+            auto scale = std::max(i.double_number(video, "scale"), static_cast<double>(1));
 
             data::shape new_shape;
             new_shape.x = x;
             new_shape.y = y;
 
             new_shape.gradients_.clear();
-            transfer_gradient(i, instance, new_shape, gradients);
+            util::generator::copy_gradient_from_object_to_shape(i, instance, new_shape, gradients);
             while (level > 0) {
               level--;
               new_shape.x += i.double_number(parents[level], "x");
               new_shape.y += i.double_number(parents[level], "y");
-              transfer_gradient(i, parents[level], new_shape, gradients);
+              util::generator::copy_gradient_from_object_to_shape(i, parents[level], new_shape, gradients);
             }
 
             if (new_shape.gradients_.empty()) {
@@ -699,14 +532,15 @@ bool generator_v2::generate_frame() {
               new_shape.type = data::shape_type::circle;
               // wrap this in a proper add method
               if (current_step + 1 != max_step) {
-                indexes[j][current_step] = assistant->the_job->shapes[current_step].size();
+                indexes[j][current_step] = job->shapes[current_step].size();
               } else {
                 new_shape.indexes = indexes[j];
               }
-              assistant->the_job->shapes[current_step].push_back(new_shape);
+              job->shapes[current_step].push_back(new_shape);
             } else {
               new_shape.type = data::shape_type::none;
             }
+            job->scale = scale;
           }
 
           // Copy our "next" instances to intermediate instances, which will serve as a "previous" instance for the next
@@ -748,7 +582,7 @@ bool generator_v2::generate_frame() {
                   instance->Get(isolate->GetCurrentContext(), v8_str(context, "radiussize")).ToLocalChecked()));
             }
           }
-          if (assistant->the_job->shapes.size() != max_step) {
+          if (job->shapes.size() != max_step) {
             break;
           }
         }
@@ -792,14 +626,14 @@ bool generator_v2::generate_frame() {
       }
     }
   });
-  assistant->the_job->job_number++;
-  assistant->the_job->frame_number++;
-  return assistant->the_job->frame_number != max_frames;
-  // assistant->the_job.shapes[0] = assistant->the_previous_job.shapes[0];
-  // assistant->the_job.shapes[0].reset( assistant->the_previous_job.shapes[0] );
+  job->job_number++;
+  job->frame_number++;
+  return job->frame_number != max_frames;
+  // assistant->the_job->shapes[0] = assistant->the_previous_job->shapes[0];
+  // assistant->the_job->shapes[0].reset( assistant->the_previous_job->shapes[0] );
   // return !write_frame_fun();
 }
 
 std::shared_ptr<data::job> generator_v2::get_job() const {
-  return assistant->the_job;
+  return job;
 }

@@ -15,6 +15,10 @@
 
 class generator_v2 {
 private:
+  std::shared_ptr<data::job> job;
+  std::shared_ptr<data::job> previous_job;
+  uint32_t frame_number;
+
   size_t max_frames = 0;
   int32_t canvas_w = 0;
   int32_t canvas_h = 0;
@@ -30,6 +34,13 @@ public:
   ~generator_v2() = default;
 
   void init(const std::string &filename);
+  void init_context(const std::string &filename);
+  void init_user_script(const std::string &filename);
+  void init_job();
+  void init_video_meta_info();
+  void init_gradients();
+  void init_object_instances();
+
   bool generate_frame();
   std::shared_ptr<data::job> get_job() const;
   double fps() const {
