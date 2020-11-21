@@ -125,7 +125,7 @@ _ = {
       'time': function(t, elapsed) {
         this.radius += 100.0 * elapsed;  // 25 pixels per second
         this.radius %= this.props.maxradius;
-        // video.scale += 0.001;
+        // script.video.scale += 0.001;
       },
       'proximity': function(t) {
         this.radiussize = 5.0 + (5.0 * t);

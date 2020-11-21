@@ -123,7 +123,7 @@ _ = {
     'height': 1080,
     'scale': 1,
     'rand_seed': 1,
-    'granularity': 100,
+    'granularity': 5,
   },
   'scenes': [{
     'name': 'scene1',

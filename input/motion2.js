@@ -84,7 +84,7 @@ _ = {
         // });
       },
       'time': function(t, e) {
-        // video.scale += 0.1 * e;
+        // script.video.scale += 0.1 * e;
         if (!this.props.start && t > 0.1) {
           this.props.start = true;
 

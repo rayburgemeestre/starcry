@@ -57,7 +57,6 @@ void generator_v2::init_user_script(const std::string& filename) {
   std::istreambuf_iterator<char> begin(filename == "-" ? std::cin : stream), end;
   const auto source = std::string("script = ") + std::string(begin, end);
   context->run(source);
-  context->run("var video = script.video;");
 }
 
 void generator_v2::init_job() {
@@ -89,7 +88,7 @@ void generator_v2::init_video_meta_info() {
     canvas_w = i.double_number(video, "width");
     canvas_h = i.double_number(video, "height");
     auto seed = i.double_number(video, "rand_seed");
-    granularity = i.double_number(video, "granularity");
+    tolerated_granularity = i.double_number(video, "granularity");
     set_rand_seed(seed);
 
     max_frames = duration * use_fps;
@@ -166,225 +165,27 @@ bool generator_v2::generate_frame() {
       auto next_instances = i.v8_array(sceneobj, "instances_next");
       if (!next_instances->IsArray()) continue;
 
-      std::unordered_map<int64_t, v8::Local<v8::Object>> parents;
-      int max_step = 1;
-      int attempt = 0;
+      parents.clear();
+      max_step = 1;
+      attempt = 0;
       current_step_max = std::numeric_limits<int>::max();
 
-      while (current_step_max > granularity) {
+      while (current_step_max > tolerated_granularity) {
         if (++attempt != 1) {
-          // TODO: figure out why this doesn't work??
-          // cleanup_previous_attempt(i, instances, next_instances, intermediates);
-
-          job->shapes.clear();
-          indexes.clear();
-          // reset next and intermediate instances
-          util::generator::copy_instances(i, next_instances, instances);
-          util::generator::copy_instances(i, intermediates, instances);
+          cleanup_previous_attempt(i, instances, next_instances, intermediates);
         }
         job->resize_for_num_steps(max_step);
         step_calculator sc(max_step);
 
         // For each steps (i.e., this frame could be divided into 10 steps)
-        for (int current_step = 0; current_step < max_step; current_step++) {
-          // Initialize a quadtree
+        for (current_step = 0; current_step < max_step; current_step++) {
           quadtree qt(rectangle_v2(position(-width() / 2, -height() / 2), width(), height()), 32);
 
-          // For each scene instance, let time progress and update it's x, y and velocity and also add to quadtree
-          // We manipulate only the "next" instance, not the current instance, as we might choose to revert these
-          // changes if the granularity is not sufficient.
-          for (size_t j = 0; j < next_instances->Length(); j++) {
-            auto instance = i.get_index(next_instances, j).As<v8::Object>();
-            if (!instance->IsObject()) continue;
-            const auto t = static_cast<double>(job->frame_number) / max_frames;
-            const auto elapsed =
-                static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(max_step);
-            i.call_fun(instance, "time", t, elapsed);
+          update_object_positions(i, next_instances, max_step, qt);
 
-            std::string type = i.str(instance, "type");
-            auto x = i.double_number(instance, "x");
-            auto y = i.double_number(instance, "y");
-            auto vel_x = i.double_number(instance, "vel_x");
-            auto vel_y = i.double_number(instance, "vel_y");
-            if (!std::isnan(vel_x)) {
-              x += (vel_x / static_cast<double>(max_step));
-            }
-            if (!std::isnan(vel_y)) {
-              y += vel_y / static_cast<double>(max_step);
-            }
+          update_object_interactions(i, next_instances, intermediates, qt);
 
-            // For now we only care about circles
-            if (type == "circle" &&
-                i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
-              qt.insert(point_type(position(x, y), j));
-            }
-            i.set_field(instance, "x", v8::Number::New(isolate, x));
-            i.set_field(instance, "y", v8::Number::New(isolate, y));
-            i.set_field(instance, "vel_x", v8::Number::New(isolate, vel_x));
-            i.set_field(instance, "vel_y", v8::Number::New(isolate, vel_y));
-          }
-
-          // Now that we're going over all the instances a second time, at smaller steps potentially, we'll still keep
-          // track of the required steps we find this time. It could be objects were speeding up exponentially and the
-          // previously chosen stepsize we is still not sufficient to handle with this kind of movement. If it's still
-          // too high, we can discard everything again and try once more with a bigger step size.
-          current_step_max = 1;
-
-          // For each instance determine how far the object has travelled and if it's within the allowed granularity,
-          //  also do the collision detection efficiently using the quadtree we just created
-          for (size_t j = 0; j < next_instances->Length(); j++) {
-            auto instance = i.get_index(next_instances, j).As<v8::Object>();
-            if (!instance->IsObject()) continue;
-            auto previous_instance = i.get_index(intermediates, j).As<v8::Object>();
-            if (!previous_instance->IsObject()) continue;
-
-            // Update time here again
-            const auto t = static_cast<double>(job->frame_number) / max_frames;
-            const auto e = static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(max_step);
-            i.call_fun(instance, "time", t, e);
-
-            auto type = i.str(instance, "type");
-            auto x = i.double_number(instance, "x");
-            auto y = i.double_number(instance, "y");
-            auto radius = i.double_number(instance, "radius");
-            auto radiussize = i.double_number(instance, "radiussize");
-            auto last_collide = i.double_number(instance, "last_collide");
-
-            // Calculate how many pixels are maximally covered by this instance, this is currently very simplified
-            auto prev_x = i.double_number(previous_instance, "x");
-            auto prev_y = i.double_number(previous_instance, "y");
-            auto prev_radius = i.double_number(previous_instance, "radius");
-            auto prev_radiussize = i.double_number(previous_instance, "radiussize");
-            auto prev_rad = prev_radius + prev_radiussize;
-            auto rad = radius + radiussize;
-            auto dist = sqrt(pow(x - prev_x, 2) + pow(y - prev_y, 2));
-            // TODO: stupid warp hack
-            while (dist >= 1920 * 0.9) dist -= 1920;
-            while (dist >= 1080 * 0.9) dist -= 1080;
-            dist = std::max(dist, fabs(prev_rad - rad));
-            auto steps = (int)std::max(1.0, fabs(dist) / granularity);
-            max_step = std::max(max_step, steps);
-            current_step_max = std::max(current_step_max, steps);
-
-            // Now do the collision detection part
-            std::vector<point_type> found;
-            auto index = j;
-            // NOTE: we multiple radius/size * 2.0 since we're not looking up a point, and querying the quadtree does
-            // not check for overlap, but only whether the x,y is inside the specified range. If we don't want to miss
-            // points on the edge of our circle, we need to widen the matching range.
-            // TODO: for different sizes of circle collision detection, we need to somehow adjust the interface to this
-            // lookup somehow.
-            qt.query(index, circle_v2(position(x, y), radius * 2.0, radiussize * 2.0), found);
-            if (type == "circle" &&
-                i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
-              for (const auto& collide : found) {
-                const auto index2 = collide.userdata;
-                if (index2 <= index) {
-                  // TODO: can we uncomment this one again, if not, why-not?
-                  // continue;
-                }
-                auto instance2 = i.get_index(next_instances, index2).As<v8::Object>();
-                auto x2 = i.double_number(instance2, "x");
-                auto y2 = i.double_number(instance2, "y");
-                if (!instance2->IsObject()) continue;
-
-                // they already collided, no need to let them collide again
-                if (last_collide == index2) continue;
-
-                // handle collision
-                auto vel_x = i.double_number(instance, "vel_x");
-                auto vel_y = i.double_number(instance, "vel_y");
-                auto vel_x2 = i.double_number(instance2, "vel_x");
-                auto vel_y2 = i.double_number(instance2, "vel_y");
-
-                const auto normal = unit_vector(subtract_vector(vector2d(x, y), vector2d(x2, y2)));
-                const auto ta = dot_product(vector2d(vel_x, vel_y), normal);
-                const auto tb = dot_product(vector2d(vel_x2, vel_y2), normal);
-                const auto optimized_p = (2.0 * (ta - tb)) / 2.0;
-
-                // save velocities
-                auto updated_vel1 = subtract_vector(vector2d(vel_x, vel_y), multiply_vector(normal, optimized_p));
-                i.set_field(instance, "vel_x", v8::Number::New(isolate, updated_vel1.x));
-                i.set_field(instance, "vel_y", v8::Number::New(isolate, updated_vel1.y));
-                auto updated_vel2 = add_vector(vector2d(vel_x2, vel_y2), multiply_vector(normal, optimized_p));
-                i.set_field(instance2, "vel_x", v8::Number::New(isolate, updated_vel2.x));
-                i.set_field(instance2, "vel_y", v8::Number::New(isolate, updated_vel2.y));
-
-                // save collision
-                i.set_field(instance, "last_collide", v8::Number::New(isolate, index2));
-                i.set_field(instance2, "last_collide", v8::Number::New(isolate, index));
-              }
-            }
-
-            if (attempt > 1) {
-              steps = std::max(steps, (int)i.integer_number(instance, "steps"));
-            }
-            handle_error(
-                instance->Set(isolate->GetCurrentContext(), v8_str(context, "steps"), v8::Number::New(isolate, steps)));
-          }
-
-          // Risking doing this for nothing, as this may still be discarded, we'll translate all the instances to
-          // objects ready for rendering Note that we save object states for multiple "steps" per frame if needed.
-          for (size_t j = 0; j < next_instances->Length(); j++) {
-            auto instance = next_instances->Get(isolate->GetCurrentContext(), j).ToLocalChecked().As<v8::Object>();
-            if (!instance->IsObject()) {
-              continue;
-            }
-            // Update level for all objects
-            auto level = i.double_number(instance, "level");
-            parents[level] = instance;
-
-            // See if we require this step for this object
-            auto steps = i.integer_number(instance, "steps");
-            if (!sc.do_step(steps, current_step + 1)) {
-              continue;
-            }
-            auto id = i.str(instance, "id");
-            auto x = i.double_number(instance, "x");
-            auto y = i.double_number(instance, "y");
-            auto radius = i.double_number(instance, "radius");
-            auto radiussize = i.double_number(instance, "radiussize");
-            auto type = i.str(instance, "type");
-            auto scale = std::max(i.double_number(video, "scale"), static_cast<double>(1));
-
-            data::shape new_shape;
-            new_shape.x = x;
-            new_shape.y = y;
-
-            new_shape.gradients_.clear();
-            util::generator::copy_gradient_from_object_to_shape(i, instance, new_shape, gradients);
-            while (level > 0) {
-              level--;
-              new_shape.x += i.double_number(parents[level], "x");
-              new_shape.y += i.double_number(parents[level], "y");
-              util::generator::copy_gradient_from_object_to_shape(i, parents[level], new_shape, gradients);
-            }
-
-            if (new_shape.gradients_.empty()) {
-              new_shape.gradients_.emplace_back(1.0, data::gradient{});
-              new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
-              new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
-              new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(1.0, data::color{0.0, 0, 0, 1}));
-            }
-            new_shape.z = 0;
-            new_shape.radius = radius;
-            new_shape.radius_size = radiussize;
-            new_shape.blending_ = data::blending_type::add;
-
-            if (type == "circle") {
-              new_shape.type = data::shape_type::circle;
-              // wrap this in a proper add method
-              if (current_step + 1 != max_step) {
-                indexes[j][current_step] = job->shapes[current_step].size();
-              } else {
-                new_shape.indexes = indexes[j];
-              }
-              job->shapes[current_step].push_back(new_shape);
-            } else {
-              new_shape.type = data::shape_type::none;
-            }
-            job->scale = scale;
-          }
+          add_objects_to_shapes(i, next_instances, sc, video);
 
           // Copy our "next" instances to intermediate instances, which will serve as a "previous" instance for the next
           // step.
@@ -416,6 +217,239 @@ void generator_v2::cleanup_previous_attempt(v8_interact& i,
   util::generator::copy_instances(i, next_instances, instances);
   util::generator::copy_instances(i, intermediates, instances);
 }
+
+void generator_v2::update_object_positions(v8_interact& i,
+                                           v8::Local<v8::Array>& next_instances,
+                                           int max_step,
+                                           quadtree& qt) {
+  auto isolate = i.get_isolate();
+  for (size_t j = 0; j < next_instances->Length(); j++) {
+    auto instance = i.get_index(next_instances, j).As<v8::Object>();
+    if (!instance->IsObject()) continue;
+
+    update_time(i, instance);
+
+    std::string type = i.str(instance, "type");
+    auto x = i.double_number(instance, "x");
+    auto y = i.double_number(instance, "y");
+    auto vel_x = i.double_number(instance, "vel_x");
+    auto vel_y = i.double_number(instance, "vel_y");
+    if (!std::isnan(vel_x)) {
+      x += (vel_x / static_cast<double>(max_step));
+    }
+    if (!std::isnan(vel_y)) {
+      y += vel_y / static_cast<double>(max_step);
+    }
+
+    // For now we only care about circles
+    if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
+      qt.insert(point_type(position(x, y), j));
+    }
+    i.set_field(instance, "x", v8::Number::New(isolate, x));
+    i.set_field(instance, "y", v8::Number::New(isolate, y));
+    i.set_field(instance, "vel_x", v8::Number::New(isolate, vel_x));
+    i.set_field(instance, "vel_y", v8::Number::New(isolate, vel_y));
+  }
+}
+
+void generator_v2::update_object_interactions(v8_interact& i,
+                                              v8::Local<v8::Array>& next_instances,
+                                              v8::Local<v8::Array>& intermediates,
+                                              quadtree& qt) {
+  // reset current step max
+  current_step_max = 1;
+
+  const auto isolate = i.get_isolate();
+  // For each instance determine how far the object has travelled and if it's within the allowed granularity,
+  //  also do the collision detection efficiently using the quadtree we just created
+  for (size_t index = 0; index < next_instances->Length(); index++) {
+    auto instance = i.get_index(next_instances, index).As<v8::Object>();
+    auto previous_instance = i.get_index(intermediates, index).As<v8::Object>();
+    if (!instance->IsObject() || !previous_instance->IsObject()) continue;
+    update_time(i, instance);
+    auto dist = get_max_travel_of_object(i, previous_instance, instance);
+    auto steps = update_steps(dist);
+    handle_collisions(i, instance, index, next_instances, qt);
+    if (attempt > 1) {
+      steps = std::max(steps, (int)i.integer_number(instance, "steps"));
+    }
+    i.set_field(instance, "steps", v8::Number::New(isolate, steps));
+  }
+}
+
+void generator_v2::handle_collisions(
+    v8_interact& i, v8::Local<v8::Object> instance, size_t index, v8::Local<v8::Array> next_instances, quadtree& qt) {
+  // Now do the collision detection part
+  // NOTE: we multiple radius/size * 2.0 since we're not looking up a point, and querying the quadtree does
+  // not check for overlap, but only whether the x,y is inside the specified range. If we don't want to miss
+  // points on the edge of our circle, we need to widen the matching range.
+  // TODO: for different sizes of circle collision detection, we need to somehow adjust the interface to this
+  // lookup somehow.
+  std::vector<point_type> found;
+  auto type = i.str(instance, "type");
+  auto x = i.double_number(instance, "x");
+  auto y = i.double_number(instance, "y");
+  auto radius = i.double_number(instance, "radius");
+  auto radiussize = i.double_number(instance, "radiussize");
+  qt.query(index, circle_v2(position(x, y), radius * 2.0, radiussize * 2.0), found);
+  if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
+    for (const auto& collide : found) {
+      const auto index2 = collide.userdata;
+      // TODO: can we uncomment this one again, if not, why-not?
+      //  if (index2 <= index) continue;
+      auto instance2 = i.get_index(next_instances, index2).As<v8::Object>();
+      handle_collision(i, index, index2, instance, instance2);
+    }
+  }
+};
+
+void generator_v2::handle_collision(
+    v8_interact& i, size_t index, size_t index2, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2) {
+  const auto isolate = i.get_isolate();
+  auto last_collide = i.double_number(instance, "last_collide");
+
+  auto x = i.double_number(instance, "x");
+  auto y = i.double_number(instance, "y");
+
+  auto x2 = i.double_number(instance2, "x");
+  auto y2 = i.double_number(instance2, "y");
+  if (!instance2->IsObject()) return;
+
+  // they already collided, no need to let them collide again
+  if (last_collide == index2) return;
+
+  // handle collision
+  auto vel_x = i.double_number(instance, "vel_x");
+  auto vel_y = i.double_number(instance, "vel_y");
+  auto vel_x2 = i.double_number(instance2, "vel_x");
+  auto vel_y2 = i.double_number(instance2, "vel_y");
+
+  const auto normal = unit_vector(subtract_vector(vector2d(x, y), vector2d(x2, y2)));
+  const auto ta = dot_product(vector2d(vel_x, vel_y), normal);
+  const auto tb = dot_product(vector2d(vel_x2, vel_y2), normal);
+  const auto optimized_p = (2.0 * (ta - tb)) / 2.0;
+
+  // save velocities
+  auto updated_vel1 = subtract_vector(vector2d(vel_x, vel_y), multiply_vector(normal, optimized_p));
+  i.set_field(instance, "vel_x", v8::Number::New(isolate, updated_vel1.x));
+  i.set_field(instance, "vel_y", v8::Number::New(isolate, updated_vel1.y));
+  auto updated_vel2 = add_vector(vector2d(vel_x2, vel_y2), multiply_vector(normal, optimized_p));
+  i.set_field(instance2, "vel_x", v8::Number::New(isolate, updated_vel2.x));
+  i.set_field(instance2, "vel_y", v8::Number::New(isolate, updated_vel2.y));
+
+  // save collision
+  i.set_field(instance, "last_collide", v8::Number::New(isolate, index2));
+  i.set_field(instance2, "last_collide", v8::Number::New(isolate, index));
+}
+
+void generator_v2::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
+  // Update time here again
+  const auto t = static_cast<double>(job->frame_number) / max_frames;
+  const auto e = static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(max_step);
+  i.call_fun(instance, "time", t, e);
+}
+
+int generator_v2::update_steps(double dist) {
+  auto steps = (int)std::max(1.0, fabs(dist) / tolerated_granularity);
+  max_step = std::max(max_step, steps);
+  current_step_max = std::max(current_step_max, steps);
+  return steps;
+}
+
+double generator_v2::get_max_travel_of_object(v8_interact& i,
+                                              v8::Local<v8::Object>& previous_instance,
+                                              v8::Local<v8::Object>& instance) {
+  auto type = i.str(instance, "type");
+  auto x = i.double_number(instance, "x");
+  auto y = i.double_number(instance, "y");
+  auto radius = i.double_number(instance, "radius");
+  auto radiussize = i.double_number(instance, "radiussize");
+
+  // Calculate how many pixels are maximally covered by this instance, this is currently very simplified
+  auto prev_x = i.double_number(previous_instance, "x");
+  auto prev_y = i.double_number(previous_instance, "y");
+  auto prev_radius = i.double_number(previous_instance, "radius");
+  auto prev_radiussize = i.double_number(previous_instance, "radiussize");
+  auto prev_rad = prev_radius + prev_radiussize;
+  auto rad = radius + radiussize;
+  auto dist = sqrt(pow(x - prev_x, 2) + pow(y - prev_y, 2));
+  // TODO: stupid warp hack
+  while (dist >= 1920 * 0.9) dist -= 1920;
+  while (dist >= 1080 * 0.9) dist -= 1080;
+  dist = std::max(dist, fabs(prev_rad - rad));
+  return dist;
+}
+
+void generator_v2::add_objects_to_shapes(v8_interact& i,
+                                         v8::Local<v8::Array> next_instances,
+                                         step_calculator& sc,
+                                         v8::Local<v8::Object> video) {
+  // Risking doing this for nothing, as this may still be discarded, we'll translate all the instances to
+  // objects ready for rendering Note that we save object states for multiple "steps" per frame if needed.
+  for (size_t index = 0; index < next_instances->Length(); index++) {
+    auto instance = i.get_index(next_instances, index).As<v8::Object>();
+    if (!instance->IsObject()) continue;
+    add_object_to_shapes(i, instance, index, sc, video);
+  }
+}
+
+void generator_v2::add_object_to_shapes(
+    v8_interact& i, v8::Local<v8::Object> instance, size_t index, step_calculator& sc, v8::Local<v8::Object> video) {
+  // Update level for all objects
+  auto level = i.double_number(instance, "level");
+  parents[level] = instance;
+
+  // See if we require this step for this object
+  auto steps = i.integer_number(instance, "steps");
+  if (!sc.do_step(steps, current_step + 1)) {
+    return;
+  }
+  auto id = i.str(instance, "id");
+  auto x = i.double_number(instance, "x");
+  auto y = i.double_number(instance, "y");
+  auto radius = i.double_number(instance, "radius");
+  auto radiussize = i.double_number(instance, "radiussize");
+  auto type = i.str(instance, "type");
+  auto scale = std::max(i.double_number(video, "scale"), static_cast<double>(1));
+
+  data::shape new_shape;
+  new_shape.x = x;
+  new_shape.y = y;
+
+  new_shape.gradients_.clear();
+  util::generator::copy_gradient_from_object_to_shape(i, instance, new_shape, gradients);
+  while (level > 0) {
+    level--;
+    new_shape.x += i.double_number(parents[level], "x");
+    new_shape.y += i.double_number(parents[level], "y");
+    util::generator::copy_gradient_from_object_to_shape(i, parents[level], new_shape, gradients);
+  }
+
+  if (new_shape.gradients_.empty()) {
+    new_shape.gradients_.emplace_back(1.0, data::gradient{});
+    new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
+    new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
+    new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(1.0, data::color{0.0, 0, 0, 1}));
+  }
+  new_shape.z = 0;
+  new_shape.radius = radius;
+  new_shape.radius_size = radiussize;
+  new_shape.blending_ = data::blending_type::add;
+
+  if (type == "circle") {
+    new_shape.type = data::shape_type::circle;
+    // wrap this in a proper add method
+    if (current_step + 1 != max_step) {
+      indexes[index][current_step] = job->shapes[current_step].size();
+    } else {
+      new_shape.indexes = indexes[index];
+    }
+    job->shapes[current_step].push_back(new_shape);
+  } else {
+    new_shape.type = data::shape_type::none;
+  }
+  job->scale = scale;
+};
 
 std::shared_ptr<data::job> generator_v2::get_job() const {
   return job;
