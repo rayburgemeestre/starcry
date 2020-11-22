@@ -13,6 +13,7 @@
 
 #include "data/job.hpp"
 
+#include "util/frame_stepper.hpp"
 #include "util/v8_interact.hpp"
 #include "util/v8_wrapper.hpp"
 
@@ -22,6 +23,7 @@ class step_calculator;
 class generator_v2 {
 private:
   std::shared_ptr<data::job> job;
+  // TODO: seems unused??
   uint32_t frame_number;
 
   size_t max_frames = 0;
@@ -31,9 +33,7 @@ private:
   size_t use_fps = 25;
   std::unordered_map<std::string, data::gradient> gradients;
   std::unordered_map<size_t, std::map<int, size_t>> indexes;
-  int max_step = 0;
-  int current_step_max = std::numeric_limits<int>::max();
-  int current_step = 0;
+  frame_stepper stepper;
   std::unordered_map<int64_t, v8::Local<v8::Object>> parents;
   int attempt = 0;
 
@@ -50,10 +50,10 @@ public:
   void init_object_instances();
 
   bool generate_frame();
-  void cleanup_previous_attempt(v8_interact& i,
-                                v8::Local<v8::Array>& instances,
-                                v8::Local<v8::Array>& next_instances,
-                                v8::Local<v8::Array>& intermediates);
+  void revert_all_changes(v8_interact& i,
+                          v8::Local<v8::Array>& instances,
+                          v8::Local<v8::Array>& next_instances,
+                          v8::Local<v8::Array>& intermediates);
   void update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, int max_step, quadtree& qt);
   void update_object_interactions(v8_interact& i,
                                   v8::Local<v8::Array>& next_instances,
@@ -68,11 +68,11 @@ public:
   double get_max_travel_of_object(v8_interact& i,
                                   v8::Local<v8::Object>& previous_instance,
                                   v8::Local<v8::Object>& instance);
-  void add_objects_to_shapes(v8_interact& i,
-                             v8::Local<v8::Array> next_instances,
-                             step_calculator& sc,
-                             v8::Local<v8::Object> video);
-  void add_object_to_shapes(
+  void convert_objects_to_render_job(v8_interact& i,
+                                     v8::Local<v8::Array> next_instances,
+                                     step_calculator& sc,
+                                     v8::Local<v8::Object> video);
+  void convert_object_to_render_job(
       v8_interact& i, v8::Local<v8::Object> instance, size_t index, step_calculator& sc, v8::Local<v8::Object> video);
 
   std::shared_ptr<data::job> get_job() const;

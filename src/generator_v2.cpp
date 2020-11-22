@@ -166,39 +166,34 @@ bool generator_v2::generate_frame() {
       if (!next_instances->IsArray()) continue;
 
       parents.clear();
-      max_step = 1;
+      stepper.reset();
+      indexes.clear();
       attempt = 0;
-      current_step_max = std::numeric_limits<int>::max();
 
-      while (current_step_max > tolerated_granularity) {
-        if (++attempt != 1) {
-          cleanup_previous_attempt(i, instances, next_instances, intermediates);
+      while (stepper.exceeds(tolerated_granularity)) {
+        ++attempt;
+        if (attempt > 2) {
+          stepper.multiply(2.0);
+          revert_all_changes(i, instances, next_instances, intermediates);
+        } else if (attempt > 1) {
+          revert_all_changes(i, instances, next_instances, intermediates);
         }
-        job->resize_for_num_steps(max_step);
-        step_calculator sc(max_step);
+        step_calculator sc(stepper.max_step);
+        job->resize_for_num_steps(stepper.max_step);
 
-        // For each steps (i.e., this frame could be divided into 10 steps)
-        for (current_step = 0; current_step < max_step; current_step++) {
+        stepper.rewind();
+        while (stepper.has_next_step()) {
           quadtree qt(rectangle_v2(position(-width() / 2, -height() / 2), width(), height()), 32);
-
-          update_object_positions(i, next_instances, max_step, qt);
-
+          update_object_positions(i, next_instances, stepper.max_step, qt);
           update_object_interactions(i, next_instances, intermediates, qt);
-
-          add_objects_to_shapes(i, next_instances, sc, video);
-
-          // Copy our "next" instances to intermediate instances, which will serve as a "previous" instance for the next
-          // step.
+          convert_objects_to_render_job(i, next_instances, sc, video);
           util::generator::copy_instances(i, intermediates, next_instances);
-
-          if (job->shapes.size() != max_step) {
+          if (job->shapes.size() != stepper.max_step) {
             break;
           }
         }
       }
 
-      // At this point we are sure that we've handled the frame with sufficiently fine-grained granularity, and we can
-      // commit to saving the "next" instances over the current instances.
       util::generator::copy_instances(i, instances, next_instances, true);
     }
   });
@@ -207,12 +202,13 @@ bool generator_v2::generate_frame() {
   return job->frame_number != max_frames;
 }
 
-void generator_v2::cleanup_previous_attempt(v8_interact& i,
-                                            v8::Local<v8::Array>& instances,
-                                            v8::Local<v8::Array>& next_instances,
-                                            v8::Local<v8::Array>& intermediates) {
+void generator_v2::revert_all_changes(v8_interact& i,
+                                      v8::Local<v8::Array>& instances,
+                                      v8::Local<v8::Array>& next_instances,
+                                      v8::Local<v8::Array>& intermediates) {
   job->shapes.clear();
   indexes.clear();
+
   // reset next and intermediate instances
   util::generator::copy_instances(i, next_instances, instances);
   util::generator::copy_instances(i, intermediates, instances);
@@ -249,6 +245,9 @@ void generator_v2::update_object_positions(v8_interact& i,
     i.set_field(instance, "y", v8::Number::New(isolate, y));
     i.set_field(instance, "vel_x", v8::Number::New(isolate, vel_x));
     i.set_field(instance, "vel_y", v8::Number::New(isolate, vel_y));
+    if (attempt == 1) {
+      i.set_field(instance, "steps", v8::Number::New(isolate, 1));
+    }
   }
 }
 
@@ -256,24 +255,27 @@ void generator_v2::update_object_interactions(v8_interact& i,
                                               v8::Local<v8::Array>& next_instances,
                                               v8::Local<v8::Array>& intermediates,
                                               quadtree& qt) {
-  // reset current step max
-  current_step_max = 1;
-
+  stepper.reset_current();
   const auto isolate = i.get_isolate();
   // For each instance determine how far the object has travelled and if it's within the allowed granularity,
   //  also do the collision detection efficiently using the quadtree we just created
   for (size_t index = 0; index < next_instances->Length(); index++) {
-    auto instance = i.get_index(next_instances, index).As<v8::Object>();
+    auto next_instance = i.get_index(next_instances, index).As<v8::Object>();
     auto previous_instance = i.get_index(intermediates, index).As<v8::Object>();
-    if (!instance->IsObject() || !previous_instance->IsObject()) continue;
-    update_time(i, instance);
-    auto dist = get_max_travel_of_object(i, previous_instance, instance);
+    if (!next_instance->IsObject() || !previous_instance->IsObject()) continue;
+    update_time(i, next_instance);
+  }
+  for (size_t index = 0; index < next_instances->Length(); index++) {
+    auto next_instance = i.get_index(next_instances, index).As<v8::Object>();
+    auto previous_instance = i.get_index(intermediates, index).As<v8::Object>();
+    if (!next_instance->IsObject() || !previous_instance->IsObject()) continue;
+    auto dist = get_max_travel_of_object(i, previous_instance, next_instance);
     auto steps = update_steps(dist);
-    handle_collisions(i, instance, index, next_instances, qt);
     if (attempt > 1) {
-      steps = std::max(steps, (int)i.integer_number(instance, "steps"));
+      steps = std::max(steps, (int)i.integer_number(next_instance, "steps"));
     }
-    i.set_field(instance, "steps", v8::Number::New(isolate, steps));
+    i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
+    handle_collisions(i, next_instance, index, next_instances, qt);
   }
 }
 
@@ -343,16 +345,16 @@ void generator_v2::handle_collision(
 }
 
 void generator_v2::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
-  // Update time here again
-  const auto t = static_cast<double>(job->frame_number) / max_frames;
-  const auto e = static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(max_step);
+  auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step));
+  auto fn = static_cast<double>(job->frame_number - (1.0 - extra));
+  const auto t = fn / max_frames;
+  const auto e = static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(stepper.max_step);
   i.call_fun(instance, "time", t, e);
 }
 
 int generator_v2::update_steps(double dist) {
   auto steps = (int)std::max(1.0, fabs(dist) / tolerated_granularity);
-  max_step = std::max(max_step, steps);
-  current_step_max = std::max(current_step_max, steps);
+  stepper.update(steps);
   return steps;
 }
 
@@ -380,20 +382,20 @@ double generator_v2::get_max_travel_of_object(v8_interact& i,
   return dist;
 }
 
-void generator_v2::add_objects_to_shapes(v8_interact& i,
-                                         v8::Local<v8::Array> next_instances,
-                                         step_calculator& sc,
-                                         v8::Local<v8::Object> video) {
+void generator_v2::convert_objects_to_render_job(v8_interact& i,
+                                                 v8::Local<v8::Array> next_instances,
+                                                 step_calculator& sc,
+                                                 v8::Local<v8::Object> video) {
   // Risking doing this for nothing, as this may still be discarded, we'll translate all the instances to
   // objects ready for rendering Note that we save object states for multiple "steps" per frame if needed.
   for (size_t index = 0; index < next_instances->Length(); index++) {
     auto instance = i.get_index(next_instances, index).As<v8::Object>();
     if (!instance->IsObject()) continue;
-    add_object_to_shapes(i, instance, index, sc, video);
+    convert_object_to_render_job(i, instance, index, sc, video);
   }
 }
 
-void generator_v2::add_object_to_shapes(
+void generator_v2::convert_object_to_render_job(
     v8_interact& i, v8::Local<v8::Object> instance, size_t index, step_calculator& sc, v8::Local<v8::Object> video) {
   // Update level for all objects
   auto level = i.double_number(instance, "level");
@@ -401,7 +403,7 @@ void generator_v2::add_object_to_shapes(
 
   // See if we require this step for this object
   auto steps = i.integer_number(instance, "steps");
-  if (!sc.do_step(steps, current_step + 1)) {
+  if (!sc.do_step(steps, stepper.next_step)) {
     return;
   }
   auto id = i.str(instance, "id");
@@ -439,12 +441,12 @@ void generator_v2::add_object_to_shapes(
   if (type == "circle") {
     new_shape.type = data::shape_type::circle;
     // wrap this in a proper add method
-    if (current_step + 1 != max_step) {
-      indexes[index][current_step] = job->shapes[current_step].size();
+    if (stepper.next_step != stepper.max_step) {
+      indexes[index][stepper.current_step] = job->shapes[stepper.current_step].size();
     } else {
       new_shape.indexes = indexes[index];
     }
-    job->shapes[current_step].push_back(new_shape);
+    job->shapes[stepper.current_step].push_back(new_shape);
   } else {
     new_shape.type = data::shape_type::none;
   }

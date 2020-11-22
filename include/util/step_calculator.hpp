@@ -10,7 +10,7 @@ private:
   std::unordered_map<int, std::unordered_map<int, bool>> step_map;
 
 public:
-  step_calculator(int max_step) {
+  explicit step_calculator(int max_step) {
     for (int i = 1; i <= max_step; i++) {
       int diff = max_step / i;
       int frame = max_step;

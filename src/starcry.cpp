@@ -56,7 +56,7 @@ void starcry::add_command(seasocks::WebSocket *client, const std::string &script
   cmds->push(std::make_shared<instruction>(client, it, script, frame_num));
   le.run([=]() {
     if (webserv) {
-      webserv->send_stats(system->stats());
+      webserv->send_stats(system->get_stats());
     }
   });
 }
