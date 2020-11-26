@@ -4,11 +4,12 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "scripting.h"
+#include "deprecated/scripting.h"
+#include "deprecated/generator.h"
+
 #include <random>
 //#include "actors/job_generator.h"
 //#include "atom_types.h"
-#include "generator.h"
 #include "util/assistant.h"
 
 using namespace std;

@@ -38,7 +38,7 @@ _ = {
   },
   'video': {
     'duration': 3,
-    'fps': 25,
+    'fps': 30,
     'width': 1920,
     'height': 1080,
     'scale': 1,

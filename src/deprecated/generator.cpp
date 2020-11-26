@@ -4,16 +4,15 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "generator.h"
+#include "deprecated/generator.h"
+#include "deprecated/scripting.h"
 
 #include "util/a.hpp"
 
-#include <scripting.h>
 #include <memory>
 
 #include "primitives.h"
 #include "primitives_v8.h"
-#include "scripting.h"
 #include "util/assistant.h"
 #include "util/image_splitter.hpp"
 #include "util/v8_wrapper.hpp"
