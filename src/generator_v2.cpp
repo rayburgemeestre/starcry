@@ -13,7 +13,6 @@
 #include "primitives_v8.h"
 #include "scripting_v2.h"
 #include "util/generator.h"
-#include "util/quadtree.h"
 #include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
 
@@ -21,7 +20,7 @@
 #include "shapes/position.h"
 #include "shapes/rectangle_v2.h"
 
-extern std::shared_ptr<v8_wrapper> context;
+std::shared_ptr<v8_wrapper> context;
 
 generator_v2::generator_v2() {
   static std::once_flag once;
@@ -149,56 +148,61 @@ void generator_v2::init_object_instances() {
 }
 
 bool generator_v2::generate_frame() {
-  job->shapes.clear();
+  try {
+    job->shapes.clear();
 
-  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i(isolate);
-    auto obj = val.As<v8::Object>();
-    auto scenes = i.v8_array(obj, "scenes");
-    auto video = i.v8_obj(obj, "video");
-    for (size_t I = 0; I < scenes->Length(); I++) {
-      auto current_scene = i.get_index(scenes, I);
-      if (!current_scene->IsObject()) continue;
-      auto sceneobj = current_scene.As<v8::Object>();
-      auto instances = i.v8_array(sceneobj, "instances");
-      auto intermediates = i.v8_array(sceneobj, "instances_intermediate");
-      auto next_instances = i.v8_array(sceneobj, "instances_next");
-      if (!next_instances->IsArray()) continue;
+    context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+      v8_interact i(isolate);
+      auto obj = val.As<v8::Object>();
+      auto scenes = i.v8_array(obj, "scenes");
+      auto video = i.v8_obj(obj, "video");
+      for (size_t I = 0; I < scenes->Length(); I++) {
+        auto current_scene = i.get_index(scenes, I);
+        if (!current_scene->IsObject()) continue;
+        auto sceneobj = current_scene.As<v8::Object>();
+        auto instances = i.v8_array(sceneobj, "instances");
+        auto intermediates = i.v8_array(sceneobj, "instances_intermediate");
+        auto next_instances = i.v8_array(sceneobj, "instances_next");
+        if (!next_instances->IsArray()) continue;
 
-      parents.clear();
-      stepper.reset();
-      indexes.clear();
-      attempt = 0;
+        parents.clear();
+        stepper.reset();
+        indexes.clear();
+        attempt = 0;
 
-      while (stepper.exceeds(tolerated_granularity)) {
-        ++attempt;
-        if (attempt > 2) {
-          stepper.multiply(2.0);
-          revert_all_changes(i, instances, next_instances, intermediates);
-        } else if (attempt > 1) {
-          revert_all_changes(i, instances, next_instances, intermediates);
-        }
-        step_calculator sc(stepper.max_step);
-        job->resize_for_num_steps(stepper.max_step);
+        while (stepper.exceeds(tolerated_granularity)) {
+          ++attempt;
+          if (attempt > 2) {
+            stepper.multiply(2.0);
+            revert_all_changes(i, instances, next_instances, intermediates);
+          } else if (attempt > 1) {
+            revert_all_changes(i, instances, next_instances, intermediates);
+          }
+          step_calculator sc(stepper.max_step);
+          job->resize_for_num_steps(stepper.max_step);
 
-        stepper.rewind();
-        while (stepper.has_next_step()) {
-          quadtree qt(rectangle_v2(position(-width() / 2, -height() / 2), width(), height()), 32);
-          update_object_positions(i, next_instances, stepper.max_step, qt);
-          update_object_interactions(i, next_instances, intermediates, qt);
-          convert_objects_to_render_job(i, next_instances, sc, video);
-          util::generator::copy_instances(i, intermediates, next_instances);
-          if (job->shapes.size() != stepper.max_step) {
-            break;
+          stepper.rewind();
+          while (stepper.has_next_step()) {
+            qts.clear();
+            update_object_positions(i, next_instances, stepper.max_step);
+            update_object_interactions(i, next_instances, intermediates);
+            convert_objects_to_render_job(i, next_instances, sc, video);
+            util::generator::copy_instances(i, intermediates, next_instances);
+            if (job->shapes.size() != stepper.max_step) {
+              break;
+            }
           }
         }
-      }
 
-      util::generator::copy_instances(i, instances, next_instances, true);
-    }
-  });
-  job->job_number++;
-  job->frame_number++;
+        util::generator::copy_instances(i, instances, next_instances, true);
+      }
+    });
+    job->job_number++;
+    std::cout << " " << job->frame_number << std::endl;
+    job->frame_number++;
+  } catch (std::exception& ex) {
+    std::cout << ex.what() << std::endl;
+  }
   return job->frame_number != max_frames;
 }
 
@@ -214,10 +218,7 @@ void generator_v2::revert_all_changes(v8_interact& i,
   util::generator::copy_instances(i, intermediates, instances);
 }
 
-void generator_v2::update_object_positions(v8_interact& i,
-                                           v8::Local<v8::Array>& next_instances,
-                                           int max_step,
-                                           quadtree& qt) {
+void generator_v2::update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, int max_step) {
   auto isolate = i.get_isolate();
   for (size_t j = 0; j < next_instances->Length(); j++) {
     auto instance = i.get_index(next_instances, j).As<v8::Object>();
@@ -226,6 +227,7 @@ void generator_v2::update_object_positions(v8_interact& i,
     update_time(i, instance);
 
     std::string type = i.str(instance, "type");
+    std::string collision_group = i.str(instance, "collision_group");
     auto x = i.double_number(instance, "x");
     auto y = i.double_number(instance, "y");
     auto vel_x = i.double_number(instance, "vel_x");
@@ -239,7 +241,13 @@ void generator_v2::update_object_positions(v8_interact& i,
 
     // For now we only care about circles
     if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
-      qt.insert(point_type(position(x, y), j));
+      if (qts.find(collision_group) == qts.end()) {
+        qts.insert(std::make_pair(
+            collision_group, quadtree(rectangle_v2(position(-width() / 2, -height() / 2), width(), height()), 32)));
+      }
+      if (collision_group != "undefined") {
+        qts[collision_group].insert(point_type(position(x, y), j));
+      }
     }
     i.set_field(instance, "x", v8::Number::New(isolate, x));
     i.set_field(instance, "y", v8::Number::New(isolate, y));
@@ -253,8 +261,7 @@ void generator_v2::update_object_positions(v8_interact& i,
 
 void generator_v2::update_object_interactions(v8_interact& i,
                                               v8::Local<v8::Array>& next_instances,
-                                              v8::Local<v8::Array>& intermediates,
-                                              quadtree& qt) {
+                                              v8::Local<v8::Array>& intermediates) {
   stepper.reset_current();
   const auto isolate = i.get_isolate();
   // For each instance determine how far the object has travelled and if it's within the allowed granularity,
@@ -275,12 +282,14 @@ void generator_v2::update_object_interactions(v8_interact& i,
       steps = std::max(steps, (int)i.integer_number(next_instance, "steps"));
     }
     i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
-    handle_collisions(i, next_instance, index, next_instances, qt);
+    handle_collisions(i, next_instance, index, next_instances);
   }
 }
 
-void generator_v2::handle_collisions(
-    v8_interact& i, v8::Local<v8::Object> instance, size_t index, v8::Local<v8::Array> next_instances, quadtree& qt) {
+void generator_v2::handle_collisions(v8_interact& i,
+                                     v8::Local<v8::Object> instance,
+                                     size_t index,
+                                     v8::Local<v8::Array> next_instances) {
   // Now do the collision detection part
   // NOTE: we multiple radius/size * 2.0 since we're not looking up a point, and querying the quadtree does
   // not check for overlap, but only whether the x,y is inside the specified range. If we don't want to miss
@@ -289,11 +298,15 @@ void generator_v2::handle_collisions(
   // lookup somehow.
   std::vector<point_type> found;
   auto type = i.str(instance, "type");
+  auto collision_group = i.str(instance, "collision_group");
+  if (collision_group == "undefined") {
+    return;
+  }
   auto x = i.double_number(instance, "x");
   auto y = i.double_number(instance, "y");
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
-  qt.query(index, circle_v2(position(x, y), radius * 2.0, radiussize * 2.0), found);
+  qts[collision_group].query(index, circle_v2(position(x, y), radius * 2.0, radiussize * 2.0), found);
   if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
     for (const auto& collide : found) {
       const auto index2 = collide.userdata;
@@ -342,6 +355,12 @@ void generator_v2::handle_collision(
   // save collision
   i.set_field(instance, "last_collide", v8::Number::New(isolate, index2));
   i.set_field(instance2, "last_collide", v8::Number::New(isolate, index));
+
+  // call 'on collision' event
+  auto on1 = i.get(instance, "on").As<v8::Object>();
+  auto on2 = i.get(instance2, "on").As<v8::Object>();
+  i.call_fun(on1, instance, "collide", instance2);
+  i.call_fun(on2, instance2, "collide", instance);
 }
 
 void generator_v2::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {

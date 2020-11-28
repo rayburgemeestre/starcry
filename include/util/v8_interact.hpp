@@ -8,6 +8,7 @@
 #include "util/v8_wrapper.hpp"
 
 #include <iostream>
+#include <utility>
 
 extern std::shared_ptr<v8_wrapper> context;
 
@@ -146,14 +147,30 @@ public:
 
   template <class... Args>
   void call_fun(v8::Local<v8::Object> object, const std::string& field, Args... args) {
-    v8::Local<v8::Function> fun = object.As<v8::Object>()
-                                      ->Get(isolate->GetCurrentContext(), v8_str(context, field))
-                                      .ToLocalChecked()
-                                      .As<v8::Function>();
+    return call_fun(object, object, field, std::forward<Args>(args)...);
+  }
+
+  template <class... Args>
+  void call_fun(v8::Local<v8::Object> object, v8::Local<v8::Object> self, const std::string& field, Args... args) {
+    auto v8_field = v8_str(context, field);
+    auto has_field = object.As<v8::Object>()->Has(isolate->GetCurrentContext(), v8_field).ToChecked();
+    if (!has_field) return;
+    auto funref = object.As<v8::Object>()->Get(isolate->GetCurrentContext(), v8_field);
+    if (funref.IsEmpty()) {
+      std::cout << "exit 1" << std::endl;
+      return;
+    }
+    auto fundef = funref.ToLocalChecked();
+    if (!fundef->IsFunction()) {
+      std::cout << "exit 2" << std::endl;
+      return;
+      //      throw std::runtime_error("type not function");
+    }
+    auto fun = fundef.As<v8::Function>();
     v8::Handle<v8::Value> argz[sizeof...(Args)];
     size_t index = 0;
     (void(argz[index++] = v8pp::to_v8(isolate, args)), ...);
-    fun->Call(isolate->GetCurrentContext(), object, sizeof...(Args), argz).ToLocalChecked();
+    fun->Call(isolate->GetCurrentContext(), self, sizeof...(Args), argz).ToLocalChecked();
   }
 
   v8::Local<v8::Value> get_index(v8::Local<v8::Array> array, size_t index) {
@@ -164,6 +181,9 @@ public:
   }
   v8::Local<v8::Value> get(v8::Local<v8::Object> array, v8::Local<v8::Value> index) {
     return array->Get(ctx, index).ToLocalChecked();
+  }
+  v8::Local<v8::Value> get(v8::Local<v8::Object> array, const std::string& index) {
+    return array->Get(ctx, v8_str(context, index)).ToLocalChecked();
   }
   v8::Local<v8::Array> prop_names(v8::Local<v8::Object> obj) {
     return obj->GetOwnPropertyNames(ctx).ToLocalChecked();

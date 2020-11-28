@@ -61,6 +61,8 @@ include_directories(
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.hpp"  "include/**.h" "/opt/cppse/build/v8pp/include/v8pp/context.cpp" "libs/piper/src/**")
 #file(GLOB_RECURSE starcry_SOURCES "src/main.cpp")
 list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/client.cpp")
+list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/deprecated/generator.cpp")
+list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/deprecated/scripting.cpp")
 
 file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp")
 # (below) useful for testing v8 hello world in main.cpp

@@ -73,15 +73,6 @@ _ = {
             'props': {'grad': i === 0 || i === 3 ? 'red' : 'white'}
           });
         }
-        // this.subobj.push({
-        //   'id': 'ball',
-        //   'x': 0,
-        //   'y': 0,
-        //   'z': 0,
-        //   'vel_x': undefined,
-        //   'vel_y': undefined,
-        //   'props': {'grad': i === 0 ? 'red' : 'white'}
-        // });
       },
       'time': function(t, e) {
         // script.video.scale += 0.1 * e;

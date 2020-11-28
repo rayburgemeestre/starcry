@@ -30,6 +30,7 @@ public:
   std::unique_ptr<quadtree> southeast;
   std::unique_ptr<quadtree> southwest;
 
+  quadtree();
   quadtree(rectangle_v2 boundary, size_t capacity);
 
   void subdivide();

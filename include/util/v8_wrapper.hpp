@@ -158,7 +158,7 @@ inline void v8_wrapper::run_array(std::string const& source,
   v8::Isolate* isolate = context->isolate();
   v8::HandleScope scope(isolate);
   v8::TryCatch try_catch(isolate);
-  try_catch.SetVerbose(false);
+  try_catch.SetVerbose(true);
   try_catch.SetCaptureMessage(true);
   // v8::Handle<v8::Array> result = context->run_script(source, filename_).As<v8::Array>();
   v8::Handle<v8::Value> result = context->run_script(source, filename_);
@@ -166,6 +166,9 @@ inline void v8_wrapper::run_array(std::string const& source,
     rethrow_as_runtime_error(isolate, try_catch);
   }
   callback(isolate, result);
+  if (try_catch.HasCaught()) {
+    rethrow_as_runtime_error(isolate, try_catch);
+  }
 }
 
 // TODO: replace call(fn) and call(fn, T) with a template function

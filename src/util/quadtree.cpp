@@ -8,6 +8,8 @@
 
 point_type::point_type(position pos, int userdata) : pos(pos), userdata(userdata) {}
 
+quadtree::quadtree() : boundary(rectangle_v2(position(0, 0), 0, 0)) {}
+
 quadtree::quadtree(rectangle_v2 boundary, size_t capacity)
     : boundary(boundary), capacity(std::max(capacity, size_t(1))), divided(false) {}
 

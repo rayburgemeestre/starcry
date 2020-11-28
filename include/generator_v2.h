@@ -17,7 +17,8 @@
 #include "util/v8_interact.hpp"
 #include "util/v8_wrapper.hpp"
 
-class quadtree;
+#include "util/quadtree.h"
+
 class step_calculator;
 
 class generator_v2 {
@@ -37,6 +38,8 @@ private:
   std::unordered_map<int64_t, v8::Local<v8::Object>> parents;
   int attempt = 0;
 
+  std::map<std::string, quadtree> qts;
+
 public:
   generator_v2();
   ~generator_v2() = default;
@@ -54,13 +57,14 @@ public:
                           v8::Local<v8::Array>& instances,
                           v8::Local<v8::Array>& next_instances,
                           v8::Local<v8::Array>& intermediates);
-  void update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, int max_step, quadtree& qt);
+  void update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, int max_step);
   void update_object_interactions(v8_interact& i,
                                   v8::Local<v8::Array>& next_instances,
-                                  v8::Local<v8::Array>& intermediates,
-                                  quadtree& qt);
-  void handle_collisions(
-      v8_interact& i, v8::Local<v8::Object> instance, size_t index, v8::Local<v8::Array> next_instances, quadtree& qt);
+                                  v8::Local<v8::Array>& intermediates);
+  void handle_collisions(v8_interact& i,
+                         v8::Local<v8::Object> instance,
+                         size_t index,
+                         v8::Local<v8::Array> next_instances);
   void handle_collision(
       v8_interact& i, size_t index, size_t index2, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2);
   void update_time(v8_interact& i, v8::Local<v8::Object>& instance);

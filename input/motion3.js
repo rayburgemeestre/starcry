@@ -83,29 +83,69 @@ _ = {
         for (let obj of this.subobj) {
           let velocity = new vector2d(rand(), 0);
           velocity.rotate(rand() * 360);
-          velocity.x *= 150;
-          velocity.y *= 150;
+          velocity.x *= 15;
+          velocity.y *= 15;
           obj.vel_x = velocity.x;
-          output('set: vel: ' + obj.vel_x);
           obj.vel_y = velocity.y;
         }
       },
-      'time': function(t, e) {
-        for (let obj of this.subobj) {
-          obj.radiussize += 25 * e;
+      'time': function(t, e) {},
+    },
+    'explosion': {
+      'type': 'circle',
+      'gradient': 'blue',
+      'radius': 0,
+      'radiussize': 25,
+      'init': function() {},
+      'time': function(t, elapsed) {
+        if (this.props.enabled) {
+          this.radius += 0.1;
+        } else {
+          this.radius -= 0.1;
         }
-      }
+        if (this.radius > 100) {
+          this.radius = 100;
+        }
+        if (this.radius < 0) {
+          this.radius = 0;
+        }
+      },
+      'props': {}
     },
     'ball': {
+      'collision_group': 'group1',
       'type': 'circle',
-      'gradient': 'white',
+      'gradients': [
+        [1.0, 'white'],
+        [0.0, 'red'],
+      ],
       'radius': 0,
       'radiussize': 20.0,
       'props': {'grad': 'white'},
       'init': function() {
-        this.gradient = this.props.grad;
+        // this.gradient = this.props.grad;
+        this.subobj.push({'id': 'explosion', 'x': 0, 'y': 0, 'z': 0, 'vel_x': 0, 'vel_y': 0, 'props': {}});
       },
-      'time': function(t, elapsed) {},
+      'time': function(t, elapsed) {
+        const steps = 0.001;
+        if (this.gradients[1][0] > steps) {
+          this.gradients[0][0] += steps;
+          this.gradients[1][0] -= steps;
+        } else {
+          if (this.subobj.length) {
+            this.subobj[0].props.enabled = false;
+          }
+        }
+      },
+      'on': {
+        'collide': function(other) {
+          this.gradients[0][0] = 0.0;
+          this.gradients[1][0] = 1.0;
+          if (this.subobj.length) {
+            this.subobj[0].props.enabled = true;
+          }
+        }
+      }
     },
     'bg': {
       'type': 'circle',
@@ -123,12 +163,12 @@ _ = {
     'height': 1080,
     'scale': 1,
     'rand_seed': 1,
-    'granularity': 5,
+    'granularity': 1,
   },
   'scenes': [{
     'name': 'scene1',
     'objects': [
-      {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+      // {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
       {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
     ],
   }]

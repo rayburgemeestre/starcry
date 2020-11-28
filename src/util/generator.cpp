@@ -54,13 +54,26 @@ void instantiate_object(v8_interact& i,
   i.set_field(new_instance, "subobj", v8::Array::New(isolate));
   i.set_field(new_instance, "meta", v8_str(context, annotation));
   i.set_field(new_instance, "level", v8::Number::New(isolate, level));
-  i.copy_field(new_instance, "gradients", object_prototype);
+
+  // Make sure we deep copy the gradients
+  i.set_field(new_instance, "gradients", v8::Array::New(isolate));
+  auto dest_gradients = i.get(new_instance, "gradients").As<v8::Array>();
+  auto gradients = i.get(object_prototype, "gradients").As<v8::Array>();
+  for (size_t k = 0; k < gradients->Length(); k++) {
+    i.set_field(dest_gradients, k, v8::Array::New(isolate));
+
+    auto gradient = i.get_index(gradients, k).As<v8::Array>();
+    auto dest_gradient = i.get_index(dest_gradients, k).As<v8::Array>();
+    for (size_t l = 0; l < gradient->Length(); l++) {
+      i.set_field(dest_gradient, l, i.get_index(gradient, l));
+    }
+  }
 
   // Copy over scene properties to instance properties
   auto props = i.v8_obj(new_instance, "props");
   auto scene_props = i.v8_obj(scene_obj, "props");
   auto obj_fields = i.prop_names(scene_props);
-  ;
+
   for (size_t k = 0; k < obj_fields->Length(); k++) {
     auto field_name = i.get_index(obj_fields, k);
     auto field_value = i.get(scene_props, field_name);
@@ -128,6 +141,7 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field(dst, "radius", src);
     i.copy_field(dst, "radiussize", src);
     i.copy_field(dst, "last_collide", src);
+    i.copy_field(dst, "gradient", src);
     if (!exclude_props) {
       i.copy_field(dst, "props", src);
     }
