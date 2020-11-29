@@ -15,7 +15,9 @@ _ = {
       'y': 0,
       'radiussize': 20.0,
       'props': {'grad': 'white', 'mode': 'linear'},
-      'init': function() {},
+      'init': function() {
+        this.subobj.push({'id': 'subball', 'x': 0, 'y': 50, 'z': 0, 'vel_x': 0, 'vel_y': 0, 'props': {}});
+      },
       'time': function(t, elapsed) {
         let max = 50;
         let maxexp = Math.log(max + 1.0) / Math.log(2.0);
@@ -34,6 +36,17 @@ _ = {
         }
         this.x -= 700;
       },
+    },
+    'subball': {
+      'type': 'circle',
+      'gradient': 'white',
+      'radius': 0,
+      'x': 0,
+      'y': 0,
+      'radiussize': 20.0,
+      'props': {},
+      'init': function() {},
+      'time': function(t, elapsed) {},
     },
   },
   'video': {

@@ -83,28 +83,36 @@ _ = {
         for (let obj of this.subobj) {
           let velocity = new vector2d(rand(), 0);
           velocity.rotate(rand() * 360);
-          velocity.x *= 15;
-          velocity.y *= 15;
           obj.vel_x = velocity.x;
           obj.vel_y = velocity.y;
+          obj.velocity = 1;
         }
       },
-      'time': function(t, e) {},
+      'time': function(t, e) {
+        for (let obj of this.subobj) {
+          obj.velocity = 1000 * t;
+        }
+      },
     },
     'explosion': {
       'type': 'circle',
       'gradient': 'blue',
+      'velocity': 1.0,
+      'vel_x': 0.0,
+      'vel_y': 0.0,
+      'x': 0.0,
+      'y': 0.0,
       'radius': 0,
-      'radiussize': 25,
+      'radiussize': 5,
       'init': function() {},
       'time': function(t, elapsed) {
         if (this.props.enabled) {
-          this.radius += 0.1;
+          this.radius += elapsed * 3;
         } else {
-          this.radius -= 0.1;
+          this.radius -= elapsed * 3;
         }
-        if (this.radius > 100) {
-          this.radius = 100;
+        if (this.radius > 15) {
+          this.radius = 15;
         }
         if (this.radius < 0) {
           this.radius = 0;
@@ -120,14 +128,14 @@ _ = {
         [0.0, 'red'],
       ],
       'radius': 0,
-      'radiussize': 20.0,
+      'radiussize': 5.0,
       'props': {'grad': 'white'},
       'init': function() {
         // this.gradient = this.props.grad;
         this.subobj.push({'id': 'explosion', 'x': 0, 'y': 0, 'z': 0, 'vel_x': 0, 'vel_y': 0, 'props': {}});
       },
       'time': function(t, elapsed) {
-        const steps = 0.001;
+        const steps = elapsed / 5;  // tie this to elapsed time
         if (this.gradients[1][0] > steps) {
           this.gradients[0][0] += steps;
           this.gradients[1][0] -= steps;
@@ -136,6 +144,10 @@ _ = {
             this.subobj[0].props.enabled = false;
           }
         }
+        while (this.x + (1920 / 2) < 0) this.x += 1920;
+        while (this.y + (1080 / 2) < 0) this.y += 1080;
+        while (this.x + (1920 / 2) > 1920) this.x -= 1920;
+        while (this.y + (1080 / 2) > 1080) this.y -= 1080;
       },
       'on': {
         'collide': function(other) {
@@ -151,7 +163,7 @@ _ = {
       'type': 'circle',
       'gradient': 'blue',
       'radius': 0,
-      'radiussize': 2500,
+      'radiussize': 5,
       'init': function() {},
       'time': function(t, elapsed) {},
     },

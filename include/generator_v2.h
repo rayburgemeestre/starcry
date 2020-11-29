@@ -36,6 +36,7 @@ private:
   std::unordered_map<size_t, std::map<int, size_t>> indexes;
   frame_stepper stepper;
   std::unordered_map<int64_t, v8::Local<v8::Object>> parents;
+  std::unordered_map<int64_t, v8::Local<v8::Object>> prev_parents;
   int attempt = 0;
 
   std::map<std::string, quadtree> qts;

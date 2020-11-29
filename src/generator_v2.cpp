@@ -166,6 +166,7 @@ bool generator_v2::generate_frame() {
         if (!next_instances->IsArray()) continue;
 
         parents.clear();
+        prev_parents.clear();
         stepper.reset();
         indexes.clear();
         attempt = 0;
@@ -230,13 +231,16 @@ void generator_v2::update_object_positions(v8_interact& i, v8::Local<v8::Array>&
     std::string collision_group = i.str(instance, "collision_group");
     auto x = i.double_number(instance, "x");
     auto y = i.double_number(instance, "y");
+    auto velocity = i.double_number(instance, "velocity");
     auto vel_x = i.double_number(instance, "vel_x");
     auto vel_y = i.double_number(instance, "vel_y");
-    if (!std::isnan(vel_x)) {
-      x += (vel_x / static_cast<double>(max_step));
-    }
-    if (!std::isnan(vel_y)) {
-      y += vel_y / static_cast<double>(max_step);
+    if (!std::isnan(velocity)) {
+      if (!std::isnan(vel_x)) {
+        x += (vel_x * velocity) / static_cast<double>(max_step);
+      }
+      if (!std::isnan(vel_y)) {
+        y += (vel_y * velocity) / static_cast<double>(max_step);
+      }
     }
 
     // For now we only care about circles
@@ -251,8 +255,6 @@ void generator_v2::update_object_positions(v8_interact& i, v8::Local<v8::Array>&
     }
     i.set_field(instance, "x", v8::Number::New(isolate, x));
     i.set_field(instance, "y", v8::Number::New(isolate, y));
-    i.set_field(instance, "vel_x", v8::Number::New(isolate, vel_x));
-    i.set_field(instance, "vel_y", v8::Number::New(isolate, vel_y));
     if (attempt == 1) {
       i.set_field(instance, "steps", v8::Number::New(isolate, 1));
     }
@@ -380,15 +382,41 @@ int generator_v2::update_steps(double dist) {
 double generator_v2::get_max_travel_of_object(v8_interact& i,
                                               v8::Local<v8::Object>& previous_instance,
                                               v8::Local<v8::Object>& instance) {
+  // Update level for all objects
+  // TODO: move to better place
+  auto level = i.double_number(instance, "level");
+  parents[level] = instance;
+  prev_parents[level] = previous_instance;
+
+  auto offset_x = static_cast<double>(0);
+  auto offset_y = static_cast<double>(0);
+  while (level > 0) {
+    level--;
+    offset_x += i.double_number(parents[level], "x");
+    offset_y += i.double_number(parents[level], "y");
+  }
+
+  level = i.double_number(previous_instance, "level");
+  auto prev_offset_x = static_cast<double>(0);
+  auto prev_offset_y = static_cast<double>(0);
+  while (level > 0) {
+    level--;
+    prev_offset_x += i.double_number(prev_parents[level], "x");
+    prev_offset_y += i.double_number(prev_parents[level], "y");
+  }
+
   auto type = i.str(instance, "type");
-  auto x = i.double_number(instance, "x");
-  auto y = i.double_number(instance, "y");
+  auto x = offset_x + i.double_number(instance, "x");
+  auto y = offset_y + i.double_number(instance, "y");
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
 
+  i.set_field(instance, "transitive_x", v8::Number::New(i.get_isolate(), x));
+  i.set_field(instance, "transitive_y", v8::Number::New(i.get_isolate(), y));
+
   // Calculate how many pixels are maximally covered by this instance, this is currently very simplified
-  auto prev_x = i.double_number(previous_instance, "x");
-  auto prev_y = i.double_number(previous_instance, "y");
+  auto prev_x = prev_offset_x + i.double_number(previous_instance, "x");
+  auto prev_y = prev_offset_y + i.double_number(previous_instance, "y");
   auto prev_radius = i.double_number(previous_instance, "radius");
   auto prev_radiussize = i.double_number(previous_instance, "radiussize");
   auto prev_rad = prev_radius + prev_radiussize;
@@ -426,23 +454,21 @@ void generator_v2::convert_object_to_render_job(
     return;
   }
   auto id = i.str(instance, "id");
-  auto x = i.double_number(instance, "x");
-  auto y = i.double_number(instance, "y");
+  auto transitive_x = i.double_number(instance, "transitive_x");
+  auto transitive_y = i.double_number(instance, "transitive_y");
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
   auto type = i.str(instance, "type");
   auto scale = std::max(i.double_number(video, "scale"), static_cast<double>(1));
 
   data::shape new_shape;
-  new_shape.x = x;
-  new_shape.y = y;
+  new_shape.x = transitive_x;
+  new_shape.y = transitive_y;
 
   new_shape.gradients_.clear();
   util::generator::copy_gradient_from_object_to_shape(i, instance, new_shape, gradients);
   while (level > 0) {
     level--;
-    new_shape.x += i.double_number(parents[level], "x");
-    new_shape.y += i.double_number(parents[level], "y");
     util::generator::copy_gradient_from_object_to_shape(i, parents[level], new_shape, gradients);
   }
 
