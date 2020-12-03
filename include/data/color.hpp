@@ -12,10 +12,10 @@
 namespace data {
 
 struct color {
-  double r;
-  double g;
-  double b;
-  double a;
+  double r = 0;
+  double g = 0;
+  double b = 0;
+  double a = 0;
 
   template <class Archive>
   void serialize(Archive &ar) {

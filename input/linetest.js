@@ -1,0 +1,70 @@
+_ = {
+  'gradients': {
+    'white': [
+      {'position': 0.0, 'r': 1, 'g': 1, 'b': 1, 'a': 1.0},
+      {'position': 0.9, 'r': 1, 'g': 1, 'b': 1, 'a': 1.0},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+    ],
+    'white_line': [
+      {'position': 0.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 0.5, 'r': 1, 'g': 1, 'b': 1, 'a': 1.0},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+    ],
+  },
+  'objects': {
+    'circle': {
+      'type': 'circle',
+      'gradient': 'white',
+      'radius': 10.0,
+      'x': 0,
+      'y': 0,
+      'radiussize': 10.0,
+      'props': {},
+      'init': function() {},
+      'time': function(t, elapsed) {},
+    },
+    'line': {
+      'type': 'line',
+      'gradient': 'white',
+      'radius': 0,
+      'x': 0,
+      'y': 0,
+      'x2': 0,
+      'y2': 0,
+      'radiussize': 10.0,
+      'props': {},
+      'init': function() {},
+      'time': function(t, elapsed) {},
+    },
+    'line2': {
+      'type': 'line',
+      'gradient': 'white_line',
+      'radius': 0,
+      'x': 0,
+      'y': 0,
+      'x2': 0,
+      'y2': 0,
+      'radiussize': 10.0,
+      'props': {},
+      'init': function() {},
+      'time': function(t, elapsed) {},
+    },
+  },
+  'video': {
+    'duration': 3,
+    'fps': 30,
+    'width': 1920,
+    'height': 1080,
+    'scale': 1,
+    'rand_seed': 1,
+    'granularity': 1,
+  },
+  'scenes': [{
+    'name': 'scene1',
+    'objects': [
+      {'id': 'circle', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+      {'id': 'line', 'x': -700, 'y': -300, 'x2': 700, 'y2': -300, 'z': 0, 'props': {}},
+      {'id': 'line2', 'x': -700, 'y': 300, 'x2': 700, 'y2': 300, 'z': 0, 'props': {}},
+    ],
+  }]
+};

@@ -64,7 +64,7 @@ _ = {
           this.props.step++;
 
           this.subobj.push({
-            'id': i === 0 || i === 3 ? 'red_ball' : 'ball',
+            'id': i < 30 ? 'red_ball' : 'ball',
             'x': x,
             'y': y,
             'z': 0,
@@ -100,8 +100,7 @@ _ = {
           for (let obj of this.subobj) {
             let velocity = new vector2d(rand(), 0);
             velocity.rotate(rand() * 360);
-            velocity.x *= 50;
-            velocity.y *= 50;
+            obj.velocity = 50;
             obj.vel_x = velocity.x;
             obj.vel_y = velocity.y;
           }
@@ -131,6 +130,7 @@ _ = {
     },
     'ball': {
       'type': 'circle',
+      'collision_group': 'cg1',
       'gradients': [
         [1.0, 'white'],
         [0.0, 'white_2'],
@@ -157,6 +157,7 @@ _ = {
     },
     'red_ball': {
       'type': 'circle',
+      'collision_group': 'cg2',
       'gradients': [
         [1.0, 'red'],
       ],

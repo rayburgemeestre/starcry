@@ -98,8 +98,22 @@ public:
         }
 
       } else if (shape.type == data::shape_type::line) {
+        // first one
+        double opacity = 1.0;
+        if (shape.indexes.size() > 0) {
+          opacity /= (shape.indexes.size() + 1);
+        }
         draw_logic_.render_line<double>(
-            bmp, shape.x, shape.y, shape.x2, shape.y2, shape.radius_size, shape.gradients_, shape.blending_);
+            bmp, shape.x, shape.y, shape.x2, shape.y2, shape.radius_size, shape.gradients_, shape.blending_, opacity);
+
+        // the rest...
+        for (const auto &index_data : shape.indexes) {
+          const auto &step = index_data.first;
+          const auto &index = index_data.second;
+          const auto &shape = shapes[step][index];
+          draw_logic_.render_line<double>(
+              bmp, shape.x, shape.y, shape.x2, shape.y2, shape.radius_size, shape.gradients_, shape.blending_, opacity);
+        }
       } else if (shape.type == data::shape_type::text) {
         draw_logic_.render_text<double>(shape.x, shape.y, shape.text_size, shape.text, shape.align);
       }

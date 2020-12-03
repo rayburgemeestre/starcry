@@ -48,6 +48,8 @@ void instantiate_object(v8_interact& i,
   i.copy_field(new_instance, "id", scene_obj);
   i.copy_field(new_instance, "x", scene_obj);
   i.copy_field(new_instance, "y", scene_obj);
+  i.copy_field(new_instance, "x2", scene_obj);
+  i.copy_field(new_instance, "y2", scene_obj);
   i.copy_field(new_instance, "vel_x", scene_obj);
   i.copy_field(new_instance, "vel_y", scene_obj);
 
@@ -136,6 +138,8 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     auto dst = i.get_index(dest, j).As<v8::Object>();
     i.copy_field(dst, "x", src);
     i.copy_field(dst, "y", src);
+    i.copy_field(dst, "x2", src);
+    i.copy_field(dst, "y2", src);
     i.copy_field(dst, "vel_x", src);
     i.copy_field(dst, "vel_y", src);
     i.copy_field(dst, "radius", src);

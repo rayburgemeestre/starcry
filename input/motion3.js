@@ -11,8 +11,8 @@ _ = {
     ],
     'white': [
       {'position': 0.0, 'r': 1, 'g': 1, 'b': 1, 'a': 0.0},
-      {'position': 0.7, 'r': 1, 'g': 1, 'b': 1, 'a': 0.0},
-      {'position': 0.9, 'r': 1, 'g': 1, 'b': 1, 'a': 0.8},
+      {'position': 0.3, 'r': 1, 'g': 1, 'b': 1, 'a': 0.0},
+      {'position': 0.6, 'r': 1, 'g': 1, 'b': 1, 'a': 0.8},
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
     ],
   },
@@ -90,7 +90,7 @@ _ = {
       },
       'time': function(t, e) {
         for (let obj of this.subobj) {
-          obj.velocity = 1000 * t;
+          obj.velocity = 10 * t;
         }
       },
     },

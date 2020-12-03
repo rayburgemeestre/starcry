@@ -5,6 +5,11 @@ _ = {
       {'position': 0.9, 'r': 1, 'g': 1, 'b': 1, 'a': 1.0},
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
     ],
+    'white_line': [
+      {'position': 0.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 0.5, 'r': 1, 'g': 1, 'b': 1, 'a': 1.0},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+    ],
   },
   'objects': {
     'ball': {
@@ -17,6 +22,8 @@ _ = {
       'props': {'grad': 'white', 'mode': 'linear'},
       'init': function() {
         this.subobj.push({'id': 'subball', 'x': 0, 'y': 50, 'z': 0, 'vel_x': 0, 'vel_y': 0, 'props': {}});
+        this.subobj.push(
+            {'id': 'subline', 'x': 500, 'y': 500, 'x2': 0, 'y2': 0, 'z': 0, 'vel_x': 0, 'vel_y': 0, 'props': {}});
       },
       'time': function(t, elapsed) {
         let max = 50;
@@ -36,6 +43,19 @@ _ = {
         }
         this.x -= 700;
       },
+    },
+    'subline': {
+      'type': 'line',
+      'gradient': 'white',
+      'radius': 0,
+      'x': 0,
+      'y': 0,
+      'x2': 0,
+      'y2': 0,
+      'radiussize': 2.0,
+      'props': {},
+      'init': function() {},
+      'time': function(t, elapsed) {},
     },
     'subball': {
       'type': 'circle',

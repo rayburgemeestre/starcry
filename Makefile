@@ -26,7 +26,7 @@ debug:
 
 format:
 	# build starcry with tailored image so we can invoke the make command straight away
-	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core_format"
+	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_format"
 	stat -c 'chown %u:%g . -R' CMakeLists.txt | sudo sh -
 
 profile:
@@ -146,16 +146,11 @@ build-shell2:
 .PHONY: shell
 shell:
 	xhost +
-	docker run -i --privileged -t -v $$PWD:/projects/starcry -v $$HOME:/home/trigen -e DISPLAY=$DISPLAY -v /etc/passwd:/etc/passwd -v /etc/shadow:/etc/shadow -v /etc/sudoers:/etc/sudoers -v /tmp/.X11-unix:/tmp/.X11-unix -u 1144 rayburgemeestre/build-starcry-ubuntu:18.04 /bin/bash
-
-.PHONY: shell-ubuntu2004
-shell-ubuntu2004:
-	xhost +
 	docker run -i --privileged -t -v $$PWD:/projects/starcry -v $$HOME:/home/trigen -e DISPLAY=$DISPLAY -v /etc/passwd:/etc/passwd -v /etc/shadow:/etc/shadow -v /etc/sudoers:/etc/sudoers -v /tmp/.X11-unix:/tmp/.X11-unix -u 1144 rayburgemeestre/build-starcry-ubuntu:20.04 /bin/bash
 
 .PHONY: starcry
 clean:
-	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "cd build && make clean"
+	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "cd build && make clean"
 	rm -rf CMakeCache.txt
 	rm -rf build/CMakeCache.txt
 	rm -rf out

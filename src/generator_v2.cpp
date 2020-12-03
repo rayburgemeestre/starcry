@@ -385,46 +385,74 @@ double generator_v2::get_max_travel_of_object(v8_interact& i,
   // Update level for all objects
   // TODO: move to better place
   auto level = i.double_number(instance, "level");
+  auto type = i.str(instance, "type");
+  auto is_line = type == "line";
   parents[level] = instance;
   prev_parents[level] = previous_instance;
 
   auto offset_x = static_cast<double>(0);
   auto offset_y = static_cast<double>(0);
+  auto offset_x2 = static_cast<double>(0);
+  auto offset_y2 = static_cast<double>(0);
   while (level > 0) {
     level--;
     offset_x += i.double_number(parents[level], "x");
     offset_y += i.double_number(parents[level], "y");
+    if (is_line) {
+      // note, do not assume all parents are lines, use x & y relative
+      offset_x2 += i.double_number(parents[level], "x");
+      offset_y2 += i.double_number(parents[level], "y");
+    }
   }
 
   level = i.double_number(previous_instance, "level");
   auto prev_offset_x = static_cast<double>(0);
   auto prev_offset_y = static_cast<double>(0);
+  auto prev_offset_x2 = static_cast<double>(0);
+  auto prev_offset_y2 = static_cast<double>(0);
   while (level > 0) {
     level--;
     prev_offset_x += i.double_number(prev_parents[level], "x");
     prev_offset_y += i.double_number(prev_parents[level], "y");
+    if (is_line) {
+      prev_offset_x2 += i.double_number(prev_parents[level], "x2");
+      prev_offset_y2 += i.double_number(prev_parents[level], "y2");
+    }
   }
 
-  auto type = i.str(instance, "type");
   auto x = offset_x + i.double_number(instance, "x");
   auto y = offset_y + i.double_number(instance, "y");
+  auto x2 = is_line ? offset_x2 + i.double_number(instance, "x2") : 0.0;
+  auto y2 = is_line ? offset_y2 + i.double_number(instance, "y2") : 0.0;
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
 
   i.set_field(instance, "transitive_x", v8::Number::New(i.get_isolate(), x));
   i.set_field(instance, "transitive_y", v8::Number::New(i.get_isolate(), y));
+  if (is_line) {
+    i.set_field(instance, "transitive_x2", v8::Number::New(i.get_isolate(), x2));
+    i.set_field(instance, "transitive_y2", v8::Number::New(i.get_isolate(), y2));
+  }
 
   // Calculate how many pixels are maximally covered by this instance, this is currently very simplified
   auto prev_x = prev_offset_x + i.double_number(previous_instance, "x");
   auto prev_y = prev_offset_y + i.double_number(previous_instance, "y");
+  auto prev_x2 = is_line ? prev_offset_x2 + i.double_number(previous_instance, "x2") : 0.0;
+  auto prev_y2 = is_line ? prev_offset_y2 + i.double_number(previous_instance, "y2") : 0.0;
   auto prev_radius = i.double_number(previous_instance, "radius");
   auto prev_radiussize = i.double_number(previous_instance, "radiussize");
   auto prev_rad = prev_radius + prev_radiussize;
   auto rad = radius + radiussize;
+  // x, y
   auto dist = sqrt(pow(x - prev_x, 2) + pow(y - prev_y, 2));
+  // x2, y2
+  if (is_line) {
+    dist = std::max(dist, sqrt(pow(x2 - prev_x2, 2) + pow(y2 - prev_y2, 2)));
+  }
   // TODO: stupid warp hack
   while (dist >= 1920 * 0.9) dist -= 1920;
   while (dist >= 1080 * 0.9) dist -= 1080;
+  // radius
   dist = std::max(dist, fabs(prev_rad - rad));
   return dist;
 }
@@ -446,6 +474,8 @@ void generator_v2::convert_object_to_render_job(
     v8_interact& i, v8::Local<v8::Object> instance, size_t index, step_calculator& sc, v8::Local<v8::Object> video) {
   // Update level for all objects
   auto level = i.double_number(instance, "level");
+  auto type = i.str(instance, "type");
+  auto is_line = type == "line";
   parents[level] = instance;
 
   // See if we require this step for this object
@@ -456,9 +486,10 @@ void generator_v2::convert_object_to_render_job(
   auto id = i.str(instance, "id");
   auto transitive_x = i.double_number(instance, "transitive_x");
   auto transitive_y = i.double_number(instance, "transitive_y");
+  auto transitive_x2 = is_line ? i.double_number(instance, "transitive_x2") : 0.0;
+  auto transitive_y2 = is_line ? i.double_number(instance, "transitive_y2") : 0.0;
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
-  auto type = i.str(instance, "type");
   auto scale = std::max(i.double_number(video, "scale"), static_cast<double>(1));
 
   data::shape new_shape;
@@ -485,16 +516,27 @@ void generator_v2::convert_object_to_render_job(
 
   if (type == "circle") {
     new_shape.type = data::shape_type::circle;
-    // wrap this in a proper add method
-    if (stepper.next_step != stepper.max_step) {
-      indexes[index][stepper.current_step] = job->shapes[stepper.current_step].size();
-    } else {
-      new_shape.indexes = indexes[index];
-    }
-    job->shapes[stepper.current_step].push_back(new_shape);
+  } else if (type == "line") {
+    new_shape.type = data::shape_type::line;
+    // test
+    //    new_shape.gradients_.clear();
+    //    new_shape.gradients_.emplace_back(1.0, data::gradient{});
+    //    new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{0, 0, 0, 0}));
+    //    new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.5, data::color{0, 0, 0, 1}));
+    //    new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(1.0, data::color{0, 0, 0, 0}));
+    // ----TODO---- figure out why this shit is NaN (guessing)
+    new_shape.x2 = transitive_x2;  // i.double_number(instance, "x2");  ///#transitive_x;
+    new_shape.y2 = transitive_y2;  // i.double_number(instance, "y2");  // transitive_y;
   } else {
     new_shape.type = data::shape_type::none;
   }
+  // wrap this in a proper add method
+  if (stepper.next_step != stepper.max_step) {
+    indexes[index][stepper.current_step] = job->shapes[stepper.current_step].size();
+  } else {
+    new_shape.indexes = indexes[index];
+  }
+  job->shapes[stepper.current_step].push_back(new_shape);
   job->scale = scale;
 };
 
