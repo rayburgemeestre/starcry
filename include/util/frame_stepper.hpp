@@ -26,16 +26,12 @@ public:
   }
 
   void update(int steps) {
-    max_step = std::max(max_step, steps);
     current_step_max = std::max(current_step_max, steps);
   }
 
   void multiply(double multiplier) {
-    max_step *= multiplier;
-  }
-
-  bool exceeds(double tolerated_granularity) {
-    return current_step_max > tolerated_granularity;
+    const auto add = std::max(1.0, static_cast<double>(max_step) * multiplier);
+    max_step += add;
   }
 
   void rewind() {

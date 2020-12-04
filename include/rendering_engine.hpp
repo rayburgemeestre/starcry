@@ -118,6 +118,16 @@ public:
         draw_logic_.render_text<double>(shape.x, shape.y, shape.text_size, shape.text, shape.align);
       }
     }
+    //    // test
+    //    double x = 1.;
+    //    double y = 0.;
+    //    auto copy = bg_color;
+    //    copy.r = 1.;
+    //    // bmp.clear_to_color(copy);
+    //    for (int i=0; i<1; i++) {
+    //      for (int j=0; j<100; j++)
+    //        bmp.set(i, j, x, y, y, y);
+    //    }
 
     // if (false) {  // TODO: debug chunks flag
     //   for (uint32_t y = 0; y < canvas_h; y++) al_put_pixel(0, y, al_map_rgba(0, 255, 0, 255));

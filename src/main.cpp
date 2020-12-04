@@ -26,6 +26,7 @@ private:
   po::variables_map vm;
   std::string output_file = "output.h264";
   size_t frame_of_interest = std::numeric_limits<size_t>::max();
+  double rand_seed = std::numeric_limits<double>::max();
   po::options_description desc = std::string("Allowed options");
   std::string script = "input/test.js";
   size_t num_worker_threads = 1;
@@ -38,10 +39,10 @@ public:
     // clang-format off
     desc.add_options()
       ("help", "produce help message")
-      ("dev", "temporary generator v2 development mode execution")
       ("script,s", po::value<std::string>(&script), "javascript file to use for processing")
       ("output,o", po::value<std::string>(&output_file), "filename for video output (default output.h264)")
       ("frame,f", po::value<size_t>(&frame_of_interest), "specific frame to render and save as BMP file")
+      ("seed", po::value<double>(&rand_seed), "override the random seed used")
       ("num_threads,t", po::value<size_t>(&num_worker_threads), "number of local render threads (default 1)")
       ("server", "start server to allow dynamic renderers (default no)")
       ("client", "start client renderer, connects to hardcoded address")
@@ -119,12 +120,6 @@ public:
       }
     };
 
-    if (vm.count("dev")) {
-      std::cout << "temporary dev mode" << std::endl;
-      generator_v2 gen;
-      gen.init("input/test2.js");
-      return;
-    }
     starcry sc(num_worker_threads,
                vm.count("server"),
                vm.count("vis"),
@@ -132,7 +127,8 @@ public:
                start_webserver,
                vm.count("compression"),
                p_mode,
-               render_command);
+               render_command,
+               rand_seed != std::numeric_limits<double>::max() ? std::make_optional<double>(rand_seed) : std::nullopt);
 
     if (vm.count("client")) {
       sc.run_client();

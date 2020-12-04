@@ -106,6 +106,12 @@ public:
     return v8_number(obj, index)->NumberValue(isolate->GetCurrentContext()).ToChecked();
   }
 
+  double boolean(v8::Local<v8::Object>& obj, const std::string& field) {
+    auto tmp = obj->Get(get_context(), v8_str(context, field)).ToLocalChecked();
+    if (!tmp->IsBoolean()) return false;
+    return tmp->BooleanValue(isolate);
+  }
+
   //  v8::Maybe<double> maybe_double_number(v8::Local<v8::Object>& obj, const std::string& field) {
   //    return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext());
   //  }
@@ -120,6 +126,10 @@ public:
 
   std::string str(v8::Local<v8::Array>& obj, size_t index) {
     return v8_str(isolate, v8_string(obj, index));
+  }
+
+  bool has_field(v8::Local<v8::Object> source, const std::string& source_field) {
+    return source->Has(ctx, v8_str(context, source_field)).ToChecked();
   }
 
   void copy_field(v8::Local<v8::Object> dest,

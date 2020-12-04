@@ -29,11 +29,11 @@ generator_v2::generator_v2() {
   });
 }
 
-void generator_v2::init(const std::string& filename) {
+void generator_v2::init(const std::string& filename, std::optional<double> rand_seed) {
   init_context(filename);
   init_user_script(filename);
   init_job();
-  init_video_meta_info();
+  init_video_meta_info(rand_seed);
   init_gradients();
   init_object_instances();
 }
@@ -70,7 +70,9 @@ void generator_v2::init_job() {
   job->frame_number = frame_number;
   job->rendered = false;
   job->last_frame = false;
-  job->num_chunks = 1;    // num_chunks;
+  job->num_chunks = 1;  // num_chunks;
+  job->offset_x = 0;
+  job->offset_y = 0;
   job->canvas_w = 1920;   // canvas_w;
   job->canvas_h = 1080;   // canvas_h;
   job->scale = 1.0;       // scale;
@@ -78,7 +80,7 @@ void generator_v2::init_job() {
   job->save_image = false;
 }
 
-void generator_v2::init_video_meta_info() {
+void generator_v2::init_video_meta_info(std::optional<double> rand_seed) {
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto video = v8_index_object(context, val, "video").As<v8::Object>();
@@ -86,8 +88,9 @@ void generator_v2::init_video_meta_info() {
     use_fps = i.double_number(video, "fps");
     canvas_w = i.double_number(video, "width");
     canvas_h = i.double_number(video, "height");
-    auto seed = i.double_number(video, "rand_seed");
+    seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
     tolerated_granularity = i.double_number(video, "granularity");
+    experimental_feature1 = i.boolean(video, "experimental_feature1");
     set_rand_seed(seed);
 
     max_frames = duration * use_fps;
@@ -170,13 +173,13 @@ bool generator_v2::generate_frame() {
         stepper.reset();
         indexes.clear();
         attempt = 0;
+        max_dist_found = std::numeric_limits<double>::max();
 
-        while (stepper.exceeds(tolerated_granularity)) {
+        while (max_dist_found > tolerated_granularity) {
           ++attempt;
-          if (attempt > 2) {
-            stepper.multiply(2.0);
-            revert_all_changes(i, instances, next_instances, intermediates);
-          } else if (attempt > 1) {
+          max_dist_found = 0;
+          if (attempt > 1) {
+            stepper.multiply(1.5);
             revert_all_changes(i, instances, next_instances, intermediates);
           }
           step_calculator sc(stepper.max_step);
@@ -194,6 +197,8 @@ bool generator_v2::generate_frame() {
             }
           }
         }
+
+        if (experimental_feature1) revert_position_updates(i, instances, next_instances, intermediates);
 
         util::generator::copy_instances(i, instances, next_instances, true);
       }
@@ -219,6 +224,25 @@ void generator_v2::revert_all_changes(v8_interact& i,
   util::generator::copy_instances(i, intermediates, instances);
 }
 
+void generator_v2::revert_position_updates(v8_interact& i,
+                                           v8::Local<v8::Array>& instances,
+                                           v8::Local<v8::Array>& next_instances,
+                                           v8::Local<v8::Array>& intermediates) {
+  for (size_t j = 0; j < next_instances->Length(); j++) {
+    auto src = i.get_index(instances, j).As<v8::Object>();
+    auto dst = i.get_index(next_instances, j).As<v8::Object>();
+    auto dst2 = i.get_index(intermediates, j).As<v8::Object>();
+    i.copy_field(dst, "x", src, "x");
+    i.copy_field(dst, "y", src, "y");
+    i.copy_field(dst, "x2", src, "x2");
+    i.copy_field(dst, "y2", src, "y2");
+    i.copy_field(dst2, "x", src, "x");
+    i.copy_field(dst2, "y", src, "y");
+    i.copy_field(dst2, "x2", src, "x2");
+    i.copy_field(dst2, "y2", src, "y2");
+  }
+}
+
 void generator_v2::update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, int max_step) {
   auto isolate = i.get_isolate();
   for (size_t j = 0; j < next_instances->Length(); j++) {
@@ -228,18 +252,31 @@ void generator_v2::update_object_positions(v8_interact& i, v8::Local<v8::Array>&
     update_time(i, instance);
 
     std::string type = i.str(instance, "type");
+    bool is_line = type == "line";
     std::string collision_group = i.str(instance, "collision_group");
     auto x = i.double_number(instance, "x");
     auto y = i.double_number(instance, "y");
+    auto x2 = i.double_number(instance, "x2");
+    auto y2 = i.double_number(instance, "y2");
     auto velocity = i.double_number(instance, "velocity");
     auto vel_x = i.double_number(instance, "vel_x");
     auto vel_y = i.double_number(instance, "vel_y");
+    auto vel_x2 = is_line ? i.double_number(instance, "vel_x2") : 0.0;
+    auto vel_y2 = is_line ? i.double_number(instance, "vel_y2") : 0.0;
     if (!std::isnan(velocity)) {
       if (!std::isnan(vel_x)) {
         x += (vel_x * velocity) / static_cast<double>(max_step);
       }
       if (!std::isnan(vel_y)) {
         y += (vel_y * velocity) / static_cast<double>(max_step);
+      }
+      if (is_line) {
+        if (!std::isnan(vel_x2)) {
+          x2 += (vel_x2 * velocity) / static_cast<double>(max_step);
+        }
+        if (!std::isnan(vel_y2)) {
+          y2 += (vel_y2 * velocity) / static_cast<double>(max_step);
+        }
       }
     }
 
@@ -255,6 +292,10 @@ void generator_v2::update_object_positions(v8_interact& i, v8::Local<v8::Array>&
     }
     i.set_field(instance, "x", v8::Number::New(isolate, x));
     i.set_field(instance, "y", v8::Number::New(isolate, y));
+    if (is_line) {
+      i.set_field(instance, "x2", v8::Number::New(isolate, x2));
+      i.set_field(instance, "y2", v8::Number::New(isolate, y2));
+    }
     if (attempt == 1) {
       i.set_field(instance, "steps", v8::Number::New(isolate, 1));
     }
@@ -374,7 +415,8 @@ void generator_v2::update_time(v8_interact& i, v8::Local<v8::Object>& instance) 
 }
 
 int generator_v2::update_steps(double dist) {
-  auto steps = (int)std::max(1.0, fabs(dist) / tolerated_granularity);
+  max_dist_found = std::max(max_dist_found, fabs(dist));
+  auto steps = std::max(1.0, fabs(dist) / tolerated_granularity);
   stepper.update(steps);
   return steps;
 }

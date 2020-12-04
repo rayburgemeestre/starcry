@@ -31,7 +31,8 @@ starcry::starcry(size_t num_local_engines,
                  bool start_webserver,
                  bool enable_compression,
                  starcry::render_video_mode mode,
-                 std::function<void(starcry &sc)> on_pipeline_initialized)
+                 std::function<void(starcry &sc)> on_pipeline_initialized,
+                 std::optional<double> rand_seed)
     : num_local_engines(num_local_engines),
       enable_remote_workers(enable_remote_workers),
       is_interactive(is_interactive),
@@ -46,7 +47,8 @@ starcry::starcry(size_t num_local_engines,
       frames(system->create_queue("frames", 10)),
       mode(mode),
       on_pipeline_initialized(on_pipeline_initialized),
-      le(std::chrono::milliseconds(1000)) {}
+      le(std::chrono::milliseconds(1000)),
+      seed(rand_seed) {}
 
 starcry::~starcry() {
   le.cancel();
@@ -98,7 +100,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   if (cmd_def->type == instruction_type::get_image || cmd_def->type == instruction_type::get_bitmap ||
       cmd_def->type == instruction_type::get_shapes) {
     gen = std::make_shared<generator_v2>();
-    gen->init(cmd_def->script);
+    gen->init(cmd_def->script, seed);
     size_t idx = 0;
     while (gen->generate_frame()) {
       if (++idx >= cmd_def->frame) {
@@ -128,7 +130,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     }
 
     gen = std::make_shared<generator_v2>();
-    gen->init(cmd_def->script);
+    gen->init(cmd_def->script, seed);
     // old generator:
     // bitrate = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");
     size_t bitrate = (500 * 1024 * 8);
@@ -170,7 +172,9 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   auto &bmp = bitmaps[i]->get(job.width, job.height);
   render_job(*engines[i], job, bmp);
   if (job.job_number == std::numeric_limits<uint32_t>::max()) {
-    engines[i]->write_image(bmp, "output.bmp");
+    png::image<png::rgb_pixel> image(job.width, job.height);
+    copy_to_png(bmp.pixels(), job.width, job.height, image);
+    image.write("output_" + std::to_string(gen->get_seed()) + ".png");
   }
   if (job_msg->client == nullptr) {
     auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels());
@@ -212,7 +216,9 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
         auto fun = [&](std::shared_ptr<ImageHandler> chat_handler, std::shared_ptr<render_msg> job_msg) {
           chat_handler->callback(job_msg->client, job_msg->buffer);
         };
-        if (webserv) webserv->execute_image(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+        if (webserv) {
+          webserv->execute_image(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+        }
       } else if (job_msg->type == instruction_type::get_bitmap) {
         auto fun = [&](std::shared_ptr<BitmapHandler> bmp_handler, std::shared_ptr<render_msg> job_msg) {
           std::string buffer;

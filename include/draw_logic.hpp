@@ -422,13 +422,19 @@ public:
       process_intersection(D);
 
       if (has_intersection_x1 && has_intersection_x2) {
-        int x_left = min(intersection_x1, intersection_x2);
+        // The following two "TODO" items fix some glitch that has been in the original code for some time as well.
+        // This requires some digging as to why the patching was necessary. As long as I don't see any visual artifacts
+        // I'm kind of okay with these hacks to fix it
+        // Without the fix you will see the final column of pixels in the first row, fixing only the first TODO item
+        // will move this column to the last column on the screen, aand the change from <= to < will get rid of this
+        // last column
+        int x_left = min(intersection_x1, intersection_x2) - 1;  // TODO: figure out why this - 1 is needed!
         int x_right = max(intersection_x1, intersection_x2);
         // Do not loop through unnecessary pixels
         if (x_left < 0) x_left = 0;
         if (x_right > static_cast<int>(width_)) x_right = static_cast<int>(width_);
 
-        for (int x = x_left; x <= x_right; x++) {
+        for (int x = x_left; x < /* <= */ x_right; x++) {  // TODO#2: figure out why this <= was wrong!
           double dist_pixel = sqrt(squared_dist(x, aline.center().x) + squared_dist(aline.center().y, current_y));
           double dist_max = sqrt(squared_dist(aline.center().x, aline.x2) + squared_dist(aline.center().y, aline.y2));
 
@@ -515,7 +521,11 @@ public:
 
     // CompiledGradient *ptrGradient = m_object->GetGradient();
     // LColor color = ptrGradient->getColor( (1.0 - normalized_dist_from_line));
-    double num = 1.0 - (1.0 - normalized_dist_from_center) * (1.0 - normalized_dist_from_line);
+    // TODO: make the line modes configurable
+    // line mode 1
+    // double num = 1.0 - (1.0 - normalized_dist_from_center) * (1.0 - normalized_dist_from_line);
+    // line mode 2
+    double num = 1.0 - (1.0 - normalized_dist_from_line);
     // num = 1.0 - num; // just to get it to look like it supposed to a bit right now
     // LColor color = ptrGradient->getColor( num );
 

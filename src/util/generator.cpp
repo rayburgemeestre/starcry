@@ -52,6 +52,15 @@ void instantiate_object(v8_interact& i,
   i.copy_field(new_instance, "y2", scene_obj);
   i.copy_field(new_instance, "vel_x", scene_obj);
   i.copy_field(new_instance, "vel_y", scene_obj);
+  i.copy_field(new_instance, "vel_x2", scene_obj);
+  i.copy_field(new_instance, "vel_y2", scene_obj);
+  i.copy_field(new_instance, "velocity", scene_obj);
+  if (i.has_field(scene_obj, "radius")) {
+    i.copy_field(new_instance, "radius", scene_obj);
+  }
+  if (i.has_field(scene_obj, "radiussize")) {
+    i.copy_field(new_instance, "radiussize", scene_obj);
+  }
 
   i.set_field(new_instance, "subobj", v8::Array::New(isolate));
   i.set_field(new_instance, "meta", v8_str(context, annotation));
@@ -142,6 +151,9 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field(dst, "y2", src);
     i.copy_field(dst, "vel_x", src);
     i.copy_field(dst, "vel_y", src);
+    i.copy_field(dst, "vel_x2", src);
+    i.copy_field(dst, "vel_y2", src);
+    i.copy_field(dst, "velocity", src);
     i.copy_field(dst, "radius", src);
     i.copy_field(dst, "radiussize", src);
     i.copy_field(dst, "last_collide", src);

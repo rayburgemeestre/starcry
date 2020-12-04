@@ -64,6 +64,7 @@ private:
   std::map<size_t, std::shared_ptr<render_msg>> buffered_frames;
   size_t current_frame = 1;
   limited_executor le;
+  std::optional<double> seed;
 
 public:
   starcry(
@@ -74,7 +75,8 @@ public:
       bool start_webserver,
       bool enable_compression,
       render_video_mode mode,
-      std::function<void(starcry &sc)> on_pipeline_initialized = [](auto &) {});
+      std::function<void(starcry &sc)> on_pipeline_initialized = [](auto &) {},
+      std::optional<double> rand_seed = std::nullopt);
   ~starcry();
 
   void add_command(seasocks::WebSocket *client, const std::string &script, instruction_type it, int frame_num);

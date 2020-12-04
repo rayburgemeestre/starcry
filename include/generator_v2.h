@@ -30,6 +30,7 @@ private:
   size_t max_frames = 0;
   int32_t canvas_w = 0;
   int32_t canvas_h = 0;
+  double seed = 1;
   double tolerated_granularity = 1;
   size_t use_fps = 25;
   std::unordered_map<std::string, data::gradient> gradients;
@@ -38,6 +39,8 @@ private:
   std::unordered_map<int64_t, v8::Local<v8::Object>> parents;
   std::unordered_map<int64_t, v8::Local<v8::Object>> prev_parents;
   int attempt = 0;
+  double max_dist_found = std::numeric_limits<double>::max();
+  bool experimental_feature1 = false;
 
   std::map<std::string, quadtree> qts;
 
@@ -45,11 +48,11 @@ public:
   generator_v2();
   ~generator_v2() = default;
 
-  void init(const std::string& filename);
+  void init(const std::string& filename, std::optional<double> rand_seed);
   void init_context(const std::string& filename);
   void init_user_script(const std::string& filename);
   void init_job();
-  void init_video_meta_info();
+  void init_video_meta_info(std::optional<double> rand_seed);
   void init_gradients();
   void init_object_instances();
 
@@ -58,6 +61,10 @@ public:
                           v8::Local<v8::Array>& instances,
                           v8::Local<v8::Array>& next_instances,
                           v8::Local<v8::Array>& intermediates);
+  void revert_position_updates(v8_interact& i,
+                               v8::Local<v8::Array>& instances,
+                               v8::Local<v8::Array>& next_instances,
+                               v8::Local<v8::Array>& intermediates);
   void update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, int max_step);
   void update_object_interactions(v8_interact& i,
                                   v8::Local<v8::Array>& next_instances,
@@ -89,6 +96,9 @@ public:
   }
   int32_t height() const {
     return canvas_h;
+  }
+  double get_seed() const {
+    return seed;
   }
 };
 
