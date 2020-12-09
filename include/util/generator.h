@@ -11,16 +11,24 @@
 
 namespace util {
 namespace generator {
+
 void copy_gradient_from_object_to_shape(v8_interact& i,
                                         v8::Local<v8::Object>& source_object,
                                         data::shape& destination_shape,
                                         std::unordered_map<std::string, data::gradient>& known_gradients_map);
+
+void copy_texture_from_object_to_shape(v8_interact& i,
+                                       v8::Local<v8::Object>& source_object,
+                                       data::shape& destination_shape,
+                                       std::unordered_map<std::string, data::texture>& known_textures_map);
+
 void instantiate_object(v8_interact& i,
                         v8::Local<v8::Object> scene_obj,
                         v8::Local<v8::Object> object_prototype,
                         v8::Local<v8::Object> new_instance,
                         int64_t level,
                         const std::string& annotation);
+
 v8::Local<v8::Object> instantiate_objects(v8_interact& i,
                                           v8::Local<v8::Array>& objects,
                                           v8::Local<v8::Array>& scene_instances,

@@ -19,6 +19,7 @@
 #include "shapes/circle_v2.h"
 #include "shapes/position.h"
 #include "shapes/rectangle_v2.h"
+#include "data/texture.hpp"
 
 std::shared_ptr<v8_wrapper> context;
 
@@ -35,6 +36,7 @@ void generator_v2::init(const std::string& filename, std::optional<double> rand_
   init_job();
   init_video_meta_info(rand_seed);
   init_gradients();
+  init_textures();
   init_object_instances();
 }
 
@@ -45,6 +47,7 @@ void generator_v2::init_context(const std::string& filename) {
   context->reset();
   context->add_fun("output", &output_fun);
   context->add_fun("rand", &rand_fun_v2);
+  context->add_fun("random_velocity", &random_velocity);
   context->add_include_fun();
 }
 
@@ -120,6 +123,41 @@ void generator_v2::init_gradients() {
         auto b = i.double_number(position, "b");
         auto a = i.double_number(position, "a");
         gradients[id].colors.emplace_back(std::make_tuple(pos, data::color{r, g, b, a}));
+      }
+    }
+  });
+}
+
+void generator_v2::init_textures() {
+  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+    v8_interact i(isolate);
+    auto obj = val.As<v8::Object>();
+    auto texture_objects = i.v8_obj(obj, "textures");
+    auto texture_fields = texture_objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+    for (size_t k = 0; k < texture_fields->Length(); k++) {
+      auto texture_id = i.get_index(texture_fields, k);
+      auto texture_settings = i.get(texture_objects, texture_id).As<v8::Object>();
+      auto id = v8_str(isolate, texture_id.As<v8::String>());
+      auto type = i.str(texture_settings, "type");
+      textures[id].size = i.double_number(texture_settings, "size");
+      textures[id].octaves = i.integer_number(texture_settings, "octaves");
+      textures[id].persistence = i.double_number(texture_settings, "persistence");
+      textures[id].percentage = i.double_number(texture_settings, "percentage");
+      textures[id].scale = i.double_number(texture_settings, "scale");
+      auto range = i.v8_array(texture_settings, "range");
+      textures[id].strength = i.double_number(texture_settings, "strength");
+      if (range->Length() == 4) {
+        data::texture::noise_type use_type = data::texture::noise_type::perlin;
+        if (type == "fractal") {
+          use_type = data::texture::noise_type::fractal;
+        } else if (type == "turbulence") {
+          use_type = data::texture::noise_type::turbulence;
+        }
+        textures[id].type = use_type;
+        textures[id].fromX = i.double_number(range, 0);
+        textures[id].begin = i.double_number(range, 1);
+        textures[id].end = i.double_number(range, 2);
+        textures[id].toX = i.double_number(range, 3);
       }
     }
   });
@@ -412,6 +450,8 @@ void generator_v2::update_time(v8_interact& i, v8::Local<v8::Object>& instance) 
   const auto t = fn / max_frames;
   const auto e = static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(stepper.max_step);
   i.call_fun(instance, "time", t, e);
+  i.set_field(instance, "__time__", v8::Number::New(i.get_isolate(), t));
+  i.set_field(instance, "__elapsed__", v8::Number::New(i.get_isolate(), e));
 }
 
 int generator_v2::update_steps(double dist) {
@@ -526,6 +566,7 @@ void generator_v2::convert_object_to_render_job(
     return;
   }
   auto id = i.str(instance, "id");
+  auto time = i.double_number(instance, "__time__");
   auto transitive_x = i.double_number(instance, "transitive_x");
   auto transitive_y = i.double_number(instance, "transitive_y");
   auto transitive_x2 = is_line ? i.double_number(instance, "transitive_x2") : 0.0;
@@ -535,14 +576,18 @@ void generator_v2::convert_object_to_render_job(
   auto scale = std::max(i.double_number(video, "scale"), static_cast<double>(1));
 
   data::shape new_shape;
+  new_shape.time = time;
   new_shape.x = transitive_x;
   new_shape.y = transitive_y;
 
   new_shape.gradients_.clear();
+  new_shape.textures.clear();
   util::generator::copy_gradient_from_object_to_shape(i, instance, new_shape, gradients);
+  util::generator::copy_texture_from_object_to_shape(i, instance, new_shape, textures);
   while (level > 0) {
     level--;
     util::generator::copy_gradient_from_object_to_shape(i, parents[level], new_shape, gradients);
+    util::generator::copy_texture_from_object_to_shape(i, parents[level], new_shape, textures);
   }
 
   if (new_shape.gradients_.empty()) {

@@ -8,6 +8,7 @@
 
 namespace util {
 namespace generator {
+
 void copy_gradient_from_object_to_shape(v8_interact& i,
                                         v8::Local<v8::Object>& source_object,
                                         data::shape& destination_shape,
@@ -30,6 +31,33 @@ void copy_gradient_from_object_to_shape(v8_interact& i,
       auto opacity = i.double_number(gradient_data, size_t(0));
       auto gradient_id = i.str(gradient_data, size_t(1));
       destination_shape.gradients_.emplace_back(opacity, known_gradients_map[gradient_id]);
+    }
+  }
+}
+
+// TODO: this is almost a copy of the above copy_gradient_from_object_to_shape function
+void copy_texture_from_object_to_shape(v8_interact& i,
+                                       v8::Local<v8::Object>& source_object,
+                                       data::shape& destination_shape,
+                                       std::unordered_map<std::string, data::texture>& known_textures_map) {
+  std::string texture_id = i.str(source_object, "texture");
+  if (!texture_id.empty()) {
+    if (destination_shape.textures.empty()) {
+      if (known_textures_map.find(texture_id) != known_textures_map.end()) {
+        destination_shape.textures.emplace_back(1.0, known_textures_map[texture_id]);
+      }
+    }
+  }
+  auto texture_array = i.v8_array(source_object, "textures");
+  if (destination_shape.textures.empty()) {
+    for (size_t k = 0; k < texture_array->Length(); k++) {
+      auto texture_data = i.get_index(texture_array, k).As<v8::Array>();
+      if (!texture_data->IsArray()) {
+        continue;
+      }
+      auto opacity = i.double_number(texture_data, size_t(0));
+      auto texture_id = i.str(texture_data, size_t(1));
+      destination_shape.textures.emplace_back(opacity, known_textures_map[texture_id]);
     }
   }
 }
@@ -158,6 +186,8 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field(dst, "radiussize", src);
     i.copy_field(dst, "last_collide", src);
     i.copy_field(dst, "gradient", src);
+    i.copy_field(dst, "__time__", src);
+    i.copy_field(dst, "__elapsed__", src);
     if (!exclude_props) {
       i.copy_field(dst, "props", src);
     }

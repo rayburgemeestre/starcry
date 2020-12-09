@@ -14,6 +14,7 @@
 #include "cereal/types/vector.hpp"
 
 #include "data/gradient.hpp"
+#include "data/texture.hpp"
 
 namespace data {
 
@@ -81,6 +82,7 @@ public:
 };
 
 struct shape {
+  double time;
   double x;
   double y;
   double z;
@@ -97,12 +99,32 @@ struct shape {
   std::string text;
   std::string align;
   std::vector<std::pair<double, gradient>> gradients_;
+  std::vector<std::pair<double, texture>> textures;
   blending_type blending_;
   std::map<int, size_t> indexes;
 
   template <class Archive>
   void serialize(Archive &ar) {
-    ar(x, y, z, x2, y2, z2, type, r, g, b, radius, text_size, radius_size, text, align, gradients_, blending_, indexes);
+    ar(time,
+       x,
+       y,
+       z,
+       x2,
+       y2,
+       z2,
+       type,
+       r,
+       g,
+       b,
+       radius,
+       text_size,
+       radius_size,
+       text,
+       align,
+       gradients_,
+       textures,
+       blending_,
+       indexes);
   }
 };
 

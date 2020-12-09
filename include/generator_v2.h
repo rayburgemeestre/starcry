@@ -12,6 +12,7 @@
 #include <cstdint>
 
 #include "data/job.hpp"
+#include "data/texture.hpp"
 
 #include "util/frame_stepper.hpp"
 #include "util/v8_interact.hpp"
@@ -34,6 +35,7 @@ private:
   double tolerated_granularity = 1;
   size_t use_fps = 25;
   std::unordered_map<std::string, data::gradient> gradients;
+  std::unordered_map<std::string, data::texture> textures;
   std::unordered_map<size_t, std::map<int, size_t>> indexes;
   frame_stepper stepper;
   std::unordered_map<int64_t, v8::Local<v8::Object>> parents;
@@ -54,6 +56,7 @@ public:
   void init_job();
   void init_video_meta_info(std::optional<double> rand_seed);
   void init_gradients();
+  void init_textures();
   void init_object_instances();
 
   bool generate_frame();

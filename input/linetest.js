@@ -21,10 +21,23 @@ _ = {
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
     ],
   },
+  'textures': {
+    'clouds': {
+      'type': 'perlin',  // fractal, turbulence
+      'size': 1920.,
+      'octaves': 7,
+      'persistence': 0.45,
+      'percentage': 1.0,
+      'scale': 14.,
+      'range': [0.0, 0.0, 1.0, 1.0],
+      'strength': 0.8,
+    }
+  },
   'objects': {
     'line': {
       'type': 'line',
       'gradient': 'white',
+      // 'texture': 'clouds',
       'radius': 0,
       'x': 0,
       'y': 0,
@@ -47,11 +60,14 @@ _ = {
         var height = script.video.height;
         var prev_vel_x = 0;
         var prev_vel_y = 0;
+
+        var vel_x = 0;
+        var vel_y = 0;
+
         for (var i = 0; i < 50; i++) {
           var x = (rand() * width) - width / 2;
           var y = (rand() * height) - height / 2;
-          vel_x = rand();
-          vel_y = rand();
+          [vel_x, vel_y] = random_velocity();
           if (i > 0) {
             this.subobj.push({
               'id': 'line',
@@ -63,7 +79,7 @@ _ = {
               'vel_y': vel_y,
               'vel_x2': prev_vel_x,
               'vel_y2': prev_vel_y,
-              'velocity': 60,
+              'velocity': 300,
               'z': 0,
               'radiussize': 5.0,
               'props': {}
@@ -95,11 +111,11 @@ _ = {
     'duration': 60,
     'fps': 30,
     'width': 1920,
-    'height': 1920,
+    'height': 1080,
     'scale': 1,
     'rand_seed': 1,
     'granularity': 1,
-    'experimental_feature1': true,
+    'experimental_feature1': false,
   },
   'scenes': [{
     'name': 'scene1',
