@@ -11,7 +11,6 @@
 #include "color_blender.hpp"
 #include "data/gradient.hpp"
 #include "data/texture.hpp"
-#include "perlin.h"
 #include "primitives.h"
 #include "util/memory_font.h"
 
