@@ -456,7 +456,7 @@ void generator_v2::update_time(v8_interact& i, v8::Local<v8::Object>& instance) 
 
 int generator_v2::update_steps(double dist) {
   max_dist_found = std::max(max_dist_found, fabs(dist));
-  auto steps = std::max(1.0, fabs(dist) / tolerated_granularity);
+  auto steps = (int)std::max(1.0, fabs(dist) / tolerated_granularity);
   stepper.update(steps);
   return steps;
 }

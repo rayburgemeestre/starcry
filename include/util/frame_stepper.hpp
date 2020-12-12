@@ -26,6 +26,7 @@ public:
   }
 
   void update(int steps) {
+    max_step = std::max(max_step, steps);
     current_step_max = std::max(current_step_max, steps);
   }
 
