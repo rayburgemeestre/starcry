@@ -26,6 +26,7 @@ class render_server;
 class webserver;
 class frame_streamer;
 class render_client;
+class progress_visualizer;
 
 namespace data {
 struct job;
@@ -65,6 +66,7 @@ private:
   size_t current_frame = 1;
   limited_executor le;
   std::optional<double> seed;
+  std::shared_ptr<progress_visualizer> visualizer;
 
 public:
   starcry(
@@ -83,7 +85,7 @@ public:
   void add_command(seasocks::WebSocket *client, const std::string &script, const std::string &output_file);
 
   void run_server();
-  void run_client();
+  void run_client(const std::string &host);
 
 private:
   void render_job(rendering_engine_wrapper &engine, const data::job &job, image &bmp);

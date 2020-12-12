@@ -18,11 +18,11 @@ public:
   void finalize();
 
 private:
-  float ball_radius = 16.f;
+  // float ball_radius = 16.f;
   int bpp = 32;
   bool vsync = false;
   sf::RenderWindow window;
   // sf::Font font;
   // sf::Text text;
-  sf::CircleShape ball;
+  // sf::CircleShape ball;
 };

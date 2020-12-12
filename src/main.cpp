@@ -30,6 +30,7 @@ private:
   po::options_description desc = std::string("Allowed options");
   std::string script = "input/test.js";
   size_t num_worker_threads = 1;
+  std::string host = "localhost";
 
 public:
   main_program(int argc, char *argv[]) {
@@ -45,7 +46,7 @@ public:
       ("seed", po::value<double>(&rand_seed), "override the random seed used")
       ("num_threads,t", po::value<size_t>(&num_worker_threads), "number of local render threads (default 1)")
       ("server", "start server to allow dynamic renderers (default no)")
-      ("client", "start client renderer, connects to hardcoded address")
+      ("client", po::value<std::string>(&host), "start client renderer, connect to host (default localhost)")
       ("gui", "render to graphical window")
       ("gui-only", "render to graphical window only (no video)")
       ("javascript-only", "render only the jobs, nothing graphical")
@@ -131,7 +132,7 @@ public:
                rand_seed != std::numeric_limits<double>::max() ? std::make_optional<double>(rand_seed) : std::nullopt);
 
     if (vm.count("client")) {
-      sc.run_client();
+      sc.run_client(host);
     } else {
       sc.run_server();
     }

@@ -49,3 +49,20 @@ std::vector<double> random_velocity() {
   vec.push_back(y);
   return vec;
 }
+
+double expf_fun(double v, double factor) {
+  auto max = factor;
+  auto maxexp = log(max + 1.0) / log(2.0);
+  auto linear = v;
+  auto expf = ((pow(2.0, (linear)*maxexp)) - 1.0) / max;
+  return expf;
+}
+
+double logn_fun(double v, double factor) {
+  auto max = factor;
+  auto maxexp = log(max + 1.0) / log(2.0);
+  auto linear = v;
+  auto maxpow = pow(2.0, maxexp);
+  auto logn = (maxpow - (pow(2.0, (1.0 - linear) * maxexp))) / max;
+  return logn;
+}

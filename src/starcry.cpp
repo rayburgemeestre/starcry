@@ -11,6 +11,8 @@
 
 #include <coz.h>
 
+#include <unistd.h>  // getpid()
+
 #include "bitmap_wrapper.hpp"
 #include "cereal/archives/binary.hpp"
 #include "cereal/archives/json.hpp"
@@ -22,6 +24,7 @@
 #include "rendering_engine_wrapper.h"
 #include "streamer_output/sfml_window.h"
 #include "util/compress_vector.h"
+#include "util/progress_visualizer.h"
 #include "webserver.h"
 
 starcry::starcry(size_t num_local_engines,
@@ -48,7 +51,8 @@ starcry::starcry(size_t num_local_engines,
       mode(mode),
       on_pipeline_initialized(on_pipeline_initialized),
       le(std::chrono::milliseconds(1000)),
-      seed(rand_seed) {}
+      seed(rand_seed),
+      visualizer(std::make_shared<progress_visualizer>()) {}
 
 starcry::~starcry() {
   le.cancel();
@@ -131,6 +135,10 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
 
     gen = std::make_shared<generator_v2>();
     gen->init(cmd_def->script, seed);
+
+    visualizer->initialize();
+    visualizer->set_max_frames(gen->get_max_frames());
+
     // old generator:
     // bitrate = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");
     size_t bitrate = (500 * 1024 * 8);
@@ -143,6 +151,8 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       jobs->sleep_until_not_full();
       if (!ret) break;
     }
+    std::cout << std::endl;
+
     // bring the house down
     cmds->check_terminate();
     jobs->check_terminate();
@@ -200,7 +210,8 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 }
 
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
-  std::cout << job_msg->job_number << " " << std::flush;
+  visualizer->display(job_msg->job_number);
+
   if (mode == starcry::render_video_mode::javascript_only) {
     return;
   }
@@ -300,8 +311,8 @@ void starcry::run_server() {
   std::cout << std::endl;
 }
 
-void starcry::run_client() {
-  render_client client;
+void starcry::run_client(const std::string &host) {
+  render_client client(host);
   rendering_engine_wrapper engine;
   bitmap_wrapper bitmap;
   engine.initialize();
@@ -312,7 +323,6 @@ void starcry::run_client() {
 
   client.register_me();
   while (client.poll()) {
-    std::cout << "client poll.." << std::endl;
   }
 }
 
@@ -337,6 +347,13 @@ bool starcry::on_server_message(render_client &client,
       data::job job;
       archive(job);
       auto &bmp = bitmap.get(job.width, job.height);
+      size_t num_shapes = 0;
+      for (const auto &shapez : job.shapes) {
+        num_shapes += shapez.size();
+      }
+
+      std::cout << "render client " << getpid() << " rendering job " << job.job_number << " shapes=" << num_shapes
+                << ", dimensions=" << job.width << "x" << job.height << std::endl;
       render_job(engine, job, bmp);
       data::pixel_data2 dat;
       dat.pixels = pixels_vec_to_pixel_data(bmp.pixels());

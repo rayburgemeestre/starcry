@@ -160,15 +160,17 @@ clean:
 
 .PHONY: dockerize
 dockerize:
-	docker run $$FLAGS --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 /bin/sh -c "make dockerize_run"
-	cd out && docker build . -t rayburgemeestre/starcry:latest
-	#docker push rayburgemeestre/starcry:latest
+	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_"
+	docker run $$FLAGS --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 /bin/sh -c "make dockerize_run"
+	cd out && docker build . -t rayburgemeestre/starcry:v2
+	docker push rayburgemeestre/starcry:v2
 
 .PHONY: dockerize_run
 dockerize_run:
 	apt update
-	apt install python-pip rsync -y
-	pip install dockerize
+	apt install python3-pip rsync git -y
+	cd /tmp && git clone https://github.com/larsks/dockerize && cd dockerize && python3 setup.py install
+	# python3 -m pip install dockerize
 	cp -prv $$PWD/build/starcry /starcry
 	strip --strip-debug /starcry
 	dockerize --verbose --debug -n -o out /starcry

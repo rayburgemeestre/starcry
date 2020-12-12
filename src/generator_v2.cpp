@@ -16,10 +16,10 @@
 #include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
 
+#include "data/texture.hpp"
 #include "shapes/circle_v2.h"
 #include "shapes/position.h"
 #include "shapes/rectangle_v2.h"
-#include "data/texture.hpp"
 
 std::shared_ptr<v8_wrapper> context;
 
@@ -48,7 +48,43 @@ void generator_v2::init_context(const std::string& filename) {
   context->add_fun("output", &output_fun);
   context->add_fun("rand", &rand_fun_v2);
   context->add_fun("random_velocity", &random_velocity);
+  context->add_fun("expf", &expf_fun);
+  context->add_fun("logn", &logn_fun);
   context->add_include_fun();
+
+  // TODO: wrap this also in context (wrapper)
+  v8::HandleScope scope(context->context->isolate());
+  v8pp::module consts(context->isolate);
+  consts.set_const("normal", data::blending_type::normal)
+      .set_const("lighten", data::blending_type::lighten)
+      .set_const("darken", data::blending_type::darken)
+      .set_const("multiply", data::blending_type::multiply)
+      .set_const("average", data::blending_type::average)
+      .set_const("add", data::blending_type::add)
+      .set_const("subtract", data::blending_type::subtract)
+      .set_const("difference", data::blending_type::difference)
+      .set_const("negation", data::blending_type::negation_)
+      .set_const("screen", data::blending_type::screen)
+      .set_const("exclusion", data::blending_type::exclusion)
+      .set_const("overlay", data::blending_type::overlay)
+      .set_const("softlight", data::blending_type::softlight)
+      .set_const("hardlight", data::blending_type::hardlight)
+      .set_const("colordodge", data::blending_type::colordodge)
+      .set_const("colorburn", data::blending_type::colorburn)
+      .set_const("lineardodge", data::blending_type::lineardodge)
+      .set_const("linearburn", data::blending_type::linearburn)
+      .set_const("linearlight", data::blending_type::linearlight)
+      .set_const("vividlight", data::blending_type::vividlight)
+      .set_const("pinlight", data::blending_type::pinlight)
+      .set_const("hardmix", data::blending_type::hardmix)
+      .set_const("reflect", data::blending_type::reflect)
+      .set_const("glow", data::blending_type::glow)
+      .set_const("phoenix", data::blending_type::phoenix)
+      .set_const("hue", data::blending_type::hue)
+      .set_const("saturation", data::blending_type::saturation)
+      .set_const("color", data::blending_type::color)
+      .set_const("luminosity", data::blending_type::luminosity);
+  context->context->set("blending_type", consts);
 }
 
 void generator_v2::init_user_script(const std::string& filename) {
@@ -94,6 +130,13 @@ void generator_v2::init_video_meta_info(std::optional<double> rand_seed) {
     seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
     tolerated_granularity = i.double_number(video, "granularity");
     experimental_feature1 = i.boolean(video, "experimental_feature1");
+    if (i.has_field(video, "sample")) {
+      auto sample = i.get(video, "sample").As<v8::Object>();
+      sample_include = i.double_number(sample, "include");  // seconds
+      sample_exclude = i.double_number(sample, "exclude");  // seconds
+      sample_include_current = sample_include * use_fps;
+      sample_exclude_current = sample_exclude * use_fps;
+    }
     set_rand_seed(seed);
 
     max_frames = duration * use_fps;
@@ -101,7 +144,7 @@ void generator_v2::init_video_meta_info(std::optional<double> rand_seed) {
     job->height = canvas_h;
     job->canvas_w = canvas_w;
     job->canvas_h = canvas_h;
-    job->scale = std::max(i.double_number(video, "scale"), static_cast<double>(1));
+    job->scale = i.double_number(video, "scale");
   });
 }
 
@@ -132,6 +175,7 @@ void generator_v2::init_textures() {
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
+    if (!i.has_field(obj, "textures")) return;
     auto texture_objects = i.v8_obj(obj, "textures");
     auto texture_fields = texture_objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
     for (size_t k = 0; k < texture_fields->Length(); k++) {
@@ -146,6 +190,7 @@ void generator_v2::init_textures() {
       textures[id].scale = i.double_number(texture_settings, "scale");
       auto range = i.v8_array(texture_settings, "range");
       textures[id].strength = i.double_number(texture_settings, "strength");
+      textures[id].speed = i.double_number(texture_settings, "speed");
       if (range->Length() == 4) {
         data::texture::noise_type use_type = data::texture::noise_type::perlin;
         if (type == "fractal") {
@@ -189,6 +234,32 @@ void generator_v2::init_object_instances() {
 }
 
 bool generator_v2::generate_frame() {
+  // no sampling
+  if (sample_include == 0 || sample_exclude == 0) {
+    return _generate_frame();
+  }
+  while (true) {
+    // sampling frames to include
+    if (sample_include_current-- > 0) {
+      return _generate_frame();
+    }
+    // frames to be skipped
+    while (sample_exclude_current-- > 0) {
+      total_skipped_frames++;
+      bool ret = _generate_frame();
+      job->job_number--;
+      if (!ret) {
+        // bail out if we find a last frame
+        return false;
+      }
+    }
+    // reset
+    sample_include_current = sample_include * use_fps;
+    sample_exclude_current = sample_exclude * use_fps;
+  }
+}
+
+bool generator_v2::_generate_frame() {
   try {
     job->shapes.clear();
 
@@ -242,7 +313,6 @@ bool generator_v2::generate_frame() {
       }
     });
     job->job_number++;
-    std::cout << " " << job->frame_number << std::endl;
     job->frame_number++;
   } catch (std::exception& ex) {
     std::cout << ex.what() << std::endl;
@@ -573,7 +643,11 @@ void generator_v2::convert_object_to_render_job(
   auto transitive_y2 = is_line ? i.double_number(instance, "transitive_y2") : 0.0;
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
-  auto scale = std::max(i.double_number(video, "scale"), static_cast<double>(1));
+  auto seed = i.double_number(instance, "seed");
+  auto blending_type =
+      i.has_field(instance, "blending_type") ? i.integer_number(instance, "blending_type") : data::blending_type::add;
+  auto scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
+  auto video_scale = i.double_number(video, "scale");
 
   data::shape new_shape;
   new_shape.time = time;
@@ -599,7 +673,9 @@ void generator_v2::convert_object_to_render_job(
   new_shape.z = 0;
   new_shape.radius = radius;
   new_shape.radius_size = radiussize;
-  new_shape.blending_ = data::blending_type::add;
+  new_shape.blending_ = blending_type;
+  new_shape.scale = scale;
+  new_shape.seed = seed;
 
   if (type == "circle") {
     new_shape.type = data::shape_type::circle;
@@ -624,7 +700,7 @@ void generator_v2::convert_object_to_render_job(
     new_shape.indexes = indexes[index];
   }
   job->shapes[stepper.current_step].push_back(new_shape);
-  job->scale = scale;
+  job->scale = video_scale;
 };
 
 std::shared_ptr<data::job> generator_v2::get_job() const {

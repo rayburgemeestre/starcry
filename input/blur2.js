@@ -22,24 +22,17 @@ _ = {
       'props': {'grad': 'white', 'mode': 'linear'},
       'init': function() {
         this.subobj.push({'id': 'subball', 'x': 0, 'y': 50, 'z': 0, 'vel_x': 0, 'vel_y': 0, 'props': {}});
-        this.subobj.push(
-            {'id': 'subline', 'x': 500, 'y': 500, 'x2': 0, 'y2': 0, 'z': 0, 'vel_x': 0, 'vel_y': 0, 'props': {}});
+        // this.subobj.push({'id': 'subline', 'x': 500, 'y': 500, 'x2': 0, 'y2': 0, 'z': 0, 'vel_x': 0, 'vel_y': 0,
+        // 'props': {}});
       },
       'time': function(t, elapsed) {
-        let max = 50;
-        let maxexp = Math.log(max + 1.0) / Math.log(2.0);
-
         let linear = Math.min(1.0, t * 2.0);
-        let expf = ((Math.pow(2.0, (linear) * maxexp)) - 1.0) / max;
-
-        let maxpow = Math.pow(2.0, maxexp);
-        let logn = (maxpow - (Math.pow(2.0, (1.0 - linear) * maxexp))) / max;
         if (this.props.mode === 'linear') {
           this.x = 1400 * linear;
         } else if (this.props.mode === 'expf') {
-          this.x = 1400 * expf;
+          this.x = 1400 * expf(linear, 50);
         } else if (this.props.mode === 'logn') {
-          this.x = 1400 * logn;
+          this.x = 1400 * logn(linear, 50);
         }
         this.x -= 700;
       },

@@ -102,6 +102,8 @@ struct shape {
   std::vector<std::pair<double, texture>> textures;
   blending_type blending_;
   std::map<int, size_t> indexes;
+  double seed;
+  double scale;
 
   template <class Archive>
   void serialize(Archive &ar) {
@@ -124,7 +126,9 @@ struct shape {
        gradients_,
        textures,
        blending_,
-       indexes);
+       indexes,
+       seed,
+       scale);
   }
 };
 

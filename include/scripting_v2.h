@@ -12,3 +12,6 @@ double rand_fun_v2();
 std::vector<double> random_velocity();
 
 void set_rand_seed(double seed);
+
+double expf_fun(double v, double factor);
+double logn_fun(double v, double factor);

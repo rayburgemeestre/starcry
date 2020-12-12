@@ -11,8 +11,7 @@
 const int window_width = 100;
 const int window_height = 100;
 
-sfml_window::sfml_window()
-    : window(sf::VideoMode(window_width, window_height, bpp), "Bouncing ball"), ball(ball_radius - 4) {
+sfml_window::sfml_window() : window(sf::VideoMode(window_width, window_height, bpp), "Preview") {
   if (vsync) window.setVerticalSyncEnabled(true);
 
   window.setActive(false);
@@ -39,11 +38,10 @@ void sfml_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ui
   sf::View view = window.getDefaultView();
   view.setCenter({static_cast<float>(canvas_w / 2.0), static_cast<float>(canvas_h / 2.0)});
   view.setSize({static_cast<float>(canvas_w), static_cast<float>(canvas_h)});
-  window.setView(view);
 
   if (window.isOpen()) {
     sf::Event event;
-    if (window.pollEvent(event)) {
+    while (window.pollEvent(event)) {
       if ((event.type == sf::Event::Closed) ||
           ((event.type == sf::Event::KeyPressed) && (event.key.code == sf::Keyboard::Escape))) {
         window.close();
@@ -52,6 +50,8 @@ void sfml_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ui
       if (event.type == sf::Event::Resized) {
       }
     }
+    window.setView(view);
+
     // text.setString("Hello world");
     // window.clear(sf::Color(30, 30, 120));
     // window.draw(text);

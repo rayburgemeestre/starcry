@@ -165,18 +165,20 @@ public:
   template <typename double_type>
   inline void render_circle(image &bmp,
                             double_type time,
-                            double_type circle_x,
-                            double_type circle_y,
+                            double_type circle_x_rel,
+                            double_type circle_y_rel,
                             double_type radius,
                             double_type radius_size,
                             const std::vector<std::pair<double, data::gradient>> &gradients_,
                             const std::vector<std::pair<double, data::texture>> &textures,
                             const data::blending_type &blending_,
-                            double opacity) {
-    circle_x = ((circle_x * scale_) + center_x_) - offset_x_;
-    circle_y = ((circle_y * scale_) + center_y_) - offset_y_;
-    radius *= scale_;
-    radius_size *= scale_;
+                            double opacity,
+                            double seed,
+                            double scale) {
+    double_type circle_x = ((circle_x_rel * scale_ * scale) + center_x_) - offset_x_;
+    double_type circle_y = ((circle_y_rel * scale_ * scale) + center_y_) - offset_y_;
+    radius *= scale_ * scale;
+    radius_size *= scale_ * scale;
 
     bool reuse_sqrt = floor(circle_x) == circle_x && floor(circle_y) == circle_y;
 
@@ -217,7 +219,8 @@ public:
                             gradients_,
                             textures,
                             blending_,
-                            opacity);
+                            opacity,
+                            seed);
 
         if (rel_y != 0)
           render_circle_pixel(bmp,
@@ -232,7 +235,8 @@ public:
                               gradients_,
                               textures,
                               blending_,
-                              opacity);
+                              opacity,
+                              seed);
         if (rel_x != 0)
           render_circle_pixel(bmp,
                               time,
@@ -246,7 +250,8 @@ public:
                               gradients_,
                               textures,
                               blending_,
-                              opacity);
+                              opacity,
+                              seed);
         if (rel_x != 0 && rel_y != 0)
           render_circle_pixel(bmp,
                               time,
@@ -260,7 +265,8 @@ public:
                               gradients_,
                               textures,
                               blending_,
-                              opacity);
+                              opacity,
+                              seed);
       }
     }
   }
@@ -306,7 +312,8 @@ public:
                            const std::vector<std::pair<double, data::gradient>> &gradients_,
                            const std::vector<std::pair<double, data::texture>> &textures,
                            const data::blending_type &blending_,
-                           double opacity) {
+                           double opacity,
+                           double seed) {
     if (absX < 0 || absY < 0 || absX >= static_cast<int>(width_) || absY >= static_cast<int>(height_)) return;
 
     if (diffFromCenter == -1) diffFromCenter = distance<double_type>(absX, posX, absY, posY);
@@ -330,7 +337,8 @@ public:
       throw std::runtime_error("gradients cannot not be empty");
     }
 
-    render_pixel<double_type>(bmp, time, absX, absY, gradients_, textures, Opacity, opacity, blending_);
+    render_pixel<double_type>(
+        bmp, time, posX, posY, absX, absY, gradients_, textures, Opacity, opacity, blending_, seed);
   }
 
   template <typename double_type, typename blending_type_>
@@ -357,12 +365,14 @@ public:
                    const std::vector<std::pair<double, data::gradient>> &gradients_,
                    const std::vector<std::pair<double, data::texture>> &textures,
                    const data::blending_type &blending_,
-                   double opacity) {
-    x1 = ((x1 * scale_) + center_x_) - offset_x_;
-    y1 = ((y1 * scale_) + center_y_) - offset_y_;
-    x2 = ((x2 * scale_) + center_x_) - offset_x_;
-    y2 = ((y2 * scale_) + center_y_) - offset_y_;
-    size = size * scale_;
+                   double opacity,
+                   double seed,
+                   double scale) {
+    x1 = ((x1 * scale_ * scale) + center_x_) - offset_x_;
+    y1 = ((y1 * scale_ * scale) + center_y_) - offset_y_;
+    x2 = ((x2 * scale_ * scale) + center_x_) - offset_x_;
+    y2 = ((y2 * scale_ * scale) + center_y_) - offset_y_;
+    size = size * scale_ * scale;
 
     // test
     // al_draw_line(x1, y1, x2, y2, al_map_rgb_f(red, green, blue), size);
@@ -503,6 +513,8 @@ public:
             double normalized_dist_from_line = (dist_from_center_line / aline.size);
             render_line_pixel<double_type>(bmp,
                                            time,
+                                           aline.center().x,
+                                           aline.center().y,
                                            x,
                                            current_y,
                                            normalized_dist_from_center,
@@ -510,7 +522,8 @@ public:
                                            gradients_,
                                            textures,
                                            blending_,
-                                           opacity);
+                                           opacity,
+                                           seed);
           }
         }
       }
@@ -524,6 +537,8 @@ public:
   template <typename double_type>
   void render_line_pixel(image &bmp,
                          double time,
+                         double posX,
+                         double posY,
                          int absX,
                          int absY,
                          double normalized_dist_from_center,
@@ -531,7 +546,8 @@ public:
                          const std::vector<std::pair<double, data::gradient>> &gradients_,
                          const std::vector<std::pair<double, data::texture>> &textures,
                          const data::blending_type &blending_,
-                         double opacity) {
+                         double opacity,
+                         double seed) {
     if (normalized_dist_from_center > 1.0 || normalized_dist_from_center < 0.0) {
       return;
     }
@@ -544,8 +560,24 @@ public:
     // TODO: make the line modes configurable
     // line mode 1
     // double num = 1.0 - (1.0 - normalized_dist_from_center) * (1.0 - normalized_dist_from_line);
+    auto expf = [](double v, double factor) {
+      auto max = factor;
+      auto maxexp = log(max + 1.0) / log(2.0);
+      auto linear = v;
+      auto expf = ((pow(2.0, (linear)*maxexp)) - 1.0) / max;
+      return expf;
+    };
+    //    auto logn = [](double v, double factor) {
+    //      auto max = factor;
+    //      auto maxexp = log(max + 1.0) / log(2.0);
+    //      auto linear = v;
+    //      auto maxpow = pow(2.0, maxexp);
+    //      auto logn = (maxpow - (pow(2.0, (1.0 - linear) * maxexp))) / max;
+    //      return logn;
+    //    };
+    double num = 1.0 - (1.0 - expf(normalized_dist_from_center, 1000)) * (1.0 - normalized_dist_from_line);
     // line mode 2
-    double num = 1.0 - (1.0 - normalized_dist_from_line);
+    // double num = 1.0 - (1.0 - normalized_dist_from_line);
     // num = 1.0 - num; // just to get it to look like it supposed to a bit right now
     // LColor color = ptrGradient->getColor( num );
 
@@ -557,19 +589,22 @@ public:
     // bg.g = min(1., bg.g + gradient_.get(num).g);
     // bg.b = min(1., bg.b + gradient_.get(num).b);
 
-    render_pixel<double_type>(bmp, time, absX, absY, gradients_, textures, num, opacity, blending_);
+    render_pixel<double_type>(bmp, time, posX, posY, absX, absY, gradients_, textures, num, opacity, blending_, seed);
   }
 
   template <typename double_type>
   void render_pixel(image &bmp,
                     double time,
+                    double posX,
+                    double posY,
                     int absX,
                     int absY,
                     const std::vector<std::pair<double, data::gradient>> &gradients_,
                     const std::vector<std::pair<double, data::texture>> &textures,
                     double num,  // Opacity in circle pixel fun
                     double opacity,
-                    const data::blending_type &blending_) {
+                    const data::blending_type &blending_,
+                    double seed) {
     data::color clr{0, 0, 0, 0};
     for (const auto &grad : gradients_) {
       double gradient_opacity = grad.first;
@@ -585,14 +620,14 @@ public:
     //    bg.b = clr.b;  // gradient_.get(num).b;
 
     //---
-    auto max = 10.0;  // TODO: tweak this a bit, or make configurable at least.
-    auto maxexp = log(max + 1.0) / log(2.0);
+    // auto max = 10.0;  // TODO: tweak this a bit, or make configurable at least.
+    // auto maxexp = log(max + 1.0) / log(2.0);
 
     auto linear = opacity;
-    auto expf = ((pow(2.0, (linear)*maxexp)) - 1.0) / max;
+    // auto expf = ((pow(2.0, (linear)*maxexp)) - 1.0) / max;
 
-    auto maxpow = pow(2.0, maxexp);
-    auto logn = (maxpow - (pow(2.0, (1.0 - linear) * maxexp))) / max;
+    // auto maxpow = pow(2.0, maxexp);
+    // auto logn = (maxpow - (pow(2.0, (1.0 - linear) * maxexp))) / max;
     //---
 
     // --- perlin noise ---
@@ -600,7 +635,8 @@ public:
     if (!textures.empty()) {
       noise = 0;
       for (const auto &texture : textures) {
-        noise += std::clamp(texture.second.get(num, absX, absY, time), 0.0, 1.0);
+        noise += std::clamp(
+            texture.second.get(num, absX - posX, absY - posY, time, scale_, std::isnan(seed) ? 1. : seed), 0.0, 1.0);
       }
       noise /= static_cast<double>(textures.size());
     }
@@ -617,7 +653,7 @@ public:
     amount_of_blur += 0.1;                     // extra default grain amount
     // clr.a = logn * noise * (1.0 - amount_of_blur * rand1);
     // use noise to dial down opacity
-    clr.a = (logn * noise) * (1.0 - amount_of_blur * rand1);
+    clr.a = (linear * noise) * (1.0 - amount_of_blur * rand1);
     clr.a = std::clamp(clr.a, 0.0, 1.0);
     // ------------motion blur------------
 

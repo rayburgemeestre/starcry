@@ -89,6 +89,21 @@ void instantiate_object(v8_interact& i,
   if (i.has_field(scene_obj, "radiussize")) {
     i.copy_field(new_instance, "radiussize", scene_obj);
   }
+  if (i.has_field(scene_obj, "gradient")) {
+    i.copy_field(new_instance, "gradient", scene_obj);
+  }
+  if (i.has_field(scene_obj, "texture")) {
+    i.copy_field(new_instance, "texture", scene_obj);
+  }
+  if (i.has_field(scene_obj, "seed")) {
+    i.copy_field(new_instance, "seed", scene_obj);
+  }
+  if (i.has_field(scene_obj, "blending_type")) {
+    i.copy_field(new_instance, "blending_type", scene_obj);
+  }
+  if (i.has_field(scene_obj, "scale")) {
+    i.copy_field(new_instance, "scale", scene_obj);
+  }
 
   i.set_field(new_instance, "subobj", v8::Array::New(isolate));
   i.set_field(new_instance, "meta", v8_str(context, annotation));
@@ -186,6 +201,16 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field(dst, "radiussize", src);
     i.copy_field(dst, "last_collide", src);
     i.copy_field(dst, "gradient", src);
+    i.copy_field(dst, "texture", src);
+    i.copy_field(dst, "seed", src);
+    // TODO: move has_field check into copy_field
+    if (i.has_field(src, "blending_type")) {
+      i.copy_field(dst, "blending_type", src);
+    }
+    // TODO: move has_field check into copy_field
+    if (i.has_field(src, "scale")) {
+      i.copy_field(dst, "scale", src);
+    }
     i.copy_field(dst, "__time__", src);
     i.copy_field(dst, "__elapsed__", src);
     if (!exclude_props) {

@@ -43,6 +43,11 @@ private:
   int attempt = 0;
   double max_dist_found = std::numeric_limits<double>::max();
   bool experimental_feature1 = false;
+  double sample_include = 0.;
+  double sample_exclude = 0.;
+  double sample_include_current = 0.;
+  double sample_exclude_current = 0.;
+  double total_skipped_frames = 0.;
 
   std::map<std::string, quadtree> qts;
 
@@ -103,6 +108,12 @@ public:
   double get_seed() const {
     return seed;
   }
+  size_t get_max_frames() const {
+    return max_frames;
+  }
+
+private:
+  bool _generate_frame();
 };
 
 void call_print_exception(const std::string& fn);

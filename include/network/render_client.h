@@ -44,9 +44,10 @@ private:
   socketbuffer send_buffer;
   std::vector<std::pair<int, std::string>> messages;
   std::function<void(int fd, int type, size_t len, const std::string &msg)> msg_callback;
+  std::string host;
 
 public:
-  render_client();
+  render_client(const std::string &host);
   ~render_client();
 
   // disable copy and move

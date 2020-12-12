@@ -62,7 +62,8 @@ public:
               uint32_t width,
               uint32_t height,
               double scale) {
-    std::unique_lock<std::mutex> lock(m);
+    // this lock is no longer needed since we got rid of all dependencies
+    // std::unique_lock<std::mutex> lock(m);
     bmp.clear_to_color(bg_color);
 
     // debug font
@@ -96,7 +97,9 @@ public:
                                           shape.gradients_,
                                           shape.textures,
                                           shape.blending_,
-                                          opacity);
+                                          opacity,
+                                          shape.seed,
+                                          shape.scale);
 
         // the rest...
         for (const auto &index_data : shape.indexes) {
@@ -112,7 +115,9 @@ public:
                                             shape.gradients_,
                                             shape.textures,
                                             shape.blending_,
-                                            opacity);
+                                            opacity,
+                                            shape.seed,
+                                            shape.scale);
         }
 
       } else if (shape.type == data::shape_type::line) {
@@ -131,7 +136,9 @@ public:
                                         shape.gradients_,
                                         shape.textures,
                                         shape.blending_,
-                                        opacity);
+                                        opacity,
+                                        shape.seed,
+                                        shape.scale);
 
         // the rest...
         for (const auto &index_data : shape.indexes) {
@@ -148,7 +155,9 @@ public:
                                           shape.gradients_,
                                           shape.textures,
                                           shape.blending_,
-                                          opacity);
+                                          opacity,
+                                          shape.seed,
+                                          shape.scale);
         }
       } else if (shape.type == data::shape_type::text) {
         draw_logic_.render_text<double>(shape.x, shape.y, shape.text_size, shape.text, shape.align);

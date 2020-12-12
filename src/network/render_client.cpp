@@ -13,13 +13,13 @@
 #include "network/messages.h"
 // #include "util/compress_vector.h"
 
-render_client::render_client() {
+render_client::render_client(const std::string &host) : host(host) {
   memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
 
   // TODO: do not hard-code this stuff
-  if ((rv = getaddrinfo("localhost", PORT, &hints, &servinfo)) != 0) {
+  if ((rv = getaddrinfo(host.c_str(), PORT, &hints, &servinfo)) != 0) {
     // fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
     // return 1;
     throw std::runtime_error("getaddrinfo");
