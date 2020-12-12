@@ -12,8 +12,6 @@
 
 #include "data/color.hpp"
 
-#include "perlin.h"
-
 namespace data {
 
 struct texture {
