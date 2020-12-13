@@ -268,6 +268,7 @@ bool generator_v2::_generate_frame() {
       auto obj = val.As<v8::Object>();
       auto scenes = i.v8_array(obj, "scenes");
       auto video = i.v8_obj(obj, "video");
+      auto objects = i.v8_array(obj, "objects");
       for (size_t I = 0; I < scenes->Length(); I++) {
         auto current_scene = i.get_index(scenes, I);
         if (!current_scene->IsObject()) continue;
@@ -299,6 +300,7 @@ bool generator_v2::_generate_frame() {
             qts.clear();
             update_object_positions(i, next_instances, stepper.max_step);
             update_object_interactions(i, next_instances, intermediates);
+            util::generator::find_new_objects(i, objects, instances, next_instances, intermediates);
             convert_objects_to_render_job(i, next_instances, sc, video);
             util::generator::copy_instances(i, intermediates, next_instances);
             if (job->shapes.size() != stepper.max_step) {
@@ -510,7 +512,23 @@ void generator_v2::handle_collision(
   // call 'on collision' event
   auto on1 = i.get(instance, "on").As<v8::Object>();
   auto on2 = i.get(instance2, "on").As<v8::Object>();
+
+  // TODO: proof-of-concept
+  size_t subobj_len_before = 0;
+  size_t subobj_len_after = 0;
+  if (i.has_field(instance, "subobj")) {
+    auto subobj = i.get(instance, "subobj").As<v8::Array>();
+    subobj_len_before = subobj->Length();
+  }
   i.call_fun(on1, instance, "collide", instance2);
+  if (i.has_field(instance, "subobj")) {
+    auto subobj = i.get(instance, "subobj").As<v8::Array>();
+    subobj_len_after = subobj->Length();
+  }
+  if (subobj_len_after > subobj_len_before) {
+    i.set_field(instance, "new_objects", v8::Boolean::New(i.get_isolate(), true));
+  }
+
   i.call_fun(on2, instance2, "collide", instance);
 }
 
@@ -536,7 +554,7 @@ double generator_v2::get_max_travel_of_object(v8_interact& i,
                                               v8::Local<v8::Object>& instance) {
   // Update level for all objects
   // TODO: move to better place
-  auto level = i.double_number(instance, "level");
+  auto level = i.integer_number(instance, "level");
   auto type = i.str(instance, "type");
   auto is_line = type == "line";
   parents[level] = instance;
@@ -625,7 +643,7 @@ void generator_v2::convert_objects_to_render_job(v8_interact& i,
 void generator_v2::convert_object_to_render_job(
     v8_interact& i, v8::Local<v8::Object> instance, size_t index, step_calculator& sc, v8::Local<v8::Object> video) {
   // Update level for all objects
-  auto level = i.double_number(instance, "level");
+  auto level = i.integer_number(instance, "level");
   auto type = i.str(instance, "type");
   auto is_line = type == "line";
   parents[level] = instance;

@@ -63,7 +63,7 @@ void copy_texture_from_object_to_shape(v8_interact& i,
 }
 
 void instantiate_object(v8_interact& i,
-                        v8::Local<v8::Object> scene_obj,
+                        std::optional<v8::Local<v8::Object>> scene_obj,
                         v8::Local<v8::Object> object_prototype,
                         v8::Local<v8::Object> new_instance,
                         int64_t level,
@@ -73,41 +73,44 @@ void instantiate_object(v8_interact& i,
   i.recursively_copy_object(new_instance, object_prototype);
   // i.recursively_copy_object(new_instance, scene_obj);
 
-  i.copy_field(new_instance, "id", scene_obj);
-  i.copy_field(new_instance, "x", scene_obj);
-  i.copy_field(new_instance, "y", scene_obj);
-  i.copy_field(new_instance, "x2", scene_obj);
-  i.copy_field(new_instance, "y2", scene_obj);
-  i.copy_field(new_instance, "vel_x", scene_obj);
-  i.copy_field(new_instance, "vel_y", scene_obj);
-  i.copy_field(new_instance, "vel_x2", scene_obj);
-  i.copy_field(new_instance, "vel_y2", scene_obj);
-  i.copy_field(new_instance, "velocity", scene_obj);
-  if (i.has_field(scene_obj, "radius")) {
-    i.copy_field(new_instance, "radius", scene_obj);
-  }
-  if (i.has_field(scene_obj, "radiussize")) {
-    i.copy_field(new_instance, "radiussize", scene_obj);
-  }
-  if (i.has_field(scene_obj, "gradient")) {
-    i.copy_field(new_instance, "gradient", scene_obj);
-  }
-  if (i.has_field(scene_obj, "texture")) {
-    i.copy_field(new_instance, "texture", scene_obj);
-  }
-  if (i.has_field(scene_obj, "seed")) {
-    i.copy_field(new_instance, "seed", scene_obj);
-  }
-  if (i.has_field(scene_obj, "blending_type")) {
-    i.copy_field(new_instance, "blending_type", scene_obj);
-  }
-  if (i.has_field(scene_obj, "scale")) {
-    i.copy_field(new_instance, "scale", scene_obj);
+  if (scene_obj) {
+    i.copy_field(new_instance, "id", *scene_obj);
+    i.copy_field(new_instance, "x", *scene_obj);
+    i.copy_field(new_instance, "y", *scene_obj);
+    i.copy_field(new_instance, "x2", *scene_obj);
+    i.copy_field(new_instance, "y2", *scene_obj);
+    i.copy_field(new_instance, "vel_x", *scene_obj);
+    i.copy_field(new_instance, "vel_y", *scene_obj);
+    i.copy_field(new_instance, "vel_x2", *scene_obj);
+    i.copy_field(new_instance, "vel_y2", *scene_obj);
+    i.copy_field(new_instance, "velocity", *scene_obj);
+    if (i.has_field(*scene_obj, "radius")) {
+      i.copy_field(new_instance, "radius", *scene_obj);
+    }
+    if (i.has_field(*scene_obj, "radiussize")) {
+      i.copy_field(new_instance, "radiussize", *scene_obj);
+    }
+    if (i.has_field(*scene_obj, "gradient")) {
+      i.copy_field(new_instance, "gradient", *scene_obj);
+    }
+    if (i.has_field(*scene_obj, "texture")) {
+      i.copy_field(new_instance, "texture", *scene_obj);
+    }
+    if (i.has_field(*scene_obj, "seed")) {
+      i.copy_field(new_instance, "seed", *scene_obj);
+    }
+    if (i.has_field(*scene_obj, "blending_type")) {
+      i.copy_field(new_instance, "blending_type", *scene_obj);
+    }
+    if (i.has_field(*scene_obj, "scale")) {
+      i.copy_field(new_instance, "scale", *scene_obj);
+    }
   }
 
   i.set_field(new_instance, "subobj", v8::Array::New(isolate));
   i.set_field(new_instance, "meta", v8_str(context, annotation));
   i.set_field(new_instance, "level", v8::Number::New(isolate, level));
+  i.set_field(new_instance, "__instance__", v8::Boolean::New(isolate, true));
 
   // Make sure we deep copy the gradients
   i.set_field(new_instance, "gradients", v8::Array::New(isolate));
@@ -124,14 +127,16 @@ void instantiate_object(v8_interact& i,
   }
 
   // Copy over scene properties to instance properties
-  auto props = i.v8_obj(new_instance, "props");
-  auto scene_props = i.v8_obj(scene_obj, "props");
-  auto obj_fields = i.prop_names(scene_props);
+  if (scene_obj) {
+    auto props = i.v8_obj(new_instance, "props");
+    auto scene_props = i.v8_obj(*scene_obj, "props");
+    auto obj_fields = i.prop_names(scene_props);
 
-  for (size_t k = 0; k < obj_fields->Length(); k++) {
-    auto field_name = i.get_index(obj_fields, k);
-    auto field_value = i.get(scene_props, field_name);
-    i.set_field(props, field_name, field_value);
+    for (size_t k = 0; k < obj_fields->Length(); k++) {
+      auto field_name = i.get_index(obj_fields, k);
+      auto field_value = i.get(scene_props, field_name);
+      i.set_field(props, field_name, field_value);
+    }
   }
   i.call_fun(new_instance, "init", 0.5);
 }
@@ -215,6 +220,101 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field(dst, "__elapsed__", src);
     if (!exclude_props) {
       i.copy_field(dst, "props", src);
+    }
+    // TODO: move has_field check into copy_field
+    if (i.has_field(src, "new_objects")) {
+      i.copy_field(dst, "new_objects", src);
+    }
+    if (i.has_field(src, "subobj")) {
+      i.copy_field(dst, "subobj", src);
+    }
+  }
+}
+
+void find_new_objects(v8_interact& i,
+                      v8::Local<v8::Array>& objects,
+                      v8::Local<v8::Array>& scene_instances,
+                      v8::Local<v8::Array>& scene_instances_next,
+                      v8::Local<v8::Array>& scene_instances_intermediate) {
+  v8::Isolate* isolate = i.get_isolate();
+  std::unordered_map<size_t, std::vector<std::array<v8::Local<v8::Object>, 3>>> new_instances;
+  size_t total_new_instances = 0;
+
+  // go over all instances and see if any of them added new objects for instantiation
+  for (size_t j = 0; j < scene_instances_next->Length(); j++) {
+    auto next = i.get_index(scene_instances_next, j).As<v8::Object>();
+    auto instance = i.get_index(scene_instances, j).As<v8::Object>();
+    auto intermediate = i.get_index(scene_instances_intermediate, j).As<v8::Object>();
+    if (i.has_field(next, "new_objects")) {
+      if (i.has_field(next, "subobj")) {
+        auto subobjs = i.get(next, "subobj").As<v8::Array>();
+        auto subobjs2 = i.get(instance, "subobj").As<v8::Array>();
+        auto subobjs3 = i.get(intermediate, "subobj").As<v8::Array>();
+        for (size_t k = 0; k < subobjs->Length(); k++) {
+          auto object_definition = i.get_index(subobjs, k).As<v8::Object>();
+          if (i.has_field(object_definition, "__instance__")) {
+            // these are already instantiated, ignore these
+            continue;
+          }
+          auto object_id = i.str(object_definition, "id");
+          auto object_prototype = v8_index_object(context, objects, object_id).template As<v8::Object>();
+
+          v8::Local<v8::Object> new_instance = v8::Object::New(isolate);
+          v8::Local<v8::Object> new_next = v8::Object::New(isolate);
+          v8::Local<v8::Object> new_intermediate = v8::Object::New(isolate);
+          int64_t current_level = i.integer_number(next, "level") + 1;
+
+          instantiate_object(i, object_definition, object_prototype, new_instance, current_level, "instance");
+          instantiate_object(i, object_definition, object_prototype, new_next, current_level, "next");
+          instantiate_object(i, object_definition, object_prototype, new_intermediate, current_level, "intermediate");
+
+          // we'll need to insert the new instances at the correct position in the arrays
+          // we store the index where they have to be inserted, which should be one past their
+          // parent instance (hence j + 1)
+          new_instances[j + 1].push_back({new_instance, new_next, new_intermediate});
+          total_new_instances++;
+
+          // make sure the subobj will also point to the new instance
+          i.set_field(subobjs, k, new_next);
+          i.set_field(subobjs2, k, new_instance);
+          i.set_field(subobjs3, k, new_intermediate);
+        }
+      }
+      i.remove_field(next, "new_objects");
+    }
+  }
+
+  if (total_new_instances == 0) {
+    return;
+  }
+  // insert all the newly created instances in the appropriate arrays
+  // step 1: make sure we add space in the arrays (or we'll write out of bounds)
+  for (size_t j = 0; j < new_instances.size(); j++) {
+    // push is highly optimized
+    i.call_fun(scene_instances, "push", v8::Object::New(isolate));
+    i.call_fun(scene_instances_next, "push", v8::Object::New(isolate));
+    i.call_fun(scene_instances_intermediate, "push", v8::Object::New(isolate));
+  }
+  // step 2: walk backwards over the arrays, and move elements to the end, inserting where needed.
+  auto items_left = total_new_instances;
+  for (size_t j = scene_instances_next->Length() - 1; j != std::numeric_limits<size_t>::max() && items_left > 0; j--) {
+    auto from = j - items_left;
+    auto to = j;
+    if (new_instances.find(to) == new_instances.end()) {
+      // no need to insert, simply move the element
+      i.set_field(scene_instances, to, i.get_index(scene_instances, from).As<v8::Object>());
+      i.set_field(scene_instances_next, to, i.get_index(scene_instances_next, from).As<v8::Object>());
+      i.set_field(scene_instances_intermediate, to, i.get_index(scene_instances_intermediate, from).As<v8::Object>());
+    } else {
+      // insert elements for this index
+      for (const auto& new_instance : new_instances[j]) {
+        i.set_field(scene_instances, to, new_instance[0]);
+        i.set_field(scene_instances_next, to, new_instance[1]);
+        i.set_field(scene_instances_intermediate, to, new_instance[2]);
+        items_left--;
+        to--;
+      }
+      j -= new_instances[j].size() - 1;
     }
   }
 }

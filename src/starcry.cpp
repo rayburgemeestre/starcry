@@ -184,7 +184,9 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   if (job.job_number == std::numeric_limits<uint32_t>::max()) {
     png::image<png::rgb_pixel> image(job.width, job.height);
     copy_to_png(bmp.pixels(), job.width, job.height, image);
-    image.write("output_" + std::to_string(gen->get_seed()) + ".png");
+    // TODO: replace with fmt
+    image.write("output_frame_" + std::to_string(job.frame_number) + "_seed_" + std::to_string(gen->get_seed()) +
+                ".png");
   }
   if (job_msg->client == nullptr) {
     auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels());

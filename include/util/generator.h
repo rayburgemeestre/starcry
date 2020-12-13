@@ -23,7 +23,7 @@ void copy_texture_from_object_to_shape(v8_interact& i,
                                        std::unordered_map<std::string, data::texture>& known_textures_map);
 
 void instantiate_object(v8_interact& i,
-                        v8::Local<v8::Object> scene_obj,
+                        std::optional<v8::Local<v8::Object>> scene_obj,
                         v8::Local<v8::Object> object_prototype,
                         v8::Local<v8::Object> new_instance,
                         int64_t level,
@@ -38,6 +38,12 @@ v8::Local<v8::Object> instantiate_objects(v8_interact& i,
                                           v8::Local<v8::Object>& scene_object,
                                           v8::Local<v8::Object>* parent_object = nullptr);
 void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Array> source, bool exclude_props = false);
+
+void find_new_objects(v8_interact& i,
+                      v8::Local<v8::Array>& objects,
+                      v8::Local<v8::Array>& scene_instances,
+                      v8::Local<v8::Array>& scene_instances_next,
+                      v8::Local<v8::Array>& scene_instances_intermediate);
 
 }  // namespace generator
 }  // namespace util

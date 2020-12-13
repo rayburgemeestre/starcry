@@ -154,6 +154,9 @@ public:
   void set_field(v8::Local<v8::Object> object, size_t field_index, v8::Local<v8::Value> value) {
     handle_error(object->Set(ctx, field_index, value));
   }
+  void remove_field(v8::Local<v8::Object> object, const std::string& field) {
+    handle_error(object->Delete(ctx, v8_str(context, field)));
+  }
 
   template <class... Args>
   void call_fun(v8::Local<v8::Object> object, const std::string& field, Args... args) {
