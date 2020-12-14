@@ -5,8 +5,8 @@
 </template>
 
 <script>
-  let ws;
-  let retry;
+  import StarcryAPI from '../util/StarcryAPI'
+
   export default {
     data() {
       return {
@@ -32,35 +32,6 @@
       }
     },
     methods: {
-      connect: function() {
-        this.$data.websock_status = 'connecting';
-        let protocol = document.location.protocol.replace('http', 'ws');
-        if (document.location.href.indexOf('localhost')) {
-          ws = new WebSocket(protocol + '//' + document.location.host.replace(':8080', ':18080') + '/script', ['tag_test']);
-        } else {
-          ws = new WebSocket(protocol + '//' + document.location.host + '/script', ['tag_test']);
-        }
-        ws.onopen = function () {
-          clearInterval(retry);
-          this.$data.websock_status = 'connected';
-          ws.send("list");
-        }.bind(this);
-        ws.onclose = function () {
-          this.$data.websock_status = 'disconnected';
-          retry = setTimeout(this.connect, 1000);
-          console.log(ws);
-        }.bind(this);
-        ws.onmessage = function (message) {
-          message.data.arrayBuffer().then(function(buffer) {
-            let str = String.fromCharCode.apply(null, new Uint8Array(buffer));
-            console.log(JSON.parse(str));
-            this.$data.data = JSON.parse(str);
-          }.bind(this));
-        }.bind(this);
-        ws.onerror = function (error) {
-          console.log("ERROR: " + error);
-        };
-      }
     },
     watch: {
       selected: function (new_value) {
@@ -68,7 +39,20 @@
       }
     },
     mounted: function() {
-      this.connect();
+      this.script_endpoint = new StarcryAPI(
+              'script',
+              msg => {
+                this.$data.websock_status = msg;
+              },
+              buffer => {
+                let str = String.fromCharCode.apply(null, new Uint8Array(buffer));
+                this.$data.data = JSON.parse(str);
+              },
+              _ => {
+                this.script_endpoint.send("open " + this.$data.filename);
+                this.script_endpoint.send("list");
+              }
+      );
     }
   }
 </script>
