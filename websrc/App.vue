@@ -52,8 +52,12 @@
             <div class="column is-narrow">
                 Third column
                 <h2>{{ websock_status }}</h2>
+                <h2>{{ websock_status2 }}</h2>
                 <button v-shortkey="['ctrl', 's']" @shortkey="menu = menu == 'script' ? '' : 'script'">_</button>
                 <button v-shortkey="['ctrl', 'f']" @shortkey="menu = menu == 'files' ? '' : 'files'">_</button>
+                <button v-shortkey="[',']" @shortkey="prev_frame()">_</button>
+                <button v-shortkey="['.']" @shortkey="next_frame()">_</button>
+                <button v-shortkey="['ctrl', 'o']" @shortkey="get_objects()">_</button>
                 <hr>
                 <stats-component />
             </div>
@@ -69,31 +73,16 @@
     import ScriptsComponent from './components/ScriptsComponent.vue'
     import PlaybackComponent from './components/PlaybackComponent.vue'
     import StatsComponent from './components/StatsComponent.vue'
-    let ws;
-    let ws_script;
-    let retry;
-    let retry2;
-
-    /*
-    TODO: need to figure this out
-    window.Module = {
-        canvas: (function() { return document.getElementById('canvas'); })(),
-        initialized: false,
-        onRuntimeInitialized: function() {
-            this.initialized = true;
-            // console.log("Setting 4K dimensions");
-            // Module.start(3840, 2160);
-        }
-    };
-    */
+    import StarcryAPI from './util/StarcryAPI'
 
     export default {
         data() {
             return {
                 cpp_code: 'Hello world',
                 websock_status: '',
+                websock_status2: '',
                 menu: 'files',
-                filename: 'input/test2.js',
+                filename: 'input/motion4.js',
                 current_frame : 0,
                 rendering: 0,
                 max_queued: 10,
@@ -107,78 +96,10 @@
             StatsComponent,
         },
         methods: {
-            // TODO: need to figure this out
-            set_dimensions: function() {
-                //if (!window.Module || !window.Module.initialized) {
-                //    setTimeout(this.set_dimensions, 1000);
-                //    return;
-                //}
-                //console.log("Setting 4K dimensions");
-                // Module.start(3840, 2160);
-                //console.log("Setting Full HD dimensions");
-                //Module.start(1920, 1080);
-            },
-            connect: function() {
-                this.$data.websock_status = 'connecting';
-                let protocol = document.location.protocol.replace('http', 'ws');
-                if (document.location.href.indexOf('localhost')) {
-                    ws = new WebSocket(protocol + '//' + document.location.host.replace(':8080', ':18080') + '/bitmap', ['tag_test']);
-                } else {
-                    ws = new WebSocket(protocol + '//' + document.location.host + '/bitmap', ['tag_test']);
-                }
-                ws.onopen = function () {
-                    clearTimeout(retry);
-                    this.$data.websock_status = 'connected';
-                    // TODO: need to figure this out
-                    this.set_dimensions();
-                }.bind(this);
-                ws.onclose = function () {
-                    this.$data.websock_status = 'disconnected';
-                    retry = setTimeout(this.connect, 1000);
-                }.bind(this);
-                ws.onmessage = function (message) {
-                    message.data.arrayBuffer().then(buffer => {
-                        Module.set_texture(buffer);
-                        this.$data.rendering--;
-                        this.process_queue();
-                    });
-                }.bind(this);
-                ws.onerror = function (error) {
-                    console.log("ERROR: " + error);
-                };
-            },
-            connect2: function () {
-                this.$data.websock_status = 'connecting';
-                let protocol = document.location.protocol.replace('http', 'ws');
-                if (document.location.href.indexOf('localhost')) {
-                    ws_script = new WebSocket(protocol + '//' + document.location.host.replace(':8080', ':18080') + '/script', ['tag_test']);
-                    console.log(document.location.host.replace(':8080', ':18080'));
-                } else {
-                    ws_script = new WebSocket(protocol + '//' + document.location.host + '/script', ['tag_test']);
-                }
-                ws_script.onopen = function () {
-                    clearTimeout(retry2);
-                    this.$data.websock_status = 'connected';
-                    ws_script.send("open " + this.$data.filename);
-                }.bind(this);
-                ws_script.onclose = function () {
-                    this.$data.websock_status = 'disconnected';
-                    retry2 = setTimeout(this.connect2, 1000);
-                }.bind(this);
-                ws_script.onmessage = function (message) {
-                    message.data.arrayBuffer().then(function(buffer) {
-                        let str = String.fromCharCode.apply(null, new Uint8Array(buffer));
-                        this.$data.cpp_code = str;
-                    }.bind(this));
-                }.bind(this);
-                ws_script.onerror = function (error) {
-                    console.log("ERROR: " + error);
-                };
-            },
             open: function(filename) {
-               this.$data.filename = filename;
-               ws_script.send("open " + filename);
-               ws.send(filename + " 0");
+                this.$data.filename = filename;
+                this.script_endpoint.send("open " + filename);
+                this.bitmap_endpoint.send(filename + " 0");
             },
             process_queue: function () {
                 this._schedule_frames();
@@ -190,6 +111,18 @@
             },
             stop: function () {
                 this.$data._play = false;
+            },
+            prev_frame: function () {
+                this.$data.current_frame--;
+                if (!this.$data._play) {
+                    this._schedule_frame();
+                }
+            },
+            next_frame: function () {
+                this.$data.current_frame++;
+                if (!this.$data._play) {
+                    this._schedule_frame();
+                }
             },
             set_frame: function (frame) {
                 this.$data.current_frame = frame;
@@ -206,7 +139,7 @@
             },
             _schedule_frame: function () {
                 this.$data.rendering++;
-                ws.send(this.$data.filename + " " + this.$data.current_frame);
+                this.bitmap_endpoint.send(this.$data.filename + " " + this.$data.current_frame);
             }
         },
         watch: {
@@ -215,8 +148,31 @@
             }
         },
         mounted: function() {
-            this.connect();
-            this.connect2();
+            this.bitmap_endpoint = new StarcryAPI(
+                'bitmap',
+                msg => {
+                    this.$data.websock_status = msg;
+                },
+                buffer => {
+                    Module.set_texture(buffer);
+                    this.$data.rendering--;
+                    this.process_queue();
+                },
+                _ => {}
+            );
+            this.script_endpoint = new StarcryAPI(
+                'script',
+                msg => {
+                    this.$data.websock_status2 = msg;
+                },
+                buffer => {
+                    let str = String.fromCharCode.apply(null, new Uint8Array(buffer));
+                    this.$data.cpp_code = str;
+                },
+                _ => {
+                    this.script_endpoint.send("open " + this.$data.filename);
+                }
+            );
         }
     }
 

@@ -62,7 +62,9 @@ _ = {
         ];
         let x = 0;
         let y = stepsize / 2;
-        for (let i = 0; i < 210; i++) {
+        // for (let i = 0; i < 210; i++) {
+        // WIP: REPRODUCES A BUG
+        for (let i = 0; i < 20; i++) {
           x += directions[this.props.direction][0];
           y += directions[this.props.direction][1];
           if (this.props.step === this.props.steps) {
@@ -105,14 +107,14 @@ _ = {
         [0.0, 'red'],
       ],
       'radius': 0,
-      'radiussize': 5.0,
+      'radiussize': 20.0,
       'props': {'grad': 'white'},
       'init': function() {},
       'time': function(t, elapsed) {
-        while (this.x + (1920 / 2) < 0) this.x += 1920;
-        while (this.y + (1080 / 2) < 0) this.y += 1080;
-        while (this.x + (1920 / 2) > 1920) this.x -= 1920;
-        while (this.y + (1080 / 2) > 1080) this.y -= 1080;
+        // while (this.x + (1920 / 2) < 0) this.x += 1920;
+        // while (this.y + (1080 / 2) < 0) this.y += 1080;
+        // while (this.x + (1920 / 2) > 1920) this.x -= 1920;
+        // while (this.y + (1080 / 2) > 1080) this.y -= 1080;
       },
       'subobj': [],
       'on': {
@@ -152,16 +154,19 @@ _ = {
   'video': {
     'duration': 20,
     'fps': 25,
-    'width': 1080,
+    'width': 1920,
     'height': 1080,
+    //    'width': 14043,
+    //    'height': 9933,
     'scale': 1,
+    //    'scale': 7.3,
     'rand_seed': 1,
     'granularity': 1,
   },
   'scenes': [{
     'name': 'scene1',
     'objects': [
-      {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+      // {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
       {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
     ],
   }]

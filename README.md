@@ -34,6 +34,7 @@ The interface to the user is either the Javascript file or the VueJS based UI.
 The executable from the dockerized build will be in `build` and should run on
 Ubuntu 20.04.
 
+
 ## Architecture
 
 - `libs/piper` - a pipeline architecture is used for the main architecture.
