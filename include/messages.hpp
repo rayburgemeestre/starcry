@@ -15,6 +15,7 @@
 enum class instruction_type {
   get_image,
   get_shapes,
+  get_objects,
   get_bitmap,
   get_video,
 };

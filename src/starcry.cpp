@@ -14,6 +14,9 @@
 
 #include <unistd.h>  // getpid()
 
+#include "nlohmann/json.hpp"
+using json = nlohmann::json;
+
 #include "bitmap_wrapper.hpp"
 #include "cereal/archives/binary.hpp"
 #include "cereal/archives/json.hpp"
@@ -103,7 +106,7 @@ void starcry::copy_to_png(const std::vector<data::color> &source,
 
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   if (cmd_def->type == instruction_type::get_image || cmd_def->type == instruction_type::get_bitmap ||
-      cmd_def->type == instruction_type::get_shapes) {
+      cmd_def->type == instruction_type::get_shapes || cmd_def->type == instruction_type::get_objects) {
     gen = std::make_shared<generator_v2>();
     gen->init(cmd_def->script, seed);
     size_t idx = 0;
@@ -178,6 +181,40 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
     return std::make_shared<render_msg>(
         job_msg->client, job_msg->type, job.job_number, job.width, job.height, os.str());
   }
+  if (job_msg->type == instruction_type::get_objects) {
+    json shapes_json = {};
+    auto &shapes = job_msg->job->shapes;
+    size_t index = 0;
+    for (const auto &shape : shapes[shapes.size() - 1]) {
+      if (shape.type == data::shape_type::circle) {
+        json circle = {
+            {"index", index},
+            {"id", shape.id},
+            {"level", shape.level},
+            {"type", "circle"},
+            {"x", shape.x},
+            {"y", shape.y},
+        };
+        shapes_json.push_back(circle);
+      }
+      if (shape.type == data::shape_type::line) {
+        json circle = {
+            {"index", index},
+            {"id", shape.id},
+            {"level", shape.level},
+            {"type", "line"},
+            {"x", shape.x},
+            {"y", shape.y},
+            {"x2", shape.x2},
+            {"y2", shape.y2},
+        };
+        shapes_json.push_back(circle);
+      }
+      index++;
+    }
+    return std::make_shared<render_msg>(
+        job_msg->client, job_msg->type, job.job_number, job.width, job.height, shapes_json.dump());
+  }
 
   auto &bmp = bitmaps[i]->get(job.width, job.height);
   render_job(*engines[i], job, bmp);
@@ -244,6 +281,11 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
           shapes_handler->callback(job_msg->client, job_msg->buffer);
         };
         if (webserv) webserv->execute_shapes(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+      } else if (job_msg->type == instruction_type::get_objects) {
+        auto fun = [&](std::shared_ptr<ObjectsHandler> objects_handler, std::shared_ptr<render_msg> job_msg) {
+          objects_handler->callback(job_msg->client, job_msg->buffer);
+        };
+        if (webserv) webserv->execute_objects(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
       }
     }
   };

@@ -47,7 +47,12 @@
                 <editor-component v-model="cpp_code" name="js" language="javascript" width="100%" height="100vh - 60px"/>
             </div>
             <div class="column" style="background-color: black; max-height: calc(100vh - 120px);">
-                <canvas id="canvas" oncontextmenu="event.preventDefault()" style="width: 100%; max-height: calc(100vh - 120px);"></canvas>
+                <div style="position: relative; z-index: 2;">
+                    <canvas id="canvas2"
+                            style="position: absolute; width: 100%; max-height: calc(100vh - 120px); left: 0; top: 0; z-index: 1; pointer-events: none /* saved my day */;"></canvas>
+                    <canvas id="canvas" v-on:mousemove="on_mouse_move"
+                            style="position: absolute; width: 100%; max-height: calc(100vh - 120px); left: 0; top: 0; z-index: 0;"></canvas>
+                </div>
             </div>
             <div class="column is-narrow">
                 <form>
@@ -59,17 +64,19 @@
                     </fieldset>
                 </form>
 
-                Current render mode: {{ render_mode }}
+                Current render mode: {{ render_mode }}<br/>
 
-                Third column
                 <h2>{{ websock_status }}</h2>
                 <h2>{{ websock_status2 }}</h2>
                 <h2>{{ websock_status3 }}</h2>
+                <h2>{{ websock_status4 }}</h2>
+
                 <button v-shortkey="['ctrl', 's']" @shortkey="menu = menu == 'script' ? '' : 'script'">_</button>
                 <button v-shortkey="['ctrl', 'f']" @shortkey="menu = menu == 'files' ? '' : 'files'">_</button>
                 <button v-shortkey="[',']" @shortkey="prev_frame()">_</button>
                 <button v-shortkey="['.']" @shortkey="next_frame()">_</button>
                 <button v-shortkey="['ctrl', 'o']" @shortkey="get_objects()">_</button>
+
                 <hr>
                 <stats-component />
             </div>
@@ -94,6 +101,7 @@
                 websock_status: '',
                 websock_status2: '',
                 websock_status3: '',
+                websock_status4: '',
                 menu: '',
                 filename: 'input/motion4.js',
                 current_frame : 0,
@@ -160,9 +168,11 @@
                     this.shapes_endpoint.send(this.$data.filename + " " + this.$data.current_frame);
                 }
             },
+            on_mouse_move: function(e) {
+                let [x, y] = [Module.get_mouse_x(), Module.get_mouse_y()];
+            },
             get_objects: function () {
-                console.log("TODO: this needs a NEW endpoint instead.")
-                // this.shapes_endpoint.send(this.$data.filename + " " + this.$data.current_frame);
+                this.objects_endpoint.send(this.$data.filename + " " + this.$data.current_frame);
             }
         },
         watch: {
@@ -207,6 +217,36 @@
                     Module.set_shapes(buffer);
                     this.$data.rendering--;
                     this.process_queue();
+                },
+                _ => {
+                }
+            );
+            this.objects_endpoint = new StarcryAPI(
+                'objects',
+                StarcryAPI.json_type,
+                msg => {
+                    this.$data.websock_status4 = msg;
+                },
+                buffer => {
+                    var canvas1 = document.getElementById("canvas");
+                    var canvas = document.getElementById("canvas2");
+                    canvas.width = canvas1.width;
+                    canvas.height = canvas1.height;
+                    var ctx = canvas.getContext("2d");
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.font = "20px Arial";
+                    ctx.fillStyle = "red";
+                    ctx.strokeStyle = 'red';
+                    var canvas_w = 1920.;
+                    var canvas_h = 1080.;
+                    for (let obj of buffer) {
+                        var x = obj.x + canvas_w/2.;
+                        var y = obj.y + canvas_h/2.
+                        var offset = 0;
+                        ctx.fillText(obj.id, x / canvas_w * canvas.width, y / canvas_h * canvas.height + offset++ * 20);
+                        ctx.fillText(obj.index, x / canvas_w * canvas.width, y / canvas_h * canvas.height + offset++ * 20);
+                        ctx.fillText(obj.level, x / canvas_w * canvas.width, y / canvas_h * canvas.height + offset++ * 20);
+                    }
                 },
                 _ => {
                 }

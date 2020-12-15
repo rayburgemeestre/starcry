@@ -105,6 +105,10 @@ struct shape {
   double seed;
   double scale;
 
+  // annotate
+  std::string id;
+  int level;
+
   template <class Archive>
   void serialize(Archive &ar) {
     ar(time,
@@ -128,7 +132,9 @@ struct shape {
        blending_,
        indexes,
        seed,
-       scale);
+       scale,
+       id,
+       level);
   }
 };
 

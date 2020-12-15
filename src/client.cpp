@@ -26,6 +26,7 @@ data::job job;
 std::vector<uint32_t> transfer_pixels;
 SDL_Texture *texture = nullptr;
 SDL_Renderer *renderer = nullptr;
+int x = 0, y = 0;
 
 struct context {
   SDL_Renderer *renderer;
@@ -44,7 +45,6 @@ void mainloop(void *arg) {
   SDL_RenderClear(renderer);
 
   SDL_Rect r, r2;
-  int x = 0, y = 0;
   SDL_PumpEvents();
   SDL_GetMouseState(&x, &y);
   r.x = 0;
@@ -221,6 +221,13 @@ void set_texture(std::string data) {
   SDL_UpdateTexture(texture, NULL, (void *)&(data[0]), job.width * sizeof(Uint32));
 }
 
+int get_mouse_x() {
+  return x;
+}
+int get_mouse_y() {
+  return x;
+}
+
 int main() {
 #ifndef EMSCRIPTEN
   start(1920, 1080);
@@ -233,5 +240,7 @@ EMSCRIPTEN_BINDINGS(my_module) {
   emscripten::function("start", &start);
   emscripten::function("set_shapes", &set_shapes);
   emscripten::function("set_texture", &set_texture);
+  emscripten::function("get_mouse_x", &get_mouse_x);
+  emscripten::function("get_mouse_y", &get_mouse_y);
 }
 #endif

@@ -695,6 +695,9 @@ void generator_v2::convert_object_to_render_job(
   new_shape.scale = scale;
   new_shape.seed = seed;
 
+  new_shape.id = id;
+  new_shape.level = level;
+
   if (type == "circle") {
     new_shape.type = data::shape_type::circle;
   } else if (type == "line") {

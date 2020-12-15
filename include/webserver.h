@@ -20,6 +20,7 @@ class starcry;
 
 #include "webserver/bitmap_handler.h"
 #include "webserver/image_handler.h"
+#include "webserver/objects_handler.h"
 #include "webserver/script_handler.h"
 #include "webserver/shapes_handler.h"
 #include "webserver/stats_handler.h"
@@ -39,6 +40,7 @@ private:
   std::shared_ptr<BitmapHandler> bitmap_handler;
   std::shared_ptr<ScriptHandler> script_handler;
   std::shared_ptr<StatsHandler> stats_handler;
+  std::shared_ptr<ObjectsHandler> objects_handler;
 
 public:
   explicit webserver(starcry *sc);
@@ -61,6 +63,12 @@ public:
   void execute_bitmap(T fun, std::shared_ptr<render_msg> job_msg) {
     if (server) {
       server->execute(std::bind(fun, bitmap_handler, job_msg));
+    }
+  }
+  template <typename T>
+  void execute_objects(T fun, std::shared_ptr<render_msg> job_msg) {
+    if (server) {
+      server->execute(std::bind(fun, objects_handler, job_msg));
     }
   }
 
