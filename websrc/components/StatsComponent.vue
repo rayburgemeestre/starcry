@@ -21,10 +21,10 @@
         mounted: function() {
             this.stats_endpoint = new StarcryAPI(
                 'stats',
+                StarcryAPI.json_type,
                 _ => {},
                 buffer => {
-                    let str = String.fromCharCode.apply(null, new Uint8Array(buffer));
-                    this.$data.statistics = JSON.parse(str);
+                    this.$data.statistics = buffer;
                 },
                 _ => {}
             );

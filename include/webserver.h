@@ -18,54 +18,11 @@
 
 class starcry;
 
-struct ImageHandler : seasocks::WebSocket::Handler {
-  starcry *sc;
-  std::set<seasocks::WebSocket *> _cons;
-  explicit ImageHandler(starcry *sc);
-  void onConnect(seasocks::WebSocket *con) override;
-  void onDisconnect(seasocks::WebSocket *con) override;
-  void onData(seasocks::WebSocket *con, const char *data) override;
-  void callback(seasocks::WebSocket *recipient, std::string s);
-};
-
-struct ShapesHandler : seasocks::WebSocket::Handler {
-  starcry *sc;
-  std::set<seasocks::WebSocket *> _cons;
-  explicit ShapesHandler(starcry *sc);
-  void onConnect(seasocks::WebSocket *con) override;
-  void onDisconnect(seasocks::WebSocket *con) override;
-  void onData(seasocks::WebSocket *con, const char *data) override;
-  void callback(seasocks::WebSocket *recipient, std::string s);
-};
-
-struct BitmapHandler : seasocks::WebSocket::Handler {
-  starcry *sc;
-  std::set<seasocks::WebSocket *> _cons;
-  explicit BitmapHandler(starcry *sc);
-  void onConnect(seasocks::WebSocket *con) override;
-  void onDisconnect(seasocks::WebSocket *con) override;
-  void onData(seasocks::WebSocket *con, const char *data) override;
-  void callback(seasocks::WebSocket *recipient, std::string s);
-};
-
-struct ScriptHandler : seasocks::WebSocket::Handler {
-  starcry *sc;
-  std::set<seasocks::WebSocket *> _cons;
-  ScriptHandler(starcry *sc);
-  void onConnect(seasocks::WebSocket *con) override;
-  void onDisconnect(seasocks::WebSocket *con) override;
-  void onData(seasocks::WebSocket *con, const char *data) override;
-  void callback(seasocks::WebSocket *recipient, std::string s);
-};
-
-struct StatsHandler : seasocks::WebSocket::Handler {
-  starcry *sc;
-  std::set<seasocks::WebSocket *> _cons;
-  StatsHandler(starcry *sc);
-  void onConnect(seasocks::WebSocket *con) override;
-  void onDisconnect(seasocks::WebSocket *con) override;
-  void onData(seasocks::WebSocket *con, const char *data) override;
-};
+#include "webserver/bitmap_handler.h"
+#include "webserver/image_handler.h"
+#include "webserver/script_handler.h"
+#include "webserver/shapes_handler.h"
+#include "webserver/stats_handler.h"
 
 struct DataHandler : seasocks::CrackedUriPageHandler {
   virtual std::shared_ptr<seasocks::Response> handle(const seasocks::CrackedUri & /*uri*/,

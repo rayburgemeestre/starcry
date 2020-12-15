@@ -50,9 +50,21 @@
                 <canvas id="canvas" oncontextmenu="event.preventDefault()" style="width: 100%; max-height: calc(100vh - 120px);"></canvas>
             </div>
             <div class="column is-narrow">
+                <form>
+                    <fieldset class="uk-fieldset">
+                        <div class="uk-margin uk-grid-small uk-child-width-auto uk-grid">
+                            <label><input class="uk-checkbox" type="radio" checked v-model="render_mode" value="server"> Server-side</label>
+                            <label><input class="uk-checkbox" type="radio" v-model="render_mode" value="client">  Client-side</label>
+                        </div>
+                    </fieldset>
+                </form>
+
+                Current render mode: {{ render_mode }}
+
                 Third column
                 <h2>{{ websock_status }}</h2>
                 <h2>{{ websock_status2 }}</h2>
+                <h2>{{ websock_status3 }}</h2>
                 <button v-shortkey="['ctrl', 's']" @shortkey="menu = menu == 'script' ? '' : 'script'">_</button>
                 <button v-shortkey="['ctrl', 'f']" @shortkey="menu = menu == 'files' ? '' : 'files'">_</button>
                 <button v-shortkey="[',']" @shortkey="prev_frame()">_</button>
@@ -81,12 +93,14 @@
                 cpp_code: 'Hello world',
                 websock_status: '',
                 websock_status2: '',
-                menu: 'files',
+                websock_status3: '',
+                menu: '',
                 filename: 'input/motion4.js',
                 current_frame : 0,
                 rendering: 0,
                 max_queued: 10,
                 _play: false,
+                render_mode: 'server',
             };
         },
         components: {
@@ -139,7 +153,16 @@
             },
             _schedule_frame: function () {
                 this.$data.rendering++;
-                this.bitmap_endpoint.send(this.$data.filename + " " + this.$data.current_frame);
+                if (this.render_mode == 'server') {
+                    this.bitmap_endpoint.send(this.$data.filename + " " + this.$data.current_frame);
+                }
+                else if (this.render_mode == 'client') {
+                    this.shapes_endpoint.send(this.$data.filename + " " + this.$data.current_frame);
+                }
+            },
+            get_objects: function () {
+                console.log("TODO: this needs a NEW endpoint instead.")
+                // this.shapes_endpoint.send(this.$data.filename + " " + this.$data.current_frame);
             }
         },
         watch: {
@@ -150,6 +173,7 @@
         mounted: function() {
             this.bitmap_endpoint = new StarcryAPI(
                 'bitmap',
+                StarcryAPI.binary_type,
                 msg => {
                     this.$data.websock_status = msg;
                 },
@@ -162,15 +186,29 @@
             );
             this.script_endpoint = new StarcryAPI(
                 'script',
+                StarcryAPI.text_type,
                 msg => {
                     this.$data.websock_status2 = msg;
                 },
                 buffer => {
-                    let str = String.fromCharCode.apply(null, new Uint8Array(buffer));
-                    this.$data.cpp_code = str;
+                    this.$data.cpp_code = buffer;
                 },
                 _ => {
                     this.script_endpoint.send("open " + this.$data.filename);
+                }
+            );
+            this.shapes_endpoint = new StarcryAPI(
+                'shapes',
+                StarcryAPI.text_type,
+                msg => {
+                    this.$data.websock_status3 = msg;
+                },
+                buffer => {
+                    Module.set_shapes(buffer);
+                    this.$data.rendering--;
+                    this.process_queue();
+                },
+                _ => {
                 }
             );
         }

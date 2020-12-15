@@ -5,15 +5,18 @@ fast-docker-build:
 	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_"
 
 client:
-	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./include -I./libs/cereal/include -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0"
+	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./include -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0"
 	# -I/usr/include -I/emsdk/upstream/emscripten/system/include/ -I/usr/include/x86_64-linux-gnu/
 
+client_desktop:
+	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "c++ -O3 -o client_desktop src/client.cpp -I./include -I./libs/cereal/include -I./libs/perlin_noise/ -lSDL2 "
+
 client-ubuntu1804:
-	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./include -I./libs/cereal/include -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0"
+	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./include -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0"
 	# -I/usr/include -I/emsdk/upstream/emscripten/system/include/ -I/usr/include/x86_64-linux-gnu/
 
 client_debug:
-	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./include -I./libs/cereal/include -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1"
+	docker run -it -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 -g --bind -o webroot/client.js src/client.cpp -I./include -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1"
 
 ci:
 	# Only difference with above is: no -i flag
@@ -80,6 +83,8 @@ deps:
 	#sudo pt-get install -y libsfml-dev
 	# sfml self-compiled (2.5)
 	sudo apt-get install -y libudev-dev libopenal-dev libflac-dev libvorbis-dev
+	# TODO: move to CI prepare dependencies
+	cd libs/fmt && cmake . && make -j $$(nproc)
 
 client_deps:
 	sudo apt-get update
@@ -97,7 +102,6 @@ prepare:
 	update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-10 50
 	update-alternatives --install /usr/bin/clang clang /usr/bin/clang-10 50
 	update-alternatives --install /usr/bin/ld ld /usr/bin/ld.lld-10 50
-
 	# prepare build dir
 	mkdir -p build
 

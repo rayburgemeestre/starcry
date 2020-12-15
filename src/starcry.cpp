@@ -10,6 +10,7 @@
 #include <sstream>
 
 #include <coz.h>
+#include <fmt/core.h>
 
 #include <unistd.h>  // getpid()
 
@@ -171,7 +172,6 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   if (job_msg->type == instruction_type::get_shapes) {
     std::ostringstream os;
     {
-      // cereal::BinaryOutputArchive archive(os);
       cereal::JSONOutputArchive archive(os);
       archive(job);
     }
@@ -184,9 +184,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   if (job.job_number == std::numeric_limits<uint32_t>::max()) {
     png::image<png::rgb_pixel> image(job.width, job.height);
     copy_to_png(bmp.pixels(), job.width, job.height, image);
-    // TODO: replace with fmt
-    image.write("output_frame_" + std::to_string(job.frame_number) + "_seed_" + std::to_string(gen->get_seed()) +
-                ".png");
+    fmt::format("output_frame_{}_seed_{}_{}x{}.png", job.frame_number, gen->get_seed(), job.canvas_w, job.canvas_h);
   }
   if (job_msg->client == nullptr) {
     auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels());

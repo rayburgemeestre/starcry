@@ -56,6 +56,7 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/json/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/perlin_noise/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libs/fmt/include/"
     "/usr/include/SDL2/"
 )
 
@@ -157,6 +158,9 @@ if (SANITIZER)
 # ASAN
 target_link_libraries(starcry /usr/lib/clang/10.0.1/lib/linux/libclang_rt.asan-x86_64.a)
 endif()
+
+# fmt
+target_link_libraries(starcry "${PROJECT_SOURCE_DIR}/libs/fmt/libfmt.a")
 
 install (TARGETS starcry DESTINATION bin)
 

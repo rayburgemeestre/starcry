@@ -125,10 +125,6 @@ void initialize(uint32_t width, uint32_t height) {
   job.canvas_h = height;
   job.scale = 1;
 
-  data::shape circle;
-  memset(&circle, 0x00, sizeof(circle));
-  circle.radius = 500;
-  circle.radius_size = 500;
   data::gradient gradient;
   data::color color1;
   color1.r = 1;
@@ -142,15 +138,6 @@ void initialize(uint32_t width, uint32_t height) {
   color2.a = 1.0;
   gradient.colors.emplace_back(std::make_tuple(0.0, color1));
   gradient.colors.emplace_back(std::make_tuple(1.0, color2));
-  circle.gradients_.push_back(std::make_pair(1.0, gradient));
-  circle.x = 0;
-  circle.y = 0;
-  circle.z = 0;
-  circle.type = data::shape_type::circle;
-  if (job.shapes.empty()) {
-    job.shapes.emplace_back();
-  }
-  job.shapes[0].push_back(circle);
 }
 
 void start(uint32_t width, uint32_t height) {

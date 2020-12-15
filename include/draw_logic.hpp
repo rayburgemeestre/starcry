@@ -5,18 +5,17 @@
  */
 #pragma once
 
-#include <algorithm>
-#include <data/shape.hpp>
+#include <algorithm>  // for std::clamp
+#include <random>
 
 #include "color_blender.hpp"
 #include "data/gradient.hpp"
+#include "data/shape.hpp"
 #include "data/texture.hpp"
 #include "primitives.h"
+#include "util/math.h"
 #include "util/memory_font.h"
 
-static constexpr const auto pi = 3.14159265358979323846;
-
-#include <random>
 static std::mt19937 mt_v3;
 void set_rand_seed_v3(double seed) {
   mt_v3.seed(seed);
@@ -634,7 +633,7 @@ public:
     if (!textures.empty()) {
       noise = 0;
       for (const auto &texture : textures) {
-        noise += std::clamp(
+        noise += ::clamp(
             texture.second.get(num, absX - posX, absY - posY, time, scale_, std::isnan(seed) ? 1. : seed), 0.0, 1.0);
       }
       noise /= static_cast<double>(textures.size());
@@ -653,7 +652,7 @@ public:
     // clr.a = logn * noise * (1.0 - amount_of_blur * rand1);
     // use noise to dial down opacity
     clr.a = (linear * noise) * (1.0 - amount_of_blur * rand1);
-    clr.a = std::clamp(clr.a, 0.0, 1.0);
+    clr.a = ::clamp(clr.a, 0.0, 1.0);
     // ------------motion blur------------
 
     // was:

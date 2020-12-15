@@ -41,12 +41,12 @@
     mounted: function() {
       this.script_endpoint = new StarcryAPI(
               'script',
+              StarcryAPI.json_type,
               msg => {
                 this.$data.websock_status = msg;
               },
               buffer => {
-                let str = String.fromCharCode.apply(null, new Uint8Array(buffer));
-                this.$data.data = JSON.parse(str);
+                this.$data.data = buffer;
               },
               _ => {
                 this.script_endpoint.send("open " + this.$data.filename);

@@ -5,12 +5,13 @@
  */
 #pragma once
 
-#include <algorithm>
+#include <algorithm>  // for std::clamp
 #include <noise.hpp>
 #include "cereal/types/tuple.hpp"
 #include "cereal/types/vector.hpp"
 
 #include "data/color.hpp"
+#include "util/math.h"
 
 namespace data {
 
@@ -55,7 +56,7 @@ struct texture {
                                        x / context_scale,
                                        y / context_scale,
                                        (z * speed) + seed);
-    perlin = std::clamp(perlin, 0., 1.0);
+    perlin = ::clamp(perlin, 0., 1.0);
     if (strength == 0) {
       return opacity(ratio);
     } else if (strength < 0 && strength > -1.0) {
