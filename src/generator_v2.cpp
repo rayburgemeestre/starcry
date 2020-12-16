@@ -700,7 +700,6 @@ void generator_v2::convert_object_to_render_job(
     util::generator::copy_gradient_from_object_to_shape(i, parents[level], new_shape, gradients);
     util::generator::copy_texture_from_object_to_shape(i, parents[level], new_shape, textures);
   }
-
   if (new_shape.gradients_.empty()) {
     new_shape.gradients_.emplace_back(1.0, data::gradient{});
     new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
@@ -714,7 +713,6 @@ void generator_v2::convert_object_to_render_job(
   new_shape.scale = scale;
   new_shape.unique_id = unique_id;
   new_shape.seed = seed;
-
   new_shape.id = id;
   new_shape.label = label;
   new_shape.level = level;
@@ -723,23 +721,16 @@ void generator_v2::convert_object_to_render_job(
     new_shape.type = data::shape_type::circle;
   } else if (type == "line") {
     new_shape.type = data::shape_type::line;
-    // test
-    //    new_shape.gradients_.clear();
-    //    new_shape.gradients_.emplace_back(1.0, data::gradient{});
-    //    new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{0, 0, 0, 0}));
-    //    new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.5, data::color{0, 0, 0, 1}));
-    //    new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(1.0, data::color{0, 0, 0, 0}));
-    // ----TODO---- figure out why this shit is NaN (guessing)
-    new_shape.x2 = transitive_x2;  // i.double_number(instance, "x2");  ///#transitive_x;
-    new_shape.y2 = transitive_y2;  // i.double_number(instance, "y2");  // transitive_y;
+    new_shape.x2 = transitive_x2;
+    new_shape.y2 = transitive_y2;
   } else {
     new_shape.type = data::shape_type::none;
   }
   // wrap this in a proper add method
   if (stepper.next_step != stepper.max_step) {
-    indexes[index][stepper.current_step] = job->shapes[stepper.current_step].size();
+    indexes[unique_id][stepper.current_step] = job->shapes[stepper.current_step].size();
   } else {
-    new_shape.indexes = indexes[index];
+    new_shape.indexes = indexes[unique_id];
   }
   job->shapes[stepper.current_step].push_back(new_shape);
   job->scale = video_scale;
