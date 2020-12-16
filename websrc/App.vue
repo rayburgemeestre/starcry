@@ -243,9 +243,9 @@
                     canvas.height = canvas1.height;
                     var ctx = canvas.getContext("2d");
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.font = "20px Arial";
-                    ctx.fillStyle = "red";
-                    ctx.strokeStyle = 'red';
+                    ctx.font = "12px Monaco";
+                    ctx.fillStyle = "yellow";
+                    ctx.strokeStyle = 'yellow';
                     var canvas_w = 1920.;
                     var canvas_h = 1080.;
                     var scale = Module.get_scale();
