@@ -105,8 +105,11 @@ struct shape {
   double seed;
   double scale;
 
+  int64_t unique_id;
+
   // annotate
   std::string id;
+  std::string label;
   int level;
 
   template <class Archive>
@@ -133,7 +136,9 @@ struct shape {
        indexes,
        seed,
        scale,
+       unique_id,
        id,
+       label,
        level);
   }
 };

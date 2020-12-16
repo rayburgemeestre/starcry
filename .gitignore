@@ -17,3 +17,5 @@ build
 webroot/client.js
 webroot/client.wasm
 node_modules
+*.png
+*.h264

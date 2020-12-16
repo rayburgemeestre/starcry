@@ -298,6 +298,7 @@ bool generator_v2::_generate_frame() {
           stepper.rewind();
           while (stepper.has_next_step()) {
             qts.clear();
+            create_next_instance_mapping(i, next_instances);
             update_object_positions(i, next_instances, stepper.max_step);
             update_object_interactions(i, next_instances, intermediates);
             util::generator::find_new_objects(i, objects, instances, next_instances, intermediates);
@@ -353,6 +354,15 @@ void generator_v2::revert_position_updates(v8_interact& i,
   }
 }
 
+void generator_v2::create_next_instance_mapping(v8_interact& i, v8::Local<v8::Array>& next_instances) {
+  next_instance_mapping.clear();
+  for (size_t j = 0; j < next_instances->Length(); j++) {
+    auto next = i.get_index(next_instances, j).As<v8::Object>();
+    auto unique_id = i.integer_number(next, "unique_id");
+    next_instance_mapping[unique_id] = j;
+  }
+}
+
 void generator_v2::update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, int max_step) {
   auto isolate = i.get_isolate();
   for (size_t j = 0; j < next_instances->Length(); j++) {
@@ -397,7 +407,8 @@ void generator_v2::update_object_positions(v8_interact& i, v8::Local<v8::Array>&
             collision_group, quadtree(rectangle_v2(position(-width() / 2, -height() / 2), width(), height()), 32)));
       }
       if (collision_group != "undefined") {
-        qts[collision_group].insert(point_type(position(x, y), j));
+        auto unique_id = i.integer_number(instance, "unique_id");
+        qts[collision_group].insert(point_type(position(x, y), unique_id));
       }
     }
     i.set_field(instance, "x", v8::Number::New(isolate, x));
@@ -459,21 +470,24 @@ void generator_v2::handle_collisions(v8_interact& i,
   auto y = i.double_number(instance, "y");
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
-  qts[collision_group].query(index, circle_v2(position(x, y), radius * 2.0, radiussize * 2.0), found);
+  auto unique_id = i.integer_number(instance, "unique_id");
+  qts[collision_group].query(unique_id, circle_v2(position(x, y), radius * 2.0, radiussize * 2.0), found);
   if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
     for (const auto& collide : found) {
-      const auto index2 = collide.userdata;
+      const auto unique_id2 = collide.userdata;
+      const auto index2 = next_instance_mapping.at(unique_id2);
       // TODO: can we uncomment this one again, if not, why-not?
       //  if (index2 <= index) continue;
       auto instance2 = i.get_index(next_instances, index2).As<v8::Object>();
-      handle_collision(i, index, index2, instance, instance2);
+      handle_collision(i, instance, instance2);
     }
   }
 };
 
-void generator_v2::handle_collision(
-    v8_interact& i, size_t index, size_t index2, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2) {
+void generator_v2::handle_collision(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2) {
   const auto isolate = i.get_isolate();
+  auto unique_id = i.integer_number(instance, "unique_id");
+  auto unique_id2 = i.integer_number(instance2, "unique_id");
   auto last_collide = i.double_number(instance, "last_collide");
 
   auto x = i.double_number(instance, "x");
@@ -484,7 +498,7 @@ void generator_v2::handle_collision(
   if (!instance2->IsObject()) return;
 
   // they already collided, no need to let them collide again
-  if (last_collide == index2) return;
+  if (last_collide == unique_id2) return;
 
   // handle collision
   auto vel_x = i.double_number(instance, "vel_x");
@@ -506,30 +520,30 @@ void generator_v2::handle_collision(
   i.set_field(instance2, "vel_y", v8::Number::New(isolate, updated_vel2.y));
 
   // save collision
-  i.set_field(instance, "last_collide", v8::Number::New(isolate, index2));
-  i.set_field(instance2, "last_collide", v8::Number::New(isolate, index));
+  i.set_field(instance, "last_collide", v8::Number::New(isolate, unique_id2));
+  i.set_field(instance2, "last_collide", v8::Number::New(isolate, unique_id));
 
   // call 'on collision' event
   auto on1 = i.get(instance, "on").As<v8::Object>();
   auto on2 = i.get(instance2, "on").As<v8::Object>();
 
   // TODO: proof-of-concept
-  size_t subobj_len_before = 0;
-  size_t subobj_len_after = 0;
-  if (i.has_field(instance, "subobj")) {
-    auto subobj = i.get(instance, "subobj").As<v8::Array>();
-    subobj_len_before = subobj->Length();
-  }
-  i.call_fun(on1, instance, "collide", instance2);
-  if (i.has_field(instance, "subobj")) {
-    auto subobj = i.get(instance, "subobj").As<v8::Array>();
-    subobj_len_after = subobj->Length();
-  }
-  if (subobj_len_after > subobj_len_before) {
-    i.set_field(instance, "new_objects", v8::Boolean::New(i.get_isolate(), true));
-  }
-
-  i.call_fun(on2, instance2, "collide", instance);
+  auto emit_event = [&](v8::Local<v8::Object> on1, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2) {
+    size_t subobj_len_before = 0;
+    size_t subobj_len_after = 0;
+    if (i.has_field(instance, "subobj")) {
+      auto subobj = i.get(instance, "subobj").As<v8::Array>();
+      subobj_len_before = subobj->Length();
+    }
+    i.call_fun(on1, instance, "collide", instance2);
+    if (i.has_field(instance, "subobj")) {
+      auto subobj = i.get(instance, "subobj").As<v8::Array>();
+      subobj_len_after = subobj->Length();
+    }
+    i.set_field(instance, "new_objects", v8::Boolean::New(i.get_isolate(), subobj_len_after > subobj_len_before));
+  };
+  emit_event(on1, instance, instance2);
+  emit_event(on2, instance2, instance);
 }
 
 void generator_v2::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
@@ -557,6 +571,7 @@ double generator_v2::get_max_travel_of_object(v8_interact& i,
   auto level = i.integer_number(instance, "level");
   auto type = i.str(instance, "type");
   auto is_line = type == "line";
+  auto label = i.str(instance, "label");
   parents[level] = instance;
   prev_parents[level] = previous_instance;
 
@@ -623,7 +638,8 @@ double generator_v2::get_max_travel_of_object(v8_interact& i,
   while (dist >= 1920 * 0.9) dist -= 1920;
   while (dist >= 1080 * 0.9) dist -= 1080;
   // radius
-  dist = std::max(dist, fabs(prev_rad - rad));
+  auto new_dist = fabs(prev_rad - rad);
+  dist = std::max(dist, new_dist);
   return dist;
 }
 
@@ -644,7 +660,8 @@ void generator_v2::convert_object_to_render_job(
     v8_interact& i, v8::Local<v8::Object> instance, size_t index, step_calculator& sc, v8::Local<v8::Object> video) {
   // Update level for all objects
   auto level = i.integer_number(instance, "level");
-  auto type = i.str(instance, "type");
+  auto exists = !i.has_field(instance, "exists") || i.boolean(instance, "exists");
+  auto type = !exists ? "" : i.str(instance, "type");
   auto is_line = type == "line";
   parents[level] = instance;
 
@@ -654,6 +671,7 @@ void generator_v2::convert_object_to_render_job(
     return;
   }
   auto id = i.str(instance, "id");
+  auto label = i.str(instance, "label");
   auto time = i.double_number(instance, "__time__");
   auto transitive_x = i.double_number(instance, "transitive_x");
   auto transitive_y = i.double_number(instance, "transitive_y");
@@ -665,6 +683,7 @@ void generator_v2::convert_object_to_render_job(
   auto blending_type =
       i.has_field(instance, "blending_type") ? i.integer_number(instance, "blending_type") : data::blending_type::add;
   auto scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
+  auto unique_id = i.integer_number(instance, "unique_id");
   auto video_scale = i.double_number(video, "scale");
 
   data::shape new_shape;
@@ -693,9 +712,11 @@ void generator_v2::convert_object_to_render_job(
   new_shape.radius_size = radiussize;
   new_shape.blending_ = blending_type;
   new_shape.scale = scale;
+  new_shape.unique_id = unique_id;
   new_shape.seed = seed;
 
   new_shape.id = id;
+  new_shape.label = label;
   new_shape.level = level;
 
   if (type == "circle") {

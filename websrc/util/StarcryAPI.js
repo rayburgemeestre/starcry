@@ -29,7 +29,7 @@ export default class StarcryAPI {
         }.bind(this);
         this.ws.onclose = function () {
             this.on_status_change('disconnected');
-            this.retry = setTimeout(this.connect, 1000);
+            this.retry = setTimeout(this.connect.bind(this), 1000);
         }.bind(this);
         this.ws.onmessage = function (message) {
             switch (this.type) {

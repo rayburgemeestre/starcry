@@ -32,6 +32,7 @@
                     <b-menu-list label="Menu">
                         <b-menu-item icon="information-outline" label="Files" :active="menu == 'files'" v-on:click="menu = menu == 'files' ? '' : 'files'"></b-menu-item>
                         <b-menu-item icon="cash-multiple" label="Script" :active="menu == 'script'" v-on:click="menu = menu == 'script' ? '' : 'script'"></b-menu-item>
+                        <b-menu-item icon="table" label="Objects" :active="menu == 'objects'" v-on:click="menu = menu == 'objects' ? '' : 'objects'"></b-menu-item>
                     </b-menu-list>
                     <!--
                     <b-menu-list label="Actions">
@@ -45,6 +46,9 @@
             </div>
             <div v-if="menu == 'script'" class="column" style="background-color: #c0c0c0; width: 38%;">
                 <editor-component v-model="cpp_code" name="js" language="javascript" width="100%" height="100vh - 60px"/>
+            </div>
+            <div v-if="menu == 'objects'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
+                <objects-component v-model="objects" width="100%" height="100vh - 60px"/>
             </div>
             <div class="column" style="background-color: black; max-height: calc(100vh - 120px);">
                 <div style="position: relative; z-index: 2;">
@@ -73,9 +77,10 @@
 
                 <button v-shortkey="['ctrl', 's']" @shortkey="menu = menu == 'script' ? '' : 'script'">_</button>
                 <button v-shortkey="['ctrl', 'f']" @shortkey="menu = menu == 'files' ? '' : 'files'">_</button>
+                <button v-shortkey="['ctrl', 'o']" @shortkey="menu = menu == 'objects' ? '' : 'objects'">_</button>
                 <button v-shortkey="[',']" @shortkey="prev_frame()">_</button>
                 <button v-shortkey="['.']" @shortkey="next_frame()">_</button>
-                <button v-shortkey="['ctrl', 'o']" @shortkey="get_objects()">_</button>
+                <button v-shortkey="['shift', 'o']" @shortkey="get_objects()">_</button>
 
                 <hr>
                 <stats-component />
@@ -90,6 +95,7 @@
 <script>
     import EditorComponent from './components/EditorComponent.vue'
     import ScriptsComponent from './components/ScriptsComponent.vue'
+    import ObjectsComponent from './components/ObjectsComponent.vue'
     import PlaybackComponent from './components/PlaybackComponent.vue'
     import StatsComponent from './components/StatsComponent.vue'
     import StarcryAPI from './util/StarcryAPI'
@@ -109,11 +115,13 @@
                 max_queued: 10,
                 _play: false,
                 render_mode: 'server',
+                objects: []
             };
         },
         components: {
             EditorComponent,
             ScriptsComponent,
+            ObjectsComponent,
             PlaybackComponent,
             StatsComponent,
         },
@@ -228,6 +236,7 @@
                     this.$data.websock_status4 = msg;
                 },
                 buffer => {
+                    this.$data.objects = buffer;
                     var canvas1 = document.getElementById("canvas");
                     var canvas = document.getElementById("canvas2");
                     canvas.width = canvas1.width;
@@ -239,13 +248,13 @@
                     ctx.strokeStyle = 'red';
                     var canvas_w = 1920.;
                     var canvas_h = 1080.;
+                    var scale = Module.get_scale();
                     for (let obj of buffer) {
-                        var x = obj.x + canvas_w/2.;
-                        var y = obj.y + canvas_h/2.
+                        var x = obj.x * scale + canvas_w/2.;
+                        var y = obj.y * scale + canvas_h/2.
                         var offset = 0;
-                        ctx.fillText(obj.id, x / canvas_w * canvas.width, y / canvas_h * canvas.height + offset++ * 20);
-                        ctx.fillText(obj.index, x / canvas_w * canvas.width, y / canvas_h * canvas.height + offset++ * 20);
-                        ctx.fillText(obj.level, x / canvas_w * canvas.width, y / canvas_h * canvas.height + offset++ * 20);
+                        offset += obj.level;
+                        ctx.fillText(obj.label, x / canvas_w * canvas.width, y / canvas_h * canvas.height + offset++ * 20);
                     }
                 },
                 _ => {

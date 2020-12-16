@@ -7,7 +7,6 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "cereal/archives/binary.hpp"
 #include "cereal/archives/json.hpp"
 
 #include "data/job.hpp"
@@ -227,6 +226,9 @@ int get_mouse_x() {
 int get_mouse_y() {
   return x;
 }
+double get_scale() {
+  return job.scale;
+}
 
 int main() {
 #ifndef EMSCRIPTEN
@@ -242,5 +244,6 @@ EMSCRIPTEN_BINDINGS(my_module) {
   emscripten::function("set_texture", &set_texture);
   emscripten::function("get_mouse_x", &get_mouse_x);
   emscripten::function("get_mouse_y", &get_mouse_y);
+  emscripten::function("get_scale", &get_scale);
 }
 #endif

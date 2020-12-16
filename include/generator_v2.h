@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 #include <cstddef>
 #include <cstdint>
@@ -50,6 +51,7 @@ private:
   double total_skipped_frames = 0.;
 
   std::map<std::string, quadtree> qts;
+  std::unordered_map<int64_t, size_t> next_instance_mapping;
 
 public:
   generator_v2();
@@ -73,6 +75,7 @@ public:
                                v8::Local<v8::Array>& instances,
                                v8::Local<v8::Array>& next_instances,
                                v8::Local<v8::Array>& intermediates);
+  void create_next_instance_mapping(v8_interact& i, v8::Local<v8::Array>& next_instances);
   void update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, int max_step);
   void update_object_interactions(v8_interact& i,
                                   v8::Local<v8::Array>& next_instances,
@@ -81,8 +84,7 @@ public:
                          v8::Local<v8::Object> instance,
                          size_t index,
                          v8::Local<v8::Array> next_instances);
-  void handle_collision(
-      v8_interact& i, size_t index, size_t index2, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2);
+  void handle_collision(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2);
   void update_time(v8_interact& i, v8::Local<v8::Object>& instance);
   int update_steps(double dist);
   double get_max_travel_of_object(v8_interact& i,

@@ -62,9 +62,7 @@ _ = {
         ];
         let x = 0;
         let y = stepsize / 2;
-        // for (let i = 0; i < 210; i++) {
-        // WIP: REPRODUCES A BUG
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 210; i++) {
           x += directions[this.props.direction][0];
           y += directions[this.props.direction][1];
           if (this.props.step === this.props.steps) {
@@ -82,6 +80,7 @@ _ = {
 
           this.subobj.push({
             'id': 'ball',
+            'label': 'ball#' + i,
             'x': x,
             'y': y,
             'z': 0,
@@ -119,7 +118,7 @@ _ = {
       'subobj': [],
       'on': {
         'collide': function(other) {
-          this.subobj.push({'id': 'tempring', 'x': 0, 'y': 0, 'z': 0, 'props': {}});
+          this.subobj.push({'id': 'tempring', 'label': 'ring_' + this.label, 'x': 0, 'y': 0, 'z': 0, 'props': {}});
         }
       }
     },
@@ -158,7 +157,7 @@ _ = {
     'height': 1080,
     //    'width': 14043,
     //    'height': 9933,
-    'scale': 1,
+    'scale': 1.,
     //    'scale': 7.3,
     'rand_seed': 1,
     'granularity': 1,

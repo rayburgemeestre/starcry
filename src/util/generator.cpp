@@ -9,6 +9,8 @@
 namespace util {
 namespace generator {
 
+static int64_t counter = 0;
+
 void copy_gradient_from_object_to_shape(v8_interact& i,
                                         v8::Local<v8::Object>& source_object,
                                         data::shape& destination_shape,
@@ -66,8 +68,7 @@ void instantiate_object(v8_interact& i,
                         std::optional<v8::Local<v8::Object>> scene_obj,
                         v8::Local<v8::Object> object_prototype,
                         v8::Local<v8::Object> new_instance,
-                        int64_t level,
-                        const std::string& annotation) {
+                        int64_t level) {
   v8::Isolate* isolate = i.get_isolate();
 
   i.recursively_copy_object(new_instance, object_prototype);
@@ -75,6 +76,9 @@ void instantiate_object(v8_interact& i,
 
   if (scene_obj) {
     i.copy_field(new_instance, "id", *scene_obj);
+    if (i.has_field(*scene_obj, "label")) {
+      i.copy_field(new_instance, "label", *scene_obj);
+    }
     i.copy_field(new_instance, "x", *scene_obj);
     i.copy_field(new_instance, "y", *scene_obj);
     i.copy_field(new_instance, "x2", *scene_obj);
@@ -108,7 +112,6 @@ void instantiate_object(v8_interact& i,
   }
 
   i.set_field(new_instance, "subobj", v8::Array::New(isolate));
-  i.set_field(new_instance, "meta", v8_str(context, annotation));
   i.set_field(new_instance, "level", v8::Number::New(isolate, level));
   i.set_field(new_instance, "__instance__", v8::Boolean::New(isolate, true));
 
@@ -158,9 +161,14 @@ v8::Local<v8::Object> instantiate_objects(v8_interact& i,
   v8::Local<v8::Object> next = v8::Object::New(isolate);
   v8::Local<v8::Object> intermediate = v8::Object::New(isolate);
 
-  instantiate_object(i, scene_object, object_prototype, instance, current_level, "instance");
-  instantiate_object(i, scene_object, object_prototype, next, current_level, "next");
-  instantiate_object(i, scene_object, object_prototype, intermediate, current_level, "intermediate");
+  instantiate_object(i, scene_object, object_prototype, instance, current_level);
+  instantiate_object(i, scene_object, object_prototype, next, current_level);
+  instantiate_object(i, scene_object, object_prototype, intermediate, current_level);
+
+  i.set_field(instance, "unique_id", v8::Number::New(i.get_isolate(), counter));
+  i.set_field(next, "unique_id", v8::Number::New(i.get_isolate(), counter));
+  i.set_field(intermediate, "unique_id", v8::Number::New(i.get_isolate(), counter));
+  counter++;
 
   i.set_field(scene_instances, scene_instances_idx, instance);
   i.set_field(scene_instances_next, scene_instances_idx, next);
@@ -190,7 +198,7 @@ v8::Local<v8::Object> instantiate_objects(v8_interact& i,
 }
 
 void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Array> source, bool exclude_props) {
-  for (size_t j = 0; j < dest->Length(); j++) {
+  for (size_t j = 0; j < source->Length(); j++) {
     auto src = i.get_index(source, j).As<v8::Object>();
     auto dst = i.get_index(dest, j).As<v8::Object>();
     i.copy_field(dst, "x", src);
@@ -228,6 +236,9 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     if (i.has_field(src, "subobj")) {
       i.copy_field(dst, "subobj", src);
     }
+    if (i.has_field(src, "exists")) {
+      i.copy_field(dst, "exists", src);
+    }
   }
 }
 
@@ -245,7 +256,7 @@ void find_new_objects(v8_interact& i,
     auto next = i.get_index(scene_instances_next, j).As<v8::Object>();
     auto instance = i.get_index(scene_instances, j).As<v8::Object>();
     auto intermediate = i.get_index(scene_instances_intermediate, j).As<v8::Object>();
-    if (i.has_field(next, "new_objects")) {
+    if (i.has_field(next, "new_objects") && i.boolean(next, "new_objects")) {
       if (i.has_field(next, "subobj")) {
         auto subobjs = i.get(next, "subobj").As<v8::Array>();
         auto subobjs2 = i.get(instance, "subobj").As<v8::Array>();
@@ -264,15 +275,24 @@ void find_new_objects(v8_interact& i,
           v8::Local<v8::Object> new_intermediate = v8::Object::New(isolate);
           int64_t current_level = i.integer_number(next, "level") + 1;
 
-          instantiate_object(i, object_definition, object_prototype, new_instance, current_level, "instance");
-          instantiate_object(i, object_definition, object_prototype, new_next, current_level, "next");
-          instantiate_object(i, object_definition, object_prototype, new_intermediate, current_level, "intermediate");
+          instantiate_object(i, object_definition, object_prototype, new_instance, current_level);
+          instantiate_object(i, object_definition, object_prototype, new_next, current_level);
+          instantiate_object(i, object_definition, object_prototype, new_intermediate, current_level);
+
+          i.set_field(new_instance, "unique_id", v8::Number::New(i.get_isolate(), counter));
+          i.set_field(new_next, "unique_id", v8::Number::New(i.get_isolate(), counter));
+          i.set_field(new_intermediate, "unique_id", v8::Number::New(i.get_isolate(), counter));
+          counter++;
+
+          i.set_field(new_instance, "exists", v8::Boolean::New(i.get_isolate(), false));
+          i.set_field(new_next, "exists", v8::Boolean::New(i.get_isolate(), true));
+          i.set_field(new_intermediate, "exists", v8::Boolean::New(i.get_isolate(), true));
 
           // we'll need to insert the new instances at the correct position in the arrays
           // we store the index where they have to be inserted, which should be one past their
           // parent instance (hence j + 1)
-          new_instances[j + 1].push_back({new_instance, new_next, new_intermediate});
           total_new_instances++;
+          new_instances[j + total_new_instances].push_back({new_instance, new_next, new_intermediate});
 
           // make sure the subobj will also point to the new instance
           i.set_field(subobjs, k, new_next);
@@ -280,7 +300,9 @@ void find_new_objects(v8_interact& i,
           i.set_field(subobjs3, k, new_intermediate);
         }
       }
-      i.remove_field(next, "new_objects");
+      i.set_field(next, "new_objects", v8::Boolean::New(i.get_isolate(), false));
+      i.set_field(intermediate, "new_objects", v8::Boolean::New(i.get_isolate(), false));
+      i.set_field(instance, "new_objects", v8::Boolean::New(i.get_isolate(), false));
     }
   }
 
@@ -289,7 +311,7 @@ void find_new_objects(v8_interact& i,
   }
   // insert all the newly created instances in the appropriate arrays
   // step 1: make sure we add space in the arrays (or we'll write out of bounds)
-  for (size_t j = 0; j < new_instances.size(); j++) {
+  for (size_t j = 0; j < total_new_instances; j++) {
     // push is highly optimized
     i.call_fun(scene_instances, "push", v8::Object::New(isolate));
     i.call_fun(scene_instances_next, "push", v8::Object::New(isolate));

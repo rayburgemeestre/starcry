@@ -81,31 +81,14 @@ public:
     draw_logic_.center(canvas_w / 2, canvas_h / 2);
     draw_logic_.offset(offset_x, offset_y);
 
-    for (const auto &shape : shapes[shapes.size() - 1]) {
-      if (shape.type == data::shape_type::circle) {
-        // first one
-        double opacity = 1.0;
-        if (shape.indexes.size() > 0) {
-          opacity /= (shape.indexes.size() + 1);
-        }
-        draw_logic_.render_circle<double>(bmp,
-                                          shape.time,
-                                          shape.x,
-                                          shape.y,
-                                          shape.radius,
-                                          shape.radius_size,
-                                          shape.gradients_,
-                                          shape.textures,
-                                          shape.blending_,
-                                          opacity,
-                                          shape.seed,
-                                          shape.scale);
-
-        // the rest...
-        for (const auto &index_data : shape.indexes) {
-          const auto &step = index_data.first;
-          const auto &index = index_data.second;
-          const auto &shape = shapes[step][index];
+    if (!shapes.empty()) {
+      for (const auto &shape : shapes[shapes.size() - 1]) {
+        if (shape.type == data::shape_type::circle) {
+          // first one
+          double opacity = 1.0;
+          if (shape.indexes.size() > 0) {
+            opacity /= (shape.indexes.size() + 1);
+          }
           draw_logic_.render_circle<double>(bmp,
                                             shape.time,
                                             shape.x,
@@ -118,33 +101,32 @@ public:
                                             opacity,
                                             shape.seed,
                                             shape.scale);
-        }
 
-      } else if (shape.type == data::shape_type::line) {
-        // first one
-        double opacity = 1.0;
-        if (shape.indexes.size() > 0) {
-          opacity /= (shape.indexes.size() + 1);
-        }
-        draw_logic_.render_line<double>(bmp,
-                                        shape.time,
-                                        shape.x,
-                                        shape.y,
-                                        shape.x2,
-                                        shape.y2,
-                                        shape.radius_size,
-                                        shape.gradients_,
-                                        shape.textures,
-                                        shape.blending_,
-                                        opacity,
-                                        shape.seed,
-                                        shape.scale);
+          // the rest...
+          for (const auto &index_data : shape.indexes) {
+            const auto &step = index_data.first;
+            const auto &index = index_data.second;
+            const auto &shape = shapes[step][index];
+            draw_logic_.render_circle<double>(bmp,
+                                              shape.time,
+                                              shape.x,
+                                              shape.y,
+                                              shape.radius,
+                                              shape.radius_size,
+                                              shape.gradients_,
+                                              shape.textures,
+                                              shape.blending_,
+                                              opacity,
+                                              shape.seed,
+                                              shape.scale);
+          }
 
-        // the rest...
-        for (const auto &index_data : shape.indexes) {
-          const auto &step = index_data.first;
-          const auto &index = index_data.second;
-          const auto &shape = shapes[step][index];
+        } else if (shape.type == data::shape_type::line) {
+          // first one
+          double opacity = 1.0;
+          if (shape.indexes.size() > 0) {
+            opacity /= (shape.indexes.size() + 1);
+          }
           draw_logic_.render_line<double>(bmp,
                                           shape.time,
                                           shape.x,
@@ -158,9 +140,29 @@ public:
                                           opacity,
                                           shape.seed,
                                           shape.scale);
+
+          // the rest...
+          for (const auto &index_data : shape.indexes) {
+            const auto &step = index_data.first;
+            const auto &index = index_data.second;
+            const auto &shape = shapes[step][index];
+            draw_logic_.render_line<double>(bmp,
+                                            shape.time,
+                                            shape.x,
+                                            shape.y,
+                                            shape.x2,
+                                            shape.y2,
+                                            shape.radius_size,
+                                            shape.gradients_,
+                                            shape.textures,
+                                            shape.blending_,
+                                            opacity,
+                                            shape.seed,
+                                            shape.scale);
+          }
+        } else if (shape.type == data::shape_type::text) {
+          draw_logic_.render_text<double>(shape.x, shape.y, shape.text_size, shape.text, shape.align);
         }
-      } else if (shape.type == data::shape_type::text) {
-        draw_logic_.render_text<double>(shape.x, shape.y, shape.text_size, shape.text, shape.align);
       }
     }
     //    // test

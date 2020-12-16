@@ -185,32 +185,36 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
     json shapes_json = {};
     auto &shapes = job_msg->job->shapes;
     size_t index = 0;
-    for (const auto &shape : shapes[shapes.size() - 1]) {
-      if (shape.type == data::shape_type::circle) {
-        json circle = {
-            {"index", index},
-            {"id", shape.id},
-            {"level", shape.level},
-            {"type", "circle"},
-            {"x", shape.x},
-            {"y", shape.y},
-        };
-        shapes_json.push_back(circle);
+    if (!shapes.empty()) {
+      for (const auto &shape : shapes[shapes.size() - 1]) {
+        if (shape.type == data::shape_type::circle) {
+          json circle = {
+              {"index", index},
+              {"id", shape.id},
+              {"label", shape.label.empty() ? shape.id : shape.label},
+              {"level", shape.level},
+              {"type", "circle"},
+              {"x", shape.x},
+              {"y", shape.y},
+          };
+          shapes_json.push_back(circle);
+        }
+        if (shape.type == data::shape_type::line) {
+          json circle = {
+              {"index", index},
+              {"id", shape.id},
+              {"label", shape.label.empty() ? shape.id : shape.label},
+              {"level", shape.level},
+              {"type", "line"},
+              {"x", shape.x},
+              {"y", shape.y},
+              {"x2", shape.x2},
+              {"y2", shape.y2},
+          };
+          shapes_json.push_back(circle);
+        }
+        index++;
       }
-      if (shape.type == data::shape_type::line) {
-        json circle = {
-            {"index", index},
-            {"id", shape.id},
-            {"level", shape.level},
-            {"type", "line"},
-            {"x", shape.x},
-            {"y", shape.y},
-            {"x2", shape.x2},
-            {"y2", shape.y2},
-        };
-        shapes_json.push_back(circle);
-      }
-      index++;
     }
     return std::make_shared<render_msg>(
         job_msg->client, job_msg->type, job.job_number, job.width, job.height, shapes_json.dump());
@@ -221,7 +225,8 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   if (job.job_number == std::numeric_limits<uint32_t>::max()) {
     png::image<png::rgb_pixel> image(job.width, job.height);
     copy_to_png(bmp.pixels(), job.width, job.height, image);
-    fmt::format("output_frame_{}_seed_{}_{}x{}.png", job.frame_number, gen->get_seed(), job.canvas_w, job.canvas_h);
+    image.write(fmt::format(
+        "output_frame_{}_seed_{}_{}x{}.png", job.frame_number, gen->get_seed(), job.canvas_w, job.canvas_h));
   }
   if (job_msg->client == nullptr) {
     auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels());
