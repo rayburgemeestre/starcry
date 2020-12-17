@@ -242,6 +242,35 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
   }
 }
 
+void garbage_collect_erased_objects(v8_interact& i,
+                                    v8::Local<v8::Array>& scene_instances,
+                                    v8::Local<v8::Array>& scene_instances_next,
+                                    v8::Local<v8::Array>& scene_instances_intermediate) {
+  v8::Isolate* isolate = i.get_isolate();
+  size_t remove = 0;
+  for (size_t j = 0; j < scene_instances_next->Length(); j++) {
+    auto instance = i.get_index(scene_instances, j).As<v8::Object>();
+    auto next = i.get_index(scene_instances_next, j).As<v8::Object>();
+    auto intermediate = i.get_index(scene_instances_intermediate, j).As<v8::Object>();
+    if (i.has_field(next, "exists") && !i.boolean(next, "exists")) {
+      // remove this item (we'll overwrite or pop() it later)
+      remove++;
+    } else {
+      // keep this item
+      if (remove > 0) {
+        i.set_field(scene_instances, j - remove, instance);
+        i.set_field(scene_instances_next, j - remove, next);
+        i.set_field(scene_instances_intermediate, j - remove, intermediate);
+      }
+    }
+  }
+  for (size_t j = 0; j < remove; j++) {
+    i.call_fun(scene_instances, "pop");
+    i.call_fun(scene_instances_next, "pop");
+    i.call_fun(scene_instances_intermediate, "pop");
+  }
+}
+
 void find_new_objects(v8_interact& i,
                       v8::Local<v8::Array>& objects,
                       v8::Local<v8::Array>& scene_instances,

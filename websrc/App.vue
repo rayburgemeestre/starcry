@@ -144,15 +144,9 @@
             },
             prev_frame: function () {
                 this.$data.current_frame--;
-                if (!this.$data._play) {
-                    this._schedule_frame();
-                }
             },
             next_frame: function () {
                 this.$data.current_frame++;
-                if (!this.$data._play) {
-                    this._schedule_frame();
-                }
             },
             set_frame: function (frame) {
                 this.$data.current_frame = frame;

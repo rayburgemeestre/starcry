@@ -5,6 +5,7 @@
  */
 #include "generator_v2.h"
 
+#include <fmt/core.h>
 #include <cmath>
 #include <memory>
 #include <mutex>
@@ -285,8 +286,16 @@ bool generator_v2::_generate_frame() {
         attempt = 0;
         max_dist_found = std::numeric_limits<double>::max();
 
+        util::generator::garbage_collect_erased_objects(i, instances, next_instances, intermediates);
+
         while (max_dist_found > tolerated_granularity) {
           ++attempt;
+          if (stepper.max_step > 500) {
+            throw std::runtime_error(fmt::format("Possible endless loop detected, max_step = {} (while {} > {})",
+                                                 stepper.max_step,
+                                                 max_dist_found,
+                                                 tolerated_granularity));
+          }
           max_dist_found = 0;
           if (attempt > 1) {
             stepper.multiply(1.5);

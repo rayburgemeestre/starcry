@@ -107,7 +107,7 @@ void starcry::copy_to_png(const std::vector<data::color> &source,
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   if (cmd_def->type == instruction_type::get_image || cmd_def->type == instruction_type::get_bitmap ||
       cmd_def->type == instruction_type::get_shapes || cmd_def->type == instruction_type::get_objects) {
-    gen = std::make_shared<generator_v2>();
+    if (!gen) gen = std::make_shared<generator_v2>();
     gen->init(cmd_def->script, seed);
     size_t idx = 0;
     while (gen->generate_frame()) {
@@ -125,20 +125,25 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     jobs->sleep_until_not_full();
   } else if (cmd_def->type == instruction_type::get_video) {
     std::optional<int> use_fps;
+
+    if (!gen) gen = std::make_shared<generator_v2>();
+    gen->init(cmd_def->script, seed);
+
     if (!framer &&
         (mode == starcry::render_video_mode::video_only || mode == starcry::render_video_mode::video_with_gui) &&
         cmd_def->output_file != "/dev/null") {
       auto stream_mode = frame_streamer::stream_mode::FILE;
       auto output_file = cmd_def->output_file;
-      if (output_file.substr(output_file.size() - 4, 4) == "m3u8") {
+      if (output_file.size() >= 4 && output_file.substr(output_file.size() - 4, 4) == "m3u8") {
         use_fps = 1000;
         stream_mode = frame_streamer::stream_mode::HLS;
       }
+      if (cmd_def->output_file.empty()) {
+        cmd_def->output_file =
+            fmt::format("output_seed_{}_{}x{}.h264", gen->get_seed(), (int)gen->width(), (int)gen->height());
+      }
       framer = std::make_unique<frame_streamer>(cmd_def->output_file, stream_mode);
     }
-
-    gen = std::make_shared<generator_v2>();
-    gen->init(cmd_def->script, seed);
 
     visualizer->initialize();
     visualizer->set_max_frames(gen->get_max_frames());

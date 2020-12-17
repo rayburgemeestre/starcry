@@ -38,6 +38,11 @@ v8::Local<v8::Object> instantiate_objects(v8_interact& i,
                                           v8::Local<v8::Object>* parent_object = nullptr);
 void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Array> source, bool exclude_props = false);
 
+void garbage_collect_erased_objects(v8_interact& i,
+                                    v8::Local<v8::Array>& scene_instances,
+                                    v8::Local<v8::Array>& scene_instances_next,
+                                    v8::Local<v8::Array>& scene_instances_intermediate);
+
 void find_new_objects(v8_interact& i,
                       v8::Local<v8::Array>& objects,
                       v8::Local<v8::Array>& scene_instances,

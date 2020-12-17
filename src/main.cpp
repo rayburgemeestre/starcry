@@ -24,7 +24,7 @@ namespace po = ::boost::program_options;
 class main_program {
 private:
   po::variables_map vm;
-  std::string output_file = "output.h264";
+  std::string output_file = "";
   size_t frame_of_interest = std::numeric_limits<size_t>::max();
   double rand_seed = std::numeric_limits<double>::max();
   po::options_description desc = std::string("Allowed options");
@@ -41,7 +41,7 @@ public:
     desc.add_options()
       ("help", "produce help message")
       ("script,s", po::value<std::string>(&script), "javascript file to use for processing")
-      ("output,o", po::value<std::string>(&output_file), "filename for video output (default output.h264)")
+      ("output,o", po::value<std::string>(&output_file), "filename for video output (default output_{seed}_{width}x{height}.h264)")
       ("frame,f", po::value<size_t>(&frame_of_interest), "specific frame to render and save as BMP file")
       ("seed", po::value<double>(&rand_seed), "override the random seed used")
       ("num_threads,t", po::value<size_t>(&num_worker_threads), "number of local render threads (default 1)")
@@ -77,7 +77,7 @@ public:
 
     // configure streaming
     if (vm.count("stream")) {
-      if (output_file == "output.h264") {  // default
+      if (output_file == "") {  // default
         output_file = "webroot/stream/stream.m3u8";
         // clean up left-over streaming artifacts
         namespace fs = std::experimental::filesystem;

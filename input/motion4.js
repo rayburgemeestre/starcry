@@ -62,7 +62,8 @@ _ = {
         ];
         let x = 0;
         let y = stepsize / 2;
-        for (let i = 0; i < 210; i++) {
+        // for (let i = 0; i < 210; i++) {
+        for (let i = 0; i < 42; i++) {
           x += directions[this.props.direction][0];
           y += directions[this.props.direction][1];
           if (this.props.step === this.props.steps) {
@@ -93,7 +94,7 @@ _ = {
           let [x, y] = random_velocity();
           obj.vel_x = x;
           obj.vel_y = y;
-          obj.velocity = 10;
+          obj.velocity = 50;
         }
       },
       'time': function(t, e) {},
@@ -130,7 +131,10 @@ _ = {
       'props': {},
       'init': function() {},
       'time': function(t, elapsed) {
-        this.radius += elapsed * 10;
+        this.radius += elapsed * 50;
+        if (this.radius >= 200.) {
+          this.exists = false;
+        }
       },
       'on': {
         'collide': function(other) {
@@ -151,7 +155,7 @@ _ = {
     },
   },
   'video': {
-    'duration': 20,
+    'duration': 5,
     'fps': 25,
     'width': 1920,
     'height': 1080,
