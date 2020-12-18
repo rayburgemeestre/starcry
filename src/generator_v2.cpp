@@ -437,14 +437,6 @@ void generator_v2::update_object_interactions(v8_interact& i,
                                               v8::Local<v8::Array>& intermediates) {
   stepper.reset_current();
   const auto isolate = i.get_isolate();
-  // For each instance determine how far the object has travelled and if it's within the allowed granularity,
-  //  also do the collision detection efficiently using the quadtree we just created
-  for (size_t index = 0; index < next_instances->Length(); index++) {
-    auto next_instance = i.get_index(next_instances, index).As<v8::Object>();
-    auto previous_instance = i.get_index(intermediates, index).As<v8::Object>();
-    if (!next_instance->IsObject() || !previous_instance->IsObject()) continue;
-    update_time(i, next_instance);
-  }
   for (size_t index = 0; index < next_instances->Length(); index++) {
     auto next_instance = i.get_index(next_instances, index).As<v8::Object>();
     auto previous_instance = i.get_index(intermediates, index).As<v8::Object>();
@@ -560,7 +552,20 @@ void generator_v2::update_time(v8_interact& i, v8::Local<v8::Object>& instance) 
   auto fn = static_cast<double>(job->frame_number - (1.0 - extra));
   const auto t = fn / max_frames;
   const auto e = static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(stepper.max_step);
+
+  size_t subobj_len_before = 0;
+  size_t subobj_len_after = 0;
+  if (i.has_field(instance, "subobj")) {
+    auto subobj = i.get(instance, "subobj").As<v8::Array>();
+    subobj_len_before = subobj->Length();
+  }
   i.call_fun(instance, "time", t, e);
+  if (i.has_field(instance, "subobj")) {
+    auto subobj = i.get(instance, "subobj").As<v8::Array>();
+    subobj_len_after = subobj->Length();
+  }
+  i.set_field(instance, "new_objects", v8::Boolean::New(i.get_isolate(), subobj_len_after > subobj_len_before));
+
   i.set_field(instance, "__time__", v8::Number::New(i.get_isolate(), t));
   i.set_field(instance, "__elapsed__", v8::Number::New(i.get_isolate(), e));
 }

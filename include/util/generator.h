@@ -40,7 +40,7 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
 
 void garbage_collect_erased_objects(v8_interact& i,
                                     v8::Local<v8::Array>& scene_instances,
-                                    v8::Local<v8::Array>& scene_instances_next,
+                                    v8::Local<v8::Array>& current_level,
                                     v8::Local<v8::Array>& scene_instances_intermediate);
 
 void find_new_objects(v8_interact& i,

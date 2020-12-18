@@ -234,7 +234,15 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
       i.copy_field(dst, "new_objects", src);
     }
     if (i.has_field(src, "subobj")) {
-      i.copy_field(dst, "subobj", src);
+      const auto s = i.get(src, "subobj").As<v8::Array>();
+      const auto d = i.get(dst, "subobj").As<v8::Array>();
+      // for each non-instance restore it
+      for (size_t j = 0; j < s->Length(); j++) {
+        const auto elem = i.get_index(s, j);
+        if (!i.has_field(elem.As<v8::Object>(), "__instance__")) {
+          i.set_field(d, "subobj", elem);
+        }
+      }
     }
     if (i.has_field(src, "exists")) {
       i.copy_field(dst, "exists", src);
@@ -252,16 +260,34 @@ void garbage_collect_erased_objects(v8_interact& i,
     auto instance = i.get_index(scene_instances, j).As<v8::Object>();
     auto next = i.get_index(scene_instances_next, j).As<v8::Object>();
     auto intermediate = i.get_index(scene_instances_intermediate, j).As<v8::Object>();
-    if (i.has_field(next, "exists") && !i.boolean(next, "exists")) {
+    bool removed_somewhere = (i.has_field(next, "exists") && !i.boolean(next, "exists")) ||
+                             (i.has_field(intermediate, "exists") && !i.boolean(intermediate, "exists")) ||
+                             (i.has_field(instance, "exists") && !i.boolean(instance, "exists"));
+
+    // Make all objects underneath it top level objects
+    std::function<void(v8_interact&, v8::Local<v8::Object>&, int)> update_level =
+        [&](v8_interact& i, v8::Local<v8::Object>& instance, int current_level = -1) {
+          i.set_field(instance, "level", v8::Number::New(i.get_isolate(), current_level));
+          auto instance_subobjs = i.get(instance, "subobj").As<v8::Array>();
+          for (size_t k = 0; k < i.get(instance, "subobj").As<v8::Array>()->Length(); k++) {
+            auto instance_subobj = i.get_index(instance_subobjs, k).As<v8::Object>();
+            update_level(i, instance_subobj, current_level + 1);
+          }
+        };
+    // The instances that has been removed will start the level at -1, making all it's direct children 0, children
+    // below it 1, and so on..
+    update_level(i, instance, -1);
+    update_level(i, next, -1);
+    update_level(i, intermediate, -1);
+
+    if (removed_somewhere) {
       // remove this item (we'll overwrite or pop() it later)
       remove++;
-    } else {
+    } else if (remove > 0) {
       // keep this item
-      if (remove > 0) {
-        i.set_field(scene_instances, j - remove, instance);
-        i.set_field(scene_instances_next, j - remove, next);
-        i.set_field(scene_instances_intermediate, j - remove, intermediate);
-      }
+      i.set_field(scene_instances, j - remove, instance);
+      i.set_field(scene_instances_next, j - remove, next);
+      i.set_field(scene_instances_intermediate, j - remove, intermediate);
     }
   }
   for (size_t j = 0; j < remove; j++) {
@@ -313,7 +339,7 @@ void find_new_objects(v8_interact& i,
           i.set_field(new_intermediate, "unique_id", v8::Number::New(i.get_isolate(), counter));
           counter++;
 
-          i.set_field(new_instance, "exists", v8::Boolean::New(i.get_isolate(), false));
+          i.set_field(new_instance, "exists", v8::Boolean::New(i.get_isolate(), true));
           i.set_field(new_next, "exists", v8::Boolean::New(i.get_isolate(), true));
           i.set_field(new_intermediate, "exists", v8::Boolean::New(i.get_isolate(), true));
 
