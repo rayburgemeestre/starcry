@@ -254,7 +254,6 @@ void garbage_collect_erased_objects(v8_interact& i,
                                     v8::Local<v8::Array>& scene_instances,
                                     v8::Local<v8::Array>& scene_instances_next,
                                     v8::Local<v8::Array>& scene_instances_intermediate) {
-  v8::Isolate* isolate = i.get_isolate();
   size_t remove = 0;
   for (size_t j = 0; j < scene_instances_next->Length(); j++) {
     auto instance = i.get_index(scene_instances, j).As<v8::Object>();
@@ -264,27 +263,26 @@ void garbage_collect_erased_objects(v8_interact& i,
                              (i.has_field(intermediate, "exists") && !i.boolean(intermediate, "exists")) ||
                              (i.has_field(instance, "exists") && !i.boolean(instance, "exists"));
 
-    // Make all objects underneath it top level objects
-    std::function<void(v8_interact&, v8::Local<v8::Object>&, int)> update_level =
-        [&](v8_interact& i, v8::Local<v8::Object>& instance, int current_level = -1) {
-          i.set_field(instance, "level", v8::Number::New(i.get_isolate(), current_level));
-          auto instance_subobjs = i.get(instance, "subobj").As<v8::Array>();
-          for (size_t k = 0; k < i.get(instance, "subobj").As<v8::Array>()->Length(); k++) {
-            auto instance_subobj = i.get_index(instance_subobjs, k).As<v8::Object>();
-            update_level(i, instance_subobj, current_level + 1);
-          }
-        };
-    // The instances that has been removed will start the level at -1, making all it's direct children 0, children
-    // below it 1, and so on..
-    update_level(i, instance, -1);
-    update_level(i, next, -1);
-    update_level(i, intermediate, -1);
-
     if (removed_somewhere) {
-      // remove this item (we'll overwrite or pop() it later)
+      // Remove this item (we'll overwrite or pop() it later)
       remove++;
+      // Make all objects underneath it top level objects
+      std::function<void(v8_interact&, v8::Local<v8::Object>&, int)> update_level =
+          [&](v8_interact& i, v8::Local<v8::Object>& instance, int current_level = -1) {
+            i.set_field(instance, "level", v8::Number::New(i.get_isolate(), current_level));
+            auto instance_subobjs = i.get(instance, "subobj").As<v8::Array>();
+            for (size_t k = 0; k < i.get(instance, "subobj").As<v8::Array>()->Length(); k++) {
+              auto instance_subobj = i.get_index(instance_subobjs, k).As<v8::Object>();
+              update_level(i, instance_subobj, current_level + 1);
+            }
+          };
+      // The instances that has been removed will start the level at -1, making all it's direct children 0, children
+      // below it 1, and so on..
+      update_level(i, instance, -1);
+      update_level(i, next, -1);
+      update_level(i, intermediate, -1);
     } else if (remove > 0) {
-      // keep this item
+      // Keep this item
       i.set_field(scene_instances, j - remove, instance);
       i.set_field(scene_instances_next, j - remove, next);
       i.set_field(scene_instances_intermediate, j - remove, intermediate);
