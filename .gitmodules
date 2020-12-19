@@ -13,6 +13,3 @@
 [submodule "libs/perlin_noise"]
 	path = libs/perlin_noise
 	url = https://github.com/rayburgemeestre/perlin_noise
-[submodule "libs/fmt"]
-	path = libs/fmt
-	url = https://github.com/fmtlib/fmt

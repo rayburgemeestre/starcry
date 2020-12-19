@@ -14,12 +14,8 @@
 
 #include <unistd.h>  // getpid()
 
-#include "nlohmann/json.hpp"
-using json = nlohmann::json;
-
 #include "bitmap_wrapper.hpp"
 #include "cereal/archives/binary.hpp"
-#include "cereal/archives/json.hpp"
 #include "framer.hpp"
 #include "generator_v2.h"
 #include "network/messages.h"
@@ -30,6 +26,12 @@ using json = nlohmann::json;
 #include "util/compress_vector.h"
 #include "util/progress_visualizer.h"
 #include "webserver.h"
+
+#include "starcry/command_get_bitmap.h"
+#include "starcry/command_get_image.h"
+#include "starcry/command_get_objects.h"
+#include "starcry/command_get_shapes.h"
+#include "starcry/command_get_video.h"
 
 starcry::starcry(size_t num_local_engines,
                  bool enable_remote_workers,
@@ -56,7 +58,14 @@ starcry::starcry(size_t num_local_engines,
       on_pipeline_initialized(on_pipeline_initialized),
       le(std::chrono::milliseconds(1000)),
       seed(rand_seed),
-      visualizer(std::make_shared<progress_visualizer>()) {}
+      visualizer(std::make_shared<progress_visualizer>()),
+      command_handlers({
+          {instruction_type::get_bitmap, std::make_shared<command_get_bitmap>(*this)},
+          {instruction_type::get_image, std::make_shared<command_get_image>(*this)},
+          {instruction_type::get_objects, std::make_shared<command_get_objects>(*this)},
+          {instruction_type::get_shapes, std::make_shared<command_get_shapes>(*this)},
+          {instruction_type::get_video, std::make_shared<command_get_video>(*this)},
+      }) {}
 
 starcry::~starcry() {
   le.cancel();
@@ -86,6 +95,12 @@ void starcry::render_job(rendering_engine_wrapper &engine, const data::job &job,
                 job.width,
                 job.height,
                 job.scale);
+  if (job.job_number == std::numeric_limits<uint32_t>::max()) {
+    png::image<png::rgb_pixel> image(job.width, job.height);
+    copy_to_png(bmp.pixels(), job.width, job.height, image);
+    image.write(fmt::format(
+        "output_frame_{}_seed_{}_{}x{}.png", job.frame_number, gen->get_seed(), job.canvas_w, job.canvas_h));
+  }
 }
 
 void starcry::copy_to_png(const std::vector<data::color> &source,
@@ -105,64 +120,15 @@ void starcry::copy_to_png(const std::vector<data::color> &source,
 }
 
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
-  if (cmd_def->type == instruction_type::get_image || cmd_def->type == instruction_type::get_bitmap ||
-      cmd_def->type == instruction_type::get_shapes || cmd_def->type == instruction_type::get_objects) {
-    if (!gen) gen = std::make_shared<generator_v2>();
-    gen->init(cmd_def->script, seed);
-    size_t idx = 0;
-    while (gen->generate_frame()) {
-      if (++idx >= cmd_def->frame) {
-        break;
-      }
-    }
-    auto the_job = gen->get_job();
-    the_job->job_number = std::numeric_limits<uint32_t>::max();
-    jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, the_job));
-    if (cmd_def->client == nullptr) {  // cli thing
-      cmds->check_terminate();
-      jobs->check_terminate();
-    }
-    jobs->sleep_until_not_full();
-  } else if (cmd_def->type == instruction_type::get_video) {
-    std::optional<int> use_fps;
+  if (!gen) gen = std::make_shared<generator_v2>();
+  gen->init(cmd_def->script, seed);
 
-    if (!gen) gen = std::make_shared<generator_v2>();
-    gen->init(cmd_def->script, seed);
-
-    if (!framer &&
-        (mode == starcry::render_video_mode::video_only || mode == starcry::render_video_mode::video_with_gui) &&
-        cmd_def->output_file != "/dev/null") {
-      auto stream_mode = frame_streamer::stream_mode::FILE;
-      auto output_file = cmd_def->output_file;
-      if (output_file.size() >= 4 && output_file.substr(output_file.size() - 4, 4) == "m3u8") {
-        use_fps = 1000;
-        stream_mode = frame_streamer::stream_mode::HLS;
-      }
-      if (cmd_def->output_file.empty()) {
-        cmd_def->output_file =
-            fmt::format("output_seed_{}_{}x{}.h264", gen->get_seed(), (int)gen->width(), (int)gen->height());
-      }
-      framer = std::make_unique<frame_streamer>(cmd_def->output_file, stream_mode);
-    }
-
-    visualizer->initialize();
-    visualizer->set_max_frames(gen->get_max_frames());
-
-    // old generator:
-    // bitrate = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");
-    size_t bitrate = (500 * 1024 * 8);
-    if (framer) framer->initialize(bitrate, gen->width(), gen->height(), gen->fps());
-
-    while (true) {
-      auto ret = gen->generate_frame();
-      auto job_copy = std::make_shared<data::job>(*gen->get_job());
-      jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, job_copy));
-      jobs->sleep_until_not_full();
-      if (!ret) break;
-    }
-    std::cout << std::endl;
-
-    // bring the house down
+  if (cmd_def->type == instruction_type::get_video) {
+    command_handlers[cmd_def->type]->to_job(cmd_def);
+  } else {
+    command_handlers[instruction_type::get_bitmap]->to_job(cmd_def);
+  }
+  if (cmd_def->client == nullptr) {
     cmds->check_terminate();
     jobs->check_terminate();
   }
@@ -178,82 +144,19 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 
   // no need to render in this case, client will do the rendering
   if (job_msg->type == instruction_type::get_shapes) {
-    std::ostringstream os;
-    {
-      cereal::JSONOutputArchive archive(os);
-      archive(job);
-    }
-    return std::make_shared<render_msg>(
-        job_msg->client, job_msg->type, job.job_number, job.width, job.height, os.str());
+    image empty;
+    return command_handlers[job_msg->type]->to_render_msg(job_msg, empty);
   }
   if (job_msg->type == instruction_type::get_objects) {
-    json shapes_json = {};
-    auto &shapes = job_msg->job->shapes;
-    size_t index = 0;
-    if (!shapes.empty()) {
-      for (const auto &shape : shapes[shapes.size() - 1]) {
-        if (shape.type == data::shape_type::circle) {
-          json circle = {
-              {"index", index},
-              {"id", shape.id},
-              {"label", shape.label.empty() ? shape.id : shape.label},
-              {"level", shape.level},
-              {"type", "circle"},
-              {"x", shape.x},
-              {"y", shape.y},
-          };
-          shapes_json.push_back(circle);
-        }
-        if (shape.type == data::shape_type::line) {
-          json circle = {
-              {"index", index},
-              {"id", shape.id},
-              {"label", shape.label.empty() ? shape.id : shape.label},
-              {"level", shape.level},
-              {"type", "line"},
-              {"x", shape.x},
-              {"y", shape.y},
-              {"x2", shape.x2},
-              {"y2", shape.y2},
-          };
-          shapes_json.push_back(circle);
-        }
-        index++;
-      }
-    }
-    return std::make_shared<render_msg>(
-        job_msg->client, job_msg->type, job.job_number, job.width, job.height, shapes_json.dump());
+    image empty;
+    return command_handlers[job_msg->type]->to_render_msg(job_msg, empty);
   }
 
+  // render
   auto &bmp = bitmaps[i]->get(job.width, job.height);
   render_job(*engines[i], job, bmp);
-  if (job.job_number == std::numeric_limits<uint32_t>::max()) {
-    png::image<png::rgb_pixel> image(job.width, job.height);
-    copy_to_png(bmp.pixels(), job.width, job.height, image);
-    image.write(fmt::format(
-        "output_frame_{}_seed_{}_{}x{}.png", job.frame_number, gen->get_seed(), job.canvas_w, job.canvas_h));
-  }
-  if (job_msg->client == nullptr) {
-    auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels());
-    return std::make_shared<render_msg>(
-        job_msg->client, job_msg->type, job.job_number, job.width, job.height, transfer_pixels);
-  } else {
-    if (job_msg->type == instruction_type::get_image) {
-      job.job_number = std::numeric_limits<uint32_t>::max();
-      png::image<png::rgb_pixel> image(job.width, job.height);
-      copy_to_png(bmp.pixels(), job.width, job.height, image);
-      std::ostringstream ss;
-      image.write_stream(ss);
-      return std::make_shared<render_msg>(
-          job_msg->client, job_msg->type, job.job_number, job.width, job.height, ss.str());
-    } else if (job_msg->type == instruction_type::get_bitmap) {
-      job.job_number = std::numeric_limits<uint32_t>::max();
-      auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels());
-      return std::make_shared<render_msg>(
-          job_msg->client, job_msg->type, job.job_number, job.width, job.height, transfer_pixels);
-    }
-  }
-  return nullptr;
+
+  return command_handlers[job_msg->type]->to_render_msg(job_msg, bmp);
 }
 
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
@@ -269,35 +172,9 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       if (framer) {
         framer->add_frame(job_msg->pixels);
       }
-    } else {
-      if (job_msg->type == instruction_type::get_image) {
-        auto fun = [&](std::shared_ptr<ImageHandler> chat_handler, std::shared_ptr<render_msg> job_msg) {
-          chat_handler->callback(job_msg->client, job_msg->buffer);
-        };
-        if (webserv) {
-          webserv->execute_image(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
-        }
-      } else if (job_msg->type == instruction_type::get_bitmap) {
-        auto fun = [&](std::shared_ptr<BitmapHandler> bmp_handler, std::shared_ptr<render_msg> job_msg) {
-          std::string buffer;
-          for (const auto &i : job_msg->pixels) {
-            buffer.append((char *)&i, sizeof(i));
-          }
-          bmp_handler->callback(job_msg->client, buffer);
-        };
-        if (webserv) webserv->execute_bitmap(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
-      } else if (job_msg->type == instruction_type::get_shapes) {
-        auto fun = [&](std::shared_ptr<ShapesHandler> shapes_handler, std::shared_ptr<render_msg> job_msg) {
-          shapes_handler->callback(job_msg->client, job_msg->buffer);
-        };
-        if (webserv) webserv->execute_shapes(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
-      } else if (job_msg->type == instruction_type::get_objects) {
-        auto fun = [&](std::shared_ptr<ObjectsHandler> objects_handler, std::shared_ptr<render_msg> job_msg) {
-          objects_handler->callback(job_msg->client, job_msg->buffer);
-        };
-        if (webserv) webserv->execute_objects(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
-      }
+      return;
     }
+    command_handlers[job_msg->type]->handle_frame(job_msg);
   };
 
   // handle individual frames immediately
@@ -308,7 +185,6 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
 
   buffered_frames[job_msg->job_number] = job_msg;
 
-  // std::cout << "current frame: " << current_frame << ", buffer size: " << buffered_frames.size() << std::endl;
   while (true) {
     auto pos = buffered_frames.find(current_frame);
     if (pos == buffered_frames.end()) {

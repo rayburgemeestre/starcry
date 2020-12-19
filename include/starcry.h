@@ -36,7 +36,16 @@ namespace seasocks {
 class WebSocket;
 }
 
+class command_handler;
+
 class starcry {
+  friend class command_handler;
+  friend class command_get_video;
+  friend class command_get_bitmap;
+  friend class command_get_image;
+  friend class command_get_shapes;
+  friend class command_get_objects;
+
 public:
   enum class render_video_mode { generate_only, render_only, video_only, video_with_gui, gui_only, javascript_only };
 
@@ -67,6 +76,7 @@ private:
   limited_executor le;
   std::optional<double> seed;
   std::shared_ptr<progress_visualizer> visualizer;
+  std::map<instruction_type, std::shared_ptr<command_handler>> command_handlers;
 
 public:
   starcry(
