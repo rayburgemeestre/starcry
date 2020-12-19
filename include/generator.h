@@ -23,7 +23,7 @@
 
 class step_calculator;
 
-class generator_v2 {
+class generator {
 private:
   std::shared_ptr<data::job> job;
   // TODO: seems unused??
@@ -54,8 +54,8 @@ private:
   std::unordered_map<int64_t, size_t> next_instance_mapping;
 
 public:
-  generator_v2();
-  ~generator_v2() = default;
+  generator();
+  ~generator() = default;
 
   void init(const std::string& filename, std::optional<double> rand_seed);
   void init_context(const std::string& filename);

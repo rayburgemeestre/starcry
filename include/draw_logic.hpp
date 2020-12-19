@@ -14,7 +14,6 @@
 #include "data/texture.hpp"
 #include "primitives.h"
 #include "util/math.h"
-#include "util/memory_font.h"
 
 static std::mt19937 mt_v3;
 void set_rand_seed_v3(double seed) {

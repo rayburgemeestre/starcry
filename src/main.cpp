@@ -17,7 +17,7 @@
 
 #include "starcry.h"
 
-#include "generator_v2.h"
+#include "generator.h"
 
 namespace po = ::boost::program_options;
 

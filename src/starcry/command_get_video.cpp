@@ -7,7 +7,7 @@
 #include <fmt/core.h>
 
 #include "framer.hpp"
-#include "generator_v2.h"
+#include "generator.h"
 #include "starcry.h"
 #include "starcry/command_get_video.h"
 #include "util/progress_visualizer.h"

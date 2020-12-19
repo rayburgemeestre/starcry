@@ -6,7 +6,7 @@
 
 #include "starcry/command_handler.h"
 
-#include "generator_v2.h"
+#include "generator.h"
 #include "messages.hpp"
 #include "starcry.h"
 

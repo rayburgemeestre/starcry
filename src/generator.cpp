@@ -3,7 +3,7 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-#include "generator_v2.h"
+#include "generator.h"
 
 #include <fmt/core.h>
 #include <cmath>
@@ -12,7 +12,7 @@
 
 #include "primitives.h"
 #include "primitives_v8.h"
-#include "scripting_v2.h"
+#include "scripting.h"
 #include "util/generator.h"
 #include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
@@ -24,14 +24,14 @@
 
 std::shared_ptr<v8_wrapper> context;
 
-generator_v2::generator_v2() {
+generator::generator() {
   static std::once_flag once;
   std::call_once(once, []() {
     context = nullptr;
   });
 }
 
-void generator_v2::init(const std::string& filename, std::optional<double> rand_seed) {
+void generator::init(const std::string& filename, std::optional<double> rand_seed) {
   init_context(filename);
   init_user_script(filename);
   init_job();
@@ -41,7 +41,7 @@ void generator_v2::init(const std::string& filename, std::optional<double> rand_
   init_object_instances();
 }
 
-void generator_v2::init_context(const std::string& filename) {
+void generator::init_context(const std::string& filename) {
   if (context == nullptr) {
     context = std::make_shared<v8_wrapper>(filename);
   }
@@ -88,7 +88,7 @@ void generator_v2::init_context(const std::string& filename) {
   context->context->set("blending_type", consts);
 }
 
-void generator_v2::init_user_script(const std::string& filename) {
+void generator::init_user_script(const std::string& filename) {
   std::ifstream stream(filename.c_str());
   if (!stream && filename != "-") {
     throw std::runtime_error("could not locate file " + filename);
@@ -98,7 +98,7 @@ void generator_v2::init_user_script(const std::string& filename) {
   context->run(source);
 }
 
-void generator_v2::init_job() {
+void generator::init_job() {
   job = std::make_shared<data::job>();
   job->background_color.r = 0;
   job->background_color.g = 0;
@@ -120,7 +120,7 @@ void generator_v2::init_job() {
   job->save_image = false;
 }
 
-void generator_v2::init_video_meta_info(std::optional<double> rand_seed) {
+void generator::init_video_meta_info(std::optional<double> rand_seed) {
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto video = v8_index_object(context, val, "video").As<v8::Object>();
@@ -149,7 +149,7 @@ void generator_v2::init_video_meta_info(std::optional<double> rand_seed) {
   });
 }
 
-void generator_v2::init_gradients() {
+void generator::init_gradients() {
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
@@ -172,7 +172,7 @@ void generator_v2::init_gradients() {
   });
 }
 
-void generator_v2::init_textures() {
+void generator::init_textures() {
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
@@ -209,7 +209,7 @@ void generator_v2::init_textures() {
   });
 }
 
-void generator_v2::init_object_instances() {
+void generator::init_object_instances() {
   context->run_array("script", [](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
@@ -234,7 +234,7 @@ void generator_v2::init_object_instances() {
   });
 }
 
-bool generator_v2::generate_frame() {
+bool generator::generate_frame() {
   // no sampling
   if (sample_include == 0 || sample_exclude == 0) {
     return _generate_frame();
@@ -260,7 +260,7 @@ bool generator_v2::generate_frame() {
   }
 }
 
-bool generator_v2::_generate_frame() {
+bool generator::_generate_frame() {
   try {
     job->shapes.clear();
 
@@ -332,7 +332,7 @@ bool generator_v2::_generate_frame() {
   return job->frame_number != max_frames;
 }
 
-void generator_v2::revert_all_changes(v8_interact& i,
+void generator::revert_all_changes(v8_interact& i,
                                       v8::Local<v8::Array>& instances,
                                       v8::Local<v8::Array>& next_instances,
                                       v8::Local<v8::Array>& intermediates) {
@@ -344,7 +344,7 @@ void generator_v2::revert_all_changes(v8_interact& i,
   util::generator::copy_instances(i, intermediates, instances);
 }
 
-void generator_v2::revert_position_updates(v8_interact& i,
+void generator::revert_position_updates(v8_interact& i,
                                            v8::Local<v8::Array>& instances,
                                            v8::Local<v8::Array>& next_instances,
                                            v8::Local<v8::Array>& intermediates) {
@@ -363,7 +363,7 @@ void generator_v2::revert_position_updates(v8_interact& i,
   }
 }
 
-void generator_v2::create_next_instance_mapping(v8_interact& i, v8::Local<v8::Array>& next_instances) {
+void generator::create_next_instance_mapping(v8_interact& i, v8::Local<v8::Array>& next_instances) {
   next_instance_mapping.clear();
   for (size_t j = 0; j < next_instances->Length(); j++) {
     auto next = i.get_index(next_instances, j).As<v8::Object>();
@@ -372,7 +372,7 @@ void generator_v2::create_next_instance_mapping(v8_interact& i, v8::Local<v8::Ar
   }
 }
 
-void generator_v2::update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, int max_step) {
+void generator::update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, int max_step) {
   auto isolate = i.get_isolate();
   for (size_t j = 0; j < next_instances->Length(); j++) {
     auto instance = i.get_index(next_instances, j).As<v8::Object>();
@@ -432,7 +432,7 @@ void generator_v2::update_object_positions(v8_interact& i, v8::Local<v8::Array>&
   }
 }
 
-void generator_v2::update_object_interactions(v8_interact& i,
+void generator::update_object_interactions(v8_interact& i,
                                               v8::Local<v8::Array>& next_instances,
                                               v8::Local<v8::Array>& intermediates) {
   stepper.reset_current();
@@ -451,7 +451,7 @@ void generator_v2::update_object_interactions(v8_interact& i,
   }
 }
 
-void generator_v2::handle_collisions(v8_interact& i,
+void generator::handle_collisions(v8_interact& i,
                                      v8::Local<v8::Object> instance,
                                      size_t index,
                                      v8::Local<v8::Array> next_instances) {
@@ -485,7 +485,7 @@ void generator_v2::handle_collisions(v8_interact& i,
   }
 };
 
-void generator_v2::handle_collision(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2) {
+void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2) {
   const auto isolate = i.get_isolate();
   auto unique_id = i.integer_number(instance, "unique_id");
   auto unique_id2 = i.integer_number(instance2, "unique_id");
@@ -547,7 +547,7 @@ void generator_v2::handle_collision(v8_interact& i, v8::Local<v8::Object> instan
   emit_event(on2, instance2, instance);
 }
 
-void generator_v2::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
+void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
   auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step));
   auto fn = static_cast<double>(job->frame_number - (1.0 - extra));
   const auto t = fn / max_frames;
@@ -570,14 +570,14 @@ void generator_v2::update_time(v8_interact& i, v8::Local<v8::Object>& instance) 
   i.set_field(instance, "__elapsed__", v8::Number::New(i.get_isolate(), e));
 }
 
-int generator_v2::update_steps(double dist) {
+int generator::update_steps(double dist) {
   max_dist_found = std::max(max_dist_found, fabs(dist));
   auto steps = (int)std::max(1.0, fabs(dist) / tolerated_granularity);
   stepper.update(steps);
   return steps;
 }
 
-double generator_v2::get_max_travel_of_object(v8_interact& i,
+double generator::get_max_travel_of_object(v8_interact& i,
                                               v8::Local<v8::Object>& previous_instance,
                                               v8::Local<v8::Object>& instance) {
   // Update level for all objects
@@ -657,7 +657,7 @@ double generator_v2::get_max_travel_of_object(v8_interact& i,
   return dist;
 }
 
-void generator_v2::convert_objects_to_render_job(v8_interact& i,
+void generator::convert_objects_to_render_job(v8_interact& i,
                                                  v8::Local<v8::Array> next_instances,
                                                  step_calculator& sc,
                                                  v8::Local<v8::Object> video) {
@@ -670,7 +670,7 @@ void generator_v2::convert_objects_to_render_job(v8_interact& i,
   }
 }
 
-void generator_v2::convert_object_to_render_job(
+void generator::convert_object_to_render_job(
     v8_interact& i, v8::Local<v8::Object> instance, size_t index, step_calculator& sc, v8::Local<v8::Object> video) {
   // Update level for all objects
   auto level = i.integer_number(instance, "level");
@@ -750,6 +750,6 @@ void generator_v2::convert_object_to_render_job(
   job->scale = video_scale;
 };
 
-std::shared_ptr<data::job> generator_v2::get_job() const {
+std::shared_ptr<data::job> generator::get_job() const {
   return job;
 }

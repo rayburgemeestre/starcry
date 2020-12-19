@@ -14,7 +14,7 @@
 
 #include "bitmap_wrapper.hpp"
 #include "framer.hpp"
-#include "generator_v2.h"
+#include "generator.h"
 #include "network/render_client.h"
 #include "network/render_server.h"
 #include "rendering_engine_wrapper.h"
@@ -121,7 +121,7 @@ void starcry::copy_to_png(const std::vector<data::color> &source,
 }
 
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
-  if (!gen) gen = std::make_shared<generator_v2>();
+  if (!gen) gen = std::make_shared<generator>();
   gen->init(cmd_def->script, seed);
 
   if (cmd_def->type == instruction_type::get_video) {
