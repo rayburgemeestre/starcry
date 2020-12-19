@@ -27,6 +27,8 @@ class webserver;
 class frame_streamer;
 class render_client;
 class progress_visualizer;
+class server_message_handler;
+class client_message_handler;
 
 namespace data {
 struct job;
@@ -45,6 +47,8 @@ class starcry {
   friend class command_get_image;
   friend class command_get_shapes;
   friend class command_get_objects;
+  friend class server_message_handler;
+  friend class client_message_handler;
 
 public:
   enum class render_video_mode { generate_only, render_only, video_only, video_with_gui, gui_only, javascript_only };
@@ -77,6 +81,8 @@ private:
   std::optional<double> seed;
   std::shared_ptr<progress_visualizer> visualizer;
   std::map<instruction_type, std::shared_ptr<command_handler>> command_handlers;
+  std::shared_ptr<server_message_handler> server_message_handler_;
+  std::shared_ptr<client_message_handler> client_message_handler_;
 
 public:
   starcry(
@@ -106,14 +112,6 @@ private:
 
   void command_to_jobs(std::shared_ptr<instruction> cmd_def);
   std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);
-  bool on_client_message(int sockfd, int type, size_t len, const std::string &data);
-  bool on_server_message(render_client &client,
-                         rendering_engine_wrapper &engine,
-                         bitmap_wrapper &bitmap,
-                         int sockfd,
-                         int type,
-                         size_t len,
-                         const std::string &data);
   void handle_frame(std::shared_ptr<render_msg> job_msg);
 
   std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in) const;

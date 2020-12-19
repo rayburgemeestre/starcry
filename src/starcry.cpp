@@ -12,13 +12,9 @@
 #include <coz.h>
 #include <fmt/core.h>
 
-#include <unistd.h>  // getpid()
-
 #include "bitmap_wrapper.hpp"
-#include "cereal/archives/binary.hpp"
 #include "framer.hpp"
 #include "generator_v2.h"
-#include "network/messages.h"
 #include "network/render_client.h"
 #include "network/render_server.h"
 #include "rendering_engine_wrapper.h"
@@ -32,6 +28,9 @@
 #include "starcry/command_get_objects.h"
 #include "starcry/command_get_shapes.h"
 #include "starcry/command_get_video.h"
+
+#include "starcry/client_message_handler.h"
+#include "starcry/server_message_handler.h"
 
 starcry::starcry(size_t num_local_engines,
                  bool enable_remote_workers,
@@ -65,7 +64,9 @@ starcry::starcry(size_t num_local_engines,
           {instruction_type::get_objects, std::make_shared<command_get_objects>(*this)},
           {instruction_type::get_shapes, std::make_shared<command_get_shapes>(*this)},
           {instruction_type::get_video, std::make_shared<command_get_video>(*this)},
-      }) {}
+      }),
+      server_message_handler_(std::make_shared<server_message_handler>(*this)),
+      client_message_handler_(std::make_shared<client_message_handler>(*this)) {}
 
 starcry::~starcry() {
   le.cancel();
@@ -205,8 +206,8 @@ void starcry::run_server() {
 
   if (enable_remote_workers) {
     renderserver = std::make_shared<render_server>(jobs, frames);
-    renderserver->run(std::bind(&starcry::on_client_message,
-                                this,
+    renderserver->run(std::bind(&client_message_handler::on_client_message,
+                                *client_message_handler_,
                                 std::placeholders::_1,
                                 std::placeholders::_2,
                                 std::placeholders::_3,
@@ -246,101 +247,11 @@ void starcry::run_client(const std::string &host) {
   engine.initialize();
 
   client.set_message_fun([&](int fd, int type, size_t len, const std::string &msg) {
-    on_server_message(client, engine, bitmap, fd, type, len, msg);
+    server_message_handler_->on_server_message(client, engine, bitmap, fd, type, len, msg);
   });
 
   client.register_me();
-  while (client.poll()) {
-  }
-}
-
-bool starcry::on_server_message(render_client &client,
-                                rendering_engine_wrapper &engine,
-                                bitmap_wrapper &bitmap,
-                                int sockfd,
-                                int type,
-                                size_t len,
-                                const std::string &data) {
-  switch (type) {
-    case starcry_msgs::register_me_response: {
-      if (len == sizeof(num_queue_per_worker)) {
-        memcpy(&num_queue_per_worker, data.c_str(), sizeof(num_queue_per_worker));
-      }
-      client.pull_job(true, 0);
-      break;
-    }
-    case starcry_msgs::pull_job_response: {
-      std::istringstream is(data);
-      cereal::BinaryInputArchive archive(is);
-      data::job job;
-      archive(job);
-      auto &bmp = bitmap.get(job.width, job.height);
-      size_t num_shapes = 0;
-      for (const auto &shapez : job.shapes) {
-        num_shapes += shapez.size();
-      }
-
-      std::cout << "render client " << getpid() << " rendering job " << job.job_number << " shapes=" << num_shapes
-                << ", dimensions=" << job.width << "x" << job.height << std::endl;
-      render_job(engine, job, bmp);
-      data::pixel_data2 dat;
-      dat.pixels = pixels_vec_to_pixel_data(bmp.pixels());
-      client.send_frame(job, dat, true);
-      client.pull_job(true, 0);
-      break;
-    }
-  }
-  return true;
-}
-
-bool starcry::on_client_message(int sockfd, int type, size_t len, const std::string &data) {
-  switch (type) {
-    case starcry_msgs::register_me: {
-      renderserver->send_msg(sockfd,
-                             starcry_msgs::register_me_response,
-                             (const char *)&num_queue_per_worker,
-                             sizeof(num_queue_per_worker));
-      break;
-    }
-    case starcry_msgs::pull_job: {
-      while (true) {
-        if (!jobs->has_items(0)) {
-          jobs->sleep_until_items_available(0);
-          if (!jobs->active) {
-            frames->check_terminate();
-            return false;  // shutdown server
-          }
-        }
-        auto job = std::dynamic_pointer_cast<job_message>(jobs->pop(0));
-        if (job) {  // can be nullptr if someone else took it faster than us
-          std::ostringstream os;
-          cereal::BinaryOutputArchive archive(os);
-          archive(*(job->job));
-          renderserver->send_msg(sockfd, starcry_msgs::pull_job_response, os.str().c_str(), os.str().size());
-          break;
-        }
-      }
-      break;
-    }
-    case starcry_msgs::send_frame: {
-      std::istringstream is(data);
-      cereal::BinaryInputArchive archive(is);
-      data::job job;
-      data::pixel_data2 dat;
-      bool is_remote;
-      archive(job);
-      archive(dat);
-      archive(is_remote);
-      // if (job.compress) {
-      //   compress_vector<uint32_t> cv;
-      //   cv.decompress(&dat.pixels, job.width * job.height);
-      // }
-      auto frame = std::make_shared<render_msg>(
-          nullptr, instruction_type::get_image, job.job_number, job.width, job.height, dat.pixels);
-      frames->push(frame);
-    }
-  }
-  return true;
+  while (client.poll());
 }
 
 std::vector<uint32_t> starcry::pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in) const {
