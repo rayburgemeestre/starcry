@@ -4,8 +4,59 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// TODO: remove dependency
-#include "primitives.h"
+class color {
+private:
+  double r_;
+  double g_;
+  double b_;
+  double a_;
+
+public:
+  explicit color(double r, double g, double b, double a) {
+    set_r(r);
+    set_g(g);
+    set_b(b);
+    set_a(a);
+  }
+
+  double get_r() const {
+    return r_;
+  }
+  double get_g() const {
+    return g_;
+  }
+  double get_b() const {
+    return b_;
+  }
+  double get_a() const {
+    return a_;
+  }
+  void set_r(double r) {
+    r_ = r;
+  }
+  void set_g(double g) {
+    g_ = g;
+  }
+  void set_b(double b) {
+    b_ = b;
+  }
+  void set_a(double a) {
+    a_ = a;
+  }
+
+};
+
+struct transparency {
+  double a_;
+
+  explicit transparency(double a) : a_(a) {}
+  double get_a() const {
+    return a_;
+  }
+  void set_a(double a) {
+    a_ = a;
+  }
+};
 
 /**
  * All the following macros come from Nathan Moinvaziri.

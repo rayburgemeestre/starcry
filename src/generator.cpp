@@ -10,8 +10,8 @@
 #include <memory>
 #include <mutex>
 
-#include "primitives.h"
-#include "primitives_v8.h"
+#include "v8pp/module.hpp"
+
 #include "scripting.h"
 #include "util/generator.h"
 #include "util/step_calculator.hpp"

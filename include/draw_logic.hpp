@@ -12,7 +12,6 @@
 #include "data/gradient.hpp"
 #include "data/shape.hpp"
 #include "data/texture.hpp"
-#include "primitives.h"
 #include "util/math.h"
 
 static std::mt19937 mt_v3;

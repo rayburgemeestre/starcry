@@ -13,7 +13,7 @@
 #include "data/shape.hpp"
 
 #include "bitmap_wrapper.hpp"
-#include "primitives/color.cpp"
+// #include "primitives/color.cpp"
 #include "rendering_engine_wrapper.cpp"
 #include "rendering_engine_wrapper.h"
 
