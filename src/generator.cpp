@@ -14,6 +14,7 @@
 
 #include "scripting.h"
 #include "util/generator.h"
+#include "util/progress_visualizer.h"
 #include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
 
@@ -24,7 +25,7 @@
 
 std::shared_ptr<v8_wrapper> context;
 
-generator::generator() {
+generator::generator() : visualizer(std::make_shared<progress_visualizer>("Job")) {
   static std::once_flag once;
   std::call_once(once, []() {
     context = nullptr;
@@ -141,6 +142,7 @@ void generator::init_video_meta_info(std::optional<double> rand_seed) {
     set_rand_seed(seed);
 
     max_frames = duration * use_fps;
+    visualizer->set_max_frames(duration * use_fps);
     job->width = canvas_w;
     job->height = canvas_h;
     job->canvas_w = canvas_w;
@@ -263,6 +265,7 @@ bool generator::generate_frame() {
 bool generator::_generate_frame() {
   try {
     job->shapes.clear();
+    visualizer->set_start_timing();
 
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
       v8_interact i(isolate);
@@ -321,11 +324,12 @@ bool generator::_generate_frame() {
 
         if (experimental_feature1) revert_position_updates(i, instances, next_instances, intermediates);
 
-        util::generator::copy_instances(i, instances, next_instances, true);
+        util::generator::copy_instances(i, instances, next_instances);
       }
     });
     job->job_number++;
     job->frame_number++;
+    visualizer->display(job->job_number);
   } catch (std::exception& ex) {
     std::cout << ex.what() << std::endl;
   }
@@ -333,9 +337,9 @@ bool generator::_generate_frame() {
 }
 
 void generator::revert_all_changes(v8_interact& i,
-                                      v8::Local<v8::Array>& instances,
-                                      v8::Local<v8::Array>& next_instances,
-                                      v8::Local<v8::Array>& intermediates) {
+                                   v8::Local<v8::Array>& instances,
+                                   v8::Local<v8::Array>& next_instances,
+                                   v8::Local<v8::Array>& intermediates) {
   job->shapes.clear();
   indexes.clear();
 
@@ -345,9 +349,9 @@ void generator::revert_all_changes(v8_interact& i,
 }
 
 void generator::revert_position_updates(v8_interact& i,
-                                           v8::Local<v8::Array>& instances,
-                                           v8::Local<v8::Array>& next_instances,
-                                           v8::Local<v8::Array>& intermediates) {
+                                        v8::Local<v8::Array>& instances,
+                                        v8::Local<v8::Array>& next_instances,
+                                        v8::Local<v8::Array>& intermediates) {
   for (size_t j = 0; j < next_instances->Length(); j++) {
     auto src = i.get_index(instances, j).As<v8::Object>();
     auto dst = i.get_index(next_instances, j).As<v8::Object>();
@@ -433,8 +437,8 @@ void generator::update_object_positions(v8_interact& i, v8::Local<v8::Array>& ne
 }
 
 void generator::update_object_interactions(v8_interact& i,
-                                              v8::Local<v8::Array>& next_instances,
-                                              v8::Local<v8::Array>& intermediates) {
+                                           v8::Local<v8::Array>& next_instances,
+                                           v8::Local<v8::Array>& intermediates) {
   stepper.reset_current();
   const auto isolate = i.get_isolate();
   for (size_t index = 0; index < next_instances->Length(); index++) {
@@ -452,9 +456,9 @@ void generator::update_object_interactions(v8_interact& i,
 }
 
 void generator::handle_collisions(v8_interact& i,
-                                     v8::Local<v8::Object> instance,
-                                     size_t index,
-                                     v8::Local<v8::Array> next_instances) {
+                                  v8::Local<v8::Object> instance,
+                                  size_t index,
+                                  v8::Local<v8::Array> next_instances) {
   // Now do the collision detection part
   // NOTE: we multiple radius/size * 2.0 since we're not looking up a point, and querying the quadtree does
   // not check for overlap, but only whether the x,y is inside the specified range. If we don't want to miss
@@ -578,8 +582,8 @@ int generator::update_steps(double dist) {
 }
 
 double generator::get_max_travel_of_object(v8_interact& i,
-                                              v8::Local<v8::Object>& previous_instance,
-                                              v8::Local<v8::Object>& instance) {
+                                           v8::Local<v8::Object>& previous_instance,
+                                           v8::Local<v8::Object>& instance) {
   // Update level for all objects
   // TODO: move to better place
   auto level = i.integer_number(instance, "level");
@@ -658,9 +662,9 @@ double generator::get_max_travel_of_object(v8_interact& i,
 }
 
 void generator::convert_objects_to_render_job(v8_interact& i,
-                                                 v8::Local<v8::Array> next_instances,
-                                                 step_calculator& sc,
-                                                 v8::Local<v8::Object> video) {
+                                              v8::Local<v8::Array> next_instances,
+                                              step_calculator& sc,
+                                              v8::Local<v8::Object> video) {
   // Risking doing this for nothing, as this may still be discarded, we'll translate all the instances to
   // objects ready for rendering Note that we save object states for multiple "steps" per frame if needed.
   for (size_t index = 0; index < next_instances->Length(); index++) {
@@ -699,6 +703,7 @@ void generator::convert_object_to_render_job(
   auto scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
   auto unique_id = i.integer_number(instance, "unique_id");
   auto video_scale = i.double_number(video, "scale");
+  auto shape_opacity = i.double_number(instance, "opacity");
 
   data::shape new_shape;
   new_shape.time = time;
@@ -725,6 +730,7 @@ void generator::convert_object_to_render_job(
   new_shape.radius_size = radiussize;
   new_shape.blending_ = blending_type;
   new_shape.scale = scale;
+  new_shape.opacity = std::isnan(shape_opacity) ? 1.0 : shape_opacity;
   new_shape.unique_id = unique_id;
   new_shape.seed = seed;
   new_shape.id = id;

@@ -169,6 +169,7 @@ public:
                             const std::vector<std::pair<double, data::texture>> &textures,
                             const data::blending_type &blending_,
                             double opacity,
+                            double shape_opacity,
                             double seed,
                             double scale) {
     double_type circle_x = ((circle_x_rel * scale_ * scale) + center_x_) - offset_x_;
@@ -216,6 +217,7 @@ public:
                             textures,
                             blending_,
                             opacity,
+                            shape_opacity,
                             seed);
 
         if (rel_y != 0)
@@ -232,6 +234,7 @@ public:
                               textures,
                               blending_,
                               opacity,
+                              shape_opacity,
                               seed);
         if (rel_x != 0)
           render_circle_pixel(bmp,
@@ -247,6 +250,7 @@ public:
                               textures,
                               blending_,
                               opacity,
+                              shape_opacity,
                               seed);
         if (rel_x != 0 && rel_y != 0)
           render_circle_pixel(bmp,
@@ -262,6 +266,7 @@ public:
                               textures,
                               blending_,
                               opacity,
+                              shape_opacity,
                               seed);
       }
     }
@@ -309,6 +314,7 @@ public:
                            const std::vector<std::pair<double, data::texture>> &textures,
                            const data::blending_type &blending_,
                            double opacity,
+                           double shape_opacity,
                            double seed) {
     if (absX < 0 || absY < 0 || absX >= static_cast<int>(width_) || absY >= static_cast<int>(height_)) return;
 
@@ -334,7 +340,7 @@ public:
     }
 
     render_pixel<double_type>(
-        bmp, time, posX, posY, absX, absY, gradients_, textures, Opacity, opacity, blending_, seed);
+        bmp, time, posX, posY, absX, absY, gradients_, textures, Opacity, opacity, shape_opacity, blending_, seed);
   }
 
   template <typename double_type, typename blending_type_>
@@ -362,6 +368,7 @@ public:
                    const std::vector<std::pair<double, data::texture>> &textures,
                    const data::blending_type &blending_,
                    double opacity,
+                   double shape_opacity,
                    double seed,
                    double scale) {
     x1 = ((x1 * scale_ * scale) + center_x_) - offset_x_;
@@ -519,6 +526,7 @@ public:
                                            textures,
                                            blending_,
                                            opacity,
+                                           shape_opacity,
                                            seed);
           }
         }
@@ -543,6 +551,7 @@ public:
                          const std::vector<std::pair<double, data::texture>> &textures,
                          const data::blending_type &blending_,
                          double opacity,
+                         double shape_opacity,
                          double seed) {
     if (normalized_dist_from_center > 1.0 || normalized_dist_from_center < 0.0) {
       return;
@@ -585,7 +594,8 @@ public:
     // bg.g = min(1., bg.g + gradient_.get(num).g);
     // bg.b = min(1., bg.b + gradient_.get(num).b);
 
-    render_pixel<double_type>(bmp, time, posX, posY, absX, absY, gradients_, textures, num, opacity, blending_, seed);
+    render_pixel<double_type>(
+        bmp, time, posX, posY, absX, absY, gradients_, textures, num, opacity, shape_opacity, blending_, seed);
   }
 
   template <typename double_type>
@@ -599,6 +609,7 @@ public:
                     const std::vector<std::pair<double, data::texture>> &textures,
                     double num,  // Opacity in circle pixel fun
                     double opacity,
+                    double shape_opacity,
                     const data::blending_type &blending_,
                     double seed) {
     data::color clr{0, 0, 0, 0};
@@ -637,6 +648,9 @@ public:
       noise /= static_cast<double>(textures.size());
     }
     // --- end ---
+
+    // shape opacity
+    linear *= shape_opacity;
 
     // ------------motion blur------------
 

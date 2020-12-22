@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/rayburgemeestre/starcry.svg?branch=master)](https://travis-ci.org/rayburgemeestre/starcry) [![MPL 2.0 License](https://img.shields.io/badge/license-MPL2.0-blue.svg)](http://veldstra.org/2016/12/09/you-should-choose-mpl2-for-your-opensource-project.html)
 
-This is a work-in-progress rendering engine that aims to be a blend between
-photoshop and code-based generative art.
+This is a rendering engine that aims to be a blend between photoshop and
+code-based generative art.
 
 The interface to the renderer is a declarative project file powered by the V8
 Javascript engine.
@@ -15,13 +15,13 @@ The interface to the user is either the Javascript file or the VueJS based UI.
     alias starcry='docker run -it -v `pwd`:`pwd` -w `pwd` rayburgemeestre/starcry:v2'
 
     # get a video definition file
-    wget https://raw.githubusercontent.com/rayburgemeestre/starcry/master/input/test2.js
+    wget https://raw.githubusercontent.com/rayburgemeestre/starcry/master/input/test.js
 
     # render it
-    starcry test2.js
+    starcry test.js
 
     # view the video
-    ffplay output.h264
+    ffplay output*.h264
 
 
 ## Building

@@ -104,6 +104,7 @@ struct shape {
   std::map<int, size_t> indexes;
   double seed;
   double scale;
+  double opacity;
 
   int64_t unique_id;
 
@@ -136,6 +137,7 @@ struct shape {
        indexes,
        seed,
        scale,
+       opacity,
        unique_id,
        id,
        label,

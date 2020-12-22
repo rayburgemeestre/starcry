@@ -106,6 +106,9 @@ void instantiate_object(v8_interact& i,
     if (i.has_field(*scene_obj, "blending_type")) {
       i.copy_field(new_instance, "blending_type", *scene_obj);
     }
+    if (i.has_field(*scene_obj, "opacity")) {
+      i.copy_field(new_instance, "opacity", *scene_obj);
+    }
     if (i.has_field(*scene_obj, "scale")) {
       i.copy_field(new_instance, "scale", *scene_obj);
     }
@@ -224,10 +227,25 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     if (i.has_field(src, "scale")) {
       i.copy_field(dst, "scale", src);
     }
+    // TODO: move has_field check into copy_field
+    if (i.has_field(src, "opacity")) {
+      i.copy_field(dst, "opacity", src);
+    }
     i.copy_field(dst, "__time__", src);
     i.copy_field(dst, "__elapsed__", src);
+
     if (!exclude_props) {
-      i.copy_field(dst, "props", src);
+      if (i.has_field(src, "props") && i.has_field(dst, "props")) {
+        i.set_field(dst, "props", v8::Object::New(i.get_isolate()));
+        const auto d = i.get(dst, "props").As<v8::Object>();
+        const auto s = i.get(src, "props").As<v8::Object>();
+        auto prop_fields = s->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+        for (size_t k = 0; k < prop_fields->Length(); k++) {
+          auto prop_key = i.get_index(prop_fields, k).As<v8::String>();
+          auto prop_value = i.get(s, prop_key);
+          i.set_field(d, prop_key, prop_value);
+        }
+      }
     }
     // TODO: move has_field check into copy_field
     if (i.has_field(src, "new_objects")) {

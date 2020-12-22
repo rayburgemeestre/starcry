@@ -52,6 +52,7 @@ class starcry {
 
 public:
   enum class render_video_mode { generate_only, render_only, video_only, video_with_gui, gui_only, javascript_only };
+  enum class log_level { silent, info, debug };
 
 private:
   size_t num_local_engines;
@@ -83,12 +84,13 @@ private:
   std::map<instruction_type, std::shared_ptr<command_handler>> command_handlers;
   std::shared_ptr<server_message_handler> server_message_handler_;
   std::shared_ptr<client_message_handler> client_message_handler_;
+  log_level log_level_;
 
 public:
   starcry(
       size_t num_local_engines,
       bool enable_remote_workers,
-      bool visualization_enabled,
+      log_level level,
       bool is_interactive,
       bool start_webserver,
       bool enable_compression,

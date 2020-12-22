@@ -34,7 +34,7 @@
 
 starcry::starcry(size_t num_local_engines,
                  bool enable_remote_workers,
-                 bool visualization_enabled,
+                 log_level level,
                  bool is_interactive,
                  bool start_webserver,
                  bool enable_compression,
@@ -49,7 +49,7 @@ starcry::starcry(size_t num_local_engines,
       bitmaps({}),
       gen(nullptr),
       engines({}),
-      system(std::make_shared<pipeline_system>(visualization_enabled)),
+      system(std::make_shared<pipeline_system>(false)),
       cmds(system->create_queue("commands", 10)),
       jobs(system->create_queue("jobs", 10)),
       frames(system->create_queue("frames", 10)),
@@ -66,7 +66,8 @@ starcry::starcry(size_t num_local_engines,
           {instruction_type::get_video, std::make_shared<command_get_video>(*this)},
       }),
       server_message_handler_(std::make_shared<server_message_handler>(*this)),
-      client_message_handler_(std::make_shared<client_message_handler>(*this)) {}
+      client_message_handler_(std::make_shared<client_message_handler>(*this)),
+      log_level_(level) {}
 
 starcry::~starcry() {
   le.cancel();
@@ -137,6 +138,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
 
 std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_message> job_msg) {
   auto &job = *job_msg->job;
+  visualizer->set_start_timing();
 
   if (mode == starcry::render_video_mode::javascript_only) {
     std::vector<uint32_t> transfer_pixels;
@@ -251,7 +253,8 @@ void starcry::run_client(const std::string &host) {
   });
 
   client.register_me();
-  while (client.poll());
+  while (client.poll())
+    ;
 }
 
 std::vector<uint32_t> starcry::pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in) const {

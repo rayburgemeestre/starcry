@@ -5,21 +5,25 @@
  */
 
 #include <chrono>
+#include <string>
 
 class progress_visualizer {
 private:
   std::chrono::time_point<std::chrono::high_resolution_clock> begin;
+  std::chrono::time_point<std::chrono::high_resolution_clock> begin_for_item;
   double max_frames{};
   double max_frame_rendered{};
   double counter;
+  std::string elem;
 
 public:
-  progress_visualizer();
+  progress_visualizer(std::string elem = "Frame");
 
   void initialize();
 
   void set_max_frames(double max_frames);
   void set_frame_rendered(double frame);
+  void set_start_timing();
 
   void display(double frame);
 };

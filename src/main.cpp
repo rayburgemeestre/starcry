@@ -56,7 +56,8 @@ public:
       ("pipeline,p", "non-interactive pipeline mode")
       ("perf", "run performance tests")
       ("compression", "enable pixel compression on rendered pixels")
-      ("vis,v", "enable visualization (default no)");
+      ("verbose,v", "enable verbose output (default no)")
+      ("quiet,q", "disable verbose progress (default no)");
     // clang-format on
 
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
@@ -121,9 +122,16 @@ public:
       }
     };
 
+    starcry::log_level level = starcry::log_level::info;
+    if (vm.count("quiet")) {
+      level = starcry::log_level::silent;
+    } else if (vm.count("verbose")) {
+      level = starcry::log_level::debug;
+    }
+
     starcry sc(num_worker_threads,
                vm.count("server"),
-               vm.count("vis"),
+               level,
                is_interactive,
                start_webserver,
                vm.count("compression"),

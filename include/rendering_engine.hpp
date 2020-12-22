@@ -7,6 +7,7 @@
 
 // #define DEBUGMODE
 
+#include "util/progress_visualizer.h"
 #include "util/scope_exit.hpp"
 
 #include <cmath>
@@ -81,8 +82,14 @@ public:
     draw_logic_.center(canvas_w / 2, canvas_h / 2);
     draw_logic_.offset(offset_x, offset_y);
 
+    visualizer_.set_max_frames(shapes[shapes.size() - 1].size());
+
     if (!shapes.empty()) {
+      double index = 0;
       for (const auto &shape : shapes[shapes.size() - 1]) {
+        // TODO: make dependend on log_level flag.
+        // visualizer_.display(index++);
+
         if (shape.type == data::shape_type::circle) {
           // first one
           double opacity = 1.0;
@@ -99,6 +106,7 @@ public:
                                             shape.textures,
                                             shape.blending_,
                                             opacity,
+                                            shape.opacity,
                                             shape.seed,
                                             shape.scale);
 
@@ -117,6 +125,7 @@ public:
                                               shape.textures,
                                               shape.blending_,
                                               opacity,
+                                              shape.opacity,
                                               shape.seed,
                                               shape.scale);
           }
@@ -138,6 +147,7 @@ public:
                                           shape.textures,
                                           shape.blending_,
                                           opacity,
+                                          shape.opacity,
                                           shape.seed,
                                           shape.scale);
 
@@ -157,6 +167,7 @@ public:
                                             shape.textures,
                                             shape.blending_,
                                             opacity,
+                                            shape.opacity,
                                             shape.seed,
                                             shape.scale);
           }
@@ -196,4 +207,5 @@ public:
   }
 
   draw_logic::draw_logic draw_logic_;
+  progress_visualizer visualizer_{"Object"};
 };

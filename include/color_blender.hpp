@@ -43,7 +43,6 @@ public:
   void set_a(double a) {
     a_ = a;
   }
-
 };
 
 struct transparency {

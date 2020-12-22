@@ -14,10 +14,14 @@
 #include <mutex>
 #include <sstream>
 
-progress_visualizer::progress_visualizer() : begin(std::chrono::high_resolution_clock::now()), counter(0) {}
+std::mutex progress_visualizer_mut;
+
+progress_visualizer::progress_visualizer(std::string elem)
+    : begin(std::chrono::high_resolution_clock::now()), counter(0), elem(std::move(elem)) {}
 
 void progress_visualizer::initialize() {
   begin = std::chrono::high_resolution_clock::now();
+  begin_for_item = begin;
   counter = 0;
 }
 
@@ -30,7 +34,12 @@ void progress_visualizer::set_frame_rendered(double max_frame_rendered) {
   this->counter++;
 }
 
+void progress_visualizer::set_start_timing() {
+  begin_for_item = std::chrono::high_resolution_clock::now();
+}
+
 void progress_visualizer::display(double frame) {
+  std::scoped_lock<std::mutex> lock(progress_visualizer_mut);
   set_frame_rendered(frame);
   std::stringstream msg;
   auto current = std::chrono::high_resolution_clock::now();
@@ -40,7 +49,9 @@ void progress_visualizer::display(double frame) {
   struct winsize size;
   ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
   auto cols = std::floor(size.ws_col);
-  msg << "Frame: " << max_frame_rendered << " FPS: " << fps << " ETA: " << remaining;
+  std::chrono::duration<double, std::milli> since_last = current - begin_for_item;
+  msg << elem << ": " << max_frame_rendered << " FPS: " << fps << " ETA: " << remaining
+      << " Since last: " << since_last.count();
   std::cout << "\r" << msg.str();
   for (decltype(cols) i = msg.str().size(); i < cols; i++) {
     std::cout << " ";
@@ -51,4 +62,5 @@ void progress_visualizer::display(double frame) {
     std::cout << (progress ? "░" : "█");
   }
   std::cout.flush();
+  begin_for_item = current;
 }

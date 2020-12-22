@@ -8,8 +8,8 @@
 
 #include "cereal/archives/binary.hpp"
 
-#include <sstream>
 #include <unistd.h>  // getpid()
+#include <sstream>
 
 server_message_handler::server_message_handler(starcry &sc) : sc(sc) {}
 

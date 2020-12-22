@@ -1,7 +1,7 @@
 _ = {
   'gradients': {
     'redbg': [
-      {'position': 0.0, 'r': 0., 'g': 1., 'b': 0., 'a': 0.1},
+      {'position': 0.0, 'r': 1., 'g': 0., 'b': 0., 'a': 1.0},
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
     ],
     'blue': [
@@ -30,7 +30,7 @@ _ = {
       'scale': 100.,
       'range': [0.0, 0.0, 1.0, 1.0],
       'strength': 1.0,
-      'speed': 10.,
+      'speed': 5.,
     },
     'clouds2': {
       'type': 'fractal',
@@ -63,7 +63,7 @@ _ = {
         let x = 0;
         let y = stepsize / 2;
         // for (let i = 0; i < 210; i++) {
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 42; i++) {
           x += directions[this.props.direction][0];
           y += directions[this.props.direction][1];
           if (this.props.step === this.props.steps) {
@@ -136,11 +136,6 @@ _ = {
           this.exists = false;
         }
       },
-      'on': {
-        'collide': function(other) {
-          // this.subobj.push_back();
-        }
-      }
     },
     'bg': {
       'type': 'circle',
@@ -149,7 +144,7 @@ _ = {
       'radius': 0,
       'radiussize': 0,
       'init': function() {
-        this.radiussize = script.video.width;
+        this.seed = rand();
       },
       'time': function(t, elapsed) {},
     },
