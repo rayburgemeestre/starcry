@@ -96,7 +96,8 @@ void starcry::render_job(rendering_engine_wrapper &engine, const data::job &job,
                 job.canvas_h,
                 job.width,
                 job.height,
-                job.scale);
+                job.scale,
+                log_level_ == starcry::log_level::debug);
   if (job.job_number == std::numeric_limits<uint32_t>::max()) {
     png::image<png::rgb_pixel> image(job.width, job.height);
     copy_to_png(bmp.pixels(), job.width, job.height, image);

@@ -27,8 +27,10 @@ void rendering_engine_wrapper::render(image &bmp,
                                       uint32_t canvas_h,
                                       uint32_t width,
                                       uint32_t height,
-                                      double scale) {
-  return data->engine.render(bmp, bg_color, shapes, offset_x, offset_y, canvas_w, canvas_h, width, height, scale);
+                                      double scale,
+                                      bool verbose) {
+  return data->engine.render(
+      bmp, bg_color, shapes, offset_x, offset_y, canvas_w, canvas_h, width, height, scale, verbose);
 }
 
 void rendering_engine_wrapper::write_image(image &bmp, const std::string &filename) {

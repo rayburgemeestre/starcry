@@ -39,7 +39,8 @@ public:
               uint32_t canvas_h,
               uint32_t width,
               uint32_t height,
-              double scale);
+              double scale,
+              bool verbose = false);
 
   void write_image(image &bmp, const std::string &filename);
 

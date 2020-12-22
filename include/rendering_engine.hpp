@@ -62,7 +62,8 @@ public:
               uint32_t canvas_h,
               uint32_t width,
               uint32_t height,
-              double scale) {
+              double scale,
+              bool verbose = false) {
     // this lock is no longer needed since we got rid of all dependencies
     // std::unique_lock<std::mutex> lock(m);
     bmp.clear_to_color(bg_color);
@@ -87,8 +88,9 @@ public:
     if (!shapes.empty()) {
       double index = 0;
       for (const auto &shape : shapes[shapes.size() - 1]) {
-        // TODO: make dependend on log_level flag.
-        // visualizer_.display(index++);
+        if (verbose) {
+          visualizer_.display(index++);
+        }
 
         if (shape.type == data::shape_type::circle) {
           // first one
@@ -96,38 +98,14 @@ public:
           if (shape.indexes.size() > 0) {
             opacity /= (shape.indexes.size() + 1);
           }
-          draw_logic_.render_circle<double>(bmp,
-                                            shape.time,
-                                            shape.x,
-                                            shape.y,
-                                            shape.radius,
-                                            shape.radius_size,
-                                            shape.gradients_,
-                                            shape.textures,
-                                            shape.blending_,
-                                            opacity,
-                                            shape.opacity,
-                                            shape.seed,
-                                            shape.scale);
+          draw_logic_.render_circle(bmp, shape, opacity);
 
           // the rest...
           for (const auto &index_data : shape.indexes) {
             const auto &step = index_data.first;
             const auto &index = index_data.second;
             const auto &shape = shapes[step][index];
-            draw_logic_.render_circle<double>(bmp,
-                                              shape.time,
-                                              shape.x,
-                                              shape.y,
-                                              shape.radius,
-                                              shape.radius_size,
-                                              shape.gradients_,
-                                              shape.textures,
-                                              shape.blending_,
-                                              opacity,
-                                              shape.opacity,
-                                              shape.seed,
-                                              shape.scale);
+            draw_logic_.render_circle(bmp, shape, opacity);
           }
 
         } else if (shape.type == data::shape_type::line) {
@@ -136,43 +114,17 @@ public:
           if (shape.indexes.size() > 0) {
             opacity /= (shape.indexes.size() + 1);
           }
-          draw_logic_.render_line<double>(bmp,
-                                          shape.time,
-                                          shape.x,
-                                          shape.y,
-                                          shape.x2,
-                                          shape.y2,
-                                          shape.radius_size,
-                                          shape.gradients_,
-                                          shape.textures,
-                                          shape.blending_,
-                                          opacity,
-                                          shape.opacity,
-                                          shape.seed,
-                                          shape.scale);
+          draw_logic_.render_line(bmp, shape, opacity);
 
           // the rest...
           for (const auto &index_data : shape.indexes) {
             const auto &step = index_data.first;
             const auto &index = index_data.second;
             const auto &shape = shapes[step][index];
-            draw_logic_.render_line<double>(bmp,
-                                            shape.time,
-                                            shape.x,
-                                            shape.y,
-                                            shape.x2,
-                                            shape.y2,
-                                            shape.radius_size,
-                                            shape.gradients_,
-                                            shape.textures,
-                                            shape.blending_,
-                                            opacity,
-                                            shape.opacity,
-                                            shape.seed,
-                                            shape.scale);
+            draw_logic_.render_line(bmp, shape, opacity);
           }
         } else if (shape.type == data::shape_type::text) {
-          draw_logic_.render_text<double>(shape.x, shape.y, shape.text_size, shape.text, shape.align);
+          draw_logic_.render_text(shape.x, shape.y, shape.text_size, shape.text, shape.align);
         }
       }
     }
@@ -195,7 +147,7 @@ public:
     //   draw_logic_.scale(1);
     //   draw_logic_.offset(0, 0);
     //   draw_logic_.center(width / 2, height / 2);
-    //   draw_logic_.render_text<double>(0, 0, 14, ss.str().c_str(), "left");
+    //   draw_logic_.render_text(0, 0, 14, ss.str().c_str(), "left");
     // }
   }
 
