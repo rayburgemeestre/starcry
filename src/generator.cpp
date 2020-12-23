@@ -25,6 +25,51 @@
 
 std::shared_ptr<v8_wrapper> context;
 
+/// TODO move somewhere else
+#include <cmath>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+double squared(const double& num) {
+  return num * num;
+}
+
+double squared_dist(const double& num, const double& num2) {
+  return (num - num2) * (num - num2);
+}
+
+double get_distance(double x, double y, double x2, double y2) {
+  return sqrt(squared_dist(x, x2) + squared_dist(y, y2));
+}
+
+double get_angle(const double& x1, const double& y1, const double& x2, const double& y2) {
+  double dx = x1 - x2;
+  double dy = y1 - y2;
+
+  if (dx == 0 && dy == 0) return 0;
+
+  if (dx == 0) {
+    if (dy < 0)
+      return 270;
+    else
+      return 90;
+    // old hack, dx = 1;
+  }
+
+  double slope = dy / dx;
+  double angle = atan(slope);
+  // double angle = atan2(dy, dx); // yields erroneous results.
+  if (dx < 0) angle += M_PI;
+
+  angle = 180.0 * angle / M_PI;
+
+  while (angle < 0.0) angle += 360.0;
+
+  return angle;
+}
+
 generator::generator() : visualizer(std::make_shared<progress_visualizer>("Job")) {
   static std::once_flag once;
   std::call_once(once, []() {
@@ -387,6 +432,10 @@ void generator::update_object_positions(v8_interact& i, v8::Local<v8::Array>& ne
     std::string type = i.str(instance, "type");
     bool is_line = type == "line";
     std::string collision_group = i.str(instance, "collision_group");
+    auto angle = i.double_number(instance, "angle");
+    if (std::isnan(angle)) {
+      angle = 0.;
+    }
     auto x = i.double_number(instance, "x");
     auto y = i.double_number(instance, "y");
     auto x2 = i.double_number(instance, "x2");
@@ -396,6 +445,7 @@ void generator::update_object_positions(v8_interact& i, v8::Local<v8::Array>& ne
     auto vel_y = i.double_number(instance, "vel_y");
     auto vel_x2 = is_line ? i.double_number(instance, "vel_x2") : 0.0;
     auto vel_y2 = is_line ? i.double_number(instance, "vel_y2") : 0.0;
+
     if (!std::isnan(velocity)) {
       if (!std::isnan(vel_x)) {
         x += (vel_x * velocity) / static_cast<double>(max_step);
@@ -590,6 +640,9 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto type = i.str(instance, "type");
   auto is_line = type == "line";
   auto label = i.str(instance, "label");
+  auto angle = i.double_number(instance, "angle");
+  if (std::isnan(angle)) angle = 0;
+
   parents[level] = instance;
   prev_parents[level] = previous_instance;
 
@@ -606,9 +659,13 @@ double generator::get_max_travel_of_object(v8_interact& i,
       offset_x2 += i.double_number(parents[level], "x");
       offset_y2 += i.double_number(parents[level], "y");
     }
+    auto a = i.double_number(parents[level], "angle");
+    if (!std::isnan(a)) angle += a;
   }
 
   level = i.double_number(previous_instance, "level");
+  angle = i.double_number(previous_instance, "angle");
+  if (std::isnan(angle)) angle = 0.;
   auto prev_offset_x = static_cast<double>(0);
   auto prev_offset_y = static_cast<double>(0);
   auto prev_offset_x2 = static_cast<double>(0);
@@ -621,12 +678,34 @@ double generator::get_max_travel_of_object(v8_interact& i,
       prev_offset_x2 += i.double_number(prev_parents[level], "x2");
       prev_offset_y2 += i.double_number(prev_parents[level], "y2");
     }
+    auto a = i.double_number(parents[level], "angle");
+    if (!std::isnan(a)) angle += a;
   }
 
   auto x = offset_x + i.double_number(instance, "x");
   auto y = offset_y + i.double_number(instance, "y");
   auto x2 = is_line ? offset_x2 + i.double_number(instance, "x2") : 0.0;
   auto y2 = is_line ? offset_y2 + i.double_number(instance, "y2") : 0.0;
+
+  if (angle != 0.) {
+    auto angle1 = angle + get_angle(0, 0, x, y);
+    while (angle1 > 360.) angle1 -= 360.;
+    auto rads = angle1 * M_PI / 180.0;
+    auto ratio = 1.0;
+    auto dist = get_distance(0, 0, x, y);
+    auto move = dist * ratio * -1;
+    x = (cos(rads) * move);
+    y = (sin(rads) * move);
+
+    auto angle2 = angle + get_angle(0, 0, x2, y2);
+    while (angle2 > 360.) angle2 -= 360.;
+    rads = angle2 * M_PI / 180.0;
+    dist = get_distance(0, 0, x2, y2);
+    move = dist * ratio * -1;
+    x2 = (cos(rads) * move);
+    y2 = (sin(rads) * move);
+  }
+
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
 

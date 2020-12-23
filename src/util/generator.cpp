@@ -112,6 +112,9 @@ void instantiate_object(v8_interact& i,
     if (i.has_field(*scene_obj, "scale")) {
       i.copy_field(new_instance, "scale", *scene_obj);
     }
+    if (i.has_field(*scene_obj, "angle")) {
+      i.copy_field(new_instance, "angle", *scene_obj);
+    }
   }
 
   i.set_field(new_instance, "subobj", v8::Array::New(isolate));
@@ -230,6 +233,10 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     // TODO: move has_field check into copy_field
     if (i.has_field(src, "opacity")) {
       i.copy_field(dst, "opacity", src);
+    }
+    // TODO: move has_field check into copy_field
+    if (i.has_field(src, "angle")) {
+      i.copy_field(dst, "angle", src);
     }
     i.copy_field(dst, "__time__", src);
     i.copy_field(dst, "__elapsed__", src);

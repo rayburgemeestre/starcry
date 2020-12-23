@@ -20,15 +20,15 @@ _ = {
   },
   'textures': {
     'clouds1': {
-      'type': 'perlin',
+      'type': 'fractal',
       'size': 3000.,
-      'octaves': 7,
+      'octaves': 2,
       'persistence': 0.45,
-      'percentage': 1.0,
-      'scale': 100.,
+      'percentage': 0.4,
+      'scale': 10.,
       'range': [0.0, 0.0, 1.0, 1.0],
       'strength': 1.0,
-      'speed': 1.,
+      'speed': 10.,
     },
     'clouds2': {
       'type': 'fractal',
@@ -39,7 +39,18 @@ _ = {
       'scale': 10.,
       'range': [0.0, 0.0, 1.0, 1.0],
       'strength': 1.0,
-      'speed': 10.,
+      'speed': 1.,
+    },
+    'clouds3': {
+      'type': 'fractal',
+      'size': 3000.,
+      'octaves': 7,
+      'persistence': 0.45,
+      'percentage': 0.4,
+      'scale': 40.,
+      'range': [0.0, 0.0, 1.0, 1.0],
+      'strength': 1.0,
+      'speed': 0.1,
     },
   },
   'objects': {
@@ -58,19 +69,20 @@ _ = {
     'rings': {
       'radius': 0,
       'radiussize': 0,
-      'props': {},
+      'props': {'depth': 30},
       'subobj': [],
       'x': 0,
       'y': 150,
+      'angle': 0,
       'init': function() {
-        for (var i = 0; i < 30; i++) {
-          var x = i / 50.;
-          var step = expf(x, 10) * 100.;
+        var x = this.props.depth / 50.;
+        var step = expf(x, 10) * 100.;
+        this.subobj.push({'id': 'ring', 'x': -300, 'y': 150, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}});
+        this.subobj.push({'id': 'ring', 'x': -300, 'y': 150, 'x2': 0, 'y2': -300, 'scale': step, 'z': 0, 'props': {}});
+        this.subobj.push({'id': 'ring', 'x': 0, 'y': -300, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}});
+        if (this.props.depth > 0) {
           this.subobj.push(
-              {'id': 'ring', 'x': -300, 'y': 150, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}});
-          this.subobj.push(
-              {'id': 'ring', 'x': -300, 'y': 150, 'x2': 0, 'y2': -300, 'scale': step, 'z': 0, 'props': {}});
-          this.subobj.push({'id': 'ring', 'x': 0, 'y': -300, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}});
+              {'id': 'rings', 'x': 11., 'y': 0, 'x2': 0, 'y2': 0, 'z': 0, 'props': {'depth': this.props.depth - 1}});
         }
       },
       'time': function(t, elapsed) {},
@@ -113,12 +125,24 @@ _ = {
     'objects': [
       {
         'id': 'obj',
-        'x': -300,
-        'y': 75,
+        'x': 0,
+        'y': 0,
         'z': 0,
         'radius': 0,
         'radiussize': 0,
         'texture': 'clouds1',
+        'gradient': 'red',
+        'seed': 1,
+        'props': {}
+      },
+      {
+        'id': 'obj',
+        'x': 0,
+        'y': 0,
+        'z': 0,
+        'radius': 0,
+        'radiussize': 0,
+        'texture': 'clouds2',
         'gradient': 'red',
         'seed': 2,
         'props': {}
@@ -126,24 +150,12 @@ _ = {
       {
         'id': 'obj',
         'x': 0,
-        'y': 75,
+        'y': 0,
         'z': 0,
         'radius': 0,
         'radiussize': 0,
-        'texture': 'clouds1',
-        'gradient': 'green',
-        'seed': 20,
-        'props': {}
-      },
-      {
-        'id': 'obj',
-        'x': +300,
-        'y': 75,
-        'z': 0,
-        'radius': 0,
-        'radiussize': 0,
-        'texture': 'clouds1',
-        'gradient': 'blue',
+        'texture': 'clouds3',
+        'gradient': 'red',
         'seed': 3,
         'props': {}
       },
