@@ -10,6 +10,7 @@
 
 #include "color_blender.hpp"
 #include "data/gradient.hpp"
+#include "data/settings.hpp"
 #include "data/shape.hpp"
 #include "data/texture.hpp"
 #include "util/math.h"
@@ -158,7 +159,7 @@ public:
    *   circle). For this we calculate the half of the "x chord length" for both the outer- and inner circle, and
    *   substract them.
    */
-  inline void render_circle(image &bmp, const data::shape &shape, double opacity) {
+  inline void render_circle(image &bmp, const data::shape &shape, double opacity, data::settings &settings) {
     double circle_x = ((shape.x * scale_ * shape.scale) + center_x_) - offset_x_;
     double circle_y = ((shape.y * scale_ * shape.scale) + center_y_) - offset_y_;
     auto radius = shape.radius * scale_ * shape.scale;
@@ -190,15 +191,42 @@ public:
 
         double diff_from_center = reuse_sqrt ? distance<double>(abs_x_left, circle_x, abs_y_top, circle_y) : -1;
 
-        render_circle_pixel(
-            bmp, shape, radius, radius_size, circle_x, circle_y, abs_x_left, abs_y_top, diff_from_center, opacity);
+        render_circle_pixel(bmp,
+                            shape,
+                            radius,
+                            radius_size,
+                            circle_x,
+                            circle_y,
+                            abs_x_left,
+                            abs_y_top,
+                            diff_from_center,
+                            opacity,
+                            settings);
 
         if (rel_y != 0)
-          render_circle_pixel(
-              bmp, shape, radius, radius_size, circle_x, circle_y, abs_x_left, abs_y_bottom, diff_from_center, opacity);
+          render_circle_pixel(bmp,
+                              shape,
+                              radius,
+                              radius_size,
+                              circle_x,
+                              circle_y,
+                              abs_x_left,
+                              abs_y_bottom,
+                              diff_from_center,
+                              opacity,
+                              settings);
         if (rel_x != 0)
-          render_circle_pixel(
-              bmp, shape, radius, radius_size, circle_x, circle_y, abs_x_right, abs_y_top, diff_from_center, opacity);
+          render_circle_pixel(bmp,
+                              shape,
+                              radius,
+                              radius_size,
+                              circle_x,
+                              circle_y,
+                              abs_x_right,
+                              abs_y_top,
+                              diff_from_center,
+                              opacity,
+                              settings);
         if (rel_x != 0 && rel_y != 0)
           render_circle_pixel(bmp,
                               shape,
@@ -209,7 +237,8 @@ public:
                               abs_x_right,
                               abs_y_bottom,
                               diff_from_center,
-                              opacity);
+                              opacity,
+                              settings);
       }
     }
   }
@@ -251,7 +280,8 @@ public:
                            int absX,
                            int absY,
                            double diffFromCenter,
-                           double opacity) {
+                           double opacity,
+                           data::settings &settings) {
     if (absX < 0 || absY < 0 || absX >= static_cast<int>(width_) || absY >= static_cast<int>(height_)) return;
 
     if (diffFromCenter == -1) diffFromCenter = distance<double>(absX, posX, absY, posY);
@@ -275,7 +305,7 @@ public:
       throw std::runtime_error("gradients cannot not be empty");
     }
 
-    render_pixel(bmp, shape, posX, posY, absX, absY, Opacity, opacity);
+    render_pixel(bmp, shape, posX, posY, absX, absY, Opacity, opacity, settings);
   }
 
   template <typename blending_type_>
@@ -291,7 +321,7 @@ public:
     bmp.set(absX, absY, r, g, b, a);
   }
 
-  void render_line(image &bmp, const data::shape &shape, double opacity) {
+  void render_line(image &bmp, const data::shape &shape, double opacity, data::settings &settings) {
     auto x1 = ((shape.x * scale_ * shape.scale) + center_x_) - offset_x_;
     auto y1 = ((shape.y * scale_ * shape.scale) + center_y_) - offset_y_;
     auto x2 = ((shape.x2 * scale_ * shape.scale) + center_x_) - offset_x_;
@@ -443,7 +473,8 @@ public:
                               current_y,
                               normalized_dist_from_center,
                               normalized_dist_from_line,
-                              opacity);
+                              opacity,
+                              settings);
           }
         }
       }
@@ -462,7 +493,8 @@ public:
                          int absY,
                          double normalized_dist_from_center,
                          double normalized_dist_from_line,
-                         double opacity) {
+                         double opacity,
+                         data::settings &settings) {
     if (normalized_dist_from_center > 1.0 || normalized_dist_from_center < 0.0) {
       return;
     }
@@ -504,7 +536,7 @@ public:
     // bg.g = min(1., bg.g + gradient_.get(num).g);
     // bg.b = min(1., bg.b + gradient_.get(num).b);
 
-    render_pixel(bmp, shape, posX, posY, absX, absY, num, opacity);
+    render_pixel(bmp, shape, posX, posY, absX, absY, num, opacity, settings);
   }
 
   void render_pixel(image &bmp,
@@ -514,7 +546,8 @@ public:
                     int absX,
                     int absY,
                     double num,  // Opacity in circle pixel fun
-                    double opacity) {
+                    double opacity,
+                    data::settings &settings) {
     data::color clr{0, 0, 0, 0};
     for (const auto &grad : shape.gradients_) {
       double gradient_opacity = grad.first;
@@ -525,6 +558,9 @@ public:
       clr.b += gradient_opacity * tmp.b;
       clr.a += gradient_opacity * tmp.a;
     }
+    // TODO: another knob for this? "ignore opacity"
+    // sometimes gives a fun effect
+    // clr.a = 1.0;
     //    bg.r = clr.r;  // gradient_.get(num).r;
     //    bg.g = clr.g;  // gradient_.get(num).g;
     //    bg.b = clr.b;  // gradient_.get(num).b;
@@ -533,7 +569,7 @@ public:
     // auto max = 10.0;  // TODO: tweak this a bit, or make configurable at least.
     // auto maxexp = log(max + 1.0) / log(2.0);
 
-    auto linear = opacity;
+    auto linear = clr.a * opacity;
     // auto expf = ((pow(2.0, (linear)*maxexp)) - 1.0) / max;
 
     // auto maxpow = pow(2.0, maxexp);
@@ -542,16 +578,18 @@ public:
 
     // --- perlin noise ---
     double noise = 1.0;
-    if (!shape.textures.empty()) {
-      noise = 0;
-      for (const auto &texture : shape.textures) {
-        noise +=
-            ::clamp(texture.second.get(
-                        num, absX - posX, absY - posY, shape.time, scale_, std::isnan(shape.seed) ? 1. : shape.seed),
-                    0.0,
-                    1.0);
+    if (settings.perlin_noise) {
+      if (!shape.textures.empty()) {
+        noise = 0;
+        for (const auto &texture : shape.textures) {
+          noise +=
+              ::clamp(texture.second.get(
+                          num, absX - posX, absY - posY, shape.time, scale_, std::isnan(shape.seed) ? 1. : shape.seed),
+                      0.0,
+                      1.0);
+        }
+        noise /= static_cast<double>(shape.textures.size());
       }
-      noise /= static_cast<double>(shape.textures.size());
     }
     // --- end ---
 
@@ -566,11 +604,16 @@ public:
 
     auto rand1 = (rand_fun_v3() * 2.0) - 1.0;  // -1 .. +1
     auto amount_of_blur = 1.0 - opacity;       // i.e. 0.5 blur
-    amount_of_blur += 0.1;                     // extra default grain amount
+    amount_of_blur += settings.extra_grain;    // extra default grain amount
     // clr.a = logn * noise * (1.0 - amount_of_blur * rand1);
     // use noise to dial down opacity
-    clr.a = (linear * noise) * (1.0 - amount_of_blur * rand1);
-    clr.a = ::clamp(clr.a, 0.0, 1.0);
+    if (settings.grain_for_opacity) {
+      clr.a = (linear * noise) * (1.0 - amount_of_blur * rand1);
+      clr.a = ::clamp(clr.a, 0.0, 1.0);
+    } else {
+      clr.a = linear * noise;
+      clr.a = ::clamp(clr.a, 0.0, 1.0);
+    }
     // ------------motion blur------------
 
     // was:

@@ -32,6 +32,13 @@
 #include "starcry/client_message_handler.h"
 #include "starcry/server_message_handler.h"
 
+// TODO: re-organize this somehow
+#include <random>
+std::mt19937 mt_vx;
+double rand_fun_vx() {
+  return (mt_vx() / (double)mt_vx.max());
+}
+
 starcry::starcry(size_t num_local_engines,
                  bool enable_remote_workers,
                  log_level level,
@@ -87,6 +94,7 @@ void starcry::add_command(seasocks::WebSocket *client, const std::string &script
 }
 
 void starcry::render_job(rendering_engine_wrapper &engine, const data::job &job, image &bmp) {
+  data::settings settings = gen->settings();
   engine.render(bmp,
                 job.background_color,
                 job.shapes,
@@ -97,8 +105,12 @@ void starcry::render_job(rendering_engine_wrapper &engine, const data::job &job,
                 job.width,
                 job.height,
                 job.scale,
-                log_level_ == starcry::log_level::debug);
+                log_level_ == starcry::log_level::debug,
+                settings);
   if (job.job_number == std::numeric_limits<uint32_t>::max()) {
+    // There is 16 BIT, also + Alpha, however, seems to internally still use an 8 bit palette somehow.
+    // Will need to figure out in the future how to properly use 16 bit, for now, will focus on fixing the 8 bit
+    // version. png::image<png::rgb_pixel_16> image(job.width, job.height);
     png::image<png::rgb_pixel> image(job.width, job.height);
     copy_to_png(bmp.pixels(), job.width, job.height, image);
     image.write(fmt::format(
@@ -111,12 +123,36 @@ void starcry::copy_to_png(const std::vector<data::color> &source,
                           uint32_t height,
                           png::image<png::rgb_pixel> &dest) {
   size_t index = 0;
+  auto m = std::numeric_limits<uint8_t>::max();
+  auto settings = gen->settings();
   for (uint32_t y = 0; y < height; y++) {
     for (uint32_t x = 0; x < width; x++) {
       // BGRA -> RGB
       // uint8_t *data = (uint8_t *)&(source[index]);
       // dest[y][x] = png::rgb_pixel(*(data + 2), *(data + 1), *(data + 0));
-      dest[y][x] = png::rgb_pixel(source[index].r * 255, source[index].g * 255, source[index].b * 255);
+
+      // My attempt at "random" dithering, probably inefficient
+      uint8_t r = source[index].r * m;
+      uint8_t g = source[index].g * m;
+      uint8_t b = source[index].b * m;
+      if (settings.dithering) {
+        double r_dbl = source[index].r * m;
+        double g_dbl = source[index].g * m;
+        double b_dbl = source[index].b * m;
+        double r_offset = r_dbl - static_cast<double>(r);
+        double g_offset = g_dbl - static_cast<double>(g);
+        double b_offset = b_dbl - static_cast<double>(b);
+        if (rand_fun_vx() >= r_offset && r > 0) {
+          r -= 1;
+        }
+        if (rand_fun_vx() >= g_offset && g > 0) {
+          g -= 1;
+        }
+        if (rand_fun_vx() >= b_offset && b > 0) {
+          b -= 1;
+        }
+      }
+      dest[y][x] = png::rgb_pixel(r, g, b);
       index++;
     }
   }
@@ -261,17 +297,57 @@ void starcry::run_client(const std::string &host) {
 std::vector<uint32_t> starcry::pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in) const {
   std::vector<uint32_t> pixels_out;
   pixels_out.reserve(pixels_in.size());
-  for (const auto &pix : pixels_in) {
-    uint32_t color;
-    char *cptr = (char *)&color;
-    *cptr = (char)(pix.r * 255);
-    cptr++;
-    *cptr = (char)(pix.g * 255);
-    cptr++;
-    *cptr = (char)(pix.b * 255);
-    cptr++;
-    *cptr = (char)(pix.a * 255);
-    pixels_out.push_back(color);
+
+  if (gen->settings().dithering) {
+    for (const auto &pix : pixels_in) {
+      uint32_t color;
+      char *cptr = (char *)&color;
+      auto r = (char)(pix.r * 255);
+      auto g = (char)(pix.g * 255);
+      auto b = (char)(pix.b * 255);
+      auto a = (char)(pix.a * 255);
+      double r_dbl = pix.r * 255.;
+      double g_dbl = pix.g * 255.;
+      double b_dbl = pix.b * 255.;
+      double a_dbl = pix.a * 255.;
+      double r_offset = r_dbl - static_cast<double>(r);
+      double g_offset = g_dbl - static_cast<double>(g);
+      double b_offset = b_dbl - static_cast<double>(b);
+      double a_offset = a_dbl - static_cast<double>(a);
+      if (rand_fun_vx() >= r_offset && r > 0) {
+        r -= 1;
+      }
+      if (rand_fun_vx() >= g_offset && g > 0) {
+        g -= 1;
+      }
+      if (rand_fun_vx() >= b_offset && b > 0) {
+        b -= 1;
+      }
+      if (rand_fun_vx() >= a_offset && a > 0) {
+        a -= 1;
+      }
+      *cptr = r;
+      cptr++;
+      *cptr = g;
+      cptr++;
+      *cptr = b;
+      cptr++;
+      *cptr = a;
+      pixels_out.push_back(color);
+    }
+  } else {
+    for (const auto &pix : pixels_in) {
+      uint32_t color;
+      char *cptr = (char *)&color;
+      *cptr = (char)(pix.r * 255);
+      cptr++;
+      *cptr = (char)(pix.g * 255);
+      cptr++;
+      *cptr = (char)(pix.b * 255);
+      cptr++;
+      *cptr = (char)(pix.a * 255);
+      pixels_out.push_back(color);
+    }
   }
   return pixels_out;
 }

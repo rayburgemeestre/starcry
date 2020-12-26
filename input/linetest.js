@@ -115,7 +115,7 @@ _ = {
     'scale': 1,
     'rand_seed': 1,
     'granularity': 1,
-    'experimental_feature1': false,
+    'update_positions': false,
   },
   'scenes': [{
     'name': 'scene1',

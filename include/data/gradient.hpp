@@ -35,7 +35,7 @@ struct gradient {
         return color{(color1.r * color1_mult * color1.a) + (color2.r * color2_mult * color2.a),
                      (color1.g * color1_mult * color1.a) + (color2.g * color2_mult * color2.a),
                      (color1.b * color1_mult * color1.a) + (color2.b * color2_mult * color2.a),
-                     (color1.a * color1_mult * color1.a) + (color2.a * color2_mult)};
+                     (color1.a * color1_mult) + (color2.a * color2_mult)};
       } else {
         processed_index = current_idx;
       }

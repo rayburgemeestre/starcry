@@ -16,6 +16,7 @@ struct rendering_engine_wrapper_class_data;
 namespace data {
 struct color;
 struct shape;
+struct settings;
 }  // namespace data
 
 class rendering_engine_wrapper {
@@ -40,7 +41,8 @@ public:
               uint32_t width,
               uint32_t height,
               double scale,
-              bool verbose = false);
+              bool verbose,
+              data::settings &settings);
 
   void write_image(image &bmp, const std::string &filename);
 

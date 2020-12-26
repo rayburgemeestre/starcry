@@ -6,8 +6,6 @@
 
 #pragma once
 
-#include <data/job.hpp>
-#include <data/pixels.hpp>
 #include <memory>
 #include <mutex>
 
@@ -15,6 +13,9 @@
 #include "messages.hpp"
 #include "piper.h"
 #include "png.hpp"
+
+#include "data/job.hpp"
+#include "data/pixels.hpp"
 
 #include "util/limited_executor.hpp"
 

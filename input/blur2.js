@@ -1,8 +1,8 @@
 _ = {
   'gradients': {
     'white': [
-      {'position': 0.0, 'r': 1, 'g': 1, 'b': 1, 'a': 1.0},
-      {'position': 0.9, 'r': 1, 'g': 1, 'b': 1, 'a': 1.0},
+      {'position': 0.0, 'r': 1, 'g': 0, 'b': 0, 'a': 1.0},
+      {'position': 0.9, 'r': 1, 'g': 0, 'b': 0, 'a': 1.0},
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
     ],
   },
@@ -15,6 +15,7 @@ _ = {
       'y': 0,
       'radiussize': 20.0,
       'props': {'grad': 'white', 'mode': 'linear'},
+      'blending_type': blending_type.normal,
       'init': function() {},
       'time': function(t, elapsed) {
         let linear = Math.min(1.0, t * 2.0);

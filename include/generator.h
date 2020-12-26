@@ -13,6 +13,7 @@
 #include <cstdint>
 
 #include "data/job.hpp"
+#include "data/settings.hpp"
 #include "data/texture.hpp"
 
 #include "util/frame_stepper.hpp"
@@ -54,6 +55,7 @@ private:
   std::map<std::string, quadtree> qts;
   std::unordered_map<int64_t, size_t> next_instance_mapping;
   std::shared_ptr<progress_visualizer> visualizer;
+  data::settings settings_;
 
 public:
   generator();
@@ -114,6 +116,9 @@ public:
   }
   size_t get_max_frames() const {
     return max_frames;
+  }
+  const data::settings settings() const {
+    return settings_;
   }
 
 private:

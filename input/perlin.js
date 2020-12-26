@@ -102,7 +102,7 @@ _ = {
     'scale': 1.,
     'rand_seed': 1,
     'granularity': 100,
-    'experimental_feature1': false,
+    'update_positions': false,
     // 'sample': {
     //   'include': 1.,  // include one second.
     //   'exclude': 5.,  // then skip 5 seconds, and so on.

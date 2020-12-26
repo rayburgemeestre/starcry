@@ -81,6 +81,7 @@
                 <button v-shortkey="[',']" @shortkey="prev_frame()">_</button>
                 <button v-shortkey="['.']" @shortkey="next_frame()">_</button>
                 <button v-shortkey="['shift', 'o']" @shortkey="get_objects()">_</button>
+                <button v-shortkey="['r']" @shortkey="open(filename)">_</button>
 
                 <hr>
                 <stats-component />

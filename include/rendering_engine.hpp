@@ -63,7 +63,8 @@ public:
               uint32_t width,
               uint32_t height,
               double scale,
-              bool verbose = false) {
+              bool verbose,
+              data::settings &settings) {
     // this lock is no longer needed since we got rid of all dependencies
     // std::unique_lock<std::mutex> lock(m);
     bmp.clear_to_color(bg_color);
@@ -98,14 +99,14 @@ public:
           if (shape.indexes.size() > 0) {
             opacity /= (shape.indexes.size() + 1);
           }
-          draw_logic_.render_circle(bmp, shape, opacity);
+          draw_logic_.render_circle(bmp, shape, opacity, settings);
 
           // the rest...
           for (const auto &index_data : shape.indexes) {
             const auto &step = index_data.first;
             const auto &index = index_data.second;
             const auto &shape = shapes[step][index];
-            draw_logic_.render_circle(bmp, shape, opacity);
+            draw_logic_.render_circle(bmp, shape, opacity, settings);
           }
 
         } else if (shape.type == data::shape_type::line) {
@@ -114,14 +115,14 @@ public:
           if (shape.indexes.size() > 0) {
             opacity /= (shape.indexes.size() + 1);
           }
-          draw_logic_.render_line(bmp, shape, opacity);
+          draw_logic_.render_line(bmp, shape, opacity, settings);
 
           // the rest...
           for (const auto &index_data : shape.indexes) {
             const auto &step = index_data.first;
             const auto &index = index_data.second;
             const auto &shape = shapes[step][index];
-            draw_logic_.render_line(bmp, shape, opacity);
+            draw_logic_.render_line(bmp, shape, opacity, settings);
           }
         } else if (shape.type == data::shape_type::text) {
           draw_logic_.render_text(shape.x, shape.y, shape.text_size, shape.text, shape.align);

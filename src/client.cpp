@@ -40,7 +40,7 @@ void mainloop(void *arg) {
   renderer = static_cast<SDL_Renderer *>(arg);
 #endif
 
-  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+  SDL_SetRenderDrawColor(renderer, 0, 0, 67, 255);
   SDL_RenderClear(renderer);
 
   SDL_Rect r, r2;
@@ -77,6 +77,7 @@ void mainloop(void *arg) {
 
 void render_shapes_to_texture() {
   auto &bmp = bitmap.get(job.width, job.height);
+  data::settings settings_;
   engine.render(bmp,
                 job.background_color,
                 job.shapes,
@@ -86,7 +87,9 @@ void render_shapes_to_texture() {
                 job.canvas_h,
                 job.width,
                 job.height,
-                job.scale);
+                job.scale,
+                false,
+                settings_);
   if (texture == nullptr && renderer == nullptr) {
     return;
   }
@@ -94,7 +97,7 @@ void render_shapes_to_texture() {
     SDL_DestroyTexture(texture);
     texture = nullptr;
   }
-  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, job.width, job.height);
+  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, job.width, job.height);
 
   auto &pixels = bmp.pixels();
   transfer_pixels.clear();
@@ -215,7 +218,7 @@ void set_texture(std::string data) {
     SDL_DestroyTexture(texture);
     texture = nullptr;
   }
-  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, job.width, job.height);
+  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, job.width, job.height);
   // todo, hardcoded
   SDL_UpdateTexture(texture, NULL, (void *)&(data[0]), job.width * sizeof(Uint32));
 }

@@ -39,7 +39,7 @@ void progress_visualizer::set_start_timing() {
 }
 
 void progress_visualizer::display(double frame) {
-  std::scoped_lock<std::mutex> lock(progress_visualizer_mut);
+  std::unique_lock<std::mutex> lock(progress_visualizer_mut);
   set_frame_rendered(frame);
   std::stringstream msg;
   auto current = std::chrono::high_resolution_clock::now();

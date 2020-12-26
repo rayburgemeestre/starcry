@@ -1,0 +1,211 @@
+_ = {
+  'gradients': {
+    'red': [
+      {'position': 0.0, 'r': 1, 'g': 0, 'b': 0, 'a': 1.0},
+      {'position': 0.5, 'r': 1, 'g': 0, 'b': 0, 'a': 1.0},
+      {'position': 1.0, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
+    ],
+    'blue': [
+      {'position': 0.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0.5},
+      {'position': 0.2, 'r': 0, 'g': 0, 'b': 1, 'a': 1.0},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 1, 'a': 1.0},
+    ],
+    'white': [
+      {'position': 0.0, 'r': 1, 'g': 1.0, 'b': 1., 'a': 1.0},
+      {'position': 1.0, 'r': 1, 'g': 1.0, 'b': 1., 'a': 0.0},
+    ],
+  },
+  'textures': {
+    'clouds1': {
+      'type': 'perlin',
+      'size': 3000.,
+      'octaves': 4,
+      'persistence': 0.45,
+      'percentage': 1.0,
+      'scale': 25.,
+      'range': [0.0, 0.0, 1.0, 1.0],
+      'strength': 1.0,
+      'speed': 1.,
+    },
+    'clouds2': {
+      'type': 'perlin',
+      'size': 300.,
+      'octaves': 3,
+      'persistence': 0.45,
+      'percentage': 0.9,
+      'scale': 1.,
+      'range': [0.0, 0.0, 1.0, 1.0],
+      'strength': 1.0,
+      'speed': 1.,
+    },
+  },
+  'objects': {
+    'bg': {
+      'type': 'circle',
+      'gradient': 'blue',
+      'texture': 'clouds1',
+      'radius': 0,
+      'radiussize': 1920,
+      'opacity': 1.0,
+      'props': {},
+      'init': function() {},
+      'velocity': 0.,
+      'time': function(t, elapsed) {},
+    },
+    'bg2': {
+      'seed': 3,
+      'type': 'circle',
+      'gradient': 'white',
+      'texture': 'clouds2',
+      'radius': 0,
+      'radiussize': 1920,
+      'opacity': 1.0,
+      'props': {},
+      'blending_type': blending_type.add,
+      'init': function() {},
+      'velocity': 0.,
+      'time': function(t, elapsed) {},
+    },
+    'line': {
+      'type': 'line',
+      'gradient': 'red',
+      'radiussize': 4.0,
+      'opacity': 0.5,
+      'props': {},
+      'blending_type': blending_type.subtract,
+      'init': function() {},
+      'time': function(t, elapsed) {},
+    },
+    'obj': {
+      'type': 'circle',
+      'gradient': 'red',
+      'radius': 200,
+      'radiussize': 4.0,
+      'opacity': 1.0,
+      'props': {},
+      'blending_type': blending_type.pinlight,
+      'velocity': 0.,
+      'props': {'child': false},
+      'init': function() {
+        if (this.props.child) return;
+        // temp
+        function squared(num) {
+          return num * num;
+        }
+        function squared_dist(num, num2) {
+          return (num - num2) * (num - num2);
+        }
+        function get_distance(x, y, x2, y2) {
+          return Math.sqrt(squared_dist(x, x2) + squared_dist(y, y2));
+        }
+        function get_angle(x1, y1, x2, y2) {
+          var dx = x1 - x2;
+          var dy = y1 - y2;
+
+          if (dx == 0 && dy == 0) return 0;
+
+          if (dx == 0) {
+            if (dy < 0)
+              return 270;
+            else
+              return 90;
+          }
+
+          var slope = dy / dx;
+          var angle = Math.atan(slope);
+          if (dx < 0) angle += Math.PI;  // M_PI;
+
+          angle = 180.0 * angle / Math.PI;  // M_PI;
+
+          while (angle < 0.0) angle += 360.0;
+
+          return angle;
+        }
+
+
+        var queue = [[this.x, this.y]];
+        var visited = [], real = [];
+
+        visited.push(Math.round(this.x) + '' + Math.round(this.y));
+        real.push([this.x, this.y]);
+        var x = 2.5;
+
+        while (queue.length > 0) {
+          var current = queue.shift();
+          var n = 6.;
+
+          // if dist is 3 circles apart don't recurse ?
+          if (get_distance(0, 0, current[0], current[1]) >= this.radius * x) break;
+
+
+          for (var i = 0; i < n; i++) {
+            var angle = ((360 / n) * i) + 30;
+            var rads = angle * Math.PI / 180.0;
+            var ratio = 1.0;
+            var move = this.radius * ratio * -1;
+            var new_x = current[0] + (Math.cos(rads) * move);
+            var new_y = current[1] + (Math.sin(rads) * move);
+
+            var key = Math.round(new_x) + '' + Math.round(new_y);
+
+            // var ratio = expf(get_distance(0, 0, new_x, new_y) / (this.radius * 3.), 10.);
+            var ratio = expf(get_distance(0, 0, new_x, new_y) / (this.radius * x), 50.);
+            // new_x -= 25. * ratio;
+
+            if (!visited.includes(key)) {
+              queue.push([new_x, new_y]);
+              visited.push(key);
+              real.push([new_x, new_y]);
+              let [vel_x, vel_y] = random_velocity();
+              this.subobj.push({
+                'id': 'obj',
+                'label': 'sub1',
+                'x': new_x - (25. * ratio),
+                'y': new_y,
+                'vel_x': 1.,
+                'vel_y': 0.,
+                'velocity': 50. * ratio,
+                'opacity': 1.0 * (1.0 - ratio),
+                'z': 0,
+                'props': {'child': true}
+              });
+            }
+          }
+        }
+
+        // visited = [];
+        for (let i = 0; i < real.length; i++) {
+          for (let j = 0; j < real.length; j++) {
+            if (i >= j) continue;
+            var a = real[i];
+            var b = real[j];
+            if (get_distance(a[0], a[1], b[0], b[1]) >= 1.5 * this.radius) continue;
+            this.subobj.push({'id': 'line', 'x': a[0], 'y': a[1], 'x2': b[0], 'y2': b[1], 'z': 0, 'props': {}});
+          }
+        }
+      },
+      'time': function(t, elapsed) {},
+    },
+  },
+  'video': {
+    'duration': 30,
+    'fps': 25,
+    'width': 1920,
+    'height': 1920,
+    'scale': 1.5,
+    'rand_seed': 1,
+    'granularity': 1,
+    'grain_for_opacity': false,
+    'extra_grain': 0.,
+    'motion_blur': true,
+    'dithering': true,
+  },
+  'scenes': [{
+    'name': 'scene1',
+    'objects': [
+      {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+      {'id': 'obj', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+      {'id': 'obj', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+    ],
+  }]
+};

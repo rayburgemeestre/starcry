@@ -6,6 +6,7 @@
 
 #include "rendering_engine_wrapper.h"
 #include "data/color.hpp"
+#include "data/settings.hpp"
 #include "rendering_engine.hpp"
 
 struct rendering_engine_wrapper_class_data {
@@ -28,9 +29,10 @@ void rendering_engine_wrapper::render(image &bmp,
                                       uint32_t width,
                                       uint32_t height,
                                       double scale,
-                                      bool verbose) {
+                                      bool verbose,
+                                      data::settings &settings) {
   return data->engine.render(
-      bmp, bg_color, shapes, offset_x, offset_y, canvas_w, canvas_h, width, height, scale, verbose);
+      bmp, bg_color, shapes, offset_x, offset_y, canvas_w, canvas_h, width, height, scale, verbose, settings);
 }
 
 void rendering_engine_wrapper::write_image(image &bmp, const std::string &filename) {

@@ -176,7 +176,12 @@ void generator::init_video_meta_info(std::optional<double> rand_seed) {
     canvas_h = i.double_number(video, "height");
     seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
     tolerated_granularity = i.double_number(video, "granularity");
-    experimental_feature1 = i.boolean(video, "experimental_feature1");
+    if (i.has_field(video, "perlin_noise")) settings_.perlin_noise = i.boolean(video, "perlin_noise");
+    if (i.has_field(video, "motion_blur")) settings_.motion_blur = i.boolean(video, "motion_blur");
+    if (i.has_field(video, "grain_for_opacity")) settings_.grain_for_opacity = i.boolean(video, "grain_for_opacity");
+    if (i.has_field(video, "extra_grain")) settings_.extra_grain = i.double_number(video, "extra_grain");
+    if (i.has_field(video, "update_positions")) settings_.update_positions = i.boolean(video, "update_positions");
+    if (i.has_field(video, "dithering")) settings_.dithering = i.boolean(video, "dithering");
     if (i.has_field(video, "sample")) {
       auto sample = i.get(video, "sample").As<v8::Object>();
       sample_include = i.double_number(sample, "include");  // seconds
@@ -346,6 +351,7 @@ bool generator::_generate_frame() {
           }
           max_dist_found = 0;
           if (attempt > 1) {
+            if (!settings_.motion_blur) break;
             stepper.multiply(1.5);
             revert_all_changes(i, instances, next_instances, intermediates);
           }
