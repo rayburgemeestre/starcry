@@ -45,7 +45,6 @@ private:
   std::unordered_map<int64_t, v8::Local<v8::Object>> prev_parents;
   int attempt = 0;
   double max_dist_found = std::numeric_limits<double>::max();
-  bool experimental_feature1 = false;
   double sample_include = 0.;
   double sample_exclude = 0.;
   double sample_include_current = 0.;
@@ -56,6 +55,12 @@ private:
   std::unordered_map<int64_t, size_t> next_instance_mapping;
   std::shared_ptr<progress_visualizer> visualizer;
   data::settings settings_;
+
+  double video_scale = 1.;
+  double video_scale_next = 1.;
+  double video_scale_intermediate = 1.;
+  std::vector<double> video_scales;
+  size_t max_intermediates = 30.;
 
 public:
   generator();
@@ -80,10 +85,14 @@ public:
                                v8::Local<v8::Array>& next_instances,
                                v8::Local<v8::Array>& intermediates);
   void create_next_instance_mapping(v8_interact& i, v8::Local<v8::Array>& next_instances);
-  void update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, int max_step);
+  void update_object_positions(v8_interact& i,
+                               v8::Local<v8::Array>& next_instances,
+                               int max_step,
+                               v8::Local<v8::Object>& video);
   void update_object_interactions(v8_interact& i,
                                   v8::Local<v8::Array>& next_instances,
-                                  v8::Local<v8::Array>& intermediates);
+                                  v8::Local<v8::Array>& intermediates,
+                                  v8::Local<v8::Object>& video);
   void handle_collisions(v8_interact& i,
                          v8::Local<v8::Object> instance,
                          size_t index,

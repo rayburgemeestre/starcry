@@ -14,61 +14,17 @@
 
 #include "scripting.h"
 #include "util/generator.h"
+#include "util/math.h"
 #include "util/progress_visualizer.h"
 #include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
 
 #include "data/texture.hpp"
-#include "shapes/circle_v2.h"
+#include "shapes/circle.h"
 #include "shapes/position.h"
-#include "shapes/rectangle_v2.h"
+#include "shapes/rectangle.h"
 
 std::shared_ptr<v8_wrapper> context;
-
-/// TODO move somewhere else
-#include <cmath>
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
-double squared(const double& num) {
-  return num * num;
-}
-
-double squared_dist(const double& num, const double& num2) {
-  return (num - num2) * (num - num2);
-}
-
-double get_distance(double x, double y, double x2, double y2) {
-  return sqrt(squared_dist(x, x2) + squared_dist(y, y2));
-}
-
-double get_angle(const double& x1, const double& y1, const double& x2, const double& y2) {
-  double dx = x1 - x2;
-  double dy = y1 - y2;
-
-  if (dx == 0 && dy == 0) return 0;
-
-  if (dx == 0) {
-    if (dy < 0)
-      return 270;
-    else
-      return 90;
-    // old hack, dx = 1;
-  }
-
-  double slope = dy / dx;
-  double angle = atan(slope);
-  // double angle = atan2(dy, dx); // yields erroneous results.
-  if (dx < 0) angle += M_PI;
-
-  angle = 180.0 * angle / M_PI;
-
-  while (angle < 0.0) angle += 360.0;
-
-  return angle;
-}
 
 generator::generator() : visualizer(std::make_shared<progress_visualizer>("Job")) {
   static std::once_flag once;
@@ -182,6 +138,7 @@ void generator::init_video_meta_info(std::optional<double> rand_seed) {
     if (i.has_field(video, "extra_grain")) settings_.extra_grain = i.double_number(video, "extra_grain");
     if (i.has_field(video, "update_positions")) settings_.update_positions = i.boolean(video, "update_positions");
     if (i.has_field(video, "dithering")) settings_.dithering = i.boolean(video, "dithering");
+    if (i.has_field(video, "max_intermediates")) max_intermediates = i.integer_number(video, "max_intermediates");
     if (i.has_field(video, "sample")) {
       auto sample = i.get(video, "sample").As<v8::Object>();
       sample_include = i.double_number(sample, "include");  // seconds
@@ -198,6 +155,10 @@ void generator::init_video_meta_info(std::optional<double> rand_seed) {
     job->canvas_w = canvas_w;
     job->canvas_h = canvas_h;
     job->scale = i.double_number(video, "scale");
+
+    video_scale = i.double_number(video, "scale");
+    video_scale_next = i.double_number(video, "scale");
+    video_scale_intermediate = i.double_number(video, "scale");
   });
 }
 
@@ -338,21 +299,27 @@ bool generator::_generate_frame() {
         indexes.clear();
         attempt = 0;
         max_dist_found = std::numeric_limits<double>::max();
+        video_scales.clear();
+        video_scales.push_back(video_scale);
 
         util::generator::garbage_collect_erased_objects(i, instances, next_instances, intermediates);
 
         while (max_dist_found > tolerated_granularity) {
           ++attempt;
-          if (stepper.max_step > 500) {
+          if (attempt >= 5) {
             throw std::runtime_error(fmt::format("Possible endless loop detected, max_step = {} (while {} > {})",
                                                  stepper.max_step,
                                                  max_dist_found,
                                                  tolerated_granularity));
+            break;
           }
           max_dist_found = 0;
           if (attempt > 1) {
             if (!settings_.motion_blur) break;
-            stepper.multiply(1.5);
+            if (stepper.max_step < max_intermediates) {
+              stepper.multiply(1.5);
+              if (stepper.max_step > max_intermediates) stepper.max_step = max_intermediates;
+            }
             revert_all_changes(i, instances, next_instances, intermediates);
           }
           step_calculator sc(stepper.max_step);
@@ -362,20 +329,29 @@ bool generator::_generate_frame() {
           while (stepper.has_next_step()) {
             qts.clear();
             create_next_instance_mapping(i, next_instances);
-            update_object_positions(i, next_instances, stepper.max_step);
-            update_object_interactions(i, next_instances, intermediates);
+            update_object_positions(i, next_instances, stepper.max_step, video);
+            update_object_interactions(i, next_instances, intermediates, video);
             util::generator::find_new_objects(i, objects, instances, next_instances, intermediates);
             convert_objects_to_render_job(i, next_instances, sc, video);
             util::generator::copy_instances(i, intermediates, next_instances);
+            video_scale_intermediate = video_scale_next;
+            video_scales.push_back(video_scale_intermediate);
             if (job->shapes.size() != stepper.max_step) {
               break;
             }
           }
+          if (job->shapes.size() == stepper.max_step)   // didn't bail out with break above
+            if (stepper.max_step == max_intermediates)  // config doesn't allow finer granularity any way, break.
+              break;
         }
 
-        if (experimental_feature1) revert_position_updates(i, instances, next_instances, intermediates);
+        if (!settings_.update_positions) {
+          revert_position_updates(i, instances, next_instances, intermediates);
+        }
 
         util::generator::copy_instances(i, instances, next_instances);
+        video_scale = video_scale_next;
+        video_scales.push_back(video_scale_next);
       }
     });
     job->job_number++;
@@ -384,6 +360,7 @@ bool generator::_generate_frame() {
   } catch (std::exception& ex) {
     std::cout << ex.what() << std::endl;
   }
+  job->last_frame = job->frame_number == max_frames;
   return job->frame_number != max_frames;
 }
 
@@ -397,6 +374,9 @@ void generator::revert_all_changes(v8_interact& i,
   // reset next and intermediate instances
   util::generator::copy_instances(i, next_instances, instances);
   util::generator::copy_instances(i, intermediates, instances);
+  video_scale_next = video_scale;
+  video_scale_intermediate = video_scale;
+  video_scales.clear();
 }
 
 void generator::revert_position_updates(v8_interact& i,
@@ -427,13 +407,17 @@ void generator::create_next_instance_mapping(v8_interact& i, v8::Local<v8::Array
   }
 }
 
-void generator::update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, int max_step) {
+void generator::update_object_positions(v8_interact& i,
+                                        v8::Local<v8::Array>& next_instances,
+                                        int max_step,
+                                        v8::Local<v8::Object>& video) {
   auto isolate = i.get_isolate();
   for (size_t j = 0; j < next_instances->Length(); j++) {
     auto instance = i.get_index(next_instances, j).As<v8::Object>();
     if (!instance->IsObject()) continue;
 
     update_time(i, instance);
+    video_scale_next = i.double_number(video, "scale");
 
     std::string type = i.str(instance, "type");
     bool is_line = type == "line";
@@ -472,8 +456,8 @@ void generator::update_object_positions(v8_interact& i, v8::Local<v8::Array>& ne
     // For now we only care about circles
     if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
       if (qts.find(collision_group) == qts.end()) {
-        qts.insert(std::make_pair(
-            collision_group, quadtree(rectangle_v2(position(-width() / 2, -height() / 2), width(), height()), 32)));
+        qts.insert(std::make_pair(collision_group,
+                                  quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32)));
       }
       if (collision_group != "undefined") {
         auto unique_id = i.integer_number(instance, "unique_id");
@@ -494,19 +478,25 @@ void generator::update_object_positions(v8_interact& i, v8::Local<v8::Array>& ne
 
 void generator::update_object_interactions(v8_interact& i,
                                            v8::Local<v8::Array>& next_instances,
-                                           v8::Local<v8::Array>& intermediates) {
+                                           v8::Local<v8::Array>& intermediates,
+                                           v8::Local<v8::Object>& video) {
   stepper.reset_current();
   const auto isolate = i.get_isolate();
   for (size_t index = 0; index < next_instances->Length(); index++) {
     auto next_instance = i.get_index(next_instances, index).As<v8::Object>();
     auto previous_instance = i.get_index(intermediates, index).As<v8::Object>();
     if (!next_instance->IsObject() || !previous_instance->IsObject()) continue;
-    auto dist = get_max_travel_of_object(i, previous_instance, next_instance);
-    auto steps = update_steps(dist);
-    if (attempt > 1) {
-      steps = std::max(steps, (int)i.integer_number(next_instance, "steps"));
+    auto motion_blur = !i.has_field(next_instance, "motion_blur") || i.boolean(next_instance, "motion_blur");
+    if (!motion_blur) {
+      i.set_field(next_instance, "steps", v8::Number::New(isolate, 1));
+    } else {
+      auto dist = get_max_travel_of_object(i, previous_instance, next_instance);
+      auto steps = update_steps(dist);
+      if (attempt > 1) {
+        steps = std::max(steps, (int)i.integer_number(next_instance, "steps"));
+      }
+      i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
     }
-    i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
     handle_collisions(i, next_instance, index, next_instances);
   }
 }
@@ -532,7 +522,7 @@ void generator::handle_collisions(v8_interact& i,
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
   auto unique_id = i.integer_number(instance, "unique_id");
-  qts[collision_group].query(unique_id, circle_v2(position(x, y), radius * 2.0, radiussize * 2.0), found);
+  qts[collision_group].query(unique_id, circle(position(x, y), radius * 2.0, radiussize * 2.0), found);
   if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
     for (const auto& collide : found) {
       const auto unique_id2 = collide.userdata;
@@ -633,6 +623,9 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
 int generator::update_steps(double dist) {
   max_dist_found = std::max(max_dist_found, fabs(dist));
   auto steps = (int)std::max(1.0, fabs(dist) / tolerated_granularity);
+  if (steps > max_intermediates) {
+    steps = max_intermediates;
+  }
   stepper.update(steps);
   return steps;
 }
@@ -646,8 +639,20 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto type = i.str(instance, "type");
   auto is_line = type == "line";
   auto label = i.str(instance, "label");
-  auto angle = i.double_number(instance, "angle");
-  if (std::isnan(angle)) angle = 0;
+  auto shape_scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
+  auto rotate = [&](double src_x, double src_y, double* x, double* y, double angle) {
+    if (angle == 0.) {
+      return;
+    }
+    auto angle1 = angle + get_angle(src_x, src_y, *x, *y);
+    while (angle1 > 360.) angle1 -= 360.;
+    auto rads = angle1 * M_PI / 180.0;
+    auto ratio = 1.0;
+    auto dist = get_distance(src_x, src_y, *x, *y);
+    auto move = dist * ratio * -1;
+    *x = (cos(rads) * move);
+    *y = (sin(rads) * move);
+  };
 
   parents[level] = instance;
   prev_parents[level] = previous_instance;
@@ -656,6 +661,7 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto offset_y = static_cast<double>(0);
   auto offset_x2 = static_cast<double>(0);
   auto offset_y2 = static_cast<double>(0);
+  double angle = i.double_number(previous_instance, "angle");
   while (level > 0) {
     level--;
     offset_x += i.double_number(parents[level], "x");
@@ -670,7 +676,6 @@ double generator::get_max_travel_of_object(v8_interact& i,
   }
 
   level = i.double_number(previous_instance, "level");
-  angle = i.double_number(previous_instance, "angle");
   if (std::isnan(angle)) angle = 0.;
   auto prev_offset_x = static_cast<double>(0);
   auto prev_offset_y = static_cast<double>(0);
@@ -731,16 +736,45 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto prev_radiussize = i.double_number(previous_instance, "radiussize");
   auto prev_rad = prev_radius + prev_radiussize;
   auto rad = radius + radiussize;
-  // x, y
+  auto prev_shape_scale = i.has_field(previous_instance, "scale") ? i.double_number(previous_instance, "scale") : 1.0;
+
+  x *= video_scale_next * shape_scale;
+  prev_x *= video_scale_intermediate * prev_shape_scale;
+  y *= video_scale_next * shape_scale;
+  prev_y *= video_scale_intermediate * prev_shape_scale;
+
+  //  // TODO: make smarter for circles and lines, this is just temporary code
+  //  rectangle canvas(position(-canvas_w / 2., -canvas_h/2.), position(canvas_w / 2., canvas_h/2.));
+  //  if (is_line) {
+  //    rectangle shape_rect(position(x, y), position(x2, y2));
+  //    rectangle prev_shape_rect(position(prev_x - rad, prev_y - rad), position(prev_x + rad, prev_y + rad));
+  //    if (!canvas.overlaps(shape_rect) && !canvas.overlaps(prev_shape_rect)) {
+  //      return 0.;
+  //    }
+  //  } else {
+  //    rectangle shape_rect(position(x - rad, y - rad), position(x + rad, y + rad));
+  //    rectangle prev_shape_rect(position(prev_x - rad, prev_y - rad), position(prev_x + rad, prev_y + rad));
+  //    if (!canvas.overlaps(shape_rect) && !canvas.overlaps(prev_shape_rect)) {
+  //      return 0.;
+  //    }
+  //  }
+
   auto dist = sqrt(pow(x - prev_x, 2) + pow(y - prev_y, 2));
   // x2, y2
   if (is_line) {
+    x2 *= video_scale_next * shape_scale;
+    prev_x2 *= video_scale_intermediate * prev_shape_scale;
+    y2 *= video_scale_next * shape_scale;
+    prev_y2 *= video_scale_intermediate * prev_shape_scale;
     dist = std::max(dist, sqrt(pow(x2 - prev_x2, 2) + pow(y2 - prev_y2, 2)));
   }
   // TODO: stupid warp hack
   while (dist >= 1920 * 0.9) dist -= 1920;
   while (dist >= 1080 * 0.9) dist -= 1080;
   // radius
+  rad *= video_scale_next * shape_scale;
+  prev_rad *= video_scale_intermediate * prev_shape_scale;
+  job->scale = video_scale_next;
   auto new_dist = fabs(prev_rad - rad);
   dist = std::max(dist, new_dist);
   return dist;
@@ -789,6 +823,7 @@ void generator::convert_object_to_render_job(
   auto unique_id = i.integer_number(instance, "unique_id");
   auto video_scale = i.double_number(video, "scale");
   auto shape_opacity = i.double_number(instance, "opacity");
+  auto motion_blur = i.boolean(instance, "motion_blur");
 
   data::shape new_shape;
   new_shape.time = time;
@@ -821,6 +856,7 @@ void generator::convert_object_to_render_job(
   new_shape.id = id;
   new_shape.label = label;
   new_shape.level = level;
+  new_shape.motion_blur = motion_blur;
 
   if (type == "circle") {
     new_shape.type = data::shape_type::circle;
@@ -839,6 +875,7 @@ void generator::convert_object_to_render_job(
   }
   job->shapes[stepper.current_step].push_back(new_shape);
   job->scale = video_scale;
+  job->scales = video_scales;
 };
 
 std::shared_ptr<data::job> generator::get_job() const {

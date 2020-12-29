@@ -37,8 +37,7 @@ profile:
 	ls -althrst | tail -n 1
 
 pull:
-	docker pull rayburgemeestre/build-ubuntu:18.04
-	docker pull rayburgemeestre/build-starcry-ubuntu:18.04
+	docker pull rayburgemeestre/build-starcry-ubuntu:20.04
 
 docker-ubuntu1804:
 	# build docker container specific for building starcry
@@ -63,7 +62,7 @@ deps:
 
 	sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5CE16B7B
 	sudo add-apt-repository "deb [arch=amd64] https://cppse.nl/repo/ $$(lsb_release -cs) main"
-	sudo apt-get install -y cppseffmpeg=1.1 v8pp=1.1 allegro5=1.1 allegro5sdl=1.1 fastpfor=1.1 boost=1.1 sfml=1.1 seasocks=1.1 pngpp=1.1 fmt=1.1
+	sudo apt-get install -y cppseffmpeg=1.1 v8pp=1.1 allegro5=1.1 allegro5sdl=1.1 fastpfor=1.1 boost=1.1 sfml=1.1 seasocks=1.1 pngpp=1.1 fmt=1.1 openexr=1.1 imagemagick=1.1
 	sudo apt-get install -y coz-profiler
 
 	# dependencies runtime
@@ -83,6 +82,14 @@ deps:
 	#sudo pt-get install -y libsfml-dev
 	# sfml self-compiled (2.5)
 	sudo apt-get install -y libudev-dev libopenal-dev libflac-dev libvorbis-dev
+
+	# image magick and openexr
+	sudo apt-get install -y libwebp-dev libarchive-dev libzstd-dev
+	# ubuntu runtime deps
+	# libwebp6: ..
+	# libarchive13: /usr/lib/x86_64-linux-gnu/libarchive.so.13
+	# libzstd1: /usr/lib/x86_64-linux-gnu/libzstd.so.1.4.4
+
 
 client_deps:
 	sudo apt-get update
@@ -106,7 +113,7 @@ prepare:
 core_:
 	pushd build && \
 	CXX=$(which c++) cmake .. && \
-	make -j $$(nproc) && \
+	make -j $$(nproc) starcry && \
 	strip --strip-debug starcry
 
 core_debug:

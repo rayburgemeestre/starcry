@@ -22,7 +22,8 @@ std::shared_ptr<render_msg> command_get_image::to_render_msg(std::shared_ptr<job
   sc.copy_to_png(bmp.pixels(), job.width, job.height, image);
   std::ostringstream ss;
   image.write_stream(ss);
-  return std::make_shared<render_msg>(job_msg->client, job_msg->type, job.job_number, job.width, job.height, ss.str());
+  return std::make_shared<render_msg>(
+      job_msg->client, job_msg->type, job.job_number, job.last_frame, job.width, job.height, ss.str());
 }
 
 void command_get_image::handle_frame(std::shared_ptr<render_msg> &job_msg) {

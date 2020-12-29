@@ -29,10 +29,11 @@ void rendering_engine_wrapper::render(image &bmp,
                                       uint32_t width,
                                       uint32_t height,
                                       double scale,
+                                      std::vector<double> scales,
                                       bool verbose,
                                       data::settings &settings) {
   return data->engine.render(
-      bmp, bg_color, shapes, offset_x, offset_y, canvas_w, canvas_h, width, height, scale, verbose, settings);
+      bmp, bg_color, shapes, offset_x, offset_y, canvas_w, canvas_h, width, height, scale, scales, verbose, settings);
 }
 
 void rendering_engine_wrapper::write_image(image &bmp, const std::string &filename) {

@@ -53,6 +53,7 @@ public:
 class render_msg : public message_type {
 public:
   size_t job_number;
+  bool last_frame;
   seasocks::WebSocket *client;
   instruction_type type;
   std::string buffer;
@@ -62,15 +63,29 @@ public:
   render_msg(seasocks::WebSocket *client,
              instruction_type type,
              size_t job_number,
+             bool last_frame,
              uint32_t width,
              uint32_t height,
              std::string buf)
-      : job_number(job_number), client(client), type(type), buffer(std::move(buf)), width(width), height(height) {}
+      : job_number(job_number),
+        last_frame(last_frame),
+        client(client),
+        type(type),
+        buffer(std::move(buf)),
+        width(width),
+        height(height) {}
   render_msg(seasocks::WebSocket *client,
              instruction_type type,
              size_t job_number,
+             bool last_frame,
              uint32_t width,
              uint32_t height,
              std::vector<uint32_t> &pixels)
-      : job_number(job_number), client(client), type(type), pixels(std::move(pixels)), width(width), height(height) {}
+      : job_number(job_number),
+        last_frame(last_frame),
+        client(client),
+        type(type),
+        pixels(std::move(pixels)),
+        width(width),
+        height(height) {}
 };

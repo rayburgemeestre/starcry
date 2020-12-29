@@ -4,21 +4,20 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "shapes/circle_v2.h"
+#include "shapes/circle.h"
 
 #include <algorithm>
 #include <cmath>
 
-circle_v2::circle_v2(position pos, double radius, double radiussize)
-    : pos(pos), radius(radius), radiussize(radiussize) {}
+circle::circle(position pos, double radius, double radiussize) : pos(pos), radius(radius), radiussize(radiussize) {}
 
-bool circle_v2::contains(const position& point) const {
+bool circle::contains(const position& point) const {
   auto rad = radius + radiussize;
   return ((point.x - pos.x) * (point.x - pos.x) + (point.y - pos.y) * (point.y - pos.y) <= rad * rad);
 }
 
 // source https://stackoverflow.com/questions/401847/circle-rectangle-collision-detection-intersection/1879223#1879223
-bool circle_v2::intersects(const rectangle_v2& range) const {
+bool circle::intersects(const rectangle& range) const {
   // Find the closest point to the circle within the rectangle
   double closestX = std::clamp(pos.x, range.top_left.x, range.bottom_right.x);
   double closestY = std::clamp(pos.y, range.top_left.y, range.bottom_right.y);

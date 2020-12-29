@@ -5,6 +5,16 @@ _ = {
       {'position': 0.5, 'r': 1, 'g': 0, 'b': 0, 'a': 1.0},
       {'position': 1.0, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
     ],
+    'yellow': [
+      {'position': 0.0, 'r': 1, 'g': 1, 'b': 0, 'a': 1.0},
+      {'position': 0.5, 'r': 1, 'g': 1, 'b': 0, 'a': 1.0},
+      {'position': 1.0, 'r': 1, 'g': 1, 'b': 0, 'a': 0},
+    ],
+    'green': [
+      {'position': 0.0, 'r': 0, 'g': 1, 'b': 0, 'a': 1.0},
+      {'position': 0.5, 'r': 0, 'g': 1, 'b': 0, 'a': 1.0},
+      {'position': 1.0, 'r': 0, 'g': 1, 'b': 0, 'a': 0},
+    ],
     'msx_blue': [
       // 5900/5500/E000/ff00
       {'position': 0.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0.5},
@@ -13,7 +23,7 @@ _ = {
     ],
     'blue': [
       {'position': 0.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0.5},
-      {'position': 0.2, 'r': 0, 'g': 0, 'b': 1, 'a': 1.0},
+      {'position': 0.4, 'r': 0, 'g': 0, 'b': 1, 'a': 1.0},
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 1, 'a': 1.0},
     ],
     'white': [
@@ -54,14 +64,15 @@ _ = {
       'init': function() {},
       'velocity': 0.,
       'time': function(t, elapsed) {
-        if (t >= 0) {
-          script.video.scale = 1.5 + (1.0 - expf(t, 1000)) * 10.;
-        }
+        // var x = 0.90 * (5000/1920.);
+        var x = 0.90;
+        // was 5.
+        script.video.scale = x - expf(t, 1.);
       },
     },
     'bg': {
       'type': 'circle',
-      'gradient': 'msx_blue',
+      'gradient': 'blue',
       'texture': 'clouds1',
       'radius': 0,
       'radiussize': 1920,
@@ -72,35 +83,21 @@ _ = {
       'time': function(t, elapsed) {},
       // 'motion_blur': false,
     },
-    // 'bg2': {
-    //   'seed': 3,
-    //   'type': 'circle',
-    //   'gradient': 'white',
-    //   'texture': 'clouds2',
-    //   'radius': 0,
-    //   'radiussize': 1920,
-    //   'opacity': 1.0,
-    //   'props': {},
-    //   'blending_type': blending_type.add,
-    //   'init': function() {},
-    //   'velocity': 0.,
-    //   'time': function(t, elapsed) {},
-    // },
     'line': {
       'type': 'line',
-      'gradient': 'white',
+      'gradient': 'red',
       'radiussize': 4.0,
-      'opacity': 0.5,
+      'opacity': 1.0,
       'props': {},
-      'blending_type': blending_type.subtract,
+      'blending_type': blending_type.pinlight,
       'init': function() {},
       'time': function(t, elapsed) {},
     },
     'obj': {
       'type': 'circle',
-      'gradient': 'white',
+      'gradient': 'blue',
       //'radius': 200,
-      'radius': 0,
+      'radius': 200,
       'radiussize': 5.0,
       'opacity': 1.0,
       'props': {},
@@ -109,16 +106,20 @@ _ = {
       'props': {'child': false, 'radius': 200.},
       'init': function() {
         if (this.props.child) return;
+
         // temp
         function squared(num) {
           return num * num;
         }
+
         function squared_dist(num, num2) {
           return (num - num2) * (num - num2);
         }
+
         function get_distance(x, y, x2, y2) {
           return Math.sqrt(squared_dist(x, x2) + squared_dist(y, y2));
         }
+
         function get_angle(x1, y1, x2, y2) {
           var dx = x1 - x2;
           var dy = y1 - y2;
@@ -143,96 +144,116 @@ _ = {
           return angle;
         }
 
-
-        var queue = [[this.x, this.y]];
-        var visited = [], real = [];
-
-        visited.push(Math.round(this.x) + '' + Math.round(this.y));
+        var real = [];
         real.push([this.x, this.y]);
-        var x = 2.5;
 
-        while (queue.length > 0) {
-          var current = queue.shift();
-          var n = 6.;
+        for (var i = 0, n = 6.; i < n; i++) {
+          var angle = ((360 / n) * i) + 30;
+          var rads = angle * Math.PI / 180.0;
+          var ratio = 1.0;
+          var move = this.props.radius * 2. * ratio * -1;
+          var new_x = 0 + (Math.cos(rads) * move);
+          var new_y = 0 + (Math.sin(rads) * move);
 
-          // if dist is 3 circles apart don't recurse ?
-          if (get_distance(0, 0, current[0], current[1]) >= this.props.radius * x) break;
+          real.push([new_x, new_y]);
+          this.subobj.push({
+            'id': 'obj',
+            'label': 'sub1#' + this.subobj.length,
+            'x': new_x,
+            'y': new_y,
+            'z': 0,
+            'props': {'child': true, 'radius': this.props.radius}
+          });
 
-
-          for (var i = 0; i < n; i++) {
-            var angle = ((360 / n) * i) + 30;
-            var rads = angle * Math.PI / 180.0;
-            var ratio = 1.0;
-            var move = this.props.radius * ratio * -1;
-            var new_x = current[0] + (Math.cos(rads) * move);
-            var new_y = current[1] + (Math.sin(rads) * move);
-
-            var key = Math.round(new_x) + '' + Math.round(new_y);
-
-            // var ratio = expf(get_distance(0, 0, new_x, new_y) / (this.radius * 3.), 10.);
-            var ratio = expf(get_distance(0, 0, new_x, new_y) / (this.props.radius * x), 50.);
-            // new_x -= 25. * ratio;
-
-            if (!visited.includes(key)) {
-              queue.push([new_x, new_y]);
-              visited.push(key);
-              real.push([new_x, new_y]);
-              let [vel_x, vel_y] = random_velocity();
-              this.subobj.push({
-                'id': 'obj',
-                'label': 'sub1#' + this.subobj.length,
-                'x': new_x - (25. * ratio),
-                'y': new_y,
-                'vel_x': 1.,
-                'vel_y': 0.,
-                'velocity': 50. * ratio,
-                'opacity': 1.0 * (1.0 - ratio),
-                'z': 0,
-                'props': {'child': true, 'radius': this.props.radius}
-              });
-            }
-          }
+          move = this.props.radius * 4. * ratio * -1;
+          new_x = 0 + (Math.cos(rads) * move);
+          new_y = 0 + (Math.sin(rads) * move);
+          key = Math.round(new_x) + '' + Math.round(new_y);
+          real.push([new_x, new_y]);
+          this.subobj.push({
+            'id': 'obj',
+            'label': 'sub1b#' + this.subobj.length,
+            'x': new_x,
+            'y': new_y,
+            'z': 0,
+            'props': {'child': true, 'radius': this.props.radius}
+          });
         }
 
-        // visited = [];
         for (let i = 0; i < real.length; i++) {
           for (let j = 0; j < real.length; j++) {
             if (i >= j) continue;
             var a = real[i];
             var b = real[j];
-            if (get_distance(a[0], a[1], b[0], b[1]) >= 1.5 * this.props.radius) continue;
-            this.subobj.push(
-                {'id': 'line', 'label': 'lineX', 'x': a[0], 'y': a[1], 'x2': b[0], 'y2': b[1], 'z': 0, 'props': {}});
+            // var dist = get_distance(a[0], a[1], b[0], b[1]);
+            var dist = get_distance(0, 0, a[0], a[1]);
+            var dist2 = get_distance(0, 0, b[0], b[1]);
+            this.subobj.push({
+              'id': 'line',
+              'label': 'lineX',
+              'x': a[0],
+              'y': a[1],
+              'x2': b[0],
+              'y2': b[1],
+              'z': 0,
+              'gradient': dist < (this.props.radius * 3.1) && dist2 < (this.props.radius * 3.1) ? 'yellow' : 'red',
+              'props': {}
+            });
           }
         }
+        // encapsulating circles
+        this.subobj.push({
+          'id': 'obj',
+          'label': 'e#' + this.subobj.length,
+          'x': 0,
+          'y': 0,
+          'z': 0,
+          'radius': this.props.radius * 3,
+          'gradient': 'green',
+          'props': {'child': true, 'radius': this.props.radius}
+        });
+        this.subobj.push({
+          'id': 'obj',
+          'label': 'e#' + this.subobj.length,
+          'x': 0,
+          'y': 0,
+          'z': 0,
+          'radius': this.props.radius * 4,
+          'gradient': 'green',
+          'props': {'child': true, 'radius': this.props.radius}
+        });
+        this.subobj.push({
+          'id': 'obj',
+          'label': 'e#' + this.subobj.length,
+          'x': 0,
+          'y': 0,
+          'z': 0,
+          'radius': this.props.radius * 5,
+          'gradient': 'green',
+          'props': {'child': true, 'radius': this.props.radius}
+        });
       },
-      'time': function(t, elapsed) {
-        // if (t >= 0 && t <= 1.0) {
-        //   script.video.scale = 1.5 + (1.0 - logn(t, 10)) * 10.;
-        // }
-        this.radius = this.props.radius * (t * 1.02);
-        // TODO: this t should not go beneath zero
-        if (this.radius < 0) this.radius = 0;
-        if (this.radius >= 200.) this.radius = 200.;
-        // output("set: " + this.radius + " from " + this.props.radius + " * " + t);
-      },
+      'time': function(t, elapsed) {},
     },
   },
   'video': {
-    'duration': 3,
+    'duration': 1,
     'fps': 25,
     'width': 1920,
     'height': 1920,
-    'scale': 11.5,
-    //'scale': 1.5,
+    'scale': 0.70,
+    //        'width': 5000,
+    //       'height': 5000,
+    //      'scale': 0.70 * (5000/1920.),
     'rand_seed': 1,
     'granularity': 1.,
-    'grain_for_opacity': false,
-    'extra_grain': 0.,
-    //'motion_blur': true,
+    'grain_for_opacity': true,
+    'extra_grain': 0.2,
+    'motion_blur': true,
     'perlin_noise': true,
     'dithering': true,
-    'update_positions': false,
+    'update_positions': true,
+    'max_intermediates': 15,
     // 'sample': {
     //   'include': 1.,  // include one second.
     //   'exclude': 5.,  // then skip 5 seconds, and so on.
@@ -243,8 +264,7 @@ _ = {
     'objects': [
       {'id': 'a', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
       {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
-      {'id': 'obj', 'x': 0, 'radius': 0, 'y': 0, 'z': 0, 'props': {}},
-      {'id': 'obj', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+      {'id': 'obj', 'x': 0, 'label': 'whaa', 'y': 0, 'z': 0, 'props': {}},
     ],
   }]
 };

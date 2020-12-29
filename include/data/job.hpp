@@ -32,7 +32,8 @@ struct job {
   data::color background_color;
   // for each rendering pass the list of shapes
   std::vector<std::vector<data::shape>> shapes;
-  double scale;
+  double scale;  // deprecated
+  std::vector<double> scales;
   uint32_t bitrate;
   bool compress;
   bool save_image;

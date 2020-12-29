@@ -7,8 +7,7 @@
 
 namespace data {
 
-class settings {
-public:
+struct settings {
   bool perlin_noise;
   bool motion_blur;
   bool grain_for_opacity;
@@ -22,7 +21,7 @@ public:
         grain_for_opacity(true),
         extra_grain(0.1),
         update_positions(true),
-        dithering(dithering) {}
+        dithering(true) {}
 
   template <class Archive>
   void serialize(Archive &ar) {

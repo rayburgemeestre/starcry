@@ -160,6 +160,8 @@ _ = {
     //    'scale': 7.3,
     'rand_seed': 1,
     'granularity': 1,
+    'grain_for_opacity': false,
+    'dithering': true,
   },
   'scenes': [{
     'name': 'scene1',

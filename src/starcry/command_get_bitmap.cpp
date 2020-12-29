@@ -19,7 +19,7 @@ std::shared_ptr<render_msg> command_get_bitmap::to_render_msg(std::shared_ptr<jo
   job.job_number = std::numeric_limits<uint32_t>::max();
   auto transfer_pixels = sc.pixels_vec_to_pixel_data(bmp.pixels());
   return std::make_shared<render_msg>(
-      job_msg->client, job_msg->type, job.job_number, job.width, job.height, transfer_pixels);
+      job_msg->client, job_msg->type, job.job_number, job.last_frame, job.width, job.height, transfer_pixels);
 }
 
 void command_get_bitmap::handle_frame(std::shared_ptr<render_msg> &job_msg) {

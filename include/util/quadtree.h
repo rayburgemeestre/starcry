@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#include "shapes/circle_v2.h"
+#include "shapes/circle.h"
 
 #include <cstddef>
 #include <memory>
@@ -20,7 +20,7 @@ public:
 
 class quadtree {
 public:
-  rectangle_v2 boundary;
+  rectangle boundary;
   size_t capacity;
   bool divided;
   std::vector<point_type> points;
@@ -31,9 +31,9 @@ public:
   std::unique_ptr<quadtree> southwest;
 
   quadtree();
-  quadtree(rectangle_v2 boundary, size_t capacity);
+  quadtree(rectangle boundary, size_t capacity);
 
   void subdivide();
   bool insert(point_type point);
-  void query(size_t index, const circle_v2& range, std::vector<point_type>& found);
+  void query(size_t index, const circle& range, std::vector<point_type>& found);
 };

@@ -8,9 +8,9 @@
 
 point_type::point_type(position pos, int userdata) : pos(pos), userdata(userdata) {}
 
-quadtree::quadtree() : boundary(rectangle_v2(position(0, 0), 0, 0)) {}
+quadtree::quadtree() : boundary(rectangle(position(0, 0), 0, 0)) {}
 
-quadtree::quadtree(rectangle_v2 boundary, size_t capacity)
+quadtree::quadtree(rectangle boundary, size_t capacity)
     : boundary(boundary), capacity(std::max(capacity, size_t(1))), divided(false) {}
 
 void quadtree::subdivide() {
@@ -19,10 +19,10 @@ void quadtree::subdivide() {
   auto w = boundary.width / 2;
   auto h = boundary.height / 2;
 
-  rectangle_v2 nw(position(x + w, y), w, h);
-  rectangle_v2 ne(position(x + w, y + h), w, h);
-  rectangle_v2 se(position(x, y + h), w, h);
-  rectangle_v2 sw(position(x, y), w, h);
+  rectangle nw(position(x + w, y), w, h);
+  rectangle ne(position(x + w, y + h), w, h);
+  rectangle se(position(x, y + h), w, h);
+  rectangle sw(position(x, y), w, h);
 
   northwest = std::make_unique<quadtree>(nw, capacity);
   northeast = std::make_unique<quadtree>(ne, capacity);
@@ -46,7 +46,7 @@ bool quadtree::insert(point_type point) {
   return (northeast->insert(point) || northwest->insert(point) || southeast->insert(point) || southwest->insert(point));
 }
 
-void quadtree::query(size_t index, const circle_v2& range, std::vector<point_type>& found) {
+void quadtree::query(size_t index, const circle& range, std::vector<point_type>& found) {
   if (!range.intersects(boundary)) {
     return;
   }

@@ -6,17 +6,16 @@
 #pragma once
 
 #include "shapes/position.h"
-#include "shapes/rectangle_v2.h"
+#include "shapes/rectangle.h"
 
-class circle_v2 {
+class circle {
 public:
   const position pos;
   const double radius;
   const double radiussize;
 
-  circle_v2(position pos, double radius, double radiussize);
+  circle(position pos, double radius, double radiussize);
 
   bool contains(const position& point) const;
-
-  bool intersects(const rectangle_v2& range) const;
+  bool intersects(const rectangle& range) const;
 };

@@ -9,6 +9,7 @@
 #include <cstring>
 #include <sstream>
 
+#include <Magick++.h>
 #include <coz.h>
 #include <fmt/core.h>
 
@@ -105,6 +106,7 @@ void starcry::render_job(rendering_engine_wrapper &engine, const data::job &job,
                 job.width,
                 job.height,
                 job.scale,
+                job.scales,
                 log_level_ == starcry::log_level::debug,
                 settings);
   if (job.job_number == std::numeric_limits<uint32_t>::max()) {
@@ -115,6 +117,30 @@ void starcry::render_job(rendering_engine_wrapper &engine, const data::job &job,
     copy_to_png(bmp.pixels(), job.width, job.height, image);
     image.write(fmt::format(
         "output_frame_{}_seed_{}_{}x{}.png", job.frame_number, gen->get_seed(), job.canvas_w, job.canvas_h));
+    using namespace Magick;
+    try {
+      std::vector<double> rgb;
+      rgb.resize(job.width * job.height * 4);
+      size_t index = 0;
+      auto &source = bmp.pixels();
+      for (uint32_t y = 0; y < job.height; y++) {
+        for (uint32_t x = 0; x < job.width; x++) {
+          rgb.push_back(source[index].r);
+          rgb.push_back(source[index].g);
+          rgb.push_back(source[index].b);
+          rgb.push_back(source[index].a);
+          index++;
+        }
+      }
+      Image image(fmt::format("{}x{}", job.width, job.height).c_str(), "white");
+      image.read(job.width, job.height, "RGBA", StorageType::DoublePixel, (void *)&bmp.pixels()[0]);
+      //      image.read(Blob((void *) &bmp.pixels()[0], bmp.pixels().size()), Geometry(job.width, job.height));
+      // image.depth(32);
+      image.write(fmt::format(
+          "output_frame_{}_seed_{}_{}x{}.exr", job.frame_number, gen->get_seed(), job.canvas_w, job.canvas_h));
+    } catch (std::exception &error_) {
+      std::cout << "Caught exception: " << error_.what() << std::endl;
+    }
   }
 }
 
@@ -132,13 +158,16 @@ void starcry::copy_to_png(const std::vector<data::color> &source,
       // dest[y][x] = png::rgb_pixel(*(data + 2), *(data + 1), *(data + 0));
 
       // My attempt at "random" dithering, probably inefficient
-      uint8_t r = source[index].r * m;
-      uint8_t g = source[index].g * m;
-      uint8_t b = source[index].b * m;
+      double r1 = source[index].r;
+      double g1 = source[index].g;
+      double b1 = source[index].b;
+      uint8_t r = r1 * m;
+      uint8_t g = g1 * m;
+      uint8_t b = b1 * m;
       if (settings.dithering) {
-        double r_dbl = source[index].r * m;
-        double g_dbl = source[index].g * m;
-        double b_dbl = source[index].b * m;
+        double r_dbl = r1 * m;
+        double g_dbl = g1 * m;
+        double b_dbl = b1 * m;
         double r_offset = r_dbl - static_cast<double>(r);
         double g_offset = g_dbl - static_cast<double>(g);
         double b_offset = b_dbl - static_cast<double>(b);
@@ -179,7 +208,8 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 
   if (mode == starcry::render_video_mode::javascript_only) {
     std::vector<uint32_t> transfer_pixels;
-    return std::make_shared<render_msg>(job_msg->client, job_msg->type, job.job_number, 0, 0, transfer_pixels);
+    return std::make_shared<render_msg>(
+        job_msg->client, job_msg->type, job.job_number, job.last_frame, 0, 0, transfer_pixels);
   }
 
   // no need to render in this case, client will do the rendering
@@ -211,6 +241,11 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       if (gui) gui->add_frame(job_msg->width, job_msg->height, job_msg->pixels);
       if (framer) {
         framer->add_frame(job_msg->pixels);
+        if (job_msg->last_frame) {
+          for (int i = 0; i < 50; i++) {
+            framer->add_frame(job_msg->pixels);
+          }
+        }
       }
       return;
     }
@@ -294,6 +329,7 @@ void starcry::run_client(const std::string &host) {
     ;
 }
 
+// This function is used to send to framer and als the preview window
 std::vector<uint32_t> starcry::pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in) const {
   std::vector<uint32_t> pixels_out;
   pixels_out.reserve(pixels_in.size());

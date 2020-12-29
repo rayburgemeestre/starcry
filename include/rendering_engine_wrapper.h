@@ -41,6 +41,7 @@ public:
               uint32_t width,
               uint32_t height,
               double scale,
+              std::vector<double> scales,
               bool verbose,
               data::settings &settings);
 

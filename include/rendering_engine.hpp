@@ -63,6 +63,7 @@ public:
               uint32_t width,
               uint32_t height,
               double scale,
+              std::vector<double> scales,
               bool verbose,
               data::settings &settings) {
     // this lock is no longer needed since we got rid of all dependencies
@@ -78,7 +79,8 @@ public:
     //   }
     // }
 
-    draw_logic_.scale(scale);
+    draw_logic_.scale(scale);  // TODO: deprecate
+
     draw_logic_.width(width);
     draw_logic_.height(height);
     draw_logic_.center(canvas_w / 2, canvas_h / 2);
@@ -99,6 +101,7 @@ public:
           if (shape.indexes.size() > 0) {
             opacity /= (shape.indexes.size() + 1);
           }
+          draw_logic_.scale(scales[scales.size() - 1]);
           draw_logic_.render_circle(bmp, shape, opacity, settings);
 
           // the rest...
@@ -106,6 +109,7 @@ public:
             const auto &step = index_data.first;
             const auto &index = index_data.second;
             const auto &shape = shapes[step][index];
+            draw_logic_.scale(scales[step]);  // TODO: fix this
             draw_logic_.render_circle(bmp, shape, opacity, settings);
           }
 
@@ -115,6 +119,7 @@ public:
           if (shape.indexes.size() > 0) {
             opacity /= (shape.indexes.size() + 1);
           }
+          draw_logic_.scale(scales[scales.size() - 1]);  // TODO: fix this
           draw_logic_.render_line(bmp, shape, opacity, settings);
 
           // the rest...
@@ -122,9 +127,11 @@ public:
             const auto &step = index_data.first;
             const auto &index = index_data.second;
             const auto &shape = shapes[step][index];
+            draw_logic_.scale(scales[step]);  // TODO: fix this
             draw_logic_.render_line(bmp, shape, opacity, settings);
           }
         } else if (shape.type == data::shape_type::text) {
+          draw_logic_.scale(scales[scales.size() - 1]);  // TODO: fix this
           draw_logic_.render_text(shape.x, shape.y, shape.text_size, shape.text, shape.align);
         }
       }

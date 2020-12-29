@@ -52,6 +52,8 @@ include_directories(
     "/opt/cppse/build/seasocks/include/"
     "/opt/cppse/build/fmt/include/"
     "/opt/cppse/build/png++/"
+    "/opt/cppse/build/openexr/include/"
+    "/opt/cppse/build/imagemagick/include/ImageMagick-7/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/cereal/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/json/include/"
@@ -152,6 +154,24 @@ target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libcrypto.a)
 
 # seasocks
 target_link_libraries(starcry /opt/cppse/build/seasocks/lib/libseasocks.a)
+
+# openexr
+target_link_libraries(starcry /opt/cppse/build/openexr/lib/libHalf-2_5.a)
+target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIex-2_5.a)
+target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIexMath-2_5.a)
+target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIlmImf-2_5.a)
+target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIlmImfUtil-2_5.a)
+target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIlmThread-2_5.a)
+target_link_libraries(starcry /opt/cppse/build/openexr/lib/libImath-2_5.a)
+
+# imagemagick
+target_link_libraries(starcry -lzstd)
+target_link_libraries(starcry -lwebp)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libjbig.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libtiff.a)
+target_link_libraries(starcry /opt/cppse/build/imagemagick/lib/libMagickCore-7.Q16HDRI.a)
+target_link_libraries(starcry /opt/cppse/build/imagemagick/lib/libMagick++-7.Q16HDRI.a)
+target_link_libraries(starcry /opt/cppse/build/imagemagick/lib/libMagickWand-7.Q16HDRI.a)
 
 if (SANITIZER)
 # ASAN

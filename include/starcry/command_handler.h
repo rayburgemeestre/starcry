@@ -20,6 +20,7 @@ protected:
 
 public:
   command_handler(starcry &sc);
+  virtual ~command_handler() = default;
 
   // same for get_image, get_shapes, get_objects, get_bitmap, different for get_video
   virtual void to_job(std::shared_ptr<instruction> &cmd_def);

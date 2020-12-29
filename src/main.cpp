@@ -15,11 +15,14 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+#include <Magick++.h>
+
 #include "starcry.h"
 
 #include "generator.h"
 
 namespace po = ::boost::program_options;
+using namespace Magick;
 
 class main_program {
 private:
@@ -148,6 +151,7 @@ public:
 };
 
 int main(int argc, char *argv[]) {
+  InitializeMagick(*argv);
   main_program prog{argc, argv};
   return 0;
 }

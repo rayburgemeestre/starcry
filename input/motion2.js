@@ -131,6 +131,7 @@ _ = {
     'ball': {
       'type': 'circle',
       'collision_group': 'cg1',
+      'blending_type': blending_type.pinlight,
       'gradients': [
         [1.0, 'white'],
         [0.0, 'white_2'],
@@ -158,6 +159,7 @@ _ = {
     'red_ball': {
       'type': 'circle',
       'collision_group': 'cg2',
+      'blending_type': blending_type.pinlight,
       'gradients': [
         [1.0, 'red'],
       ],
@@ -210,6 +212,8 @@ _ = {
     'scale': 1,
     'rand_seed': 3,
     'granularity': 1,
+    'grain_for_opacity': false,
+    'dithering': true,
   },
   'scenes': [{
     'name': 'scene1',
