@@ -39,7 +39,15 @@ Ubuntu 20.04.
 
 - `libs/piper` - a pipeline architecture is used for the main architecture.
 - `libs/framer` - ffmpeg wrapper to generate video output.
-- `V8` - used for scripting, starcry is tightly coupled with it.
+- `libffmpeg` + `h264` - dependencies used by framer.
+- `V8` + `v8pp` - used for scripting, starcry is tightly coupled with it.
 - `VueJS` - used for the Web UI
 - `Vuekit` - used for the Web UI
 - `Seasocks` - used for the Web UI
+- `png++` - used for writing PNG files
+- `fmt` - used for string formatting
+- `SFML` - used for preview window
+- `ImageMagick` - used for writing 16-bit PNG, TIFF or EXR files
+- `OpenEXR` - TODO: use for layered EXR files
+
+Almost everything is statically linked, resulting in a relatively portable binary.

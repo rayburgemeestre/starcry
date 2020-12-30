@@ -34,8 +34,9 @@ generator::generator() : visualizer(std::make_shared<progress_visualizer>("Job")
 }
 
 void generator::init(const std::string& filename, std::optional<double> rand_seed) {
-  init_context(filename);
-  init_user_script(filename);
+  filename_ = filename;
+  init_context();
+  init_user_script();
   init_job();
   init_video_meta_info(rand_seed);
   init_gradients();
@@ -43,9 +44,9 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
   init_object_instances();
 }
 
-void generator::init_context(const std::string& filename) {
+void generator::init_context() {
   if (context == nullptr) {
-    context = std::make_shared<v8_wrapper>(filename);
+    context = std::make_shared<v8_wrapper>(filename());
   }
   context->reset();
   context->add_fun("output", &output_fun);
@@ -90,12 +91,12 @@ void generator::init_context(const std::string& filename) {
   context->context->set("blending_type", consts);
 }
 
-void generator::init_user_script(const std::string& filename) {
-  std::ifstream stream(filename.c_str());
-  if (!stream && filename != "-") {
-    throw std::runtime_error("could not locate file " + filename);
+void generator::init_user_script() {
+  std::ifstream stream(filename().c_str());
+  if (!stream && filename() != "-") {
+    throw std::runtime_error("could not locate file " + filename());
   }
-  std::istreambuf_iterator<char> begin(filename == "-" ? std::cin : stream), end;
+  std::istreambuf_iterator<char> begin(filename() == "-" ? std::cin : stream), end;
   const auto source = std::string("script = ") + std::string(begin, end);
   context->run(source);
 }
@@ -543,9 +544,18 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
 
   auto x = i.double_number(instance, "x");
   auto y = i.double_number(instance, "y");
-
   auto x2 = i.double_number(instance2, "x");
   auto y2 = i.double_number(instance2, "y");
+  auto radius = i.double_number(instance, "radius");
+  auto radiussize = i.double_number(instance, "radiussize");
+  auto radius2 = i.double_number(instance, "radius");
+  auto radiussize2 = i.double_number(instance, "radiussize");
+
+  // If the quadtree reported a match, it doesn't mean the objects fully collide
+  circle a(position(x, y), radius, radiussize);
+  circle b(position(x2, y2), radius2, radiussize2);
+  if (!a.overlaps(b)) return;
+
   if (!instance2->IsObject()) return;
 
   // they already collided, no need to let them collide again
@@ -662,10 +672,16 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto offset_x2 = static_cast<double>(0);
   auto offset_y2 = static_cast<double>(0);
   double angle = i.double_number(previous_instance, "angle");
+  double pivot_x = i.double_number(instance, "x");
+  double pivot_y = i.double_number(instance, "y");
   while (level > 0) {
     level--;
     offset_x += i.double_number(parents[level], "x");
     offset_y += i.double_number(parents[level], "y");
+    if (level == 1) {
+      pivot_x = i.double_number(parents[level], "x");
+      pivot_y = i.double_number(parents[level], "y");
+    }
     if (is_line) {
       // note, do not assume all parents are lines, use x & y relative
       offset_x2 += i.double_number(parents[level], "x");
@@ -698,23 +714,26 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto x2 = is_line ? offset_x2 + i.double_number(instance, "x2") : 0.0;
   auto y2 = is_line ? offset_y2 + i.double_number(instance, "y2") : 0.0;
 
+  // auto level_ = i.double_number(previous_instance, "level");
   if (angle != 0.) {
-    auto angle1 = angle + get_angle(0, 0, x, y);
+    auto angle1 = angle + get_angle(pivot_x, pivot_y, x, y);
     while (angle1 > 360.) angle1 -= 360.;
     auto rads = angle1 * M_PI / 180.0;
     auto ratio = 1.0;
-    auto dist = get_distance(0, 0, x, y);
+    auto dist = get_distance(pivot_x, pivot_y, x, y);
     auto move = dist * ratio * -1;
-    x = (cos(rads) * move);
-    y = (sin(rads) * move);
+    x = pivot_x + (cos(rads) * move);
+    y = pivot_y + (sin(rads) * move);
 
+    /*
     auto angle2 = angle + get_angle(0, 0, x2, y2);
     while (angle2 > 360.) angle2 -= 360.;
     rads = angle2 * M_PI / 180.0;
-    dist = get_distance(0, 0, x2, y2);
+    dist = get_distance(offset_x2, offset_y2, x2, y2);
     move = dist * ratio * -1;
-    x2 = (cos(rads) * move);
-    y2 = (sin(rads) * move);
+    x2 = offset_x + (cos(rads) * move);
+    y2 = offset_y + (sin(rads) * move);
+    */
   }
 
   auto radius = i.double_number(instance, "radius");

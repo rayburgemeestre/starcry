@@ -110,13 +110,27 @@ void starcry::render_job(rendering_engine_wrapper &engine, const data::job &job,
                 log_level_ == starcry::log_level::debug,
                 settings);
   if (job.job_number == std::numeric_limits<uint32_t>::max()) {
+    auto filename = gen->filename();
+    auto pos = filename.rfind("/");
+    if (pos != std::string::npos) {
+      filename = filename.substr(pos + 1);
+    }
+    pos = filename.find(".js");
+    if (pos != std::string::npos) {
+      filename = filename.substr(0, pos);
+    }
+
     // There is 16 BIT, also + Alpha, however, seems to internally still use an 8 bit palette somehow.
     // Will need to figure out in the future how to properly use 16 bit, for now, will focus on fixing the 8 bit
     // version. png::image<png::rgb_pixel_16> image(job.width, job.height);
     png::image<png::rgb_pixel> image(job.width, job.height);
     copy_to_png(bmp.pixels(), job.width, job.height, image);
-    image.write(fmt::format(
-        "output_frame_{}_seed_{}_{}x{}.png", job.frame_number, gen->get_seed(), job.canvas_w, job.canvas_h));
+    image.write(fmt::format("output_frame_{}_seed_{}_{}x{}-{}.png",
+                            job.frame_number,
+                            gen->get_seed(),
+                            job.canvas_w,
+                            job.canvas_h,
+                            filename));
     using namespace Magick;
     try {
       std::vector<double> rgb;
@@ -136,8 +150,12 @@ void starcry::render_job(rendering_engine_wrapper &engine, const data::job &job,
       image.read(job.width, job.height, "RGBA", StorageType::DoublePixel, (void *)&bmp.pixels()[0]);
       //      image.read(Blob((void *) &bmp.pixels()[0], bmp.pixels().size()), Geometry(job.width, job.height));
       // image.depth(32);
-      image.write(fmt::format(
-          "output_frame_{}_seed_{}_{}x{}.exr", job.frame_number, gen->get_seed(), job.canvas_w, job.canvas_h));
+      image.write(fmt::format("output_frame_{}_seed_{}_{}x{}-{}.exr",
+                              job.frame_number,
+                              gen->get_seed(),
+                              job.canvas_w,
+                              job.canvas_h,
+                              filename));
     } catch (std::exception &error_) {
       std::cout << "Caught exception: " << error_.what() << std::endl;
     }

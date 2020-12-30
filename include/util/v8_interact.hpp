@@ -199,7 +199,11 @@ public:
     return array->Get(ctx, v8_str(context, index)).ToLocalChecked();
   }
   v8::Local<v8::Array> prop_names(v8::Local<v8::Object> obj) {
-    return obj->GetOwnPropertyNames(ctx).ToLocalChecked();
+    v8::Local<v8::Array> out;
+    if (!obj->IsObject() || !obj->GetOwnPropertyNames(ctx).ToLocal(&out)) {
+      out = v8::Array::New(get_isolate());
+    }
+    return out;
   };
   void set_prototype(v8::Local<v8::Object> dest, v8::Local<v8::Object> source) {
     handle_error(dest->SetPrototype(isolate->GetCurrentContext(), source));

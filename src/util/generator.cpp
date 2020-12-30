@@ -124,7 +124,8 @@ void instantiate_object(v8_interact& i,
   // Make sure we deep copy the gradients
   i.set_field(new_instance, "gradients", v8::Array::New(isolate));
   auto dest_gradients = i.get(new_instance, "gradients").As<v8::Array>();
-  auto gradients = i.get(object_prototype, "gradients").As<v8::Array>();
+  auto gradients = i.has_field(object_prototype, "gradients") ? i.get(object_prototype, "gradients").As<v8::Array>()
+                                                              : v8::Array::New(i.get_isolate());
   for (size_t k = 0; k < gradients->Length(); k++) {
     i.set_field(dest_gradients, k, v8::Array::New(isolate));
 

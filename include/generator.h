@@ -62,13 +62,15 @@ private:
   std::vector<double> video_scales;
   size_t max_intermediates = 30.;
 
+  std::string filename_;
+
 public:
   generator();
   ~generator() = default;
 
   void init(const std::string& filename, std::optional<double> rand_seed);
-  void init_context(const std::string& filename);
-  void init_user_script(const std::string& filename);
+  void init_context();
+  void init_user_script();
   void init_job();
   void init_video_meta_info(std::optional<double> rand_seed);
   void init_gradients();
@@ -128,6 +130,9 @@ public:
   }
   const data::settings settings() const {
     return settings_;
+  }
+  const std::string filename() const {
+    return filename_;
   }
 
 private:

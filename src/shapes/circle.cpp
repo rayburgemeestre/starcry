@@ -31,3 +31,11 @@ bool circle::intersects(const rectangle& range) const {
   auto p = ((radius + radiussize) * (radius + radiussize));
   return distanceSquared < p;
 }
+
+bool circle::overlaps(const circle& other) const {
+  double distanceX = pos.x - other.pos.x;
+  double distanceY = pos.y - other.pos.y;
+  double distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+  auto p = ((radius + radiussize) * (radius + radiussize));
+  return distanceSquared < p;
+}
