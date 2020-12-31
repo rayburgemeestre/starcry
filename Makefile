@@ -84,7 +84,7 @@ deps:
 	sudo apt-get install -y libudev-dev libopenal-dev libflac-dev libvorbis-dev
 
 	# image magick and openexr
-	sudo apt-get install -y libwebp-dev libarchive-dev libzstd-dev libjbig-dev
+	sudo apt-get install -y libwebp-dev libarchive-dev libzstd-dev libjbig-dev libtiff-dev
 	# ubuntu runtime deps
 	# libwebp6: ..
 	# libarchive13: /usr/lib/x86_64-linux-gnu/libarchive.so.13
