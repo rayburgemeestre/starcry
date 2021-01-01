@@ -33,6 +33,7 @@ private:
   po::options_description desc = std::string("Allowed options");
   std::string script = "input/test.js";
   size_t num_worker_threads = 1;
+  size_t num_chunks = 1;
   std::string host = "localhost";
 
 public:
@@ -48,6 +49,7 @@ public:
       ("frame,f", po::value<size_t>(&frame_of_interest), "specific frame to render and save as BMP file")
       ("seed", po::value<double>(&rand_seed), "override the random seed used")
       ("num_threads,t", po::value<size_t>(&num_worker_threads), "number of local render threads (default 1)")
+      ("num_chunks,c", po::value<size_t>(&num_chunks), "number of chunks to chop frame into (default 1)")
       ("server", "start server to allow dynamic renderers (default no)")
       ("client", po::value<std::string>(&host), "start client renderer, connect to host (default localhost)")
       ("gui", "render to graphical window")
@@ -118,10 +120,10 @@ public:
       }
       if (frame_of_interest != std::numeric_limits<size_t>::max()) {
         // render still image
-        sc.add_command(nullptr, script, instruction_type::get_image, frame_of_interest);
+        sc.add_command(nullptr, script, instruction_type::get_raw_image, frame_of_interest, num_chunks);
       } else {
         // render video
-        sc.add_command(nullptr, script, output_file);
+        sc.add_command(nullptr, script, output_file, num_chunks);
       }
     };
 

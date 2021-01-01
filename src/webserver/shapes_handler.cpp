@@ -21,7 +21,7 @@ void ShapesHandler::onData(seasocks::WebSocket *con, const char *data) {
   auto find = input.find(" ");
   if (find != std::string::npos) {
     sc->add_command(
-        con, input.substr(0, find), instruction_type::get_shapes, std::atoi(input.substr(find + 1).c_str()));
+        con, input.substr(0, find), instruction_type::get_shapes, std::atoi(input.substr(find + 1).c_str()), 1);
   }
 }
 

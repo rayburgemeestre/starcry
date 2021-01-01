@@ -10,6 +10,7 @@
 #include "generator.h"
 #include "starcry.h"
 #include "starcry/command_get_video.h"
+#include "util/image_splitter.hpp"
 #include "util/progress_visualizer.h"
 
 command_get_video::command_get_video(starcry &sc) : command_handler(sc) {}
@@ -42,7 +43,25 @@ void command_get_video::to_job(std::shared_ptr<instruction> &cmd_def) {
   while (true) {
     auto ret = sc.gen->generate_frame();
     auto job_copy = std::make_shared<data::job>(*sc.gen->get_job());
-    sc.jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, job_copy));
+
+    // TODO: duplicated code, move to base class
+    util::ImageSplitter<uint32_t> is{job_copy->canvas_w, job_copy->canvas_h};
+    if (cmd_def->num_chunks == 1) {
+      sc.jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, job_copy));
+    } else {
+      const auto rectangles = is.split(cmd_def->num_chunks, util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
+      for (size_t i = 0, counter = 1; i < rectangles.size(); i++) {
+        job_copy->width = rectangles[i].width();
+        job_copy->height = rectangles[i].height();
+        job_copy->offset_x = rectangles[i].x();
+        job_copy->offset_y = rectangles[i].y();
+        job_copy->chunk = counter;
+        job_copy->num_chunks = cmd_def->num_chunks;
+        counter++;
+        sc.jobs->push(
+            std::make_shared<job_message>(cmd_def->client, cmd_def->type, std::make_shared<data::job>(*job_copy)));
+      }
+    }
     sc.jobs->sleep_until_not_full();
     if (!ret) break;
   }
@@ -55,6 +74,16 @@ std::shared_ptr<render_msg> command_get_video::to_render_msg(std::shared_ptr<job
   }
   auto &job = *job_msg->job;
   auto transfer_pixels = sc.pixels_vec_to_pixel_data(bmp.pixels());
-  return std::make_shared<render_msg>(
-      job_msg->client, job_msg->type, job.job_number, job.last_frame, job.width, job.height, transfer_pixels);
+  return std::make_shared<render_msg>(job_msg->client,
+                                      job_msg->type,
+                                      job.job_number,
+                                      job.frame_number,
+                                      job.chunk,
+                                      job.num_chunks,
+                                      job.offset_x,
+                                      job.offset_y,
+                                      job.last_frame,
+                                      job.width,
+                                      job.height,
+                                      transfer_pixels);
 }

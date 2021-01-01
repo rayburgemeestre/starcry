@@ -22,8 +22,18 @@ std::shared_ptr<render_msg> command_get_shapes::to_render_msg(std::shared_ptr<jo
     cereal::JSONOutputArchive archive(os);
     archive(job);
   }
-  return std::make_shared<render_msg>(
-      job_msg->client, job_msg->type, job.job_number, job.last_frame, job.width, job.height, os.str());
+  return std::make_shared<render_msg>(job_msg->client,
+                                      job_msg->type,
+                                      job.job_number,
+                                      job.frame_number,
+                                      job.chunk,
+                                      job.num_chunks,
+                                      job.offset_x,
+                                      job.offset_y,
+                                      job.last_frame,
+                                      job.width,
+                                      job.height,
+                                      os.str());
 }
 
 void command_get_shapes::handle_frame(std::shared_ptr<render_msg> &job_msg) {

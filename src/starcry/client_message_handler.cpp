@@ -54,8 +54,18 @@ bool client_message_handler::on_client_message(int sockfd, int type, size_t len,
       //   compress_vector<uint32_t> cv;
       //   cv.decompress(&dat.pixels, job.width * job.height);
       // }
-      auto frame = std::make_shared<render_msg>(
-          nullptr, instruction_type::get_image, job.job_number, job.last_frame, job.width, job.height, dat.pixels);
+      auto frame = std::make_shared<render_msg>(nullptr,
+                                                instruction_type::get_image,
+                                                job.job_number,
+                                                job.frame_number,
+                                                job.chunk,
+                                                job.num_chunks,
+                                                job.offset_x,
+                                                job.offset_y,
+                                                job.last_frame,
+                                                job.width,
+                                                job.height,
+                                                dat.pixels);
       sc.frames->push(frame);
     }
   }

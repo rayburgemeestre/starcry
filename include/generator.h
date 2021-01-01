@@ -60,6 +60,7 @@ private:
   double video_scale_next = 1.;
   double video_scale_intermediate = 1.;
   std::vector<double> video_scales;
+  size_t min_intermediates = 0.;
   size_t max_intermediates = 30.;
 
   std::string filename_;

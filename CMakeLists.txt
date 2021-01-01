@@ -52,7 +52,7 @@ include_directories(
     "/opt/cppse/build/seasocks/include/"
     "/opt/cppse/build/fmt/include/"
     "/opt/cppse/build/png++/"
-    "/opt/cppse/build/openexr/include/"
+    "/opt/cppse/build/openexr/include/OpenEXR/"
     "/opt/cppse/build/imagemagick/include/ImageMagick-7/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/cereal/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"

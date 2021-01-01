@@ -54,6 +54,12 @@ void generator::init_context() {
   context->add_fun("random_velocity", &random_velocity);
   context->add_fun("expf", &expf_fun);
   context->add_fun("logn", &logn_fun);
+  context->add_fun("clamp", &clamp<double>);
+  context->add_fun("squared", &squared);
+  context->add_fun("squared_dist", &squared_dist);
+  context->add_fun("get_distance", &get_distance);
+  context->add_fun("get_angle", &get_angle);
+  context->add_fun("triangular_wave", &triangular_wave);
   context->add_include_fun();
 
   // TODO: wrap this also in context (wrapper)
@@ -139,6 +145,7 @@ void generator::init_video_meta_info(std::optional<double> rand_seed) {
     if (i.has_field(video, "extra_grain")) settings_.extra_grain = i.double_number(video, "extra_grain");
     if (i.has_field(video, "update_positions")) settings_.update_positions = i.boolean(video, "update_positions");
     if (i.has_field(video, "dithering")) settings_.dithering = i.boolean(video, "dithering");
+    if (i.has_field(video, "min_intermediates")) min_intermediates = i.integer_number(video, "min_intermediates");
     if (i.has_field(video, "max_intermediates")) max_intermediates = i.integer_number(video, "max_intermediates");
     if (i.has_field(video, "sample")) {
       auto sample = i.get(video, "sample").As<v8::Object>();
@@ -304,6 +311,10 @@ bool generator::_generate_frame() {
         video_scales.push_back(video_scale);
 
         util::generator::garbage_collect_erased_objects(i, instances, next_instances, intermediates);
+
+        if (min_intermediates > 0.) {
+          update_steps(min_intermediates);
+        }
 
         while (max_dist_found > tolerated_granularity) {
           ++attempt;
@@ -608,7 +619,13 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
 }
 
 void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
-  auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step));
+  // Intermediate frames between 0 and 1, for two: [0.5, 1.0]
+  // This will make vibrations look really vibrating, as back and forth will be rendered differently
+  // auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step));
+  // Intermediate frames between 0 and 1, for two: [0.33, 0.66]
+  // This will make vibrations invisible, as back and forth will be rendered the same way
+  // NOTE: The only change is a +1 for max_step count.
+  auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step + 1));
   auto fn = static_cast<double>(job->frame_number - (1.0 - extra));
   const auto t = fn / max_frames;
   const auto e = static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(stepper.max_step);
@@ -671,17 +688,13 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto offset_y = static_cast<double>(0);
   auto offset_x2 = static_cast<double>(0);
   auto offset_y2 = static_cast<double>(0);
+  double root_x = 0;
+  double root_y = 0;
   double angle = i.double_number(previous_instance, "angle");
-  double pivot_x = i.double_number(instance, "x");
-  double pivot_y = i.double_number(instance, "y");
   while (level > 0) {
     level--;
     offset_x += i.double_number(parents[level], "x");
     offset_y += i.double_number(parents[level], "y");
-    if (level == 1) {
-      pivot_x = i.double_number(parents[level], "x");
-      pivot_y = i.double_number(parents[level], "y");
-    }
     if (is_line) {
       // note, do not assume all parents are lines, use x & y relative
       offset_x2 += i.double_number(parents[level], "x");
@@ -689,6 +702,11 @@ double generator::get_max_travel_of_object(v8_interact& i,
     }
     auto a = i.double_number(parents[level], "angle");
     if (!std::isnan(a)) angle += a;
+    // Quick and dirty way to skip objects
+    if (i.double_number(parents[level], "opacity") > 0) {
+      root_x = i.double_number(parents[level], "x");
+      root_y = i.double_number(parents[level], "y");
+    }
   }
 
   level = i.double_number(previous_instance, "level");
@@ -714,26 +732,23 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto x2 = is_line ? offset_x2 + i.double_number(instance, "x2") : 0.0;
   auto y2 = is_line ? offset_y2 + i.double_number(instance, "y2") : 0.0;
 
-  // auto level_ = i.double_number(previous_instance, "level");
   if (angle != 0.) {
-    auto angle1 = angle + get_angle(pivot_x, pivot_y, x, y);
+    auto angle1 = angle + get_angle(root_x, root_y, x, y);
     while (angle1 > 360.) angle1 -= 360.;
     auto rads = angle1 * M_PI / 180.0;
     auto ratio = 1.0;
-    auto dist = get_distance(pivot_x, pivot_y, x, y);
+    auto dist = get_distance(root_x, root_y, x, y);
     auto move = dist * ratio * -1;
-    x = pivot_x + (cos(rads) * move);
-    y = pivot_y + (sin(rads) * move);
+    x = root_x + (cos(rads) * move);
+    y = root_y + (sin(rads) * move);
 
-    /*
-    auto angle2 = angle + get_angle(0, 0, x2, y2);
+    auto angle2 = angle + get_angle(root_x, root_y, x2, y2);
     while (angle2 > 360.) angle2 -= 360.;
     rads = angle2 * M_PI / 180.0;
-    dist = get_distance(offset_x2, offset_y2, x2, y2);
+    dist = get_distance(root_x, root_y, x2, y2);
     move = dist * ratio * -1;
-    x2 = offset_x + (cos(rads) * move);
-    y2 = offset_y + (sin(rads) * move);
-    */
+    x2 = root_x + (cos(rads) * move);
+    y2 = root_y + (sin(rads) * move);
   }
 
   auto radius = i.double_number(instance, "radius");
@@ -824,7 +839,9 @@ void generator::convert_object_to_render_job(
   // See if we require this step for this object
   auto steps = i.integer_number(instance, "steps");
   if (!sc.do_step(steps, stepper.next_step)) {
-    return;
+    // TODO: make flag, to force all intermediate frames.
+    // TODO#2: make this a property also for objects, if they are vibrating they need this
+    // return;
   }
   auto id = i.str(instance, "id");
   auto label = i.str(instance, "label");

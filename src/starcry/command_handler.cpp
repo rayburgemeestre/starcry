@@ -9,6 +9,7 @@
 #include "generator.h"
 #include "messages.hpp"
 #include "starcry.h"
+#include "util/image_splitter.hpp"
 
 command_handler::command_handler(starcry &sc) : sc(sc) {}
 
@@ -20,8 +21,26 @@ void command_handler::to_job(std::shared_ptr<instruction> &cmd_def) {
     }
   }
   auto the_job = sc.gen->get_job();
-  the_job->job_number = std::numeric_limits<uint32_t>::max();
-  sc.jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, the_job));
+  util::ImageSplitter<uint32_t> is{the_job->canvas_w, the_job->canvas_h};
+  if (cmd_def->num_chunks == 1) {
+    sc.jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, the_job));
+  } else {
+    const auto rectangles = is.split(cmd_def->num_chunks, util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
+    for (size_t i = 0, counter = 1; i < rectangles.size(); i++) {
+      the_job->width = rectangles[i].width();
+      the_job->height = rectangles[i].height();
+      the_job->offset_x = rectangles[i].x();
+      the_job->offset_y = rectangles[i].y();
+      the_job->chunk = counter;
+      the_job->num_chunks = cmd_def->num_chunks;
+      counter++;
+
+      the_job->job_number = std::numeric_limits<uint32_t>::max();
+      the_job->last_frame = true;
+      sc.jobs->push(
+          std::make_shared<job_message>(cmd_def->client, cmd_def->type, std::make_shared<data::job>(*the_job)));
+    }
+  }
 }
 
 std::shared_ptr<render_msg> command_handler::to_render_msg(std::shared_ptr<job_message> &cmd_def, image &bmp) {

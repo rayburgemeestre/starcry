@@ -172,7 +172,12 @@ public:
     int radius_inner_circle = round_to_int(radius - radius_size - 1);
 
     for (int rel_y = 0; rel_y < radius_outer_circle; rel_y++) {
-      int abs_y_top = static_cast<int>(circle_y - rel_y);
+      // Below a -1 has been added, due to an off-by-one error that happens only in case objects are
+      // moving at fast(er?) velocity, and becomes noticeable as scanlines if you are rendering with > 1 chunks.
+      // I fixed this here, as well as added - 1 to bottom left and right as "abs_y_bottom - 1".
+      // In the end this was the easier fixed, for some reason extending the radius_outer_circle with more pixels
+      // doesn't have an effect.
+      int abs_y_top = static_cast<int>(circle_y - rel_y) - 1;
       int abs_y_bottom = static_cast<int>(circle_y + rel_y);
 
       if ((abs_y_top < 0) && (abs_y_bottom > static_cast<int>(height_))) break;
@@ -203,6 +208,7 @@ public:
                             opacity,
                             settings);
 
+        // bottom left
         if (rel_y != 0)
           render_circle_pixel(bmp,
                               shape,
@@ -211,10 +217,12 @@ public:
                               circle_x,
                               circle_y,
                               abs_x_left,
-                              abs_y_bottom,
+                              abs_y_bottom - 1,  // workaround for off-by-one error
                               diff_from_center,
                               opacity,
                               settings);
+
+        // top right
         if (rel_x != 0)
           render_circle_pixel(bmp,
                               shape,
@@ -227,6 +235,7 @@ public:
                               diff_from_center,
                               opacity,
                               settings);
+        // bottom right
         if (rel_x != 0 && rel_y != 0)
           render_circle_pixel(bmp,
                               shape,
@@ -235,7 +244,7 @@ public:
                               circle_x,
                               circle_y,
                               abs_x_right,
-                              abs_y_bottom,
+                              abs_y_bottom - 1,  // workaround for off-by-one error
                               diff_from_center,
                               opacity,
                               settings);

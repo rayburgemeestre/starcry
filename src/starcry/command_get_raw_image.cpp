@@ -6,22 +6,17 @@
 
 #include <fmt/core.h>
 
-#include "image.hpp"
 #include "starcry.h"
-#include "starcry/command_get_image.h"
-#include "webserver.h"  // ImageHandler
+#include "starcry/command_get_raw_image.h"
 
-#include <sstream>
+#include "image.hpp"
+#include "webserver.h"  // BitmapHandler
 
-command_get_image::command_get_image(starcry &sc) : command_handler(sc) {}
+command_get_raw_image::command_get_raw_image(starcry &sc) : command_handler(sc) {}
 
-std::shared_ptr<render_msg> command_get_image::to_render_msg(std::shared_ptr<job_message> &job_msg, image &bmp) {
+std::shared_ptr<render_msg> command_get_raw_image::to_render_msg(std::shared_ptr<job_message> &job_msg, image &bmp) {
   auto &job = *job_msg->job;
   job.job_number = std::numeric_limits<uint32_t>::max();
-  png::image<png::rgb_pixel> image(job.width, job.height);
-  sc.copy_to_png(bmp.pixels(), job.width, job.height, image);
-  std::ostringstream ss;
-  image.write_stream(ss);
   return std::make_shared<render_msg>(job_msg->client,
                                       job_msg->type,
                                       job.job_number,
@@ -33,14 +28,16 @@ std::shared_ptr<render_msg> command_get_image::to_render_msg(std::shared_ptr<job
                                       job.last_frame,
                                       job.width,
                                       job.height,
-                                      ss.str());
+                                      bmp.pixels());
 }
 
-void command_get_image::handle_frame(std::shared_ptr<render_msg> &job_msg) {
-  auto fun = [&](std::shared_ptr<ImageHandler> chat_handler, std::shared_ptr<render_msg> job_msg) {
-    chat_handler->callback(job_msg->client, job_msg->buffer);
+void command_get_raw_image::handle_frame(std::shared_ptr<render_msg> &job_msg) {
+  auto fun = [&](std::shared_ptr<BitmapHandler> bmp_handler, std::shared_ptr<render_msg> job_msg) {
+    std::string buffer;
+    for (const auto &i : job_msg->pixels) {
+      buffer.append((char *)&i, sizeof(i));
+    }
+    bmp_handler->callback(job_msg->client, buffer);
   };
-  if (sc.webserv) {
-    sc.webserv->execute_image(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
-  }
+  if (sc.webserv) sc.webserv->execute_bitmap(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
 }

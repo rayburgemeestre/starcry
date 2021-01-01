@@ -13,6 +13,12 @@
 #include <coz.h>
 #include <fmt/core.h>
 
+#include <ImfArray.h>
+#include <ImfChannelList.h>
+#include <ImfInputFile.h>
+#include <ImfOutputFile.h>
+#include <ImfStringAttribute.h>
+
 #include "bitmap_wrapper.hpp"
 #include "framer.hpp"
 #include "generator.h"
@@ -27,6 +33,7 @@
 #include "starcry/command_get_bitmap.h"
 #include "starcry/command_get_image.h"
 #include "starcry/command_get_objects.h"
+#include "starcry/command_get_raw_image.h"
 #include "starcry/command_get_shapes.h"
 #include "starcry/command_get_video.h"
 
@@ -72,6 +79,7 @@ starcry::starcry(size_t num_local_engines,
           {instruction_type::get_objects, std::make_shared<command_get_objects>(*this)},
           {instruction_type::get_shapes, std::make_shared<command_get_shapes>(*this)},
           {instruction_type::get_video, std::make_shared<command_get_video>(*this)},
+          {instruction_type::get_raw_image, std::make_shared<command_get_raw_image>(*this)},
       }),
       server_message_handler_(std::make_shared<server_message_handler>(*this)),
       client_message_handler_(std::make_shared<client_message_handler>(*this)),
@@ -81,8 +89,9 @@ starcry::~starcry() {
   le.cancel();
 }
 
-void starcry::add_command(seasocks::WebSocket *client, const std::string &script, instruction_type it, int frame_num) {
-  cmds->push(std::make_shared<instruction>(client, it, script, frame_num));
+void starcry::add_command(
+    seasocks::WebSocket *client, const std::string &script, instruction_type it, int frame_num, int num_chunks) {
+  cmds->push(std::make_shared<instruction>(client, it, script, frame_num, num_chunks));
   le.run([=]() {
     if (webserv) {
       webserv->send_stats(system->stats());
@@ -90,8 +99,11 @@ void starcry::add_command(seasocks::WebSocket *client, const std::string &script
   });
 }
 
-void starcry::add_command(seasocks::WebSocket *client, const std::string &script, const std::string &output_file) {
-  cmds->push(std::make_shared<instruction>(client, instruction_type::get_video, script, output_file));
+void starcry::add_command(seasocks::WebSocket *client,
+                          const std::string &script,
+                          const std::string &output_file,
+                          int num_chunks) {
+  cmds->push(std::make_shared<instruction>(client, instruction_type::get_video, script, output_file, num_chunks));
 }
 
 void starcry::render_job(rendering_engine_wrapper &engine, const data::job &job, image &bmp) {
@@ -109,57 +121,6 @@ void starcry::render_job(rendering_engine_wrapper &engine, const data::job &job,
                 job.scales,
                 log_level_ == starcry::log_level::debug,
                 settings);
-  if (job.job_number == std::numeric_limits<uint32_t>::max()) {
-    auto filename = gen->filename();
-    auto pos = filename.rfind("/");
-    if (pos != std::string::npos) {
-      filename = filename.substr(pos + 1);
-    }
-    pos = filename.find(".js");
-    if (pos != std::string::npos) {
-      filename = filename.substr(0, pos);
-    }
-
-    // There is 16 BIT, also + Alpha, however, seems to internally still use an 8 bit palette somehow.
-    // Will need to figure out in the future how to properly use 16 bit, for now, will focus on fixing the 8 bit
-    // version. png::image<png::rgb_pixel_16> image(job.width, job.height);
-    png::image<png::rgb_pixel> image(job.width, job.height);
-    copy_to_png(bmp.pixels(), job.width, job.height, image);
-    image.write(fmt::format("output_frame_{}_seed_{}_{}x{}-{}.png",
-                            job.frame_number,
-                            gen->get_seed(),
-                            job.canvas_w,
-                            job.canvas_h,
-                            filename));
-    using namespace Magick;
-    try {
-      std::vector<double> rgb;
-      rgb.resize(job.width * job.height * 4);
-      size_t index = 0;
-      auto &source = bmp.pixels();
-      for (uint32_t y = 0; y < job.height; y++) {
-        for (uint32_t x = 0; x < job.width; x++) {
-          rgb.push_back(source[index].r);
-          rgb.push_back(source[index].g);
-          rgb.push_back(source[index].b);
-          rgb.push_back(source[index].a);
-          index++;
-        }
-      }
-      Image image(fmt::format("{}x{}", job.width, job.height).c_str(), "white");
-      image.read(job.width, job.height, "RGBA", StorageType::DoublePixel, (void *)&bmp.pixels()[0]);
-      //      image.read(Blob((void *) &bmp.pixels()[0], bmp.pixels().size()), Geometry(job.width, job.height));
-      // image.depth(32);
-      image.write(fmt::format("output_frame_{}_seed_{}_{}x{}-{}.exr",
-                              job.frame_number,
-                              gen->get_seed(),
-                              job.canvas_w,
-                              job.canvas_h,
-                              filename));
-    } catch (std::exception &error_) {
-      std::cout << "Caught exception: " << error_.what() << std::endl;
-    }
-  }
 }
 
 void starcry::copy_to_png(const std::vector<data::color> &source,
@@ -222,12 +183,22 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
 
 std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_message> job_msg) {
   auto &job = *job_msg->job;
-  visualizer->set_start_timing();
+  if (log_level_ != starcry::log_level::silent) visualizer->set_start_timing();
 
   if (mode == starcry::render_video_mode::javascript_only) {
     std::vector<uint32_t> transfer_pixels;
-    return std::make_shared<render_msg>(
-        job_msg->client, job_msg->type, job.job_number, job.last_frame, 0, 0, transfer_pixels);
+    return std::make_shared<render_msg>(job_msg->client,
+                                        job_msg->type,
+                                        job.job_number,
+                                        job.frame_number,
+                                        job.chunk,
+                                        job.num_chunks,
+                                        job.offset_x,
+                                        job.offset_y,
+                                        job.last_frame,
+                                        0,
+                                        0,
+                                        transfer_pixels);
   }
 
   // no need to render in this case, client will do the rendering
@@ -248,20 +219,20 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 }
 
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
-  visualizer->display(job_msg->job_number);
+  if (log_level_ != starcry::log_level::silent) visualizer->display(job_msg->job_number);
 
   if (mode == starcry::render_video_mode::javascript_only) {
     return;
   }
   // COZ_PROGRESS;
-  auto process = [&](std::shared_ptr<render_msg> job_msg) {
+  auto process = [&](size_t width, size_t height, std::vector<uint32_t> pixels, bool last_frame) {
     if (job_msg->client == nullptr) {
-      if (gui) gui->add_frame(job_msg->width, job_msg->height, job_msg->pixels);
+      if (gui) gui->add_frame(width, height, pixels);
       if (framer) {
-        framer->add_frame(job_msg->pixels);
-        if (job_msg->last_frame) {
+        framer->add_frame(pixels);
+        if (last_frame) {
           for (int i = 0; i < 50; i++) {
-            framer->add_frame(job_msg->pixels);
+            framer->add_frame(pixels);
           }
         }
       }
@@ -270,20 +241,49 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
     command_handlers[job_msg->type]->handle_frame(job_msg);
   };
 
-  // handle individual frames immediately
-  if (job_msg->job_number == std::numeric_limits<uint32_t>::max()) {
-    process(job_msg);
-    return;
-  }
-
-  buffered_frames[job_msg->job_number] = job_msg;
+  buffered_frames[job_msg->job_number].push_back(job_msg);
 
   while (true) {
     auto pos = buffered_frames.find(current_frame);
     if (pos == buffered_frames.end()) {
+      pos = buffered_frames.find(std::numeric_limits<uint32_t>::max());
+      if (pos == buffered_frames.end()) {
+        break;
+      }
+    }
+    if (pos->second.empty()) {
       break;
     }
-    process(pos->second);
+    if (pos->second.size() == pos->second[0]->num_chunks) {
+      std::sort(pos->second.begin(), pos->second.end(), [](const auto &lh, const auto &rh) {
+        return lh->chunk < rh->chunk;
+      });
+
+      std::vector<uint32_t> pixels;
+      std::vector<data::color> pixels_raw;
+      size_t width = 0;
+      size_t height = 0;
+      bool last_frame = false;
+      size_t frame_number = 0;
+      for (const auto &chunk : pos->second) {
+        pixels.insert(std::end(pixels), std::begin(chunk->pixels), std::end(chunk->pixels));
+        pixels_raw.insert(std::end(pixels_raw), std::begin(chunk->pixels_raw), std::end(chunk->pixels_raw));
+        width = chunk->width;  // width does not need to be accumulated since we split in horizontal slices
+        height += chunk->height;
+        last_frame = chunk->last_frame;
+        frame_number = chunk->frame_number;
+      }
+
+      // TODO: add support for raw video at some point
+      process(width, height, pixels, last_frame);
+
+      if (job_msg->job_number == std::numeric_limits<uint32_t>::max()) {
+        save_images(gen, pixels_raw, width, height, frame_number);
+        return;
+      }
+    } else {
+      break;
+    }
     current_frame++;
     buffered_frames.erase(pos);
   }
@@ -404,4 +404,115 @@ std::vector<uint32_t> starcry::pixels_vec_to_pixel_data(const std::vector<data::
     }
   }
   return pixels_out;
+}
+
+void starcry::save_images(std::shared_ptr<generator> gen,
+                          std::vector<data::color> &pixels_raw,
+                          size_t width,
+                          size_t height,
+                          size_t frame_number) {
+  auto filename = gen->filename();
+  auto pos = filename.rfind("/");
+  if (pos != std::string::npos) {
+    filename = filename.substr(pos + 1);
+  }
+  pos = filename.find(".js");
+  if (pos != std::string::npos) {
+    filename = filename.substr(0, pos);
+  }
+
+  if (!pixels_raw.empty()) {
+    // There is 16 BIT, also + Alpha, however, seems to internally still use an 8 bit palette somehow.
+    // Will need to figure out in the future how to properly use 16 bit, for now, will focus on fixing the 8 bit
+    // version. png::image<png::rgb_pixel_16> image(job.width, job.height);
+    png::image<png::rgb_pixel> image(width, height);
+    copy_to_png(pixels_raw, width, height, image);
+    image.write(
+        fmt::format("output_frame_{}_seed_{}_{}x{}-{}.png", frame_number, gen->get_seed(), width, height, filename));
+
+    // Save TIFF through ImageMagick
+    using namespace Magick;
+    try {
+      std::vector<double> rgb;
+      rgb.resize(width * height * 4);
+      size_t index = 0;
+      auto &source = pixels_raw;
+      for (uint32_t y = 0; y < height; y++) {
+        for (uint32_t x = 0; x < width; x++) {
+          rgb.push_back(source[index].r);
+          rgb.push_back(source[index].g);
+          rgb.push_back(source[index].b);
+          rgb.push_back(source[index].a);
+          index++;
+        }
+      }
+      Image image(fmt::format("{}x{}", width, height).c_str(), "white");
+      image.read(width, height, "RGBA", StorageType::DoublePixel, (void *)&rgb[0]);
+      image.write(
+          fmt::format("output_frame_{}_seed_{}_{}x{}-{}.tiff", frame_number, gen->get_seed(), width, height, filename));
+    } catch (std::exception &error_) {
+      std::cout << "Caught exception: " << error_.what() << std::endl;
+    }
+
+    // Save EXR through OpenEXR directly
+    using namespace Imf;
+    int w = width;
+    int h = height;
+
+    Array2D<float> rp(h, w);
+    Array2D<float> gp(h, w);
+    Array2D<float> bp(h, w);
+    Array2D<float> zp(h, w);
+
+    auto &source = pixels_raw;
+    size_t index = 0;
+    for (uint32_t y = 0; y < height; y++) {
+      for (uint32_t x = 0; x < width; x++) {
+        rp[y][x] = source[index].r;
+        gp[y][x] = source[index].g;
+        bp[y][x] = source[index].b;
+        zp[y][x] = source[index].a;
+        index++;
+      }
+    }
+    const float *rPixels = &rp[0][0];
+    const float *gPixels = &gp[0][0];
+    const float *bPixels = &bp[0][0];
+    const float *zPixels = &zp[0][0];
+
+    Header header(w, h);
+    header.channels().insert("R", Channel(Imf::FLOAT));
+    header.channels().insert("G", Channel(Imf::FLOAT));
+    header.channels().insert("B", Channel(Imf::FLOAT));
+    header.channels().insert("Z", Channel(Imf::FLOAT));
+    OutputFile file(
+        fmt::format("output_frame_{}_seed_{}_{}x{}-{}.exr", frame_number, gen->get_seed(), width, height, filename)
+            .c_str(),
+        header);
+    FrameBuffer frameBuffer;
+    frameBuffer.insert("R",                           // name
+                       Slice(Imf::FLOAT,              // type
+                             (char *)rPixels,         // base
+                             sizeof(*rPixels) * 1,    // xStride
+                             sizeof(*rPixels) * w));  // yStride
+    frameBuffer.insert("G",                           // name
+                       Slice(Imf::FLOAT,              // type
+                             (char *)gPixels,         // base
+                             sizeof(*gPixels) * 1,    // xStride
+                             sizeof(*gPixels) * w));  // yStride
+    frameBuffer.insert("B",                           // name
+                       Slice(Imf::FLOAT,              // type
+                             (char *)bPixels,         // base
+                             sizeof(*bPixels) * 1,    // xStride
+                             sizeof(*bPixels) * w));  // yStride
+
+    frameBuffer.insert("Z",                           // name
+                       Slice(Imf::FLOAT,              // type
+                             (char *)zPixels,         // base
+                             sizeof(*zPixels) * 1,    // xStride
+                             sizeof(*zPixels) * w));  // yStride
+
+    file.setFrameBuffer(frameBuffer);
+    file.writePixels(h);
+  }
 }

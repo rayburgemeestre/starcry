@@ -48,6 +48,7 @@ class starcry {
   friend class command_get_image;
   friend class command_get_shapes;
   friend class command_get_objects;
+  friend class command_get_raw_image;
   friend class server_message_handler;
   friend class client_message_handler;
 
@@ -77,7 +78,7 @@ private:
   int64_t num_queue_per_worker = 1;
   std::function<void(starcry &sc)> on_pipeline_initialized;
 
-  std::map<size_t, std::shared_ptr<render_msg>> buffered_frames;
+  std::map<size_t, std::vector<std::shared_ptr<render_msg>>> buffered_frames;
   size_t current_frame = 1;
   limited_executor le;
   std::optional<double> seed;
@@ -100,8 +101,12 @@ public:
       std::optional<double> rand_seed = std::nullopt);
   ~starcry();
 
-  void add_command(seasocks::WebSocket *client, const std::string &script, instruction_type it, int frame_num);
-  void add_command(seasocks::WebSocket *client, const std::string &script, const std::string &output_file);
+  void add_command(
+      seasocks::WebSocket *client, const std::string &script, instruction_type it, int frame_num, int num_chunks);
+  void add_command(seasocks::WebSocket *client,
+                   const std::string &script,
+                   const std::string &output_file,
+                   int num_chunks);
 
   void run_server();
   void run_client(const std::string &host);
@@ -118,4 +123,9 @@ private:
   void handle_frame(std::shared_ptr<render_msg> job_msg);
 
   std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in) const;
+  void save_images(std::shared_ptr<generator> gen,
+                   std::vector<data::color> &pixels_raw,
+                   size_t width,
+                   size_t height,
+                   size_t frame_number);
 };
