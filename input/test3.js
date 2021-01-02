@@ -60,7 +60,8 @@ _ = {
     },
   },
   'video': {
-    'frames': 250,
+    'duration': 10,
+    'fps': 25,
     'width': 1920,
     'height': 1080,
   },

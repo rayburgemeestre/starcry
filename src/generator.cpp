@@ -41,7 +41,7 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
   init_video_meta_info(rand_seed);
   init_gradients();
   init_textures();
-  init_object_instances();
+  set_scene(0);
 }
 
 void generator::init_context() {
@@ -133,7 +133,24 @@ void generator::init_video_meta_info(std::optional<double> rand_seed) {
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto video = v8_index_object(context, val, "video").As<v8::Object>();
-    auto duration = i.double_number(video, "duration");
+    auto duration = i.has_field(video, "duration") ? i.double_number(video, "duration") : 0;
+    scene_durations.clear();
+    if (duration == 0) {
+      auto obj = val.As<v8::Object>();
+      auto scenes = i.v8_array(obj, "scenes");
+      for (size_t I = 0; I < scenes->Length(); I++) {
+        auto current_scene = i.get_index(scenes, I);
+        if (!current_scene->IsObject()) continue;
+        auto sceneobj = current_scene.As<v8::Object>();
+        duration += i.double_number(sceneobj, "duration");
+      }
+      for (size_t I = 0; I < scenes->Length(); I++) {
+        auto current_scene = i.get_index(scenes, I);
+        if (!current_scene->IsObject()) continue;
+        auto sceneobj = current_scene.As<v8::Object>();
+        scene_durations.push_back(i.double_number(sceneobj, "duration") / duration);
+      }
+    }
     use_fps = i.double_number(video, "fps");
     canvas_w = i.double_number(video, "width");
     canvas_h = i.double_number(video, "height");
@@ -147,6 +164,13 @@ void generator::init_video_meta_info(std::optional<double> rand_seed) {
     if (i.has_field(video, "dithering")) settings_.dithering = i.boolean(video, "dithering");
     if (i.has_field(video, "min_intermediates")) min_intermediates = i.integer_number(video, "min_intermediates");
     if (i.has_field(video, "max_intermediates")) max_intermediates = i.integer_number(video, "max_intermediates");
+    if (i.has_field(video, "bg_color")) {
+      auto bg = i.v8_obj(video, "bg_color");
+      job->background_color.r = i.double_number(bg, "r");
+      job->background_color.g = i.double_number(bg, "g");
+      job->background_color.b = i.double_number(bg, "b");
+      job->background_color.a = i.double_number(bg, "a");
+    }
     if (i.has_field(video, "sample")) {
       auto sample = i.get(video, "sample").As<v8::Object>();
       sample_include = i.double_number(sample, "include");  // seconds
@@ -231,28 +255,34 @@ void generator::init_textures() {
 }
 
 void generator::init_object_instances() {
-  context->run_array("script", [](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
     auto scenes = i.v8_array(obj, "scenes");
     auto objects = i.v8_array(obj, "objects");
-    for (size_t I = 0; I < scenes->Length(); I++) {
-      auto current_scene = i.get_index(scenes, I);
-      if (!current_scene->IsObject()) continue;
-      auto sceneobj = current_scene.As<v8::Object>();
-      auto scene_objects = i.v8_array(sceneobj, "objects");
-      auto instances = i.v8_array(sceneobj, "instances", v8::Array::New(isolate));
-      auto instances_next = i.v8_array(sceneobj, "instances_next", v8::Array::New(isolate));
-      auto instances_temp = i.v8_array(sceneobj, "instances_intermediate", v8::Array::New(isolate));
-      size_t scene_instances_idx = instances->Length();
-      for (size_t j = 0; j < scene_objects->Length(); j++) {
-        auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
-        auto created_instance = util::generator::instantiate_objects(
-            i, objects, instances, instances_next, instances_temp, scene_instances_idx, scene_obj);
-        i.set_field(scene_objects, j, created_instance);
-      }
+    auto current_scene = i.get_index(scenes, this->current_scene);
+    auto sceneobj = current_scene.As<v8::Object>();
+    auto scene_objects = i.v8_array(sceneobj, "objects");
+    auto instances = i.v8_array(sceneobj, "instances", v8::Array::New(isolate));
+    auto instances_next = i.v8_array(sceneobj, "instances_next", v8::Array::New(isolate));
+    auto instances_temp = i.v8_array(sceneobj, "instances_intermediate", v8::Array::New(isolate));
+    size_t scene_instances_idx = instances->Length();
+    for (size_t j = 0; j < scene_objects->Length(); j++) {
+      auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
+      auto created_instance = util::generator::instantiate_objects(
+          i, objects, instances, instances_next, instances_temp, scene_instances_idx, scene_obj);
+      i.set_field(scene_objects, j, created_instance);
     }
   });
+}
+
+void generator::set_scene(size_t scene) {
+  bool new_scene = current_scene != scene;
+  current_scene = scene;
+  if (new_scene) {
+    if (current_scene == 0)     // TODO: not supported yet to call this for adding additional objects
+      init_object_instances();  // it will currently reset instances/next/intermediates instead
+  }
 }
 
 bool generator::generate_frame() {
@@ -625,10 +655,25 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
   // Intermediate frames between 0 and 1, for two: [0.33, 0.66]
   // This will make vibrations invisible, as back and forth will be rendered the same way
   // NOTE: The only change is a +1 for max_step count.
-  auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step + 1));
-  auto fn = static_cast<double>(job->frame_number - (1.0 - extra));
-  const auto t = fn / max_frames;
+  const auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step + 1));
+  // Another fix, to make t= not start at for example -0.002, and run up to 0.995, is to make sure we start counting
+  // at one, instead of zero, because we subtract something to account for intermediate frames
+  // const auto fn = static_cast<double>(job->frame_number - (1.0 - extra));
+  const auto fn = static_cast<double>(job->frame_number - (1.0 - extra) + 1);
+  // Another fix, -1 on max_frames, so that we basically get 1 extra frame, it is often pleasing if the animation has
+  // one final resting frame, f.i., to complete a full rotation. Otherwise you might see motion blur + rotation
+  // stopped at 99.99%.
+  const auto t = std::clamp(fn / (max_frames - double(1.)), 0., 1.);
   const auto e = static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(stepper.max_step);
+
+  // Divide global time over all the scenes
+  if (scene_durations[current_scene] < (t - offset)) {
+    if (scene_durations.size() - 1 > current_scene) {
+      offset += scene_durations[current_scene];
+      set_scene(current_scene + 1);
+    }
+  }
+  auto scene_time = std::clamp((t - offset) / scene_durations[current_scene], 0., 1.);
 
   size_t subobj_len_before = 0;
   size_t subobj_len_after = 0;
@@ -636,14 +681,15 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
     auto subobj = i.get(instance, "subobj").As<v8::Array>();
     subobj_len_before = subobj->Length();
   }
-  i.call_fun(instance, "time", t, e);
+  i.call_fun(instance, "time", scene_time, e, current_scene);
   if (i.has_field(instance, "subobj")) {
     auto subobj = i.get(instance, "subobj").As<v8::Array>();
     subobj_len_after = subobj->Length();
   }
   i.set_field(instance, "new_objects", v8::Boolean::New(i.get_isolate(), subobj_len_after > subobj_len_before));
 
-  i.set_field(instance, "__time__", v8::Number::New(i.get_isolate(), t));
+  i.set_field(instance, "__time__", v8::Number::New(i.get_isolate(), scene_time));
+  i.set_field(instance, "__global_time__", v8::Number::New(i.get_isolate(), t));
   i.set_field(instance, "__elapsed__", v8::Number::New(i.get_isolate(), e));
 }
 

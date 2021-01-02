@@ -65,6 +65,11 @@ private:
 
   std::string filename_;
 
+  // scene related stuff
+  size_t current_scene = std::numeric_limits<size_t>::max();
+  std::vector<double> scene_durations;
+  double offset = 0;
+
 public:
   generator();
   ~generator() = default;
@@ -78,6 +83,7 @@ public:
   void init_textures();
   void init_object_instances();
 
+  void set_scene(size_t scene);
   bool generate_frame();
   void revert_all_changes(v8_interact& i,
                           v8::Local<v8::Array>& instances,
