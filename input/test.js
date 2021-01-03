@@ -29,10 +29,13 @@ _ = {
         this.subobj.push({'id': 'obj1', 'x': 0, 'y': +300, 'z': 0, 'props': {}});
       },
       'time': function(t, e, scene) {
-        if (scene === 0) {
-          this.angle = 360. * expf(t, 10.);
-        } else if (scene === 1) {
-          this.angle = -360. * expf(t, 10.);
+        switch (scene) {
+          case 0:
+            this.angle = 360. * expf(t, 1.);
+            break;
+          case 1:
+            this.angle = -360. * expf(t, 10.);
+            break;
         }
       },
     },
@@ -56,12 +59,14 @@ _ = {
         this.subobj.push({'id': 'obj2', 'x': 100, 'y': 0, 'z': 0, 'props': {'maxradius': 300}});
       },
       'time': function(t, e, s) {
-        if (s == 0)
-          this.radius = t * this.props.maxradius;
-        else if (s == 1)
-          this.radius = t * this.props.maxradius * 2.0;
-        else
-          this.radius += e * 100.;
+        switch (s) {
+          case 0:
+            this.radius = t * this.props.maxradius;
+            break;
+          case 1:
+            this.radius = t * this.props.maxradius * 2.0;
+            break;
+        }
         this.gradients[0][0] = 1.0 - t;
         this.gradients[2][0] = t;
       },
@@ -69,7 +74,6 @@ _ = {
     },
     'obj2': {
       'type': 'circle',
-      // 'gradient': 'ce475a6c-2427-420c-85de-6316f3027313',
       'radius': 100,
       'radiussize': 10.0,
       'props': {
@@ -79,12 +83,16 @@ _ = {
         this.radius = 0;
       },
       'time': function(t, elapsed, s) {
-        this.radius += 100.0 * elapsed;
-        if (s < 2) {
-          this.radius %= this.props.maxradius;
-        } else if (s == 2) {
-          // add some more
-          this.radius += 200.0 * elapsed;
+        switch (s) {
+          case 0:
+          case 1:
+            this.radius += 100.0 * elapsed;
+            this.radius %= this.props.maxradius;
+            break;
+          case 2:
+          case 3:
+          case 4:
+            this.radius = logn(t, 10.) * 1920.0;
         }
       },
     },
@@ -96,29 +104,14 @@ _ = {
     'scale': 1,
     'rand_seed': 5,
     'granularity': 1,
-    'max_intermediates': 10.,
+    'max_intermediates': 50.,
     'bg_color': {'r': 0., 'g': 0.0, 'b': 0., 'a': 0}
   },
   'scenes': [
-    {
-      'name': 'scene1',
-      'duration': 3.0,
-      'objects': [
-        // similar to a single "obj1"
-        // {'id': 'obj2', 'x': -100, 'y': 0, 'z': 0, 'props': {'maxradius': 100}},
-        // {'id': 'obj2', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 200}},
-        // {'id': 'obj2', 'x': 100, 'y': 0, 'z': 0, 'props': {'maxradius': 300}},
-
-        // multiple instances of "obj1"s
-        // {'id': 'obj1', 'x': -300, 'y': 0, 'z': 0, 'props': {}},
-        // {'id': 'obj1', 'x': 300, 'y': 0, 'z': 0, 'props': {}},
-        // {'id': 'obj1', 'x': 0, 'y': -300, 'z': 0, 'props': {}},
-        // {'id': 'obj1', 'x': 0, 'y': +300, 'z': 0, 'props': {}},
-
-        {'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
-      ],
-    },
-    {'name': 'scene2', 'duration': 3.0, 'objects': []},
-    {'name': 'scene3', 'duration': 1.0, 'objects': []},
+    {'name': 'scene1', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}]},
+    {'name': 'scene2', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': 100, 'y': 0, 'z': 0, 'props': {}}]},
+    {'name': 'scene3', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': -100, 'y': 0, 'z': 0, 'props': {}}]},
+    {'name': 'scene3', 'duration': 0.5, 'objects': [{'id': 'obj0', 'x': -100, 'y': 0, 'z': 0, 'props': {}}]},
+    {'name': 'scene3', 'duration': 0.1, 'objects': [{'id': 'obj0', 'x': -100, 'y': 0, 'z': 0, 'props': {}}]},
   ]
 };

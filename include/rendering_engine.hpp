@@ -86,6 +86,7 @@ public:
     draw_logic_.center(canvas_w / 2, canvas_h / 2);
     draw_logic_.offset(offset_x, offset_y);
 
+    if (shapes.empty()) return;
     visualizer_.set_max_frames(shapes[shapes.size() - 1].size());
 
     if (!shapes.empty()) {

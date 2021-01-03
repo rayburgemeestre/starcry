@@ -66,9 +66,16 @@ private:
   std::string filename_;
 
   // scene related stuff
-  size_t current_scene = std::numeric_limits<size_t>::max();
+  size_t current_scene = 0;
+  size_t current_scene_next = 0;
+  size_t current_scene_intermediate = std::numeric_limits<size_t>::max();
+  size_t scene_initialized = std::numeric_limits<size_t>::max();
   std::vector<double> scene_durations;
+
+  // time related stuff
   double offset = 0;
+  double offset_next = 0;
+  double offset_intermediate = 0;
 
 public:
   generator();
