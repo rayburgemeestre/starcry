@@ -68,6 +68,12 @@ private:
   std::string filename_;
 
 public:
+  struct time_settings {
+    double time;
+    double elapsed;
+    double scene_time;
+  };
+
   generator();
   ~generator() = default;
 
@@ -138,6 +144,8 @@ public:
   const std::string filename() const {
     return filename_;
   }
+
+  inline time_settings get_time() const;
 
 private:
   bool _generate_frame();

@@ -295,7 +295,8 @@ void generator::set_scene(size_t scene) {
     scenesettings.current_scene_next = scene;
   else
     scenesettings.current_scene_next = std::max(scenesettings.current_scene_next, scene);
-  if (scenesettings.scene_initialized == std::numeric_limits<size_t>::max() || scenesettings.current_scene_next > scenesettings.scene_initialized) {
+  if (scenesettings.scene_initialized == std::numeric_limits<size_t>::max() ||
+      scenesettings.current_scene_next > scenesettings.scene_initialized) {
     scenesettings.scene_initialized = scenesettings.current_scene_next;
     init_object_instances();
   }
@@ -384,10 +385,7 @@ bool generator::_generate_frame() {
         stepper.rewind();
         while (stepper.has_next_step()) {
           qts.clear();
-          const auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step + 1));
-          const auto fn = static_cast<double>(job->frame_number - (1.0 - extra) + 1);
-          const auto t = std::clamp(fn / (max_frames - double(1.)), 0., 1.);
-          if (scenesettings.update(t)) {
+          if (scenesettings.update(get_time().time)) {
             set_scene(scenesettings.current_scene_next + 1);
           }
           create_next_instance_mapping(i, next_instances);
@@ -666,7 +664,7 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
   emit_event(on2, instance2, instance);
 }
 
-void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
+inline generator::time_settings generator::get_time() const {
   // Intermediate frames between 0 and 1, for two: [0.5, 1.0]
   // This will make vibrations look really vibrating, as back and forth will be rendered differently
   // auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step));
@@ -684,6 +682,17 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
   const auto t = std::clamp(fn / (max_frames - double(1.)), 0., 1.);
   const auto e = static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(stepper.max_step);
 
+  // Scene time as well for convenience, with the trade off, of calculating this more often than needed
+  // NOTE: added inline, in the hope the calculation will get optimized away for those cases
+  auto scene_time = std::clamp(
+      (t - scenesettings.offset_next) / scenesettings.scene_durations[scenesettings.current_scene_next], 0., 1.);
+
+  return time_settings{t, e, scene_time};
+}
+
+void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
+  const auto time_settings = get_time();
+
   const auto execute = [&](double scene_time) {
     size_t subobj_len_before = 0;
     size_t subobj_len_after = 0;
@@ -691,15 +700,15 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
       auto subobj = i.get(instance, "subobj").As<v8::Array>();
       subobj_len_before = subobj->Length();
     }
-    i.call_fun(instance, "time", scene_time, e, scenesettings.current_scene_next);
+    i.call_fun(instance, "time", scene_time, time_settings.elapsed, scenesettings.current_scene_next);
     if (i.has_field(instance, "subobj")) {
       auto subobj = i.get(instance, "subobj").As<v8::Array>();
       subobj_len_after = subobj->Length();
     }
     i.set_field(instance, "new_objects", v8::Boolean::New(i.get_isolate(), subobj_len_after > subobj_len_before));
     i.set_field(instance, "__time__", v8::Number::New(i.get_isolate(), scene_time));
-    i.set_field(instance, "__global_time__", v8::Number::New(i.get_isolate(), t));
-    i.set_field(instance, "__elapsed__", v8::Number::New(i.get_isolate(), e));
+    i.set_field(instance, "__global_time__", v8::Number::New(i.get_isolate(), time_settings.time));
+    i.set_field(instance, "__elapsed__", v8::Number::New(i.get_isolate(), time_settings.elapsed));
   };
 
   if (scenesettings.current_scene_next > scenesettings.current_scene_intermediate) {
@@ -710,8 +719,7 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
     execute(1.0);
     scenesettings.current_scene_next = bak;
   }
-  auto scene_time = std::clamp((t - scenesettings.offset_next) / scenesettings.scene_durations[scenesettings.current_scene_next], 0., 1.);
-  execute(scene_time);
+  execute(time_settings.scene_time);
 }
 
 int generator::update_steps(double dist) {

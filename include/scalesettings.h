@@ -24,4 +24,3 @@ public:
   double video_scale_intermediate = 1.;
   std::vector<double> video_scales;
 };
-

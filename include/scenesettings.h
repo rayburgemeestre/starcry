@@ -5,8 +5,8 @@
  */
 #pragma once
 
-#include <vector>
 #include <limits>
+#include <vector>
 
 #include "util/transaction.h"
 
@@ -16,8 +16,8 @@ public:
   virtual ~scene_settings() = default;
 
   void reset() override;
-  bool update(double t);// override;
-  void update();// override;
+  bool update(double t);  // override;
+  void update();          // override;
   void revert() override;
   void commit() override;
 
@@ -30,4 +30,3 @@ public:
   double offset_next = 0;
   double offset_intermediate = 0;
 };
-

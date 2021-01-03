@@ -7,8 +7,7 @@
 
 #include "scenesettings.h"
 
-void scene_settings::reset() {
-}
+void scene_settings::reset() {}
 
 bool scene_settings::update(double t) {
   if (scene_durations[current_scene_next] < (t - offset_next)) {
