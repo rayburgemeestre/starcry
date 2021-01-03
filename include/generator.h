@@ -12,6 +12,9 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "scalesettings.h"
+#include "scenesettings.h"
+
 #include "data/job.hpp"
 #include "data/settings.hpp"
 #include "data/texture.hpp"
@@ -56,26 +59,13 @@ private:
   std::shared_ptr<progress_visualizer> visualizer;
   data::settings settings_;
 
-  double video_scale = 1.;
-  double video_scale_next = 1.;
-  double video_scale_intermediate = 1.;
-  std::vector<double> video_scales;
   size_t min_intermediates = 0.;
   size_t max_intermediates = 30.;
 
+  scale_settings scalesettings;
+  scene_settings scenesettings;
+
   std::string filename_;
-
-  // scene related stuff
-  size_t current_scene = 0;
-  size_t current_scene_next = 0;
-  size_t current_scene_intermediate = std::numeric_limits<size_t>::max();
-  size_t scene_initialized = std::numeric_limits<size_t>::max();
-  std::vector<double> scene_durations;
-
-  // time related stuff
-  double offset = 0;
-  double offset_next = 0;
-  double offset_intermediate = 0;
 
 public:
   generator();

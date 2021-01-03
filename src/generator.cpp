@@ -41,7 +41,7 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
   init_video_meta_info(rand_seed);
   init_gradients();
   init_textures();
-  scene_initialized = std::numeric_limits<size_t>::max();
+  scenesettings.scene_initialized = std::numeric_limits<size_t>::max();
   set_scene(0);
 }
 
@@ -135,7 +135,7 @@ void generator::init_video_meta_info(std::optional<double> rand_seed) {
     v8_interact i(isolate);
     auto video = v8_index_object(context, val, "video").As<v8::Object>();
     auto duration = i.has_field(video, "duration") ? i.double_number(video, "duration") : 0;
-    scene_durations.clear();
+    scenesettings.scene_durations.clear();
     if (duration == 0) {
       auto obj = val.As<v8::Object>();
       auto scenes = i.v8_array(obj, "scenes");
@@ -149,10 +149,10 @@ void generator::init_video_meta_info(std::optional<double> rand_seed) {
         auto current_scene = i.get_index(scenes, I);
         if (!current_scene->IsObject()) continue;
         auto sceneobj = current_scene.As<v8::Object>();
-        scene_durations.push_back(i.double_number(sceneobj, "duration") / duration);
+        scenesettings.scene_durations.push_back(i.double_number(sceneobj, "duration") / duration);
       }
     } else {
-      scene_durations.push_back(1.0);
+      scenesettings.scene_durations.push_back(1.0);
     }
     use_fps = i.double_number(video, "fps");
     canvas_w = i.double_number(video, "width");
@@ -191,9 +191,9 @@ void generator::init_video_meta_info(std::optional<double> rand_seed) {
     job->canvas_h = canvas_h;
     job->scale = i.double_number(video, "scale");
 
-    video_scale = i.double_number(video, "scale");
-    video_scale_next = i.double_number(video, "scale");
-    video_scale_intermediate = i.double_number(video, "scale");
+    scalesettings.video_scale = i.double_number(video, "scale");
+    scalesettings.video_scale_next = i.double_number(video, "scale");
+    scalesettings.video_scale_intermediate = i.double_number(video, "scale");
   });
 }
 
@@ -263,14 +263,14 @@ void generator::init_object_instances() {
     auto obj = val.As<v8::Object>();
     auto scenes = i.v8_array(obj, "scenes");
     auto objects = i.v8_array(obj, "objects");
-    auto current_scene = i.get_index(scenes, this->current_scene_next);
+    auto current_scene = i.get_index(scenes, scenesettings.current_scene_next);
     auto sceneobj = current_scene.As<v8::Object>();
     auto scene_objects = i.v8_array(sceneobj, "objects");
     auto instances = i.v8_array(sceneobj, "instances", v8::Array::New(isolate));
     auto instances_next = i.v8_array(sceneobj, "instances_next", v8::Array::New(isolate));
     auto instances_temp = i.v8_array(sceneobj, "instances_intermediate", v8::Array::New(isolate));
-    if (this->current_scene_next > 0) {
-      auto prev_current_scene = i.get_index(scenes, this->current_scene_next - 1);
+    if (scenesettings.current_scene_next > 0) {
+      auto prev_current_scene = i.get_index(scenes, scenesettings.current_scene_next - 1);
       auto prev_sceneobj = prev_current_scene.As<v8::Object>();
       // continue from previous
       instances = i.v8_array(prev_sceneobj, "instances", v8::Array::New(isolate));
@@ -291,12 +291,12 @@ void generator::init_object_instances() {
 }
 
 void generator::set_scene(size_t scene) {
-  if (current_scene_next == std::numeric_limits<size_t>::max())
-    current_scene_next = scene;
+  if (scenesettings.current_scene_next == std::numeric_limits<size_t>::max())
+    scenesettings.current_scene_next = scene;
   else
-    current_scene_next = std::max(current_scene_next, scene);
-  if (scene_initialized == std::numeric_limits<size_t>::max() || current_scene_next > scene_initialized) {
-    scene_initialized = current_scene_next;
+    scenesettings.current_scene_next = std::max(scenesettings.current_scene_next, scene);
+  if (scenesettings.scene_initialized == std::numeric_limits<size_t>::max() || scenesettings.current_scene_next > scenesettings.scene_initialized) {
+    scenesettings.scene_initialized = scenesettings.current_scene_next;
     init_object_instances();
   }
 }
@@ -338,7 +338,7 @@ bool generator::_generate_frame() {
       auto scenes = i.v8_array(obj, "scenes");
       auto video = i.v8_obj(obj, "video");
       auto objects = i.v8_array(obj, "objects");
-      auto current_scene = i.get_index(scenes, this->current_scene_next);
+      auto current_scene = i.get_index(scenes, scenesettings.current_scene_next);
       if (!current_scene->IsObject()) return;
       auto sceneobj = current_scene.As<v8::Object>();
       auto instances = i.v8_array(sceneobj, "instances");
@@ -352,8 +352,7 @@ bool generator::_generate_frame() {
       indexes.clear();
       attempt = 0;
       max_dist_found = std::numeric_limits<double>::max();
-      video_scales.clear();
-      video_scales.push_back(video_scale);
+      scalesettings.reset();
 
       util::generator::garbage_collect_erased_objects(i, instances, next_instances, intermediates);
 
@@ -388,11 +387,8 @@ bool generator::_generate_frame() {
           const auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step + 1));
           const auto fn = static_cast<double>(job->frame_number - (1.0 - extra) + 1);
           const auto t = std::clamp(fn / (max_frames - double(1.)), 0., 1.);
-          if (scene_durations[current_scene_next] < (t - offset_next)) {
-            if (scene_durations.size() - 1 > current_scene_next) {
-              offset_next += scene_durations[current_scene_next];
-              set_scene(current_scene_next + 1);
-            }
+          if (scenesettings.update(t)) {
+            set_scene(scenesettings.current_scene_next + 1);
           }
           create_next_instance_mapping(i, next_instances);
           update_object_positions(i, next_instances, stepper.max_step, video);
@@ -400,10 +396,8 @@ bool generator::_generate_frame() {
           util::generator::find_new_objects(i, objects, instances, next_instances, intermediates);
           convert_objects_to_render_job(i, next_instances, sc, video);
           util::generator::copy_instances(i, intermediates, next_instances);
-          video_scale_intermediate = video_scale_next;
-          current_scene_intermediate = current_scene_next;
-          offset_intermediate = offset_next;
-          video_scales.push_back(video_scale_intermediate);
+          scalesettings.update();
+          scenesettings.update();
           if (job->shapes.size() != stepper.max_step) {
             break;
           }
@@ -418,10 +412,8 @@ bool generator::_generate_frame() {
       }
 
       util::generator::copy_instances(i, instances, next_instances);
-      video_scale = video_scale_next;
-      video_scales.push_back(video_scale_next);
-      this->current_scene = current_scene_next;
-      this->offset = offset_next;
+      scalesettings.commit();
+      scenesettings.commit();
     });
     job->job_number++;
     job->frame_number++;
@@ -443,13 +435,8 @@ void generator::revert_all_changes(v8_interact& i,
   // reset next and intermediate instances
   util::generator::copy_instances(i, next_instances, instances);
   util::generator::copy_instances(i, intermediates, instances);
-  video_scale_next = video_scale;
-  video_scale_intermediate = video_scale;
-  video_scales.clear();
-  current_scene_next = current_scene;
-  current_scene_intermediate = current_scene;
-  offset_next = offset;
-  offset_intermediate = offset;
+  scalesettings.revert();
+  scenesettings.revert();
 }
 
 void generator::revert_position_updates(v8_interact& i,
@@ -490,7 +477,7 @@ void generator::update_object_positions(v8_interact& i,
     if (!instance->IsObject()) continue;
 
     update_time(i, instance);
-    video_scale_next = i.double_number(video, "scale");
+    scalesettings.video_scale_next = i.double_number(video, "scale");
 
     std::string type = i.str(instance, "type");
     bool is_line = type == "line";
@@ -704,7 +691,7 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
       auto subobj = i.get(instance, "subobj").As<v8::Array>();
       subobj_len_before = subobj->Length();
     }
-    i.call_fun(instance, "time", scene_time, e, current_scene_next);
+    i.call_fun(instance, "time", scene_time, e, scenesettings.current_scene_next);
     if (i.has_field(instance, "subobj")) {
       auto subobj = i.get(instance, "subobj").As<v8::Array>();
       subobj_len_after = subobj->Length();
@@ -715,15 +702,15 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
     i.set_field(instance, "__elapsed__", v8::Number::New(i.get_isolate(), e));
   };
 
-  if (current_scene_next > current_scene_intermediate) {
+  if (scenesettings.current_scene_next > scenesettings.current_scene_intermediate) {
     // Make sure we end previous scene at the very last frame in any case, even though we won't render it.
     // This may be necessary to finalize some calculations that work with "t" (time), i.e., for rotations.
-    auto bak = current_scene_next;
-    current_scene_next = current_scene_intermediate;
+    auto bak = scenesettings.current_scene_next;
+    scenesettings.current_scene_next = scenesettings.current_scene_intermediate;
     execute(1.0);
-    current_scene_next = bak;
+    scenesettings.current_scene_next = bak;
   }
-  auto scene_time = std::clamp((t - offset_next) / scene_durations[current_scene_next], 0., 1.);
+  auto scene_time = std::clamp((t - scenesettings.offset_next) / scenesettings.scene_durations[scenesettings.current_scene_next], 0., 1.);
   execute(scene_time);
 }
 
@@ -852,10 +839,10 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto rad = radius + radiussize;
   auto prev_shape_scale = i.has_field(previous_instance, "scale") ? i.double_number(previous_instance, "scale") : 1.0;
 
-  x *= video_scale_next * shape_scale;
-  prev_x *= video_scale_intermediate * prev_shape_scale;
-  y *= video_scale_next * shape_scale;
-  prev_y *= video_scale_intermediate * prev_shape_scale;
+  x *= scalesettings.video_scale_next * shape_scale;
+  prev_x *= scalesettings.video_scale_intermediate * prev_shape_scale;
+  y *= scalesettings.video_scale_next * shape_scale;
+  prev_y *= scalesettings.video_scale_intermediate * prev_shape_scale;
 
   //  // TODO: make smarter for circles and lines, this is just temporary code
   //  rectangle canvas(position(-canvas_w / 2., -canvas_h/2.), position(canvas_w / 2., canvas_h/2.));
@@ -876,19 +863,19 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto dist = sqrt(pow(x - prev_x, 2) + pow(y - prev_y, 2));
   // x2, y2
   if (is_line) {
-    x2 *= video_scale_next * shape_scale;
-    prev_x2 *= video_scale_intermediate * prev_shape_scale;
-    y2 *= video_scale_next * shape_scale;
-    prev_y2 *= video_scale_intermediate * prev_shape_scale;
+    x2 *= scalesettings.video_scale_next * shape_scale;
+    prev_x2 *= scalesettings.video_scale_intermediate * prev_shape_scale;
+    y2 *= scalesettings.video_scale_next * shape_scale;
+    prev_y2 *= scalesettings.video_scale_intermediate * prev_shape_scale;
     dist = std::max(dist, sqrt(pow(x2 - prev_x2, 2) + pow(y2 - prev_y2, 2)));
   }
   // TODO: stupid warp hack
   while (dist >= 1920 * 0.9) dist -= 1920;
   while (dist >= 1080 * 0.9) dist -= 1080;
   // radius
-  rad *= video_scale_next * shape_scale;
-  prev_rad *= video_scale_intermediate * prev_shape_scale;
-  job->scale = video_scale_next;
+  rad *= scalesettings.video_scale_next * shape_scale;
+  prev_rad *= scalesettings.video_scale_intermediate * prev_shape_scale;
+  job->scale = scalesettings.video_scale_next;
   auto new_dist = fabs(prev_rad - rad);
   dist = std::max(dist, new_dist);
   return dist;
@@ -990,8 +977,8 @@ void generator::convert_object_to_render_job(
     new_shape.indexes = indexes[unique_id];
   }
   job->shapes[stepper.current_step].push_back(new_shape);
-  job->scale = video_scale;
-  job->scales = video_scales;
+  job->scale = scalesettings.video_scale;
+  job->scales = scalesettings.video_scales;
 };
 
 std::shared_ptr<data::job> generator::get_job() const {
