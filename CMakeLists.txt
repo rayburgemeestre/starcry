@@ -173,6 +173,10 @@ target_link_libraries(starcry /opt/cppse/build/imagemagick/lib/libMagickCore-7.Q
 target_link_libraries(starcry /opt/cppse/build/imagemagick/lib/libMagick++-7.Q16HDRI.a)
 target_link_libraries(starcry /opt/cppse/build/imagemagick/lib/libMagickWand-7.Q16HDRI.a)
 
+# curses
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libcurses.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libtinfo.a)
+
 if (SANITIZER)
 # ASAN
 target_link_libraries(starcry /usr/lib/clang/10.0.1/lib/linux/libclang_rt.asan-x86_64.a)

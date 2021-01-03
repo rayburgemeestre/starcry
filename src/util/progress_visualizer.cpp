@@ -6,6 +6,7 @@
 
 #include "util/progress_visualizer.h"
 
+#include <ncurses.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <algorithm>
@@ -16,12 +17,13 @@
 
 std::mutex progress_visualizer_mut;
 
-progress_visualizer::progress_visualizer(std::string elem)
-    : begin(std::chrono::high_resolution_clock::now()), counter(0), elem(std::move(elem)) {}
+progress_visualizer::progress_visualizer(std::string elem, int offset)
+    : begin(std::chrono::high_resolution_clock::now()), counter(0), elem(std::move(elem)), offset(offset) {}
 
 void progress_visualizer::initialize() {
   begin = std::chrono::high_resolution_clock::now();
   begin_for_item = begin;
+  max_frame_rendered = 0;
   counter = 0;
 }
 
@@ -48,22 +50,27 @@ void progress_visualizer::display(double frame, int chunk, int num_chunks) {
   double remaining = (idle.count() / 1000. / counter) * (max_frames - counter);
   struct winsize size;
   ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
-  auto cols = std::floor(size.ws_col);
+  auto cols = std::max(0., std::floor(size.ws_col));
   std::chrono::duration<double, std::milli> since_last = current - begin_for_item;
   msg << elem << ": " << max_frame_rendered;
   if (num_chunks != 1) {
     msg << " Chunk: " << chunk << "/" << num_chunks;
   }
   msg << " FPS: " << fps << " ETA: " << remaining << " Since last: " << since_last.count();
-  std::cout << "\r" << msg.str();
   for (decltype(cols) i = msg.str().size(); i < cols; i++) {
-    std::cout << " ";
+    msg << " ";
   }
-  std::cout << "\n";
+  mvaddstr(3 + (offset * 2), 0, msg.str().c_str());
+
+  msg.str("");
+  msg.clear();
+
   for (decltype(cols) i = 0; i < cols; i++) {
     bool progress = (max_frame_rendered / max_frames * cols) < i;
-    std::cout << (progress ? "░" : "█");
+    msg << "" << (progress ? "_" : "X");
+    // msg << (progress ? "░" : "█");
   }
-  std::cout.flush();
+  mvaddstr(4 + (offset * 2), 0, msg.str().c_str());
   begin_for_item = current;
+  refresh();
 }

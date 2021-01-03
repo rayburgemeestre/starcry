@@ -87,6 +87,7 @@ public:
     draw_logic_.offset(offset_x, offset_y);
 
     if (shapes.empty()) return;
+    visualizer_.initialize();
     visualizer_.set_max_frames(shapes[shapes.size() - 1].size());
 
     if (!shapes.empty()) {
@@ -168,5 +169,5 @@ public:
   }
 
   draw_logic::draw_logic draw_logic_;
-  progress_visualizer visualizer_{"Object"};
+  progress_visualizer visualizer_{"Object", 6};
 };

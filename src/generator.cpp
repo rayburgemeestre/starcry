@@ -26,7 +26,7 @@
 
 std::shared_ptr<v8_wrapper> context;
 
-generator::generator() : visualizer(std::make_shared<progress_visualizer>("Job")) {
+generator::generator() : visualizer(std::make_shared<progress_visualizer>("Job", 4)) {
   static std::once_flag once;
   std::call_once(once, []() {
     context = nullptr;

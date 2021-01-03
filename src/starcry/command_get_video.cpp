@@ -34,6 +34,7 @@ void command_get_video::to_job(std::shared_ptr<instruction> &cmd_def) {
   }
   sc.visualizer->initialize();
   sc.visualizer->set_max_frames(sc.gen->get_max_frames());
+  sc.visualizer_chunks->set_max_frames(sc.gen->get_job()->num_chunks);
 
   // old generator:
   // bitrate = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");

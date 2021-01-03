@@ -89,6 +89,9 @@ deps:
 	# libwebp6: ..
 	# libarchive13: /usr/lib/x86_64-linux-gnu/libarchive.so.13
 	# libzstd1: /usr/lib/x86_64-linux-gnu/libzstd.so.1.4.4
+	#
+	# ncurses
+	sudo apt-get install -y libncurses-dev
 
 
 client_deps:

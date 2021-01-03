@@ -72,7 +72,8 @@ starcry::starcry(size_t num_local_engines,
       on_pipeline_initialized(on_pipeline_initialized),
       le(std::chrono::milliseconds(1000)),
       seed(rand_seed),
-      visualizer(std::make_shared<progress_visualizer>()),
+      visualizer(std::make_shared<progress_visualizer>("Frame", 0)),
+      visualizer_chunks(std::make_shared<progress_visualizer>("Chunks", 2)),
       command_handlers({
           {instruction_type::get_bitmap, std::make_shared<command_get_bitmap>(*this)},
           {instruction_type::get_image, std::make_shared<command_get_image>(*this)},
@@ -184,6 +185,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
 std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_message> job_msg) {
   auto &job = *job_msg->job;
   if (log_level_ != starcry::log_level::silent) visualizer->set_start_timing();
+  if (log_level_ != starcry::log_level::silent) visualizer_chunks->set_start_timing();
 
   if (mode == starcry::render_video_mode::javascript_only) {
     std::vector<uint32_t> transfer_pixels;
@@ -219,10 +221,19 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 }
 
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
-  if (log_level_ != starcry::log_level::silent)
-    visualizer->display(job_msg->job_number == std::numeric_limits<size_t>::max() ? 0 : job_msg->job_number,
-                        job_msg->chunk,
-                        job_msg->num_chunks);
+  if (log_level_ != starcry::log_level::silent) {
+    const auto frame = job_msg->job_number == std::numeric_limits<size_t>::max() ? 0 : job_msg->job_number;
+    static auto prev_frame = 0;
+    visualizer->display(frame, job_msg->chunk, job_msg->num_chunks);
+    if (log_level_ != starcry::log_level::info) {
+      if (frame != prev_frame) {
+        visualizer_chunks->set_max_frames(job_msg->num_chunks);
+        visualizer_chunks->initialize();
+      }
+      visualizer_chunks->display(job_msg->chunk);
+    }
+    prev_frame = frame;
+  }
 
   if (mode == starcry::render_video_mode::javascript_only) {
     return;

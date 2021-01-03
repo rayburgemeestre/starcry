@@ -16,13 +16,37 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include <Magick++.h>
-
-#include "starcry.h"
+#include <curses.h>
+#include <fmt/core.h>
 
 #include "generator.h"
+#include "starcry.h"
+#include "util/scope_exit.hpp"
 
 namespace po = ::boost::program_options;
 using namespace Magick;
+
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+WINDOW *mainwin;
+volatile bool flag = true;
+
+void cleanup_curses() {
+  flag = false;
+  delwin(mainwin);
+  endwin();
+  refresh();
+  std::cout << "\nWelcome back..." << std::endl;
+}
+
+void my_handler(int s) {
+  printf("Caught signal %d\n", s);
+  cleanup_curses();
+  exit(1);
+}
 
 class main_program {
 private:
@@ -38,6 +62,37 @@ private:
 
 public:
   main_program(int argc, char *argv[]) {
+    std::cout << "Switching to separate screen..." << std::endl;
+    if ((mainwin = initscr()) == NULL) {
+      fprintf(stderr, "Error initialising ncurses.\n");
+      exit(EXIT_FAILURE);
+    }
+    mvaddstr(0, 0, "Welcome to Starcry!");
+    refresh();
+
+    timeout(1000);
+    std::thread test([&]() {
+      noecho();
+      while (flag) {
+        int c = getch();
+        if (c != -1) {
+          mvaddstr(1, 0, fmt::format("Last key pressed: {}  ", c).c_str());
+        }
+      }
+    });
+
+    struct sigaction sigIntHandler;
+    sigIntHandler.sa_handler = my_handler;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+    sigaction(SIGINT, &sigIntHandler, NULL);
+
+    scope_exit se([&]() {
+      cleanup_curses();
+      std::cout << "Welcome back..." << std::endl;
+      test.join();
+    });
+
     po::positional_options_description p;
     p.add("script", 1);
     p.add("output", 1);

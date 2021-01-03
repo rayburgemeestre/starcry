@@ -15,9 +15,10 @@ private:
   double max_frame_rendered{};
   double counter;
   std::string elem;
+  int offset;
 
 public:
-  progress_visualizer(std::string elem = "Frame");
+  progress_visualizer(std::string elem = "Frame", int offset = 0);
 
   void initialize();
 

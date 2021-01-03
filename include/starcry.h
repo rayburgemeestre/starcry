@@ -83,6 +83,7 @@ private:
   limited_executor le;
   std::optional<double> seed;
   std::shared_ptr<progress_visualizer> visualizer;
+  std::shared_ptr<progress_visualizer> visualizer_chunks;
   std::map<instruction_type, std::shared_ptr<command_handler>> command_handlers;
   std::shared_ptr<server_message_handler> server_message_handler_;
   std::shared_ptr<client_message_handler> client_message_handler_;
