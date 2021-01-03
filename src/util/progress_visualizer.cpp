@@ -38,7 +38,7 @@ void progress_visualizer::set_start_timing() {
   begin_for_item = std::chrono::high_resolution_clock::now();
 }
 
-void progress_visualizer::display(double frame) {
+void progress_visualizer::display(double frame, int chunk, int num_chunks) {
   std::unique_lock<std::mutex> lock(progress_visualizer_mut);
   set_frame_rendered(frame);
   std::stringstream msg;
@@ -50,8 +50,11 @@ void progress_visualizer::display(double frame) {
   ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
   auto cols = std::floor(size.ws_col);
   std::chrono::duration<double, std::milli> since_last = current - begin_for_item;
-  msg << elem << ": " << max_frame_rendered << " FPS: " << fps << " ETA: " << remaining
-      << " Since last: " << since_last.count();
+  msg << elem << ": " << max_frame_rendered;
+  if (num_chunks != 1) {
+    msg << " Chunk: " << chunk << "/" << num_chunks;
+  }
+  msg << " FPS: " << fps << " ETA: " << remaining << " Since last: " << since_last.count();
   std::cout << "\r" << msg.str();
   for (decltype(cols) i = msg.str().size(); i < cols; i++) {
     std::cout << " ";

@@ -25,5 +25,5 @@ public:
   void set_frame_rendered(double frame);
   void set_start_timing();
 
-  void display(double frame);
+  void display(double frame, int chunk = 1, int num_chunks = 1);
 };

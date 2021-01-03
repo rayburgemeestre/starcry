@@ -219,7 +219,10 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 }
 
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
-  if (log_level_ != starcry::log_level::silent) visualizer->display(job_msg->job_number);
+  if (log_level_ != starcry::log_level::silent)
+    visualizer->display(job_msg->job_number == std::numeric_limits<size_t>::max() ? 0 : job_msg->job_number,
+                        job_msg->chunk,
+                        job_msg->num_chunks);
 
   if (mode == starcry::render_video_mode::javascript_only) {
     return;

@@ -54,9 +54,9 @@ _ = {
         // TODO: - 500, 0, 500, however, note that shape scale currently affects x, y.
         // orb1
         // this.subobj.push({'id': 'blue_circle', 'x': 0, 'y': 0, 'scale': 3.0, 'props': {'radius_limit': 5.,
-        // orb2
-        // this.subobj.push({'id': 'blue_circle', 'x': 0, 'y': 0, 'scale': 0.75 * 3.0, 'props': {'radius_limit': 20.,
-        // 'opacity': 1.0}});
+        // 'opacity': 1.0}}); orb2
+        this.subobj.push(
+            {'id': 'blue_circle', 'x': 0, 'y': 0, 'scale': 0.75 * 3.0, 'props': {'radius_limit': 20., 'opacity': 1.0}});
         // orb3
         // this.subobj.push(
         //     {'id': 'blue_circle', 'x': 0, 'y': 0, 'scale': 0.5 * 3.0, 'props': {'radius_limit': 50.,
