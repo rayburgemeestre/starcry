@@ -774,8 +774,16 @@ double generator::get_max_travel_of_object(v8_interact& i,
     offset_y += i.double_number(parents[level], "y");
     if (is_line) {
       // note, do not assume all parents are lines, use x & y relative
-      offset_x2 += i.double_number(parents[level], "x");
-      offset_y2 += i.double_number(parents[level], "y");
+      if (!std::isnan(i.double_number(parents[level], "x2"))) {
+        offset_x2 += i.double_number(parents[level], "x2");
+      } else {
+        offset_x2 += i.double_number(parents[level], "x");
+      }
+      if (!std::isnan(i.double_number(parents[level], "y2"))) {
+        offset_y2 += i.double_number(parents[level], "y2");
+      } else {
+        offset_y2 += i.double_number(parents[level], "y");
+      }
     }
     auto a = i.double_number(parents[level], "angle");
     if (!std::isnan(a)) angle += a;
