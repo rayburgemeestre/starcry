@@ -24,7 +24,9 @@ _ = {
         this.subobj.push({'id': 'test_ball', 'x': 0, 'y': 0});
       },
       'time': function(time, elapsed) {
-        var total_frames = script.video.duration * 25.;
+        // TODO: hide this complexity (of - 1 and calculating total/current frames) in a more "native" vibe/wave
+        // function in C++
+        var total_frames = script.video.duration * 25. - 1.;
         var current_frame = total_frames * time;
         if (this.props.mode == 1) {
           var q = current_frame - parseInt(current_frame);

@@ -679,6 +679,8 @@ inline generator::time_settings generator::get_time() const {
   // Another fix, -1 on max_frames, so that we basically get 1 extra frame, it is often pleasing if the animation has
   // one final resting frame, f.i., to complete a full rotation. Otherwise you might see motion blur + rotation
   // stopped at 99.99%.
+  // EDIT: NOTE, this -1 affects the calculation of properly "vibrating" objects with triangular_wave.
+  // See for example the fix I had to make in input/wave.js
   const auto t = std::clamp(fn / (max_frames - double(1.)), 0., 1.);
   const auto e = static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(stepper.max_step);
 
