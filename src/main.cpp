@@ -15,7 +15,7 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-#include <Magick++.h>
+// #include <Magick++.h>
 #include <curses.h>
 #include <fmt/core.h>
 
@@ -24,7 +24,7 @@
 #include "util/scope_exit.hpp"
 
 namespace po = ::boost::program_options;
-using namespace Magick;
+// using namespace Magick;
 
 #include <signal.h>
 #include <stdio.h>
@@ -101,7 +101,7 @@ public:
       ("help", "produce help message")
       ("script,s", po::value<std::string>(&script), "javascript file to use for processing")
       ("output,o", po::value<std::string>(&output_file), "filename for video output (default output_{seed}_{width}x{height}.h264)")
-      ("frame,f", po::value<size_t>(&frame_of_interest), "specific frame to render and save as BMP file")
+      ("frame,f", po::value<size_t>(&frame_of_interest), "specific frame to render and save as 8-bit PNG and 32-bit EXR file")
       ("seed", po::value<double>(&rand_seed), "override the random seed used")
       ("num_threads,t", po::value<size_t>(&num_worker_threads), "number of local render threads (default 1)")
       ("num_chunks,c", po::value<size_t>(&num_chunks), "number of chunks to chop frame into (default 1)")
@@ -117,7 +117,8 @@ public:
       ("perf", "run performance tests")
       ("compression", "enable pixel compression on rendered pixels")
       ("verbose,v", "enable verbose output (default no)")
-      ("quiet,q", "disable verbose progress (default no)");
+      ("quiet,q", "disable verbose progress (default no)")
+      ("raw,r", "write raw 32-bit EXR frames (default no)");
     // clang-format on
 
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
@@ -178,7 +179,8 @@ public:
         sc.add_command(nullptr, script, instruction_type::get_raw_image, frame_of_interest, num_chunks);
       } else {
         // render video
-        sc.add_command(nullptr, script, output_file, num_chunks);
+        bool is_raw = vm.count("raw");
+        sc.add_command(nullptr, script, output_file, num_chunks, is_raw);
       }
     };
 
@@ -208,7 +210,7 @@ public:
 };
 
 int main(int argc, char *argv[]) {
-  InitializeMagick(*argv);
+  // InitializeMagick(*argv);
   main_program prog{argc, argv};
   return 0;
 }

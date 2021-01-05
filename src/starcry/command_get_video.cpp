@@ -48,7 +48,7 @@ void command_get_video::to_job(std::shared_ptr<instruction> &cmd_def) {
     // TODO: duplicated code, move to base class
     util::ImageSplitter<uint32_t> is{job_copy->canvas_w, job_copy->canvas_h};
     if (cmd_def->num_chunks == 1) {
-      sc.jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, job_copy));
+      sc.jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, job_copy, cmd_def->raw));
     } else {
       const auto rectangles = is.split(cmd_def->num_chunks, util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
       for (size_t i = 0, counter = 1; i < rectangles.size(); i++) {
@@ -59,8 +59,8 @@ void command_get_video::to_job(std::shared_ptr<instruction> &cmd_def) {
         job_copy->chunk = counter;
         job_copy->num_chunks = cmd_def->num_chunks;
         counter++;
-        sc.jobs->push(
-            std::make_shared<job_message>(cmd_def->client, cmd_def->type, std::make_shared<data::job>(*job_copy)));
+        sc.jobs->push(std::make_shared<job_message>(
+            cmd_def->client, cmd_def->type, std::make_shared<data::job>(*job_copy), cmd_def->raw));
       }
     }
     sc.jobs->sleep_until_not_full();
@@ -75,16 +75,32 @@ std::shared_ptr<render_msg> command_get_video::to_render_msg(std::shared_ptr<job
   }
   auto &job = *job_msg->job;
   auto transfer_pixels = sc.pixels_vec_to_pixel_data(bmp.pixels());
-  return std::make_shared<render_msg>(job_msg->client,
-                                      job_msg->type,
-                                      job.job_number,
-                                      job.frame_number,
-                                      job.chunk,
-                                      job.num_chunks,
-                                      job.offset_x,
-                                      job.offset_y,
-                                      job.last_frame,
-                                      job.width,
-                                      job.height,
-                                      transfer_pixels);
+  auto raw = job_msg->raw;
+  if (raw) {
+    return std::make_shared<render_msg>(job_msg->client,
+                                        job_msg->type,
+                                        job.job_number,
+                                        job.frame_number,
+                                        job.chunk,
+                                        job.num_chunks,
+                                        job.offset_x,
+                                        job.offset_y,
+                                        job.last_frame,
+                                        job.width,
+                                        job.height,
+                                        bmp.pixels());
+  } else {
+    return std::make_shared<render_msg>(job_msg->client,
+                                        job_msg->type,
+                                        job.job_number,
+                                        job.frame_number,
+                                        job.chunk,
+                                        job.num_chunks,
+                                        job.offset_x,
+                                        job.offset_y,
+                                        job.last_frame,
+                                        job.width,
+                                        job.height,
+                                        transfer_pixels);
+  }
 }

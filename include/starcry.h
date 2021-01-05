@@ -88,6 +88,7 @@ private:
   std::shared_ptr<server_message_handler> server_message_handler_;
   std::shared_ptr<client_message_handler> client_message_handler_;
   log_level log_level_;
+  bool raw = false;
 
 public:
   starcry(
@@ -104,10 +105,8 @@ public:
 
   void add_command(
       seasocks::WebSocket *client, const std::string &script, instruction_type it, int frame_num, int num_chunks);
-  void add_command(seasocks::WebSocket *client,
-                   const std::string &script,
-                   const std::string &output_file,
-                   int num_chunks);
+  void add_command(
+      seasocks::WebSocket *client, const std::string &script, const std::string &output_file, int num_chunks, bool raw);
 
   void run_server();
   void run_client(const std::string &host);
@@ -128,5 +127,7 @@ private:
                    std::vector<data::color> &pixels_raw,
                    size_t width,
                    size_t height,
-                   size_t frame_number);
+                   size_t frame_number,
+                   bool write_8bit_png,
+                   bool write_32bit_exr);
 };

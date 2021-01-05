@@ -51,16 +51,28 @@ _ = {
       'y': 0,
       'angle': 0,
       'init': function() {
-        // TODO: - 500, 0, 500, however, note that shape scale currently affects x, y.
-        // orb1
-        // this.subobj.push({'id': 'blue_circle', 'x': 0, 'y': 0, 'scale': 3.0, 'props': {'radius_limit': 5.,
-        // 'opacity': 1.0}}); orb2
-        this.subobj.push(
-            {'id': 'blue_circle', 'x': 0, 'y': 0, 'scale': 0.75 * 3.0, 'props': {'radius_limit': 20., 'opacity': 1.0}});
-        // orb3
-        // this.subobj.push(
-        //     {'id': 'blue_circle', 'x': 0, 'y': 0, 'scale': 0.5 * 3.0, 'props': {'radius_limit': 50.,
-        //     'opacity': 1.0}});
+        // temporary changed for testing purposes
+        this.subobj.push({
+          'id': 'blue_circle',
+          'x': -500 - 50,
+          'y': 0,
+          'scale': 0.5,
+          'props': {'radius_limit': 60., 'opacity': 1.0}
+        });  // 50.
+        this.subobj.push({
+          'id': 'blue_circle',
+          'x': 0 - 100,
+          'y': 0,
+          'scale': 0.75,
+          'props': {'radius_limit': 60., 'opacity': 1.0}
+        });  // 20.
+        this.subobj.push({
+          'id': 'blue_circle',
+          'x': 500,
+          'y': 0,
+          'scale': 1.0,
+          'props': {'radius_limit': 60., 'opacity': 1.0}
+        });  // was 5.
       },
     },
     'blue_circle': {
@@ -69,7 +81,8 @@ _ = {
         [1.0, 'blue'],
         [0.0, 'green'],
       ],
-      'texture': 'clouds',
+      // temporary commentedfor testing purposes
+      // 'texture': 'clouds',
       'radius': 100.,
       'radiussize': 30.0,
       'opacity': 0.,
@@ -79,10 +92,13 @@ _ = {
       'scale': 1.0,
       'init': function() {},
       'time': function(time, elapsed) {
+        // temporary added for testing purposes
+        if (this.level > 4) return;
+
         this.gradients[0][0] = 1.0 - time;
         this.gradients[1][0] = time;
         this.opacity = 1. * this.props.opacity;
-        if (this.radius > this.props.radius_limit && this.subobj.length == 0) {
+        if (this.radius > this.props.radius_limit && this.subobj.length == 0 && true) {
           var child_radius = this.radius * 0.67;
           this.subobj.push({
             'id': 'blue_circle',

@@ -160,8 +160,8 @@ public:
    *   substract them.
    */
   inline void render_circle(image &bmp, const data::shape &shape, double opacity, data::settings &settings) {
-    double circle_x = ((shape.x * scale_ * shape.scale) + center_x_) - offset_x_;
-    double circle_y = ((shape.y * scale_ * shape.scale) + center_y_) - offset_y_;
+    double circle_x = ((shape.x * scale_) + center_x_) - offset_x_;
+    double circle_y = ((shape.y * scale_) + center_y_) - offset_y_;
     auto radius = shape.radius * scale_ * shape.scale;
     auto radius_size = shape.radius_size * scale_ * shape.scale;
 
@@ -331,10 +331,10 @@ public:
   }
 
   void render_line(image &bmp, const data::shape &shape, double opacity, data::settings &settings) {
-    auto x1 = ((shape.x * scale_ * shape.scale) + center_x_) - offset_x_;
-    auto y1 = ((shape.y * scale_ * shape.scale) + center_y_) - offset_y_;
-    auto x2 = ((shape.x2 * scale_ * shape.scale) + center_x_) - offset_x_;
-    auto y2 = ((shape.y2 * scale_ * shape.scale) + center_y_) - offset_y_;
+    auto x1 = ((shape.x * scale_) + center_x_) - offset_x_;
+    auto y1 = ((shape.y * scale_) + center_y_) - offset_y_;
+    auto x2 = ((shape.x2 * scale_) + center_x_) - offset_x_;
+    auto y2 = ((shape.y2 * scale_) + center_y_) - offset_y_;
     auto size = shape.radius_size * scale_ * shape.scale;
 
     // test

@@ -9,7 +9,7 @@
 #include <cstring>
 #include <sstream>
 
-#include <Magick++.h>
+//#include <Magick++.h>
 #include <coz.h>
 #include <fmt/core.h>
 
@@ -84,7 +84,8 @@ starcry::starcry(size_t num_local_engines,
       }),
       server_message_handler_(std::make_shared<server_message_handler>(*this)),
       client_message_handler_(std::make_shared<client_message_handler>(*this)),
-      log_level_(level) {}
+      log_level_(level),
+      raw(raw) {}
 
 starcry::~starcry() {
   le.cancel();
@@ -100,11 +101,9 @@ void starcry::add_command(
   });
 }
 
-void starcry::add_command(seasocks::WebSocket *client,
-                          const std::string &script,
-                          const std::string &output_file,
-                          int num_chunks) {
-  cmds->push(std::make_shared<instruction>(client, instruction_type::get_video, script, output_file, num_chunks));
+void starcry::add_command(
+    seasocks::WebSocket *client, const std::string &script, const std::string &output_file, int num_chunks, bool raw) {
+  cmds->push(std::make_shared<instruction>(client, instruction_type::get_video, script, output_file, num_chunks, raw));
 }
 
 void starcry::render_job(rendering_engine_wrapper &engine, const data::job &job, image &bmp) {
@@ -292,8 +291,10 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       process(width, height, pixels, last_frame);
 
       if (job_msg->job_number == std::numeric_limits<uint32_t>::max()) {
-        save_images(gen, pixels_raw, width, height, frame_number);
+        save_images(gen, pixels_raw, width, height, frame_number, true, true);
         return;
+      } else {
+        save_images(gen, pixels_raw, width, height, frame_number, false, true);
       }
     } else {
       break;
@@ -424,7 +425,9 @@ void starcry::save_images(std::shared_ptr<generator> gen,
                           std::vector<data::color> &pixels_raw,
                           size_t width,
                           size_t height,
-                          size_t frame_number) {
+                          size_t frame_number,
+                          bool write_8bit_png,
+                          bool write_32bit_exr) {
   auto filename = gen->filename();
   auto pos = filename.rfind("/");
   if (pos != std::string::npos) {
@@ -439,94 +442,99 @@ void starcry::save_images(std::shared_ptr<generator> gen,
     // There is 16 BIT, also + Alpha, however, seems to internally still use an 8 bit palette somehow.
     // Will need to figure out in the future how to properly use 16 bit, for now, will focus on fixing the 8 bit
     // version. png::image<png::rgb_pixel_16> image(job.width, job.height);
-    png::image<png::rgb_pixel> image(width, height);
-    copy_to_png(pixels_raw, width, height, image);
-    image.write(
-        fmt::format("output_frame_{}_seed_{}_{}x{}-{}.png", frame_number, gen->get_seed(), width, height, filename));
+    if (write_8bit_png) {
+      png::image<png::rgb_pixel> image(width, height);
+      copy_to_png(pixels_raw, width, height, image);
+      image.write(
+          fmt::format("output_frame_{}_seed_{}_{}x{}-{}.png", frame_number, gen->get_seed(), width, height, filename));
+    }
 
     // Save TIFF through ImageMagick
-    using namespace Magick;
-    try {
-      std::vector<double> rgb;
-      rgb.resize(width * height * 4);
-      size_t index = 0;
+    // using namespace Magick;
+    // try {
+    //   std::vector<double> rgb;
+    //   rgb.resize(width * height * 4);
+    //   size_t index = 0;
+    //   auto &source = pixels_raw;
+    //   for (uint32_t y = 0; y < height; y++) {
+    //     for (uint32_t x = 0; x < width; x++) {
+    //       rgb.push_back(source[index].r);
+    //       rgb.push_back(source[index].g);
+    //       rgb.push_back(source[index].b);
+    //       rgb.push_back(source[index].a);
+    //       index++;
+    //     }
+    //   }
+    //   Image image(fmt::format("{}x{}", width, height).c_str(), "white");
+    //   image.read(width, height, "RGBA", StorageType::DoublePixel, (void *)&rgb[0]);
+    //   image.write(
+    //       fmt::format("output_frame_{}_seed_{}_{}x{}-{}.tiff", frame_number, gen->get_seed(), width, height,
+    //       filename));
+    // } catch (std::exception &error_) {
+    //   std::cout << "Caught exception: " << error_.what() << std::endl;
+    // }
+
+    if (write_32bit_exr) {
+      // Save EXR through OpenEXR directly
+      using namespace Imf;
+      int w = width;
+      int h = height;
+
+      Array2D<float> rp(h, w);
+      Array2D<float> gp(h, w);
+      Array2D<float> bp(h, w);
+      Array2D<float> zp(h, w);
+
       auto &source = pixels_raw;
+      size_t index = 0;
       for (uint32_t y = 0; y < height; y++) {
         for (uint32_t x = 0; x < width; x++) {
-          rgb.push_back(source[index].r);
-          rgb.push_back(source[index].g);
-          rgb.push_back(source[index].b);
-          rgb.push_back(source[index].a);
+          rp[y][x] = source[index].r;
+          gp[y][x] = source[index].g;
+          bp[y][x] = source[index].b;
+          zp[y][x] = source[index].a;
           index++;
         }
       }
-      Image image(fmt::format("{}x{}", width, height).c_str(), "white");
-      image.read(width, height, "RGBA", StorageType::DoublePixel, (void *)&rgb[0]);
-      image.write(
-          fmt::format("output_frame_{}_seed_{}_{}x{}-{}.tiff", frame_number, gen->get_seed(), width, height, filename));
-    } catch (std::exception &error_) {
-      std::cout << "Caught exception: " << error_.what() << std::endl;
+      const float *rPixels = &rp[0][0];
+      const float *gPixels = &gp[0][0];
+      const float *bPixels = &bp[0][0];
+      const float *zPixels = &zp[0][0];
+
+      Header header(w, h);
+      header.channels().insert("R", Channel(Imf::FLOAT));
+      header.channels().insert("G", Channel(Imf::FLOAT));
+      header.channels().insert("B", Channel(Imf::FLOAT));
+      header.channels().insert("Z", Channel(Imf::FLOAT));
+      OutputFile file(
+          fmt::format("output_frame_{}_seed_{}_{}x{}-{}.exr", frame_number, gen->get_seed(), width, height, filename)
+              .c_str(),
+          header);
+      FrameBuffer frameBuffer;
+      frameBuffer.insert("R",                           // name
+                         Slice(Imf::FLOAT,              // type
+                               (char *)rPixels,         // base
+                               sizeof(*rPixels) * 1,    // xStride
+                               sizeof(*rPixels) * w));  // yStride
+      frameBuffer.insert("G",                           // name
+                         Slice(Imf::FLOAT,              // type
+                               (char *)gPixels,         // base
+                               sizeof(*gPixels) * 1,    // xStride
+                               sizeof(*gPixels) * w));  // yStride
+      frameBuffer.insert("B",                           // name
+                         Slice(Imf::FLOAT,              // type
+                               (char *)bPixels,         // base
+                               sizeof(*bPixels) * 1,    // xStride
+                               sizeof(*bPixels) * w));  // yStride
+
+      frameBuffer.insert("Z",                           // name
+                         Slice(Imf::FLOAT,              // type
+                               (char *)zPixels,         // base
+                               sizeof(*zPixels) * 1,    // xStride
+                               sizeof(*zPixels) * w));  // yStride
+
+      file.setFrameBuffer(frameBuffer);
+      file.writePixels(h);
     }
-
-    // Save EXR through OpenEXR directly
-    using namespace Imf;
-    int w = width;
-    int h = height;
-
-    Array2D<float> rp(h, w);
-    Array2D<float> gp(h, w);
-    Array2D<float> bp(h, w);
-    Array2D<float> zp(h, w);
-
-    auto &source = pixels_raw;
-    size_t index = 0;
-    for (uint32_t y = 0; y < height; y++) {
-      for (uint32_t x = 0; x < width; x++) {
-        rp[y][x] = source[index].r;
-        gp[y][x] = source[index].g;
-        bp[y][x] = source[index].b;
-        zp[y][x] = source[index].a;
-        index++;
-      }
-    }
-    const float *rPixels = &rp[0][0];
-    const float *gPixels = &gp[0][0];
-    const float *bPixels = &bp[0][0];
-    const float *zPixels = &zp[0][0];
-
-    Header header(w, h);
-    header.channels().insert("R", Channel(Imf::FLOAT));
-    header.channels().insert("G", Channel(Imf::FLOAT));
-    header.channels().insert("B", Channel(Imf::FLOAT));
-    header.channels().insert("Z", Channel(Imf::FLOAT));
-    OutputFile file(
-        fmt::format("output_frame_{}_seed_{}_{}x{}-{}.exr", frame_number, gen->get_seed(), width, height, filename)
-            .c_str(),
-        header);
-    FrameBuffer frameBuffer;
-    frameBuffer.insert("R",                           // name
-                       Slice(Imf::FLOAT,              // type
-                             (char *)rPixels,         // base
-                             sizeof(*rPixels) * 1,    // xStride
-                             sizeof(*rPixels) * w));  // yStride
-    frameBuffer.insert("G",                           // name
-                       Slice(Imf::FLOAT,              // type
-                             (char *)gPixels,         // base
-                             sizeof(*gPixels) * 1,    // xStride
-                             sizeof(*gPixels) * w));  // yStride
-    frameBuffer.insert("B",                           // name
-                       Slice(Imf::FLOAT,              // type
-                             (char *)bPixels,         // base
-                             sizeof(*bPixels) * 1,    // xStride
-                             sizeof(*bPixels) * w));  // yStride
-
-    frameBuffer.insert("Z",                           // name
-                       Slice(Imf::FLOAT,              // type
-                             (char *)zPixels,         // base
-                             sizeof(*zPixels) * 1,    // xStride
-                             sizeof(*zPixels) * w));  // yStride
-
-    file.setFrameBuffer(frameBuffer);
-    file.writePixels(h);
   }
 }

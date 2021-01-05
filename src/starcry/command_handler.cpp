@@ -23,7 +23,7 @@ void command_handler::to_job(std::shared_ptr<instruction> &cmd_def) {
   auto the_job = sc.gen->get_job();
   util::ImageSplitter<uint32_t> is{the_job->canvas_w, the_job->canvas_h};
   if (cmd_def->num_chunks == 1) {
-    sc.jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, the_job));
+    sc.jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, the_job, cmd_def->raw));
   } else {
     const auto rectangles = is.split(cmd_def->num_chunks, util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
     for (size_t i = 0, counter = 1; i < rectangles.size(); i++) {
@@ -37,8 +37,8 @@ void command_handler::to_job(std::shared_ptr<instruction> &cmd_def) {
 
       the_job->job_number = std::numeric_limits<uint32_t>::max();
       the_job->last_frame = true;
-      sc.jobs->push(
-          std::make_shared<job_message>(cmd_def->client, cmd_def->type, std::make_shared<data::job>(*the_job)));
+      sc.jobs->push(std::make_shared<job_message>(
+          cmd_def->client, cmd_def->type, std::make_shared<data::job>(*the_job), cmd_def->raw));
     }
   }
 }

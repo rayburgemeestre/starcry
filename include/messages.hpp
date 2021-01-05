@@ -38,17 +38,23 @@ public:
   std::string script;
   std::string output_file;
   int num_chunks;
+  bool raw = false;
 
   instruction(seasocks::WebSocket *client, instruction_type type, std::string script, size_t frame, int num_chunks)
-      : client(client), type(type), frame(frame), script(script), output_file(""), num_chunks(num_chunks) {}
-  instruction(
-      seasocks::WebSocket *client, instruction_type type, std::string script, std::string output_file, int num_chunks)
+      : client(client), type(type), frame(frame), script(script), output_file(""), num_chunks(num_chunks), raw(false) {}
+  instruction(seasocks::WebSocket *client,
+              instruction_type type,
+              std::string script,
+              std::string output_file,
+              int num_chunks,
+              bool raw)
       : client(client),
         type(type),
         frame(0),
         script(std::move(script)),
         output_file(std::move(output_file)),
-        num_chunks(num_chunks) {}
+        num_chunks(num_chunks),
+        raw(raw) {}
 };
 
 class job_message : public message_type {
@@ -56,8 +62,10 @@ public:
   seasocks::WebSocket *client;
   instruction_type type;
   std::shared_ptr<data::job> job;
-  job_message(seasocks::WebSocket *client, instruction_type type, std::shared_ptr<data::job> job)
-      : client(client), type(type), job(job) {}
+  bool raw = false;
+
+  job_message(seasocks::WebSocket *client, instruction_type type, std::shared_ptr<data::job> job, bool raw)
+      : client(client), type(type), job(job), raw(raw) {}
 };
 
 class render_msg : public message_type {

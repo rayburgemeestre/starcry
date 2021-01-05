@@ -1,5 +1,7 @@
 [![Build Status](https://travis-ci.org/rayburgemeestre/starcry.svg?branch=master)](https://travis-ci.org/rayburgemeestre/starcry) [![MPL 2.0 License](https://img.shields.io/badge/license-MPL2.0-blue.svg)](http://veldstra.org/2016/12/09/you-should-choose-mpl2-for-your-opensource-project.html)
 
+![logo](https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/logo.png)
+
 This is a rendering engine that aims to be a blend between photoshop and
 code-based generative art.
 
@@ -47,7 +49,6 @@ Ubuntu 20.04.
 - `png++` - used for writing PNG files
 - `fmt` - used for string formatting
 - `SFML` - used for preview window
-- `ImageMagick` - used for writing 16-bit PNG, TIFF or EXR files
-- `OpenEXR` - TODO: use for layered EXR files
+- `OpenEXR` - used for writing exr files
 
 Almost everything is statically linked, resulting in a relatively portable binary.

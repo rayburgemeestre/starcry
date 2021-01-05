@@ -808,7 +808,7 @@ double generator::get_max_travel_of_object(v8_interact& i,
       prev_offset_x2 += i.double_number(prev_parents[level], "x2");
       prev_offset_y2 += i.double_number(prev_parents[level], "y2");
     }
-    auto a = i.double_number(parents[level], "angle");
+    auto a = i.double_number(prev_parents[level], "angle");
     if (!std::isnan(a)) angle += a;
   }
 
