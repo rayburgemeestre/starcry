@@ -79,7 +79,9 @@ public:
     //   }
     // }
 
-    draw_logic_.scale(scale);  // TODO: deprecate
+    double scale_ratio = (scale / 1080.) * std::min(canvas_w, canvas_h);
+
+    draw_logic_.scale(scale * scale_ratio);  // TODO: deprecate
 
     draw_logic_.width(width);
     draw_logic_.height(height);
@@ -103,7 +105,7 @@ public:
           if (shape.indexes.size() > 0) {
             opacity /= (shape.indexes.size() + 1);
           }
-          draw_logic_.scale(scales[scales.size() - 1]);
+          draw_logic_.scale(scales[scales.size() - 1] * scale_ratio);
           draw_logic_.render_circle(bmp, shape, opacity, settings);
 
           // the rest...
@@ -111,7 +113,7 @@ public:
             const auto &step = index_data.first;
             const auto &index = index_data.second;
             const auto &shape = shapes[step][index];
-            draw_logic_.scale(scales[step]);  // TODO: fix this
+            draw_logic_.scale(scales[step] * scale_ratio);  // TODO: fix this
             draw_logic_.render_circle(bmp, shape, opacity, settings);
           }
 
@@ -121,7 +123,7 @@ public:
           if (shape.indexes.size() > 0) {
             opacity /= (shape.indexes.size() + 1);
           }
-          draw_logic_.scale(scales[scales.size() - 1]);  // TODO: fix this
+          draw_logic_.scale(scales[scales.size() - 1] * scale_ratio);  // TODO: fix this
           draw_logic_.render_line(bmp, shape, opacity, settings);
 
           // the rest...
@@ -129,11 +131,11 @@ public:
             const auto &step = index_data.first;
             const auto &index = index_data.second;
             const auto &shape = shapes[step][index];
-            draw_logic_.scale(scales[step]);  // TODO: fix this
+            draw_logic_.scale(scales[step] * scale_ratio);  // TODO: fix this
             draw_logic_.render_line(bmp, shape, opacity, settings);
           }
         } else if (shape.type == data::shape_type::text) {
-          draw_logic_.scale(scales[scales.size() - 1]);  // TODO: fix this
+          draw_logic_.scale(scales[scales.size() - 1] * scale_ratio);  // TODO: fix this
           draw_logic_.render_text(shape.x, shape.y, shape.text_size, shape.text, shape.align);
         }
       }

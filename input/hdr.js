@@ -34,7 +34,6 @@ _ = {
       'init': function() {},
       'time': function(t, e, s, gt) {
         script.video.scale = 10 - 9.0 * logn(gt, 1000);
-        script.video.scale /= 2;
       },
     },
     'background': {
@@ -74,7 +73,7 @@ _ = {
           'x': 0,
           'y': 0,
           'scale': 1.0,
-          'props': {'radius_limit': 5., 'opacity': 1.0}
+          'props': {'radius_limit': 5., 'opacity': 1.0, 'parent': false}
         });  // was 5.
       },
     },
@@ -91,9 +90,16 @@ _ = {
       'opacity': 0.,
       'blending_type': blending_type.pinlight,
       'angle': 1,
-      'props': {},
+      'props': {
+        'parent': false,
+        'extra_radius': 0,
+      },
       'scale': 1.0,
-      'init': function() {},
+      'init': function() {
+        if (this.props.parent === false) {
+          this.props.parent = this;
+        }
+      },
       'time': function(time, elapsed, scene, global_time) {
         // temporary added for testing purposes
         // if (this.level > 10) return;
@@ -121,9 +127,10 @@ _ = {
             break;
           case 1:
             this.radius += elapsed * 100;
+            this.x += elapsed * 1;
         }
 
-        this.opacity = 1.0 * logn(1. - global_time * 1.1, 10000);
+        this.opacity = 1.0 * logn(1. - global_time * 1.0, 10000);
         this.opacity *= this.props.opacity
         if (this.opacity <= 0) {
           this.exists = false;
@@ -143,18 +150,20 @@ _ = {
     //'width': 1920 * 2.,
     //'height': 1920 * 2.,
     //'scale': 10. * 2.,
-    'width': 1920 / 4.,
-    'height': 1920 / 4.,
-    'scale': 10. / 4.,
+    'width': 1920,
+    'height': 1920,
+    'scale': 10.,
     'granularity': 1,
     'grain_for_opacity': true,
     'motion_blur': true,
     'max_intermediates': 30.,
+    'perlin_noise': true,
+    'dithering': true,
   },
   'scenes': [
     {
       'name': 'scene1',
-      'duration': 2,
+      'duration': 1,
       'objects': [
         {'id': 'camera', 'x': 0, 'y': 0},
         {'id': 'mother', 'x': 0, 'y': 0},

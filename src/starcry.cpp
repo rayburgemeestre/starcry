@@ -238,8 +238,17 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
     return;
   }
   // COZ_PROGRESS;
-  auto process = [&](size_t width, size_t height, std::vector<uint32_t> pixels, bool last_frame) {
+  auto process = [&](size_t width,
+                     size_t height,
+                     std::vector<uint32_t> &pixels,
+                     std::vector<data::color> &pixels_raw,
+                     bool last_frame) {
     if (job_msg->client == nullptr) {
+      // get pixels from raw pixels for the ffmpeg video
+      if (pixels.empty() && !pixels_raw.empty()) {
+        std::vector<uint32_t> pixels_new = starcry::pixels_vec_to_pixel_data(pixels_raw);
+        std::swap(pixels, pixels_new);
+      }
       if (gui) gui->add_frame(width, height, pixels);
       if (framer) {
         framer->add_frame(pixels);
@@ -287,8 +296,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
         frame_number = chunk->frame_number;
       }
 
-      // TODO: add support for raw video at some point
-      process(width, height, pixels, last_frame);
+      process(width, height, pixels, pixels_raw, last_frame);
 
       if (job_msg->job_number == std::numeric_limits<uint32_t>::max()) {
         save_images(gen, pixels_raw, width, height, frame_number, true, true);
