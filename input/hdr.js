@@ -32,9 +32,9 @@ _ = {
   'objects': {
     'camera': {
       'init': function() {},
-      'time': function(t, e) {
-        script.video.scale = 20 - 19.0 * logn(t, 1000);
-        script.video.scale *= 2;
+      'time': function(t, e, s, gt) {
+        script.video.scale = 10 - 9.0 * logn(gt, 1000);
+        script.video.scale /= 2;
       },
     },
     'background': {
@@ -52,26 +52,29 @@ _ = {
       'angle': 0,
       'init': function() {
         // temporary changed for testing purposes
+        if (false)
+          this.subobj.push({
+            'id': 'blue_circle',
+            'x': -450,
+            'y': 0,
+            'scale': 0.5,
+            'props': {'radius_limit': 60., 'opacity': 1.0}
+          });  // 50.
+        if (false)
+          this.subobj.push({
+            'id': 'blue_circle',
+            'x': 0,  // - 100,
+            'y': 0,
+            'scale': 0.75,
+            'props': {'radius_limit': 60., 'opacity': 1.0}
+          });  // 20.
         this.subobj.push({
           'id': 'blue_circle',
-          'x': -500 - 50,
-          'y': 0,
-          'scale': 0.5,
-          'props': {'radius_limit': 60., 'opacity': 1.0}
-        });  // 50.
-        this.subobj.push({
-          'id': 'blue_circle',
-          'x': 0 - 100,
-          'y': 0,
-          'scale': 0.75,
-          'props': {'radius_limit': 60., 'opacity': 1.0}
-        });  // 20.
-        this.subobj.push({
-          'id': 'blue_circle',
-          'x': 500,
+          //'x': 550,
+          'x': 0,
           'y': 0,
           'scale': 1.0,
-          'props': {'radius_limit': 60., 'opacity': 1.0}
+          'props': {'radius_limit': 5., 'opacity': 1.0}
         });  // was 5.
       },
     },
@@ -82,7 +85,7 @@ _ = {
         [0.0, 'green'],
       ],
       // temporary commentedfor testing purposes
-      // 'texture': 'clouds',
+      'texture': 'clouds',
       'radius': 100.,
       'radiussize': 30.0,
       'opacity': 0.,
@@ -91,17 +94,18 @@ _ = {
       'props': {},
       'scale': 1.0,
       'init': function() {},
-      'time': function(time, elapsed) {
+      'time': function(time, elapsed, scene, global_time) {
         // temporary added for testing purposes
-        if (this.level > 4) return;
-
-        this.gradients[0][0] = 1.0 - time;
-        this.gradients[1][0] = time;
+        // if (this.level > 10) return;
+        this.gradients[0][0] = 1.0 - global_time;
+        this.gradients[1][0] = global_time;
         this.opacity = 1. * this.props.opacity;
         if (this.radius > this.props.radius_limit && this.subobj.length == 0 && true) {
           var child_radius = this.radius * 0.67;
           this.subobj.push({
             'id': 'blue_circle',
+            // keep somehow the parent radius...
+            // // anyway going to render a nice vid anyway
             'x': this.radius - child_radius,
             'y': 0,
             'radius': child_radius,
@@ -111,10 +115,15 @@ _ = {
           });
         }
         if (this.level > 1) this.angle += elapsed * 5.;
-        if (time > 0.5) {
-          this.radius += elapsed * 100;
+
+        switch (scene) {
+          case 0:
+            break;
+          case 1:
+            this.radius += elapsed * 100;
         }
-        this.opacity = 1.0 * logn(1. - time * 1.1, 1000);
+
+        this.opacity = 1.0 * logn(1. - global_time * 1.1, 10000);
         this.opacity *= this.props.opacity
         if (this.opacity <= 0) {
           this.exists = false;
@@ -129,21 +138,35 @@ _ = {
     },
   },
   'video': {
-    'duration': 5,
+    //'duration': 5,
     'fps': 25,
-    'width': 1920 * 2.,
-    'height': 1920 * 2.,
-    'scale': 10. * 2.,
+    //'width': 1920 * 2.,
+    //'height': 1920 * 2.,
+    //'scale': 10. * 2.,
+    'width': 1920 / 4.,
+    'height': 1920 / 4.,
+    'scale': 10. / 4.,
     'granularity': 1,
     'grain_for_opacity': true,
     'motion_blur': true,
     'max_intermediates': 30.,
   },
-  'scenes': [{
-    'name': 'scene1',
-    'objects': [
-      {'id': 'camera', 'x': 0, 'y': 0},
-      {'id': 'mother', 'x': 0, 'y': 0},
-    ],
-  }]
+  'scenes': [
+    {
+      'name': 'scene1',
+      'duration': 2,
+      'objects': [
+        {'id': 'camera', 'x': 0, 'y': 0},
+        {'id': 'mother', 'x': 0, 'y': 0},
+      ],
+    },
+    {
+      'name': 'scene2',
+      'duration': 4,
+      'objects': [
+        {'id': 'camera', 'x': 0, 'y': 0},
+        {'id': 'mother', 'x': 0, 'y': 0},
+      ],
+    }
+  ]
 };

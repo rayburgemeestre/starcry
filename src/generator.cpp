@@ -702,7 +702,8 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
       auto subobj = i.get(instance, "subobj").As<v8::Array>();
       subobj_len_before = subobj->Length();
     }
-    i.call_fun(instance, "time", scene_time, time_settings.elapsed, scenesettings.current_scene_next);
+    i.call_fun(
+        instance, "time", scene_time, time_settings.elapsed, scenesettings.current_scene_next, time_settings.time);
     if (i.has_field(instance, "subobj")) {
       auto subobj = i.get(instance, "subobj").As<v8::Array>();
       subobj_len_after = subobj->Length();
