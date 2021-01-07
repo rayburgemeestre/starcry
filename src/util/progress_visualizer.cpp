@@ -60,7 +60,9 @@ void progress_visualizer::display(double frame, int chunk, int num_chunks) {
   for (decltype(cols) i = msg.str().size(); i < cols; i++) {
     msg << " ";
   }
+  /*
   mvaddstr(3 + (offset * 2), 0, msg.str().c_str());
+  */
 
   msg.str("");
   msg.clear();
@@ -70,7 +72,9 @@ void progress_visualizer::display(double frame, int chunk, int num_chunks) {
     msg << "" << (progress ? "_" : "X");
     // msg << (progress ? "░" : "█");
   }
+  /*
   mvaddstr(4 + (offset * 2), 0, msg.str().c_str());
+  */
   begin_for_item = current;
   refresh();
 }

@@ -110,7 +110,7 @@
                 websock_status3: '',
                 websock_status4: '',
                 menu: '',
-                filename: 'input/motion4.js',
+                filename: 'input/test.js',
                 current_frame : 0,
                 rendering: 0,
                 max_queued: 10,

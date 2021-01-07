@@ -308,14 +308,13 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
 
       if (job_msg->job_number == std::numeric_limits<uint32_t>::max()) {
         save_images(gen, pixels_raw, width, height, frame_number, true, true);
-        return;
       } else {
         save_images(gen, pixels_raw, width, height, frame_number, false, true);
+        current_frame++;
       }
     } else {
       break;
     }
-    current_frame++;
     buffered_frames.erase(pos);
   }
 }

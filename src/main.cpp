@@ -62,6 +62,7 @@ private:
 
 public:
   main_program(int argc, char *argv[]) {
+    /*
     std::cout << "Switching to separate screen..." << std::endl;
     if ((mainwin = initscr()) == NULL) {
       fprintf(stderr, "Error initialising ncurses.\n");
@@ -92,6 +93,7 @@ public:
       std::cout << "Welcome back..." << std::endl;
       test.join();
     });
+    */
 
     po::positional_options_description p;
     p.add("script", 1);
