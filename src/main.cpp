@@ -109,6 +109,7 @@ public:
       ("client", po::value<std::string>(&host), "start client renderer, connect to host (default localhost)")
       ("gui", "render to graphical window")
       ("gui-only", "render to graphical window only (no video)")
+      ("preview", "enable preview settings for fast preview rendering")
       ("javascript-only", "render only the jobs, nothing graphical")
       ("spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")
       ("stream", "start embedded webserver and stream HLS to webroot")
@@ -136,6 +137,7 @@ public:
 
     bool is_interactive = vm.count("interactive");
     bool start_webserver = is_interactive == true;
+    bool preview = vm.count("preview");
 
     // configure streaming
     if (vm.count("stream")) {
@@ -176,11 +178,11 @@ public:
       }
       if (frame_of_interest != std::numeric_limits<size_t>::max()) {
         // render still image
-        sc.add_command(nullptr, script, instruction_type::get_raw_image, frame_of_interest, num_chunks);
+        sc.add_command(nullptr, script, instruction_type::get_raw_image, frame_of_interest, num_chunks, preview);
       } else {
         // render video
         bool is_raw = vm.count("raw");
-        sc.add_command(nullptr, script, output_file, num_chunks, is_raw);
+        sc.add_command(nullptr, script, output_file, num_chunks, is_raw, preview);
       }
     };
 

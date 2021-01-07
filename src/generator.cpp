@@ -33,12 +33,12 @@ generator::generator() : visualizer(std::make_shared<progress_visualizer>("Job",
   });
 }
 
-void generator::init(const std::string& filename, std::optional<double> rand_seed) {
+void generator::init(const std::string& filename, std::optional<double> rand_seed, bool preview) {
   filename_ = filename;
   init_context();
   init_user_script();
   init_job();
-  init_video_meta_info(rand_seed);
+  init_video_meta_info(rand_seed, preview);
   init_gradients();
   init_textures();
   scenesettings.scene_initialized = std::numeric_limits<size_t>::max();
@@ -130,10 +130,15 @@ void generator::init_job() {
   job->save_image = false;
 }
 
-void generator::init_video_meta_info(std::optional<double> rand_seed) {
+void generator::init_video_meta_info(std::optional<double> rand_seed, bool preview) {
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto video = v8_index_object(context, val, "video").As<v8::Object>();
+    if (preview) {
+      auto preview_obj = v8_index_object(context, val, "preview").As<v8::Object>();
+      i.recursively_copy_object(video, preview_obj);
+    }
+
     auto duration = i.has_field(video, "duration") ? i.double_number(video, "duration") : 0;
     scenesettings.scene_durations.clear();
     if (duration == 0) {
@@ -745,19 +750,19 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto is_line = type == "line";
   auto label = i.str(instance, "label");
   auto shape_scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
-  auto rotate = [&](double src_x, double src_y, double* x, double* y, double angle) {
-    if (angle == 0.) {
-      return;
-    }
-    auto angle1 = angle + get_angle(src_x, src_y, *x, *y);
-    while (angle1 > 360.) angle1 -= 360.;
-    auto rads = angle1 * M_PI / 180.0;
-    auto ratio = 1.0;
-    auto dist = get_distance(src_x, src_y, *x, *y);
-    auto move = dist * ratio * -1;
-    *x = (cos(rads) * move);
-    *y = (sin(rads) * move);
-  };
+  //  auto rotate = [&](double src_x, double src_y, double* x, double* y, double angle) {
+  //    if (angle == 0.) {
+  //      return;
+  //    }
+  //    auto angle1 = angle + get_angle(src_x, src_y, *x, *y);
+  //    while (angle1 > 360.) angle1 -= 360.;
+  //    auto rads = angle1 * M_PI / 180.0;
+  //    auto ratio = 1.0;
+  //    auto dist = get_distance(src_x, src_y, *x, *y);
+  //    auto move = dist * ratio * -1;
+  //    *x = (cos(rads) * move);
+  //    *y = (sin(rads) * move);
+  //  };
 
   parents[level] = instance;
   prev_parents[level] = previous_instance;
@@ -943,7 +948,7 @@ void generator::convert_object_to_render_job(
       i.has_field(instance, "blending_type") ? i.integer_number(instance, "blending_type") : data::blending_type::add;
   auto scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
   auto unique_id = i.integer_number(instance, "unique_id");
-  auto video_scale = i.double_number(video, "scale");
+  // auto video_scale = i.double_number(video, "scale");
   auto shape_opacity = i.double_number(instance, "opacity");
   auto motion_blur = i.boolean(instance, "motion_blur");
 

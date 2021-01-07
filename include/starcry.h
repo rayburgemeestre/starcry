@@ -88,7 +88,6 @@ private:
   std::shared_ptr<server_message_handler> server_message_handler_;
   std::shared_ptr<client_message_handler> client_message_handler_;
   log_level log_level_;
-  bool raw = false;
 
 public:
   starcry(
@@ -103,10 +102,18 @@ public:
       std::optional<double> rand_seed = std::nullopt);
   ~starcry();
 
-  void add_command(
-      seasocks::WebSocket *client, const std::string &script, instruction_type it, int frame_num, int num_chunks);
-  void add_command(
-      seasocks::WebSocket *client, const std::string &script, const std::string &output_file, int num_chunks, bool raw);
+  void add_command(seasocks::WebSocket *client,
+                   const std::string &script,
+                   instruction_type it,
+                   int frame_num,
+                   int num_chunks,
+                   bool preview);
+  void add_command(seasocks::WebSocket *client,
+                   const std::string &script,
+                   const std::string &output_file,
+                   int num_chunks,
+                   bool raw,
+                   bool preview);
 
   void run_server();
   void run_client(const std::string &host);

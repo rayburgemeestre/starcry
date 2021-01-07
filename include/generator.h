@@ -77,11 +77,11 @@ public:
   generator();
   ~generator() = default;
 
-  void init(const std::string& filename, std::optional<double> rand_seed);
+  void init(const std::string& filename, std::optional<double> rand_seed, bool preview);
   void init_context();
   void init_user_script();
   void init_job();
-  void init_video_meta_info(std::optional<double> rand_seed);
+  void init_video_meta_info(std::optional<double> rand_seed, bool preview);
   void init_gradients();
   void init_textures();
   void init_object_instances();

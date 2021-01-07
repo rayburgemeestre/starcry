@@ -160,6 +160,15 @@ _ = {
     'perlin_noise': true,
     'dithering': true,
   },
+  'preview': {
+    'width': 320,
+    'height': 320,
+    'granularity': 1,
+    'motion_blur': false,
+    'max_intermediates': 1.,
+    'perlin_noise': false,
+    'dithering': false,
+  },
   'scenes': [
     {
       'name': 'scene1',

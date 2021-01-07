@@ -117,13 +117,13 @@ prepare:
 core_:
 	pushd build && \
 	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(which c++) cmake .. && \
-	make -j $$(nproc) starcry && \
+	time make -j $$(nproc) starcry && \
 	strip --strip-debug starcry
 
 core_debug:
 	pushd build && \
 	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(which c++) cmake -DDEBUG=on .. && \
-	make VERBOSE=1 -j $$(nproc) starcry
+	time make VERBOSE=1 -j $$(nproc) starcry
 
 core_debug_sanit:
 	pushd build && \

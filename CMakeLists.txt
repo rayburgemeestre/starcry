@@ -30,7 +30,9 @@ endif()
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # don't use libc++ v8's third party libc++ with unstable abi doesn't bode well with caf
     #set (CLANG_FLAGS "-stdlib=libc++")
-    set(CMAKE_EXE_LINKER_FLAGS "-Wl,--no-rosegment")
+    # IIUC rosesegment is not enabled by default with ld.gold anyway, it complains about this flag.
+    # set(CMAKE_EXE_LINKER_FLAGS "-Wl,--no-rosegment ")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold")
 else()
     #set (CLANG_FLAGS "")
 endif()
@@ -135,16 +137,11 @@ target_link_libraries(starcry -lGL)
 # x264
 target_link_libraries(starcry /opt/cppse/build/x264/lib/libx264.a)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libbz2.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libz.a)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/liblzma.a)
 
 target_link_libraries(starcry -ldl)
 
-# More allegro/X11 stuff
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libjpeg.a)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libpng16.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libGLU.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libfreetype.a)
 
 # fastpfor
 target_link_libraries(starcry /opt/cppse/build/fastpfor/lib/libFastPFor.a)
@@ -162,13 +159,14 @@ target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libcrypto.a)
 target_link_libraries(starcry /opt/cppse/build/seasocks/lib/libseasocks.a)
 
 # openexr
-target_link_libraries(starcry /opt/cppse/build/openexr/lib/libHalf-2_5.a)
-target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIex-2_5.a)
 target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIexMath-2_5.a)
 target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIlmImf-2_5.a)
 target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIlmImfUtil-2_5.a)
 target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIlmThread-2_5.a)
 target_link_libraries(starcry /opt/cppse/build/openexr/lib/libImath-2_5.a)
+target_link_libraries(starcry /opt/cppse/build/openexr/lib/libHalf-2_5.a)
+target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIex-2_5.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libz.a)
 
 # imagemagick
 #target_link_libraries(starcry -lzstd)
@@ -189,7 +187,7 @@ target_link_libraries(starcry /usr/lib/clang/10.0.1/lib/linux/libclang_rt.asan-x
 endif()
 
 # fmt
-target_link_libraries(starcry "/opt/cppse/build/fmt/lib/libfmt.a")
+target_link_libraries(starcry /opt/cppse/build/fmt/lib/libfmt.a)
 
 install (TARGETS starcry DESTINATION bin)
 

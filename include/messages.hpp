@@ -39,22 +39,37 @@ public:
   std::string output_file;
   int num_chunks;
   bool raw = false;
+  bool preview = false;
 
-  instruction(seasocks::WebSocket *client, instruction_type type, std::string script, size_t frame, int num_chunks)
-      : client(client), type(type), frame(frame), script(script), output_file(""), num_chunks(num_chunks), raw(false) {}
+  instruction(seasocks::WebSocket *client,
+              instruction_type type,
+              std::string script,
+              size_t frame,
+              int num_chunks,
+              bool preview)
+      : client(client),
+        type(type),
+        frame(frame),
+        script(script),
+        output_file(""),
+        num_chunks(num_chunks),
+        raw(false),
+        preview(preview) {}
   instruction(seasocks::WebSocket *client,
               instruction_type type,
               std::string script,
               std::string output_file,
               int num_chunks,
-              bool raw)
+              bool raw,
+              bool preview)
       : client(client),
         type(type),
         frame(0),
         script(std::move(script)),
         output_file(std::move(output_file)),
         num_chunks(num_chunks),
-        raw(raw) {}
+        raw(raw),
+        preview(preview) {}
 };
 
 class job_message : public message_type {
