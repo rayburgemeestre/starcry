@@ -178,12 +178,13 @@ public:
         // in interactive mode commands come from the web interface
         return;
       }
+      bool is_raw = vm.count("raw");
       if (frame_of_interest != std::numeric_limits<size_t>::max()) {
         // render still image
-        sc.add_command(nullptr, script, instruction_type::get_raw_image, frame_of_interest, num_chunks, preview);
+        sc.add_command(
+            nullptr, script, instruction_type::get_raw_image, frame_of_interest, num_chunks, is_raw, preview);
       } else {
         // render video
-        bool is_raw = vm.count("raw");
         sc.add_command(nullptr, script, output_file, num_chunks, is_raw, preview);
       }
     };

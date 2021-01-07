@@ -95,8 +95,9 @@ void starcry::add_command(seasocks::WebSocket *client,
                           instruction_type it,
                           int frame_num,
                           int num_chunks,
+                          bool raw,
                           bool preview) {
-  cmds->push(std::make_shared<instruction>(client, it, script, frame_num, num_chunks, preview));
+  cmds->push(std::make_shared<instruction>(client, it, script, frame_num, num_chunks, raw, preview));
   le.run([=]() {
     if (webserv) {
       webserv->send_stats(system->stats());

@@ -108,6 +108,7 @@ public:
                    instruction_type it,
                    int frame_num,
                    int num_chunks,
+                   bool raw,
                    bool preview);
   void add_command(seasocks::WebSocket *client,
                    const std::string &script,

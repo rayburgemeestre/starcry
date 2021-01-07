@@ -46,6 +46,7 @@ public:
               std::string script,
               size_t frame,
               int num_chunks,
+              bool raw,
               bool preview)
       : client(client),
         type(type),
@@ -53,7 +54,7 @@ public:
         script(script),
         output_file(""),
         num_chunks(num_chunks),
-        raw(false),
+        raw(raw),
         preview(preview) {}
   instruction(seasocks::WebSocket *client,
               instruction_type type,
