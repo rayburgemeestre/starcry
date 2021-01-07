@@ -8,16 +8,18 @@
 #include <vector>
 
 #include "cereal/types/vector.hpp"
+#include "data/color.hpp"
 
 namespace data {
 
 struct pixel_data2 {
   size_t job_number;
   std::vector<uint32_t> pixels;
+  std::vector<data::color> pixels_raw;
 
   template <class Archive>
   void serialize(Archive& ar) {
-    ar(job_number, pixels);
+    ar(job_number, pixels, pixels_raw);
   }
 };
 

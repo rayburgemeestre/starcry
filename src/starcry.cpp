@@ -114,8 +114,10 @@ void starcry::add_command(seasocks::WebSocket *client,
       client, instruction_type::get_video, script, output_file, num_chunks, raw, preview));
 }
 
-void starcry::render_job(rendering_engine_wrapper &engine, const data::job &job, image &bmp) {
-  data::settings settings = gen->settings();
+void starcry::render_job(rendering_engine_wrapper &engine,
+                         const data::job &job,
+                         image &bmp,
+                         const data::settings &settings) {
   engine.render(bmp,
                 job.background_color,
                 job.shapes,
@@ -222,7 +224,8 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 
   // render
   auto &bmp = bitmaps[i]->get(job.width, job.height);
-  render_job(*engines[i], job, bmp);
+  data::settings settings = gen->settings();
+  render_job(*engines[i], job, bmp, settings);
 
   return command_handlers[job_msg->type]->to_render_msg(job_msg, bmp);
 }
@@ -254,7 +257,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
     if (job_msg->client == nullptr) {
       // get pixels from raw pixels for the ffmpeg video
       if (pixels.empty() && !pixels_raw.empty()) {
-        std::vector<uint32_t> pixels_new = starcry::pixels_vec_to_pixel_data(pixels_raw);
+        std::vector<uint32_t> pixels_new = starcry::pixels_vec_to_pixel_data(pixels_raw, gen->settings());
         std::swap(pixels, pixels_new);
       }
       if (gui) gui->add_frame(width, height, pixels);
@@ -378,11 +381,12 @@ void starcry::run_client(const std::string &host) {
 }
 
 // This function is used to send to framer and als the preview window
-std::vector<uint32_t> starcry::pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in) const {
+std::vector<uint32_t> starcry::pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in,
+                                                        const data::settings &settings) const {
   std::vector<uint32_t> pixels_out;
   pixels_out.reserve(pixels_in.size());
 
-  if (gen->settings().dithering) {
+  if (settings.dithering) {
     for (const auto &pix : pixels_in) {
       uint32_t color;
       char *cptr = (char *)&color;

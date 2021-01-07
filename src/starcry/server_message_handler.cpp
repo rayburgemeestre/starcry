@@ -8,6 +8,8 @@
 
 #include "cereal/archives/binary.hpp"
 
+#include "data/settings.hpp"
+
 #include <unistd.h>  // getpid()
 #include <sstream>
 
@@ -32,7 +34,9 @@ bool server_message_handler::on_server_message(render_client &client,
       std::istringstream is(data);
       cereal::BinaryInputArchive archive(is);
       data::job job;
+      data::settings settings;
       archive(job);
+      archive(settings);
       auto &bmp = bitmap.get(job.width, job.height);
       size_t num_shapes = 0;
       for (const auto &shapez : job.shapes) {
@@ -41,9 +45,13 @@ bool server_message_handler::on_server_message(render_client &client,
 
       std::cout << "render client " << getpid() << " rendering job " << job.job_number << " shapes=" << num_shapes
                 << ", dimensions=" << job.width << "x" << job.height << std::endl;
-      sc.render_job(engine, job, bmp);
+      sc.render_job(engine, job, bmp, settings);
       data::pixel_data2 dat;
-      dat.pixels = sc.pixels_vec_to_pixel_data(bmp.pixels());
+      if (job.is_raw) {
+        dat.pixels_raw = bmp.pixels();
+      } else {
+        dat.pixels = sc.pixels_vec_to_pixel_data(bmp.pixels(), settings);
+      }
       client.send_frame(job, dat, true);
       client.pull_job(true, 0);
       break;

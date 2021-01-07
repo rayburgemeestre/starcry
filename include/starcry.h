@@ -33,7 +33,8 @@ class client_message_handler;
 
 namespace data {
 struct job;
-}
+struct settings;
+}  // namespace data
 
 namespace seasocks {
 class WebSocket;
@@ -119,7 +120,7 @@ public:
   void run_client(const std::string &host);
 
 private:
-  void render_job(rendering_engine_wrapper &engine, const data::job &job, image &bmp);
+  void render_job(rendering_engine_wrapper &engine, const data::job &job, image &bmp, const data::settings &settings);
   void copy_to_png(const std::vector<data::color> &source,
                    uint32_t width,
                    uint32_t height,
@@ -129,7 +130,8 @@ private:
   std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);
   void handle_frame(std::shared_ptr<render_msg> job_msg);
 
-  std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in) const;
+  std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in,
+                                                 const data::settings &settings) const;
   void save_images(std::shared_ptr<generator> gen,
                    std::vector<data::color> &pixels_raw,
                    size_t width,

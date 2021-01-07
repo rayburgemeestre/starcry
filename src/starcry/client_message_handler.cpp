@@ -8,7 +8,7 @@
 //
 #include "cereal/archives/binary.hpp"
 
-#include <sstream>
+#include "generator.h"
 
 client_message_handler::client_message_handler(starcry &sc) : sc(sc) {}
 
@@ -34,7 +34,11 @@ bool client_message_handler::on_client_message(int sockfd, int type, size_t len,
         if (job) {  // can be nullptr if someone else took it faster than us
           std::ostringstream os;
           cereal::BinaryOutputArchive archive(os);
+          // TODO: perhaps there should be a better way than this
+          job->job->is_raw = job->raw;
           archive(*(job->job));
+          const auto settings = sc.gen->settings();
+          archive(settings);
           sc.renderserver->send_msg(sockfd, starcry_msgs::pull_job_response, os.str().c_str(), os.str().size());
           break;
         }
@@ -54,19 +58,35 @@ bool client_message_handler::on_client_message(int sockfd, int type, size_t len,
       //   compress_vector<uint32_t> cv;
       //   cv.decompress(&dat.pixels, job.width * job.height);
       // }
-      auto frame = std::make_shared<render_msg>(nullptr,
-                                                instruction_type::get_image,
-                                                job.job_number,
-                                                job.frame_number,
-                                                job.chunk,
-                                                job.num_chunks,
-                                                job.offset_x,
-                                                job.offset_y,
-                                                job.last_frame,
-                                                job.width,
-                                                job.height,
-                                                dat.pixels);
-      sc.frames->push(frame);
+      if (!dat.pixels.empty()) {
+        auto frame = std::make_shared<render_msg>(nullptr,
+                                                  instruction_type::get_image,
+                                                  job.job_number,
+                                                  job.frame_number,
+                                                  job.chunk,
+                                                  job.num_chunks,
+                                                  job.offset_x,
+                                                  job.offset_y,
+                                                  job.last_frame,
+                                                  job.width,
+                                                  job.height,
+                                                  dat.pixels);
+        sc.frames->push(frame);
+      } else if (!dat.pixels_raw.empty()) {
+        auto frame = std::make_shared<render_msg>(nullptr,
+                                                  instruction_type::get_image,
+                                                  job.job_number,
+                                                  job.frame_number,
+                                                  job.chunk,
+                                                  job.num_chunks,
+                                                  job.offset_x,
+                                                  job.offset_y,
+                                                  job.last_frame,
+                                                  job.width,
+                                                  job.height,
+                                                  dat.pixels_raw);
+        sc.frames->push(frame);
+      }
     }
   }
   return true;

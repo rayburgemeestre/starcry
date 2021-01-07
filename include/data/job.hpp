@@ -37,6 +37,7 @@ struct job {
   uint32_t bitrate;
   bool compress;
   bool save_image;
+  bool is_raw;
 
   inline bool operator<(const job &other) const {
     return job_number < other.job_number;  // there can be no ties
@@ -60,9 +61,11 @@ struct job {
        background_color,
        shapes,
        scale,
+       scales,
        bitrate,
        compress,
-       save_image);
+       save_image,
+       is_raw);
   }
 
   inline void resize_for_num_steps(int steps) {

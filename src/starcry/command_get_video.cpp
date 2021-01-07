@@ -74,7 +74,7 @@ std::shared_ptr<render_msg> command_get_video::to_render_msg(std::shared_ptr<job
     return nullptr;
   }
   auto &job = *job_msg->job;
-  auto transfer_pixels = sc.pixels_vec_to_pixel_data(bmp.pixels());
+  auto transfer_pixels = sc.pixels_vec_to_pixel_data(bmp.pixels(), sc.gen->settings());
   auto raw = job_msg->raw;
   if (raw) {
     return std::make_shared<render_msg>(job_msg->client,

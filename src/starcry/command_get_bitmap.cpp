@@ -6,6 +6,7 @@
 
 #include <fmt/core.h>
 
+#include "generator.h"
 #include "starcry.h"
 #include "starcry/command_get_bitmap.h"
 
@@ -17,7 +18,7 @@ command_get_bitmap::command_get_bitmap(starcry &sc) : command_handler(sc) {}
 std::shared_ptr<render_msg> command_get_bitmap::to_render_msg(std::shared_ptr<job_message> &job_msg, image &bmp) {
   auto &job = *job_msg->job;
   job.job_number = std::numeric_limits<uint32_t>::max();
-  auto transfer_pixels = sc.pixels_vec_to_pixel_data(bmp.pixels());
+  auto transfer_pixels = sc.pixels_vec_to_pixel_data(bmp.pixels(), sc.gen->settings());
   return std::make_shared<render_msg>(job_msg->client,
                                       job_msg->type,
                                       job.job_number,

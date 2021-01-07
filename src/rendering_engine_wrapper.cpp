@@ -31,7 +31,7 @@ void rendering_engine_wrapper::render(image &bmp,
                                       double scale,
                                       std::vector<double> scales,
                                       bool verbose,
-                                      data::settings &settings) {
+                                      const data::settings &settings) {
   return data->engine.render(
       bmp, bg_color, shapes, offset_x, offset_y, canvas_w, canvas_h, width, height, scale, scales, verbose, settings);
 }

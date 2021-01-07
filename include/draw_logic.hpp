@@ -159,7 +159,7 @@ public:
    *   circle). For this we calculate the half of the "x chord length" for both the outer- and inner circle, and
    *   substract them.
    */
-  inline void render_circle(image &bmp, const data::shape &shape, double opacity, data::settings &settings) {
+  inline void render_circle(image &bmp, const data::shape &shape, double opacity, const data::settings &settings) {
     double circle_x = ((shape.x * scale_) + center_x_) - offset_x_;
     double circle_y = ((shape.y * scale_) + center_y_) - offset_y_;
     auto radius = shape.radius * scale_ * shape.scale;
@@ -290,7 +290,7 @@ public:
                            int absY,
                            double diffFromCenter,
                            double opacity,
-                           data::settings &settings) {
+                           const data::settings &settings) {
     if (absX < 0 || absY < 0 || absX >= static_cast<int>(width_) || absY >= static_cast<int>(height_)) return;
 
     if (diffFromCenter == -1) diffFromCenter = distance<double>(absX, posX, absY, posY);
@@ -330,7 +330,7 @@ public:
     bmp.set(absX, absY, r, g, b, a);
   }
 
-  void render_line(image &bmp, const data::shape &shape, double opacity, data::settings &settings) {
+  void render_line(image &bmp, const data::shape &shape, double opacity, const data::settings &settings) {
     auto x1 = ((shape.x * scale_) + center_x_) - offset_x_;
     auto y1 = ((shape.y * scale_) + center_y_) - offset_y_;
     auto x2 = ((shape.x2 * scale_) + center_x_) - offset_x_;
@@ -503,7 +503,7 @@ public:
                          double normalized_dist_from_center,
                          double normalized_dist_from_line,
                          double opacity,
-                         data::settings &settings) {
+                         const data::settings &settings) {
     if (normalized_dist_from_center > 1.0 || normalized_dist_from_center < 0.0) {
       return;
     }
@@ -556,7 +556,7 @@ public:
                     int absY,
                     double num,  // Opacity in circle pixel fun
                     double opacity,
-                    data::settings &settings) {
+                    const data::settings &settings) {
     data::color clr{0, 0, 0, 0};
     for (const auto &grad : shape.gradients_) {
       double gradient_opacity = grad.first;

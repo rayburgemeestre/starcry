@@ -65,7 +65,7 @@ public:
               double scale,
               std::vector<double> scales,
               bool verbose,
-              data::settings &settings) {
+              const data::settings &settings) {
     // this lock is no longer needed since we got rid of all dependencies
     // std::unique_lock<std::mutex> lock(m);
     bmp.clear_to_color(bg_color);
