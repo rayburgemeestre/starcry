@@ -36,6 +36,7 @@
 #include "starcry/command_get_raw_image.h"
 #include "starcry/command_get_shapes.h"
 #include "starcry/command_get_video.h"
+#include "starcry/metrics.h"
 
 #include "starcry/client_message_handler.h"
 #include "starcry/server_message_handler.h"
@@ -84,7 +85,8 @@ starcry::starcry(size_t num_local_engines,
       }),
       server_message_handler_(std::make_shared<server_message_handler>(*this)),
       client_message_handler_(std::make_shared<client_message_handler>(*this)),
-      log_level_(level) {}
+      log_level_(level),
+      metrics_(std::make_shared<metrics>()) {}
 
 starcry::~starcry() {
   le.cancel();
@@ -115,11 +117,16 @@ void starcry::add_command(seasocks::WebSocket *client,
       client, instruction_type::get_video, script, output_file, num_chunks, raw, preview));
 }
 
-void starcry::render_job(rendering_engine_wrapper &engine,
+void starcry::render_job(size_t thread_num,
+                         rendering_engine_wrapper &engine,
                          const data::job &job,
                          image &bmp,
                          const data::settings &settings) {
-  engine.render(bmp,
+  engine.render(thread_num,
+                job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
+                job.chunk,
+                metrics_,
+                bmp,
                 job.background_color,
                 job.shapes,
                 job.offset_x,
@@ -178,7 +185,7 @@ void starcry::copy_to_png(const std::vector<data::color> &source,
 }
 
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
-  if (!gen) gen = std::make_shared<generator>();
+  if (!gen) gen = std::make_shared<generator>(metrics_);
   gen->init(cmd_def->script, seed, cmd_def->preview);
 
   if (cmd_def->type == instruction_type::get_video) {
@@ -226,7 +233,19 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   // render
   auto &bmp = bitmaps[i]->get(job.width, job.height);
   data::settings settings = gen->settings();
-  render_job(*engines[i], job, bmp, settings);
+  if (job.job_number == std::numeric_limits<uint32_t>::max()) {
+    metrics_->set_frame_mode();
+    metrics_->render_job(i, job.frame_number, job.chunk);
+  } else {
+    metrics_->render_job(i, job.job_number, job.chunk);
+  }
+  render_job(i, *engines[i], job, bmp, settings);
+
+  if (job.job_number == std::numeric_limits<uint32_t>::max()) {
+    metrics_->complete_render_job(i, job.frame_number, job.chunk);
+  } else {
+    metrics_->complete_render_job(i, job.job_number, job.chunk);
+  }
 
   return command_handlers[job_msg->type]->to_render_msg(job_msg, bmp);
 }
@@ -341,6 +360,7 @@ void starcry::run_server() {
   }
 
   for (size_t i = 0; i < num_local_engines; i++) {
+    metrics_->register_thread(i, fmt::format("L{}", i));
     engines[i] = std::make_shared<rendering_engine_wrapper>();
     engines[i]->initialize();
     bitmaps[i] = std::make_shared<bitmap_wrapper>();

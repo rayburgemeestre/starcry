@@ -5,6 +5,7 @@
  */
 
 #include "starcry/command_handler.h"
+#include "starcry/metrics.h"
 
 #include "generator.h"
 #include "messages.hpp"
@@ -25,6 +26,7 @@ void command_handler::to_job(std::shared_ptr<instruction> &cmd_def) {
   if (cmd_def->num_chunks == 1) {
     sc.jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, the_job, cmd_def->raw));
   } else {
+    sc.metrics_->resize_job(the_job->job_number, cmd_def->num_chunks);
     const auto rectangles = is.split(cmd_def->num_chunks, util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
     for (size_t i = 0, counter = 1; i < rectangles.size(); i++) {
       the_job->width = rectangles[i].width();

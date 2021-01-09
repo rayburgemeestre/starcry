@@ -107,6 +107,10 @@ _ = {
     'max_intermediates': 50.,
     'bg_color': {'r': 0., 'g': 0.0, 'b': 0., 'a': 0}
   },
+  'preview': {
+    'width': 1920 / 4.,
+    'height': 1080 / 4.,
+  },
   'scenes': [
     {'name': 'scene1', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}]},
     {'name': 'scene2', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': 100, 'y': 0, 'z': 0, 'props': {}}]},

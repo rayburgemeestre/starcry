@@ -7,6 +7,7 @@
 //#include "bitmap_wrapper.hpp"
 //
 #include "cereal/archives/binary.hpp"
+#include "starcry/metrics.h"
 
 #include "generator.h"
 
@@ -19,6 +20,7 @@ bool client_message_handler::on_client_message(int sockfd, int type, size_t len,
                                 starcry_msgs::register_me_response,
                                 (const char *)&sc.num_queue_per_worker,
                                 sizeof(sc.num_queue_per_worker));
+      sc.metrics_->register_thread(1000 + sockfd, "remote");
       break;
     }
     case starcry_msgs::pull_job: {
@@ -40,6 +42,12 @@ bool client_message_handler::on_client_message(int sockfd, int type, size_t len,
           const auto settings = sc.gen->settings();
           archive(settings);
           sc.renderserver->send_msg(sockfd, starcry_msgs::pull_job_response, os.str().c_str(), os.str().size());
+          if (job->job->job_number == std::numeric_limits<uint32_t>::max()) {
+            sc.metrics_->set_frame_mode();
+            sc.metrics_->render_job(1000 + sockfd, job->job->frame_number, job->job->chunk);
+          } else {
+            sc.metrics_->render_job(1000 + sockfd, job->job->job_number, job->job->chunk);
+          }
           break;
         }
       }
@@ -58,6 +66,11 @@ bool client_message_handler::on_client_message(int sockfd, int type, size_t len,
       //   compress_vector<uint32_t> cv;
       //   cv.decompress(&dat.pixels, job.width * job.height);
       // }
+      if (job.job_number == std::numeric_limits<uint32_t>::max()) {
+        sc.metrics_->complete_render_job(1000 + sockfd, job.frame_number, job.chunk);
+      } else {
+        sc.metrics_->complete_render_job(1000 + sockfd, job.job_number, job.chunk);
+      }
       if (!dat.pixels.empty()) {
         auto frame = std::make_shared<render_msg>(nullptr,
                                                   instruction_type::get_image,

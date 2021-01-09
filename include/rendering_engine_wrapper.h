@@ -19,6 +19,8 @@ struct shape;
 struct settings;
 }  // namespace data
 
+class metrics;
+
 class rendering_engine_wrapper {
 public:
   rendering_engine_wrapper();
@@ -31,7 +33,11 @@ public:
 
   void initialize();
 
-  void render(image &bmp,
+  void render(size_t thread_num,
+              size_t job_num,
+              size_t chunk_num,
+              std::shared_ptr<metrics> &metrics,
+              image &bmp,
               const data::color &bg_color,
               const std::vector<std::vector<data::shape>> &shapes,
               uint32_t offset_x,

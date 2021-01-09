@@ -27,9 +27,11 @@
 
 class step_calculator;
 class progress_visualizer;
+class metrics;
 
 class generator {
 private:
+  std::shared_ptr<metrics> metrics_;
   std::shared_ptr<data::job> job;
   // TODO: seems unused??
   uint32_t frame_number;
@@ -74,7 +76,7 @@ public:
     double scene_time;
   };
 
-  generator();
+  generator(std::shared_ptr<metrics>& metrics);
   ~generator() = default;
 
   void init(const std::string& filename, std::optional<double> rand_seed, bool preview);

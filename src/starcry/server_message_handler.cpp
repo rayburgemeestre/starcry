@@ -45,7 +45,7 @@ bool server_message_handler::on_server_message(render_client &client,
 
       std::cout << "render client " << getpid() << " rendering job " << job.job_number << " shapes=" << num_shapes
                 << ", dimensions=" << job.width << "x" << job.height << std::endl;
-      sc.render_job(engine, job, bmp, settings);
+      sc.render_job(getpid(), engine, job, bmp, settings);
       data::pixel_data2 dat;
       if (job.is_raw) {
         dat.pixels_raw = bmp.pixels();

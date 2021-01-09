@@ -48,12 +48,17 @@ inline int round_to_int(double_type in) {
 #include "data/shape.hpp"
 #include "draw_logic.hpp"
 #include "image.hpp"
+#include "starcry/metrics.h"
 
 class rendering_engine {
 public:
   void initialize() {}
 
-  void render(image &bmp,
+  void render(size_t thread_num,
+              size_t job_num,
+              size_t chunk_num,
+              std::shared_ptr<metrics> &metrics,
+              image &bmp,
               const data::color &bg_color,
               const std::vector<std::vector<data::shape>> &shapes,
               uint32_t offset_x,
@@ -92,11 +97,14 @@ public:
     visualizer_.initialize();
     visualizer_.set_max_frames(shapes[shapes.size() - 1].size());
 
+    metrics->resize_job_objects(thread_num, job_num, chunk_num, shapes[shapes.size() - 1].size());
+
     if (!shapes.empty()) {
       double index = 0;
       for (const auto &shape : shapes[shapes.size() - 1]) {
+        metrics->set_render_job_object_state(thread_num, job_num, chunk_num, index, metrics::job_state::rendering);
         if (verbose) {
-          visualizer_.display(index++);
+          // visualizer_.display(index++);
         }
 
         if (shape.type == data::shape_type::circle) {
@@ -138,6 +146,8 @@ public:
           draw_logic_.scale(scales[scales.size() - 1] * scale_ratio);  // TODO: fix this
           draw_logic_.render_text(shape.x, shape.y, shape.text_size, shape.text, shape.align);
         }
+        metrics->set_render_job_object_state(thread_num, job_num, chunk_num, index, metrics::job_state::rendered);
+        index++;
       }
     }
     //    // test

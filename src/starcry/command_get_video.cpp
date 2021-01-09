@@ -10,6 +10,7 @@
 #include "generator.h"
 #include "starcry.h"
 #include "starcry/command_get_video.h"
+#include "starcry/metrics.h"
 #include "util/image_splitter.hpp"
 #include "util/progress_visualizer.h"
 
@@ -31,6 +32,9 @@ void command_get_video::to_job(std::shared_ptr<instruction> &cmd_def) {
           fmt::format("output_seed_{}_{}x{}.h264", sc.gen->get_seed(), (int)sc.gen->width(), (int)sc.gen->height());
     }
     sc.framer = std::make_unique<frame_streamer>(cmd_def->output_file, stream_mode);
+    sc.framer->set_log_callback([&](int level, const std::string &line) {
+      sc.metrics_->log_callback(level, line);
+    });
   }
   sc.visualizer->initialize();
   sc.visualizer->set_max_frames(sc.gen->get_max_frames());
@@ -50,6 +54,7 @@ void command_get_video::to_job(std::shared_ptr<instruction> &cmd_def) {
     if (cmd_def->num_chunks == 1) {
       sc.jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, job_copy, cmd_def->raw));
     } else {
+      sc.metrics_->resize_job(job_copy->job_number, cmd_def->num_chunks);
       const auto rectangles = is.split(cmd_def->num_chunks, util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
       for (size_t i = 0, counter = 1; i < rectangles.size(); i++) {
         job_copy->width = rectangles[i].width();

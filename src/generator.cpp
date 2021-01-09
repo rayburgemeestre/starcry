@@ -13,6 +13,7 @@
 #include "v8pp/module.hpp"
 
 #include "scripting.h"
+#include "starcry/metrics.h"
 #include "util/generator.h"
 #include "util/math.h"
 #include "util/progress_visualizer.h"
@@ -26,7 +27,8 @@
 
 std::shared_ptr<v8_wrapper> context;
 
-generator::generator() : visualizer(std::make_shared<progress_visualizer>("Job", 4)) {
+generator::generator(std::shared_ptr<metrics>& metrics)
+    : metrics_(metrics), visualizer(std::make_shared<progress_visualizer>("Job", 4)) {
   static std::once_flag once;
   std::call_once(once, []() {
     context = nullptr;
@@ -336,6 +338,10 @@ bool generator::generate_frame() {
 bool generator::_generate_frame() {
   try {
     job->shapes.clear();
+
+    // job_number is incremented later, hence we do a +1 on the next line.
+    metrics_->register_job(job->job_number + 1, job->frame_number, job->chunk, job->num_chunks);
+    // TODO: Deprecate
     visualizer->set_start_timing();
 
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
@@ -420,6 +426,7 @@ bool generator::_generate_frame() {
     });
     job->job_number++;
     job->frame_number++;
+    metrics_->complete_job(job->job_number);
     visualizer->display(job->job_number);
   } catch (std::exception& ex) {
     std::cout << ex.what() << std::endl;

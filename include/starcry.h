@@ -41,6 +41,7 @@ class WebSocket;
 }
 
 class command_handler;
+class metrics;
 
 class starcry {
   friend class command_handler;
@@ -89,6 +90,7 @@ private:
   std::shared_ptr<server_message_handler> server_message_handler_;
   std::shared_ptr<client_message_handler> client_message_handler_;
   log_level log_level_;
+  std::shared_ptr<metrics> metrics_;
 
 public:
   starcry(
@@ -121,7 +123,11 @@ public:
   void run_client(const std::string &host);
 
 private:
-  void render_job(rendering_engine_wrapper &engine, const data::job &job, image &bmp, const data::settings &settings);
+  void render_job(size_t thread_num,
+                  rendering_engine_wrapper &engine,
+                  const data::job &job,
+                  image &bmp,
+                  const data::settings &settings);
   void copy_to_png(const std::vector<data::color> &source,
                    uint32_t width,
                    uint32_t height,

@@ -19,7 +19,11 @@ void rendering_engine_wrapper::initialize() {
   data->engine.initialize();
 }
 
-void rendering_engine_wrapper::render(image &bmp,
+void rendering_engine_wrapper::render(size_t thread_num,
+                                      size_t job_num,
+                                      size_t chunk_num,
+                                      std::shared_ptr<metrics> &metrics,
+                                      image &bmp,
                                       const data::color &bg_color,
                                       const std::vector<std::vector<data::shape>> &shapes,
                                       uint32_t offset_x,
@@ -32,8 +36,23 @@ void rendering_engine_wrapper::render(image &bmp,
                                       std::vector<double> scales,
                                       bool verbose,
                                       const data::settings &settings) {
-  return data->engine.render(
-      bmp, bg_color, shapes, offset_x, offset_y, canvas_w, canvas_h, width, height, scale, scales, verbose, settings);
+  return data->engine.render(thread_num,
+                             job_num,
+                             chunk_num,
+                             metrics,
+                             bmp,
+                             bg_color,
+                             shapes,
+                             offset_x,
+                             offset_y,
+                             canvas_w,
+                             canvas_h,
+                             width,
+                             height,
+                             scale,
+                             scales,
+                             verbose,
+                             settings);
 }
 
 void rendering_engine_wrapper::write_image(image &bmp, const std::string &filename) {
