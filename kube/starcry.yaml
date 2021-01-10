@@ -21,7 +21,7 @@ spec:
       - name: starcrycontainer
         image: rayburgemeestre/starcry:latest
         command: ["/starcry"]
-        args: ["-i"]
+        args: ["-i", "--notty"]
         workingDir: /workdir
         volumeMounts:
         - mountPath: /workdir
