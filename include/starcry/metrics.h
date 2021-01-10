@@ -84,7 +84,7 @@ public:
     frame_mode,
   };
   metrics::modes mode = modes::global_mode;
-  std::atomic<bool> record_objects = false;
+  std::atomic<bool> record_objects{false};
 
 private:
   std::map<int, metrics::thread_data> threads_;
@@ -93,6 +93,9 @@ private:
 
   int max_keep_jobs = 10;
   int y = 0;
+
+  bool notty = false;
+  bool nostdin = false;
 
 public:
   explicit metrics(bool notty);
@@ -112,12 +115,14 @@ public:
   void log_callback(int level, const std::string& line);
 
 private:
-  bool has_terminal();
-  bool thread_exists(int number);
+  //  bool has_terminal();
+  //  bool thread_exists(int number);
 
   double time_diff(std::chrono::time_point<std::chrono::high_resolution_clock> begin,
                    std::chrono::time_point<std::chrono::high_resolution_clock> end);
 
   std::thread curses;
   std::vector<std::pair<int, std::string>> ffmpeg;
+
+  void output(int y, int x, std::string in);
 };

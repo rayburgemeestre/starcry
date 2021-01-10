@@ -78,7 +78,12 @@ void mainloop(void *arg) {
 void render_shapes_to_texture() {
   auto &bmp = bitmap.get(job.width, job.height);
   data::settings settings_;
-  engine.render(bmp,
+  std::shared_ptr<metrics> tmp = nullptr;
+  engine.render(0,
+                job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
+                job.chunk,
+                tmp,
+                bmp,
                 job.background_color,
                 job.shapes,
                 job.offset_x,
@@ -88,6 +93,7 @@ void render_shapes_to_texture() {
                 job.width,
                 job.height,
                 job.scale,
+                job.scales,
                 false,
                 settings_);
   if (texture == nullptr && renderer == nullptr) {

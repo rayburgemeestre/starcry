@@ -29,40 +29,44 @@ void my_handler(int s) {
   exit(1);
 }
 
-metrics::metrics(bool notty) {
+metrics::metrics(bool notty) : notty(notty), nostdin(notty) {
   std::cout << "Switching to separate screen..." << std::endl;
 
   curses = std::thread([&, notty]() {
-    if ((mainwin = initscr()) == NULL) {
-      fprintf(stderr, "Error initialising ncurses.\n");
-      exit(EXIT_FAILURE);
+    if (!notty) {
+      if ((mainwin = initscr()) == NULL) {
+        fprintf(stderr, "Error initialising ncurses.\n");
+        exit(EXIT_FAILURE);
+      }
+      output(0, 0, "Welcome to Starcry!");
+      timeout(100);
+      noecho();
+    } else {
+      output(0, 0, "Welcome to Starcry!");
     }
-    mvaddstr(0, 0, "Welcome to Starcry!");
-    clrtobot();
-    timeout(100);
 
-    noecho();
     while (flag) {
-      if (!notty) {
+      if (!notty && !nostdin) {
         int c = getch();  // timeout configured at 100ms
         if (c != -1) {
-          mvaddstr(1, 0, fmt::format("Last key pressed: {}  ", c).c_str());
+          output(1, 0, fmt::format("Last key pressed: {}  ", c));
         }
       } else {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        mvaddstr(1, 0, fmt::format("TTY disabled.").c_str());
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       }
       this->display();
-      refresh();
+      if (!notty) refresh();
     }
-    cleanup_curses();
+    if (!notty) cleanup_curses();
   });
 
-  struct sigaction sigIntHandler;
-  sigIntHandler.sa_handler = my_handler;
-  sigemptyset(&sigIntHandler.sa_mask);
-  sigIntHandler.sa_flags = 0;
-  sigaction(SIGINT, &sigIntHandler, NULL);
+  if (!notty) {
+    struct sigaction sigIntHandler;
+    sigIntHandler.sa_handler = my_handler;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+    sigaction(SIGINT, &sigIntHandler, NULL);
+  }
 }
 
 metrics::~metrics() {
@@ -187,17 +191,17 @@ void metrics::complete_render_job(int thread_number, int job_number, int chunk) 
   }
 }
 
-bool metrics::has_terminal() {
-  return isatty(fileno(stdin));
-}
+// bool metrics::has_terminal() {
+//  return isatty(fileno(stdin));
+//}
 
-bool metrics::thread_exists(int number) {
-  return threads_.find(number) != threads_.end();
-}
+// bool metrics::thread_exists(int number) {
+//  return threads_.find(number) != threads_.end();
+//}
 
 void metrics::display() {
   std::unique_lock<std::mutex> lock(mut);
-  mvaddstr(0, 0, "Welcome to Starcry!");
+  output(0, 0, "Welcome to Starcry!");
   y = 2;
   for (const auto &thread : threads_) {
     std::stringstream ss;
@@ -208,8 +212,7 @@ void metrics::display() {
       ss << ": Job: " << thread.second.job_number << " Chunk: " << thread.second.chunk << " Seconds Busy: ";
       ss << time_diff(thread.second.idle_end, std::chrono::high_resolution_clock::now());
     }
-    mvaddstr(y++, 0, ss.str().c_str());
-    clrtobot();
+    output(y++, 0, ss.str().c_str());
   }
   y++;
 
@@ -272,13 +275,11 @@ void metrics::display() {
         for (const auto &chunk : job.chunks) {
           ss << "" << chunk.state;
         }
-        mvaddstr(y++, 0, ss.str().c_str());
-        clrtobot();
+        output(y++, 0, ss.str().c_str());
         ss.clear();
         ss.str("");
       } else if (mode == modes::frame_mode) {
-        mvaddstr(y++, 0, ss.str().c_str());
-        clrtobot();
+        output(y++, 0, ss.str().c_str());
         ss.clear();
         ss.str("");
         for (const auto &chunk : job.chunks) {
@@ -296,19 +297,16 @@ void metrics::display() {
           for (const auto &obj : chunk.objects) {
             ss << obj.state;
           }
-          mvaddstr(y++, 0, ss.str().c_str());
-          clrtobot();
+          output(y++, 0, ss.str().c_str());
           ss.clear();
           ss.str("");
         }
-        mvaddstr(y++, 0, ss.str().c_str());
-        clrtobot();
+        output(y++, 0, ss.str().c_str());
         ss.clear();
         ss.str("");
       }
     } else {
-      mvaddstr(y++, 0, ss.str().c_str());
-      clrtobot();
+      output(y++, 0, ss.str().c_str());
       ss.clear();
       ss.str("");
     }
@@ -318,8 +316,7 @@ void metrics::display() {
     int index = ffmpeg.size() - 1 - i;
     if (index >= 0) {
       auto str = ffmpeg[index].second;
-      mvaddstr(y++, 0, str.c_str());
-      clrtobot();
+      output(y++, 0, str.c_str());
     }
   }
 }
@@ -337,4 +334,17 @@ double metrics::time_diff(std::chrono::time_point<std::chrono::high_resolution_c
                           std::chrono::time_point<std::chrono::high_resolution_clock> end) {
   std::chrono::duration<double, std::milli> diff = end - begin;
   return diff.count() / 1000.;
+}
+
+void metrics::output(int y, int x, std::string out) {
+  if (out.empty()) return;
+  if (notty) {
+    std::cout << out;
+    if (out[out.size() - 1] != '\n') {
+      std::cout << std::endl;
+    }
+  } else {
+    mvaddstr(y, x, out.c_str());
+    clrtobot();
+  }
 }

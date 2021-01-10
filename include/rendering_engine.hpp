@@ -47,7 +47,11 @@ inline int round_to_int(double_type in) {
 #include "data/shape.hpp"
 #include "draw_logic.hpp"
 #include "image.hpp"
+#ifndef EMSCRIPTEN
+#ifndef SC_CLIENT
 #include "starcry/metrics.h"
+#endif
+#endif
 
 class rendering_engine {
 public:
@@ -94,12 +98,20 @@ public:
 
     if (shapes.empty()) return;
 
+#ifndef EMSCRIPTEN
+#ifndef SC_CLIENT
     metrics->resize_job_objects(thread_num, job_num, chunk_num, shapes[shapes.size() - 1].size());
+#endif
+#endif
 
     if (!shapes.empty()) {
       double index = 0;
       for (const auto &shape : shapes[shapes.size() - 1]) {
+#ifndef EMSCRIPTEN
+#ifndef SC_CLIENT
         metrics->set_render_job_object_state(thread_num, job_num, chunk_num, index, metrics::job_state::rendering);
+#endif
+#endif
 
         if (shape.type == data::shape_type::circle) {
           // first one
@@ -140,7 +152,11 @@ public:
           draw_logic_.scale(scales[scales.size() - 1] * scale_ratio);  // TODO: fix this
           draw_logic_.render_text(shape.x, shape.y, shape.text_size, shape.text, shape.align);
         }
+#ifndef EMSCRIPTEN
+#ifndef SC_CLIENT
         metrics->set_render_job_object_state(thread_num, job_num, chunk_num, index, metrics::job_state::rendered);
+#endif
+#endif
         index++;
       }
     }

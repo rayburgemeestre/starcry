@@ -75,12 +75,14 @@ list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/client.cpp")
 list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/deprecated/generator.cpp")
 list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/deprecated/scripting.cpp")
 
-file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp" "src/perlin.cpp" "src/texture.cpp" "src/starcry/metrics.cpp")
+file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp" "src/perlin.cpp" "src/texture.cpp")
 # (below) useful for testing v8 hello world in main.cpp
 #file(GLOB_RECURSE starcry_SOURCES "src/main.cpp" "/opt/cppse/build/v8pp/include/v8pp/context.cpp")
 
 add_executable(starcry ${starcry_SOURCES})
 add_executable(sc_client ${sc_client_SOURCES})
+
+#target_compile_definitions(sc_client, "-DSC_CLIENT=1")
 
 # Optional IPO. Do not use IPO if it's not supported by compiler.
 if (NOT DEBUG)

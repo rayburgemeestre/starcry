@@ -3,12 +3,16 @@ kind: Namespace
 metadata:
   name: starcry
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: starcry
   namespace: starcry
 spec:
+  selector:
+    matchLabels:
+      app: starcry
+      tier: starcry
   replicas: 1
   revisionHistoryLimit: 2
   template:
@@ -19,9 +23,10 @@ spec:
     spec:
       containers:
       - name: starcrycontainer
-        image: rayburgemeestre/starcry:latest
+        image: rayburgemeestre/starcry:v2
         command: ["/starcry"]
-        args: ["-i", "--notty"]
+        #args: ["-i", "--notty"]
+        args: ["-i", "--notty", "-t", "8", "-c", "8"]
         workingDir: /workdir
         volumeMounts:
         - mountPath: /workdir
