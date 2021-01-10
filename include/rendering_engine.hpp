@@ -7,7 +7,6 @@
 
 // #define DEBUGMODE
 
-#include "util/progress_visualizer.h"
 #include "util/scope_exit.hpp"
 
 #include <cmath>
@@ -94,8 +93,6 @@ public:
     draw_logic_.offset(offset_x, offset_y);
 
     if (shapes.empty()) return;
-    visualizer_.initialize();
-    visualizer_.set_max_frames(shapes[shapes.size() - 1].size());
 
     metrics->resize_job_objects(thread_num, job_num, chunk_num, shapes[shapes.size() - 1].size());
 
@@ -103,9 +100,6 @@ public:
       double index = 0;
       for (const auto &shape : shapes[shapes.size() - 1]) {
         metrics->set_render_job_object_state(thread_num, job_num, chunk_num, index, metrics::job_state::rendering);
-        if (verbose) {
-          // visualizer_.display(index++);
-        }
 
         if (shape.type == data::shape_type::circle) {
           // first one
@@ -181,5 +175,4 @@ public:
   }
 
   draw_logic::draw_logic draw_logic_;
-  progress_visualizer visualizer_{"Object", 6};
 };

@@ -16,7 +16,6 @@
 #include "starcry/metrics.h"
 #include "util/generator.h"
 #include "util/math.h"
-#include "util/progress_visualizer.h"
 #include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
 
@@ -27,8 +26,7 @@
 
 std::shared_ptr<v8_wrapper> context;
 
-generator::generator(std::shared_ptr<metrics>& metrics)
-    : metrics_(metrics), visualizer(std::make_shared<progress_visualizer>("Job", 4)) {
+generator::generator(std::shared_ptr<metrics>& metrics) : metrics_(metrics) {
   static std::once_flag once;
   std::call_once(once, []() {
     context = nullptr;
@@ -191,7 +189,6 @@ void generator::init_video_meta_info(std::optional<double> rand_seed, bool previ
     set_rand_seed(seed);
 
     max_frames = duration * use_fps;
-    visualizer->set_max_frames(duration * use_fps);
     job->width = canvas_w;
     job->height = canvas_h;
     job->canvas_w = canvas_w;
@@ -341,8 +338,6 @@ bool generator::_generate_frame() {
 
     // job_number is incremented later, hence we do a +1 on the next line.
     metrics_->register_job(job->job_number + 1, job->frame_number, job->chunk, job->num_chunks);
-    // TODO: Deprecate
-    visualizer->set_start_timing();
 
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
       v8_interact i(isolate);
@@ -427,7 +422,6 @@ bool generator::_generate_frame() {
     job->job_number++;
     job->frame_number++;
     metrics_->complete_job(job->job_number);
-    visualizer->display(job->job_number);
   } catch (std::exception& ex) {
     std::cout << ex.what() << std::endl;
   }

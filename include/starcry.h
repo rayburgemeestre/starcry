@@ -27,7 +27,6 @@ class render_server;
 class webserver;
 class frame_streamer;
 class render_client;
-class progress_visualizer;
 class server_message_handler;
 class client_message_handler;
 
@@ -84,8 +83,6 @@ private:
   size_t current_frame = 1;
   limited_executor le;
   std::optional<double> seed;
-  std::shared_ptr<progress_visualizer> visualizer;
-  std::shared_ptr<progress_visualizer> visualizer_chunks;
   std::map<instruction_type, std::shared_ptr<command_handler>> command_handlers;
   std::shared_ptr<server_message_handler> server_message_handler_;
   std::shared_ptr<client_message_handler> client_message_handler_;

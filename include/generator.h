@@ -26,7 +26,6 @@
 #include "util/quadtree.h"
 
 class step_calculator;
-class progress_visualizer;
 class metrics;
 
 class generator {
@@ -58,7 +57,6 @@ private:
 
   std::map<std::string, quadtree> qts;
   std::unordered_map<int64_t, size_t> next_instance_mapping;
-  std::shared_ptr<progress_visualizer> visualizer;
   data::settings settings_;
 
   size_t min_intermediates = 0.;

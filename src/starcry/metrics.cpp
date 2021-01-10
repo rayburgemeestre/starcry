@@ -1,9 +1,73 @@
 #include "starcry/metrics.h"
+#include <fmt/core.h>
 
 #include <unistd.h>  // isatty
 #include <iostream>
+#include <sstream>
 
-metrics::metrics() : exec(std::chrono::milliseconds(10)) {}
+#include <curses.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+WINDOW *mainwin;
+volatile bool flag = true;
+
+void cleanup_curses() {
+  flag = false;
+  delwin(mainwin);
+  endwin();
+  refresh();
+  std::cout << "\nWelcome back..." << std::endl;
+}
+
+void my_handler(int s) {
+  printf("Caught signal %d\n", s);
+  cleanup_curses();
+  exit(1);
+}
+
+metrics::metrics() : exec(std::chrono::milliseconds(100)) {
+  std::cout << "Switching to separate screen..." << std::endl;
+  if ((mainwin = initscr()) == NULL) {
+    fprintf(stderr, "Error initialising ncurses.\n");
+    exit(EXIT_FAILURE);
+  }
+  mvaddstr(0, 0, "Welcome to Starcry!");
+  clrtobot();
+
+  timeout(1000);
+  refresh();
+
+  noecho();
+
+  curses = std::thread([&]() {
+    noecho();
+    while (flag) {
+      int c = getch();
+      if (c != -1) {
+        mvaddstr(1, 0, fmt::format("Last key pressed: {}  ", c).c_str());
+      }
+    }
+  });
+
+  struct sigaction sigIntHandler;
+  sigIntHandler.sa_handler = my_handler;
+  sigemptyset(&sigIntHandler.sa_mask);
+  sigIntHandler.sa_flags = 0;
+  sigaction(SIGINT, &sigIntHandler, NULL);
+}
+
+metrics::~metrics() {
+  cleanup_curses();
+  for (const auto &line : ffmpeg) {
+    if (line.first <= 32) {
+      std::cout << line.second;
+    }
+  }
+  curses.join();
+}
 
 void metrics::register_thread(int number, std::string desc) {
   std::unique_lock<std::mutex> lock(mut);
@@ -153,16 +217,20 @@ void metrics::display() {
   // locking here in theory is needed, but can cause slow updates because of a lot of locking going on
   // we delay 10ms between calls to display() anyway, so hopefully that will not cause issues.
   //  std::unique_lock<std::mutex> lock(mut);
+  y = 2;
   for (const auto &thread : threads_) {
-    std::cout << "Thread: " << thread.first << " " << str(thread.second.state);
+    std::stringstream ss;
+    ss << "Thread: " << thread.first << " " << str(thread.second.state);
     if (thread.second.state == thread_state::idle) {
-      std::cout << ": Seconds Idle: " << time_diff(thread.second.idle_begin, std::chrono::high_resolution_clock::now());
+      ss << ": Seconds Idle: " << time_diff(thread.second.idle_begin, std::chrono::high_resolution_clock::now());
     } else if (thread.second.state == thread_state::busy) {
-      std::cout << ": Job: " << thread.second.job_number << " Chunk: " << thread.second.chunk << " Seconds Busy: ";
-      std::cout << time_diff(thread.second.idle_end, std::chrono::high_resolution_clock::now());
+      ss << ": Job: " << thread.second.job_number << " Chunk: " << thread.second.chunk << " Seconds Busy: ";
+      ss << time_diff(thread.second.idle_end, std::chrono::high_resolution_clock::now());
     }
-    std::cout << std::endl;
+    mvaddstr(y++, 0, ss.str().c_str());
+    clrtobot();
   }
+  y++;
 
   if (jobs_.empty()) return;
   auto first_key = jobs_.begin()->first;
@@ -200,53 +268,77 @@ void metrics::display() {
         s = job_state::rendered;
       }
     }
+    std::stringstream ss;
     switch (s) {
       case job_state::queued:
-        std::cout << "Job: " << job.number << " " << str(s) << " "
-                  << "Gen.Time: " << time_diff(job.generate_begin, job.generate_end) << " ";
+        ss << "Job: " << job.number << " " << str(s) << " "
+           << "Gen.Time: " << time_diff(job.generate_begin, job.generate_end) << " ";
         break;
       case job_state::rendering:
-        std::cout << "Job: " << job.number << " " << str(s) << " "
-                  << "Gen.Time: " << time_diff(job.generate_begin, job.generate_end) << " "
-                  << "Render Time: " << time_diff(render_begin, render_end) << " ";
+        ss << "Job: " << job.number << " " << str(s) << " "
+           << "Gen.Time: " << time_diff(job.generate_begin, job.generate_end) << " "
+           << "Render Time: " << time_diff(render_begin, render_end) << " ";
         break;
       case job_state::rendered:
-        std::cout << "Job: " << job.number << " " << str(s) << " "
-                  << "Gen.Time: " << time_diff(job.generate_begin, job.generate_end) << " "
-                  << "Render Time: " << time_diff(render_begin, render_end) << " ";
+        ss << "Job: " << job.number << " " << str(s) << " "
+           << "Gen.Time: " << time_diff(job.generate_begin, job.generate_end) << " "
+           << "Render Time: " << time_diff(render_begin, render_end) << " ";
         break;
     }
     if (job.chunks.size() > 1) {
       if (mode == modes::global_mode) {
-        std::cout << "Chunks: ";
+        ss << "Chunks: ";
         for (const auto &chunk : job.chunks) {
-          std::cout << "" << chunk.state;
+          ss << "" << chunk.state;
         }
-        std::cout << std::endl;
+        mvaddstr(y++, 0, ss.str().c_str());
+        clrtobot();
+        ss.clear();
+        ss.str("");
       } else if (mode == modes::frame_mode) {
-        std::cout << std::endl;
+        mvaddstr(y++, 0, ss.str().c_str());
+        clrtobot();
+        ss.clear();
+        ss.str("");
         for (const auto &chunk : job.chunks) {
-          std::cout << " Chunk: " << chunk.chunk << " of " << chunk.num_chunks << " " << str(chunk.state) << " ";
+          ss << " Chunk: " << chunk.chunk << " of " << chunk.num_chunks << " " << str(chunk.state) << " ";
           switch (chunk.state) {
             case job_state::queued:
               break;
             case job_state::rendering:
-              std::cout << " Rendering T: " << time_diff(chunk.render_begin, std::chrono::high_resolution_clock::now())
-                        << " ";
+              ss << " Rendering T: " << time_diff(chunk.render_begin, std::chrono::high_resolution_clock::now()) << " ";
               break;
             case job_state::rendered:
-              std::cout << " Rendered T: " << time_diff(chunk.render_begin, chunk.render_end) << " ";
+              ss << " Rendered T: " << time_diff(chunk.render_begin, chunk.render_end) << " ";
               break;
           }
           for (const auto &obj : chunk.objects) {
-            std::cout << obj.state;
+            ss << obj.state;
           }
-          std::cout << std::endl;
+          mvaddstr(y++, 0, ss.str().c_str());
+          clrtobot();
+          ss.clear();
+          ss.str("");
         }
-        std::cout << std::endl;
+        mvaddstr(y++, 0, ss.str().c_str());
+        clrtobot();
+        ss.clear();
+        ss.str("");
       }
     } else {
-      std::cout << std::endl;
+      mvaddstr(y++, 0, ss.str().c_str());
+      clrtobot();
+      ss.clear();
+      ss.str("");
+    }
+  }
+  y++;
+  for (int i = 0; i < 5; i++) {
+    int index = ffmpeg.size() - 1 - i;
+    if (index >= 0) {
+      auto str = ffmpeg[index].second;
+      mvaddstr(y++, 0, str.c_str());
+      clrtobot();
     }
   }
 }
@@ -257,8 +349,7 @@ void metrics::set_frame_mode() {
 }
 
 void metrics::log_callback(int level, const std::string &line) {
-  if (level > 32) return;
-  std::cout << line;
+  ffmpeg.push_back(std::make_pair(level, line));
 }
 
 double metrics::time_diff(std::chrono::time_point<std::chrono::high_resolution_clock> begin,

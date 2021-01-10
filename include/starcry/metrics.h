@@ -9,6 +9,7 @@
 #include <map>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <unordered_map>
 
 #include "util/limited_executor.hpp"
@@ -93,9 +94,11 @@ private:
   std::mutex mut;
 
   int max_keep_jobs = 10;
+  int y = 0;
 
 public:
   metrics();
+  ~metrics();
 
   void register_thread(int number, std::string desc);
   void register_job(int number, int frame, int chunk, int num_chunks);
@@ -116,4 +119,7 @@ private:
 
   double time_diff(std::chrono::time_point<std::chrono::high_resolution_clock> begin,
                    std::chrono::time_point<std::chrono::high_resolution_clock> end);
+
+  std::thread curses;
+  std::vector<std::pair<int, std::string>> ffmpeg;
 };

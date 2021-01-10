@@ -12,7 +12,6 @@
 #include "starcry/command_get_video.h"
 #include "starcry/metrics.h"
 #include "util/image_splitter.hpp"
-#include "util/progress_visualizer.h"
 
 command_get_video::command_get_video(starcry &sc) : command_handler(sc) {}
 
@@ -36,9 +35,6 @@ void command_get_video::to_job(std::shared_ptr<instruction> &cmd_def) {
       sc.metrics_->log_callback(level, line);
     });
   }
-  sc.visualizer->initialize();
-  sc.visualizer->set_max_frames(sc.gen->get_max_frames());
-  sc.visualizer_chunks->set_max_frames(sc.gen->get_job()->num_chunks);
 
   // old generator:
   // bitrate = context->run<double>("typeof bitrate != 'undefined' ? bitrate : (500 * 1024 * 8)");
