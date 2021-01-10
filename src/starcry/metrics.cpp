@@ -1,5 +1,6 @@
 #include "starcry/metrics.h"
 #include <fmt/core.h>
+// #include <fmt/ostream.h> // for printing thread_id
 
 #include <unistd.h>  // isatty
 #include <iostream>
@@ -11,8 +12,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-WINDOW *mainwin;
-volatile bool flag = true;
+static WINDOW *mainwin;
+std::atomic<bool> flag = true;
 
 void cleanup_curses() {
   flag = false;
@@ -28,28 +29,33 @@ void my_handler(int s) {
   exit(1);
 }
 
-metrics::metrics() : exec(std::chrono::milliseconds(100)) {
+metrics::metrics(bool notty) {
   std::cout << "Switching to separate screen..." << std::endl;
-  if ((mainwin = initscr()) == NULL) {
-    fprintf(stderr, "Error initialising ncurses.\n");
-    exit(EXIT_FAILURE);
-  }
-  mvaddstr(0, 0, "Welcome to Starcry!");
-  clrtobot();
 
-  timeout(1000);
-  refresh();
+  curses = std::thread([&, notty]() {
+    if ((mainwin = initscr()) == NULL) {
+      fprintf(stderr, "Error initialising ncurses.\n");
+      exit(EXIT_FAILURE);
+    }
+    mvaddstr(0, 0, "Welcome to Starcry!");
+    clrtobot();
+    timeout(100);
 
-  noecho();
-
-  curses = std::thread([&]() {
     noecho();
     while (flag) {
-      int c = getch();
-      if (c != -1) {
-        mvaddstr(1, 0, fmt::format("Last key pressed: {}  ", c).c_str());
+      if (!notty) {
+        int c = getch();  // timeout configured at 100ms
+        if (c != -1) {
+          mvaddstr(1, 0, fmt::format("Last key pressed: {}  ", c).c_str());
+        }
+      } else {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        mvaddstr(1, 0, fmt::format("TTY disabled.").c_str());
       }
+      this->display();
+      refresh();
     }
+    cleanup_curses();
   });
 
   struct sigaction sigIntHandler;
@@ -60,13 +66,13 @@ metrics::metrics() : exec(std::chrono::milliseconds(100)) {
 }
 
 metrics::~metrics() {
-  cleanup_curses();
+  flag = false;
+  curses.join();
   for (const auto &line : ffmpeg) {
     if (line.first <= 32) {
       std::cout << line.second;
     }
   }
-  curses.join();
 }
 
 void metrics::register_thread(int number, std::string desc) {
@@ -76,9 +82,6 @@ void metrics::register_thread(int number, std::string desc) {
                                           metrics::thread_state::idle,
                                           std::chrono::high_resolution_clock::now(),
                                           std::chrono::high_resolution_clock::now()};
-  exec.run([&]() {
-    display();
-  });
 }
 
 void metrics::register_job(int number, int frame, int chunk, int num_chunks) {
@@ -96,17 +99,11 @@ void metrics::register_job(int number, int frame, int chunk, int num_chunks) {
                                                 std::chrono::high_resolution_clock::now(),
                                                 std::chrono::high_resolution_clock::now(),
                                                 metrics::job_state::queued});
-  exec.run([&]() {
-    display();
-  });
 }
 void metrics::complete_job(int number) {
   std::unique_lock<std::mutex> lock(mut);
   if (jobs_.find(number) != jobs_.end()) {
     jobs_[number].generate_end = std::chrono::high_resolution_clock::now();
-    exec.run([&]() {
-      display();
-    });
   }
 }
 
@@ -124,9 +121,6 @@ void metrics::render_job(int thread_number, int job_number, int chunk) {
     }
     jobs_[job_number].chunks[chunk].render_begin = std::chrono::high_resolution_clock::now();
     jobs_[job_number].chunks[chunk].state = metrics::job_state::rendering;
-    exec.run([&]() {
-      display();
-    });
   }
 }
 
@@ -144,9 +138,6 @@ void metrics::resize_job(int number, int num_chunks) {
                                                     std::chrono::high_resolution_clock::now(),
                                                     metrics::job_state::queued});
     }
-    exec.run([&]() {
-      display();
-    });
   }
 }
 
@@ -162,9 +153,6 @@ void metrics::resize_job_objects(int number, int job_number, int chunk, int num_
                                                                         std::chrono::high_resolution_clock::now(),
                                                                         metrics::job_state::queued});
     }
-    exec.run([&]() {
-      display();
-    });
   }
 }
 
@@ -182,9 +170,6 @@ void metrics::set_render_job_object_state(
       jobs_[job_number].chunks[chunk].objects[index].render_end = std::chrono::high_resolution_clock::now();
     }
   }
-  exec.run([&]() {
-    display();
-  });
 }
 
 void metrics::complete_render_job(int thread_number, int job_number, int chunk) {
@@ -200,9 +185,6 @@ void metrics::complete_render_job(int thread_number, int job_number, int chunk) 
     jobs_[job_number].chunks[chunk].render_end = std::chrono::high_resolution_clock::now();
     jobs_[job_number].chunks[chunk].state = metrics::job_state::rendered;
   }
-  exec.run([&]() {
-    display();
-  });
 }
 
 bool metrics::has_terminal() {
@@ -214,9 +196,8 @@ bool metrics::thread_exists(int number) {
 }
 
 void metrics::display() {
-  // locking here in theory is needed, but can cause slow updates because of a lot of locking going on
-  // we delay 10ms between calls to display() anyway, so hopefully that will not cause issues.
-  //  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock<std::mutex> lock(mut);
+  mvaddstr(0, 0, "Welcome to Starcry!");
   y = 2;
   for (const auto &thread : threads_) {
     std::stringstream ss;

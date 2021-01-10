@@ -11,8 +11,7 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
-
-#include "util/limited_executor.hpp"
+#include <vector>
 
 class metrics {
 public:
@@ -90,14 +89,13 @@ public:
 private:
   std::map<int, metrics::thread_data> threads_;
   std::map<int, metrics::job> jobs_;
-  limited_executor exec;
   std::mutex mut;
 
   int max_keep_jobs = 10;
   int y = 0;
 
 public:
-  metrics();
+  explicit metrics(bool notty);
   ~metrics();
 
   void register_thread(int number, std::string desc);

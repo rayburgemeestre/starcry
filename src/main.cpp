@@ -62,6 +62,7 @@ public:
       ("compression", "enable pixel compression on rendered pixels")
       ("verbose,v", "enable verbose output (default no)")
       ("quiet,q", "disable verbose progress (default no)")
+      ("notty,n", "disable terminal (default tty is assumed)")
       ("raw,r", "write raw 32-bit EXR frames (default no)");
     // clang-format on
 
@@ -140,6 +141,7 @@ public:
     starcry sc(num_worker_threads,
                vm.count("server"),
                level,
+               vm.count("notty"),
                is_interactive,
                start_webserver,
                vm.count("compression"),

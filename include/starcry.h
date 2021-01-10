@@ -94,6 +94,7 @@ public:
       size_t num_local_engines,
       bool enable_remote_workers,
       log_level level,
+      bool notty,
       bool is_interactive,
       bool start_webserver,
       bool enable_compression,

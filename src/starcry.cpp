@@ -50,6 +50,7 @@ double rand_fun_vx() {
 starcry::starcry(size_t num_local_engines,
                  bool enable_remote_workers,
                  log_level level,
+                 bool notty,
                  bool is_interactive,
                  bool start_webserver,
                  bool enable_compression,
@@ -83,7 +84,7 @@ starcry::starcry(size_t num_local_engines,
       server_message_handler_(std::make_shared<server_message_handler>(*this)),
       client_message_handler_(std::make_shared<client_message_handler>(*this)),
       log_level_(level),
-      metrics_(std::make_shared<metrics>()) {}
+      metrics_(std::make_shared<metrics>(notty)) {}
 
 starcry::~starcry() {
   le.cancel();
