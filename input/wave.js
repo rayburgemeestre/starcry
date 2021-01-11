@@ -26,7 +26,8 @@ _ = {
       'time': function(time, elapsed) {
         // TODO: hide this complexity (of - 1 and calculating total/current frames) in a more "native" vibe/wave
         // function in C++
-        var total_frames = script.video.duration * 25. - 1.;
+        // EDIT2: perhaps wasn't a good idea after all.
+        var total_frames = script.video.duration * 25. /* DISABLED AGAIN! - 1.*/;
         var current_frame = total_frames * time;
         if (this.props.mode == 1) {
           var q = current_frame - parseInt(current_frame);

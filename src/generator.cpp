@@ -189,6 +189,8 @@ void generator::init_video_meta_info(std::optional<double> rand_seed, bool previ
     set_rand_seed(seed);
 
     max_frames = duration * use_fps;
+    metrics_->set_total_frames(max_frames);
+
     job->width = canvas_w;
     job->height = canvas_h;
     job->canvas_w = canvas_w;
@@ -370,10 +372,12 @@ bool generator::_generate_frame() {
       while (max_dist_found > tolerated_granularity) {
         ++attempt;
         if (attempt >= 5) {
-          throw std::runtime_error(fmt::format("Possible endless loop detected, max_step = {} (while {} > {})",
-                                               stepper.max_step,
-                                               max_dist_found,
-                                               tolerated_granularity));
+          throw std::runtime_error(
+              fmt::format("Possible endless loop detected, max_step = {} (while {} > {}). Frame = {}",
+                          stepper.max_step,
+                          max_dist_found,
+                          tolerated_granularity,
+                          job->frame_number));
           break;
         }
         max_dist_found = 0;
@@ -687,7 +691,9 @@ inline generator::time_settings generator::get_time() const {
   // stopped at 99.99%.
   // EDIT: NOTE, this -1 affects the calculation of properly "vibrating" objects with triangular_wave.
   // See for example the fix I had to make in input/wave.js
-  const auto t = std::clamp(fn / (max_frames - double(1.)), 0., 1.);
+  // const auto t = std::clamp(fn / (max_frames - double(1.)), 0., 1.);
+  // EDIT#2: reverted, to see if it fixes a bug of a possible endlessloop in the generate frame function
+  const auto t = std::clamp(fn / (max_frames), 0., 1.);
   const auto e = static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(stepper.max_step);
 
   // Scene time as well for convenience, with the trade off, of calculating this more often than needed

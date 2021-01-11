@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <functional>
 #include <map>
 #include <mutex>
@@ -30,6 +31,8 @@ class queue;
 
 class render_server {
 private:
+  std::atomic<bool> running = true;
+
   // common
   struct pollfd *pfds = nullptr;
   int listener;                        // Listening socket descriptor

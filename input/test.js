@@ -31,7 +31,6 @@ _ = {
       'time': function(t, e, scene) {
         switch (scene) {
           case 0:
-            this.angle = 360. * expf(t, 1.);
             break;
           case 1:
             this.angle = -360. * expf(t, 10.);
@@ -79,6 +78,7 @@ _ = {
       'props': {
         'maxradius': 250.0,
       },
+      'blending_type': blending_type.pinlight,
       'init': function() {
         this.radius = 0;
       },
@@ -92,7 +92,7 @@ _ = {
           case 2:
           case 3:
           case 4:
-            this.radius = logn(t, 10.) * 1920.0;
+            this.radius = logn(t, 1.) * 1920.0;
         }
       },
     },
@@ -105,16 +105,32 @@ _ = {
     'rand_seed': 5,
     'granularity': 1,
     'max_intermediates': 50.,
-    'bg_color': {'r': 0., 'g': 0.0, 'b': 0., 'a': 0}
+    'bg_color': {'r': 1., 'g': 1., 'b': 1., 'a': 0},
+    'grain_for_opacity': false,
   },
   'preview': {
-    'width': 1920 / 4.,
-    'height': 1080 / 4.,
+    'width': 1920 / 10.,
+    'height': 1080 / 10.,
   },
   'scenes': [
-    {'name': 'scene1', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}]},
-    {'name': 'scene2', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': 100, 'y': 0, 'z': 0, 'props': {}}]},
-    //    {'name': 'scene3', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': -100, 'y': 0, 'z': 0, 'props': {}}]},
+    {
+      'name': 'scene1',
+      'duration': 5.0,
+      'objects':
+          [{'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}, {'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}]
+    },
+    {
+      'name': 'scene2',
+      'duration': 1.0,
+      'objects':
+          [{'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}, {'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}]
+    },
+    {
+      'name': 'scene3',
+      'duration': 1.0,
+      'objects':
+          [{'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}, {'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}]
+    },
     //    {'name': 'scene4', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': -100, 'y': 0, 'z': 0, 'props': {}}]},
     //    {'name': 'scene5', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': -100, 'y': 0, 'z': 0, 'props': {}}]},
   ]

@@ -117,13 +117,15 @@ render_server::render_server(std::shared_ptr<queue> source, std::shared_ptr<queu
 }
 
 render_server::~render_server() {
-  runner.join();
+  running = false;
+  close(listener);
+  runner.detach();
 }
 
 void render_server::run(std::function<bool(int fd, int type, size_t len, const std::string &msg)> fn) {
   msg_callback = fn;
   runner = std::thread([&]() {
-    while (true) {
+    while (running) {
       int poll_count = poll(pfds, fd_count, -1);
 
       if (poll_count == -1) {

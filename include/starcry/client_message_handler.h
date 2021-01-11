@@ -7,6 +7,9 @@ class starcry;
 class client_message_handler {
 private:
   starcry &sc;
+  size_t outstanding_jobs = 0;
+  bool send_last = false;
+  bool recv_last = false;
 
 public:
   client_message_handler(starcry &sc);

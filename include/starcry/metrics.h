@@ -91,11 +91,15 @@ private:
   std::map<int, metrics::job> jobs_;
   std::mutex mut;
 
-  int max_keep_jobs = 10;
+  int max_keep_jobs = 20;
   int y = 0;
 
   bool notty = false;
   bool nostdin = false;
+
+  size_t completed_frames = 0;
+  size_t max_frames;
+  double hack_last_render_time = 0.;
 
 public:
   explicit metrics(bool notty);
@@ -112,6 +116,8 @@ public:
   void display();
 
   void set_frame_mode();
+  void set_total_frames(size_t frames);
+
   void log_callback(int level, const std::string& line);
 
 private:

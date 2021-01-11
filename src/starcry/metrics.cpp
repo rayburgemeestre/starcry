@@ -41,8 +41,6 @@ metrics::metrics(bool notty) : notty(notty), nostdin(notty) {
       output(0, 0, "Welcome to Starcry!");
       timeout(100);
       noecho();
-    } else {
-      output(0, 0, "Welcome to Starcry!");
     }
 
     while (flag) {
@@ -188,6 +186,10 @@ void metrics::complete_render_job(int thread_number, int job_number, int chunk) 
     }
     jobs_[job_number].chunks[chunk].render_end = std::chrono::high_resolution_clock::now();
     jobs_[job_number].chunks[chunk].state = metrics::job_state::rendered;
+    for (const auto &chunk : jobs_[job_number].chunks) {
+      if (chunk.state != metrics::job_state::rendered) return;
+    }
+    completed_frames++;
   }
 }
 
@@ -203,6 +205,22 @@ void metrics::display() {
   std::unique_lock<std::mutex> lock(mut);
   output(0, 0, "Welcome to Starcry!");
   y = 2;
+
+  std::stringstream ss;
+  ss << "DONE: " << completed_frames << " of " << max_frames;
+  output(y++, 0, ss.str().c_str());
+  ss.str("");
+  ss.clear();
+
+  // This calculation can be done much more accurately, this is just because at the time of writing I'm lazy and kind of
+  // fed up with working on this particular class for a while.
+  const auto remaining = (max_frames - completed_frames);
+  const auto eta = (remaining * hack_last_render_time) / (double)threads_.size();
+  ss << "ETA: " << (int)eta << " secs, since last frame took " << (int)hack_last_render_time << " secs, " << remaining
+     << " frames remaining, and " << threads_.size() << " worker threads.";
+  output(y++, 0, ss.str().c_str());
+  y++;
+
   for (const auto &thread : threads_) {
     std::stringstream ss;
     ss << "Thread: " << thread.first << " " << str(thread.second.state);
@@ -237,7 +255,7 @@ void metrics::display() {
     int rendering = 0;
     int rendered = 0;
     std::chrono::time_point<std::chrono::high_resolution_clock> render_begin = job.chunks[0].render_begin;
-    std::chrono::time_point<std::chrono::high_resolution_clock> render_end = job.chunks[1].render_begin;
+    std::chrono::time_point<std::chrono::high_resolution_clock> render_end = job.chunks[0].render_begin;
     for (const auto &chunk : job.chunks) {
       if (chunk.state == job_state::queued) queued++;
       if (chunk.state == job_state::rendering) rendering++;
@@ -245,12 +263,12 @@ void metrics::display() {
       render_begin = std::min(render_begin, chunk.render_begin);
       render_end = std::max(render_end, chunk.render_end);
     }
-    auto s = job_state::queued;
-    if (queued < job.chunks.size()) {
-      s = job_state::rendering;
-      if (rendered < job.chunks.size()) {
-        s = job_state::rendered;
-      }
+    auto s = job_state::rendering;
+    if (rendered > 0) {
+      s = job_state::rendered;
+    }
+    if (queued == job.chunks.size()) {
+      s = job_state::queued;
     }
     std::stringstream ss;
     switch (s) {
@@ -261,12 +279,13 @@ void metrics::display() {
       case job_state::rendering:
         ss << "Job: " << job.number << " " << str(s) << " "
            << "Gen.Time: " << time_diff(job.generate_begin, job.generate_end) << " "
-           << "Render Time: " << time_diff(render_begin, render_end) << " ";
+           << "Render Time: " << time_diff(render_begin, std::chrono::high_resolution_clock::now()) << " ";
         break;
       case job_state::rendered:
         ss << "Job: " << job.number << " " << str(s) << " "
            << "Gen.Time: " << time_diff(job.generate_begin, job.generate_end) << " "
            << "Render Time: " << time_diff(render_begin, render_end) << " ";
+        hack_last_render_time = time_diff(render_begin, render_end);
         break;
     }
     if (job.chunks.size() > 1) {
@@ -313,7 +332,7 @@ void metrics::display() {
   }
   y++;
   for (int i = 0; i < 5; i++) {
-    int index = ffmpeg.size() - 1 - i;
+    int index = ffmpeg.size() - 1 - (5 - i);
     if (index >= 0) {
       auto str = ffmpeg[index].second;
       output(y++, 0, str.c_str());
@@ -324,6 +343,11 @@ void metrics::display() {
 void metrics::set_frame_mode() {
   mode = metrics::modes::frame_mode;
   record_objects = true;
+}
+
+void metrics::set_total_frames(size_t frames) {
+  completed_frames = 0;
+  max_frames = frames;
 }
 
 void metrics::log_callback(int level, const std::string &line) {

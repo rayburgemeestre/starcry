@@ -24,13 +24,13 @@ bool client_message_handler::on_client_message(int sockfd, int type, size_t len,
       break;
     }
     case starcry_msgs::pull_job: {
+      if (send_last) {
+        // TODO: proper handling, send some termination signal to client.
+        break;
+      }
       while (true) {
         if (!sc.jobs->has_items(0)) {
           sc.jobs->sleep_until_items_available(0);
-          if (!sc.jobs->active) {
-            sc.frames->check_terminate();
-            return false;  // shutdown server
-          }
         }
         auto job = std::dynamic_pointer_cast<job_message>(sc.jobs->pop(0));
         if (job) {  // can be nullptr if someone else took it faster than us
@@ -42,12 +42,14 @@ bool client_message_handler::on_client_message(int sockfd, int type, size_t len,
           const auto settings = sc.gen->settings();
           archive(settings);
           sc.renderserver->send_msg(sockfd, starcry_msgs::pull_job_response, os.str().c_str(), os.str().size());
+          outstanding_jobs++;
           if (job->job->job_number == std::numeric_limits<uint32_t>::max()) {
             sc.metrics_->set_frame_mode();
             sc.metrics_->render_job(1000 + sockfd, job->job->frame_number, job->job->chunk);
           } else {
             sc.metrics_->render_job(1000 + sockfd, job->job->job_number, job->job->chunk);
           }
+          if (job->job->last_frame) send_last = true;
           break;
         }
       }
@@ -66,6 +68,7 @@ bool client_message_handler::on_client_message(int sockfd, int type, size_t len,
       //   compress_vector<uint32_t> cv;
       //   cv.decompress(&dat.pixels, job.width * job.height);
       // }
+      if (job.last_frame) recv_last = true;
       if (job.job_number == std::numeric_limits<uint32_t>::max()) {
         sc.metrics_->complete_render_job(1000 + sockfd, job.frame_number, job.chunk);
       } else {
@@ -99,6 +102,14 @@ bool client_message_handler::on_client_message(int sockfd, int type, size_t len,
                                                   job.height,
                                                   dat.pixels_raw);
         sc.frames->push(frame);
+      }
+      outstanding_jobs--;
+      if (outstanding_jobs == 0) {
+        if (!sc.jobs->active) {
+          sc.frames->check_terminate();
+          // shutdown server
+          return false;
+        }
       }
     }
   }
