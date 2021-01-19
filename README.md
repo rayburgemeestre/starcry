@@ -25,6 +25,7 @@ The interface to the user is either the Javascript file or the VueJS based UI.
     # view the video
     ffplay output*.h264
 
+Currently the --gui parameter is not supported when running inside docker.
 
 ## Building
 

@@ -197,7 +197,31 @@ dockerize_run:
 	cp -prv $$PWD/build/starcry /starcry
 	strip --strip-debug /starcry
 	# dockerize --verbose --debug -n -o out "/bin/sh -c 'echo 1;'"
-	dockerize --verbose --debug -n -o out /starcry
+	#dockerize --verbose --debug -n -o out --buildcmd "/starcry --init-gfx" /starcry
+
+	#dockerize --verbose --debug -n -o out "/starcry --init-gfx"
+	#mkdir -p out/usr/lib/x86_64-linux-gnu
+	#mkdir -p out/lib/x86_64-linux-gnu
+	##cp -Lprv /usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.0 out/usr/lib/x86_64-linux-gnu/
+	#cp -Lprv /lib/x86_64-linux-gnu/libGLX_indirect.so.0 out/lib/x86_64-linux-gnu/
+	#cp -Lprv /usr/lib/x86_64-linux-gnu/libglapi.so.0 out/usr/lib/x86_64-linux-gnu/
+	#cp -Lprv /usr/lib/x86_64-linux-gnu/libdrm.so.2 out/usr/lib/x86_64-linux-gnu/
+	#cp -Lprv /usr/lib/x86_64-linux-gnu/libxcb-glx.so.0 out/usr/lib/x86_64-linux-gnu/
+	#cp -Lprv /usr/lib/x86_64-linux-gnu/libX11-xcb.so.1 out/usr/lib/x86_64-linux-gnu/
+	#cp -Lprv /usr/lib/x86_64-linux-gnu/libxcb-dri2.so.0 out/usr/lib/x86_64-linux-gnu/
+	#cp -Lprv /usr/lib/x86_64-linux-gnu/libXfixes.so.3 out/usr/lib/x86_64-linux-gnu/
+	#cp -Lprv /usr/lib/x86_64-linux-gnu/libXdamage.so.1 out/usr/lib/x86_64-linux-gnu/
+	#cp -Lprv /usr/lib/x86_64-linux-gnu/libXxf86vm.so.1 out/usr/lib/x86_64-linux-gnu/
+	#cp -Lprv /usr/lib/x86_64-linux-gnu/libexpat.so.1  out/usr/lib/x86_64-linux-gnu/
+	#cp -Lprv /usr/lib/x86_64-linux-gnu/libxcb-dri3.so.0 out/usr/lib/x86_64-linux-gnu/
+	#cp -Lprv /usr/lib/x86_64-linux-gnu/libxcb-present.so.0 out/usr/lib/x86_64-linux-gnu/
+	#cp -Lprv /usr/lib/x86_64-linux-gnu/libxcb-sync.so.1 out/usr/lib/x86_64-linux-gnu/
+	# after this test got..
+	#cp -Lprv /usr/lib/x86_64-linux-gnu/libx* out/usr/lib/x86_64-linux-gnu/
+	#libGL error: MESA-LOADER: failed to open swrast (search paths /usr/lib/x86_64-linux-gnu/dri:\$${ORIGIN}/dri:/usr/lib/dri)
+	# so for now let's abandon this approach.
+
+	dockerize --verbose --debug -n -o out "/starcry"
 	# mkdir out/bin
 	# cp -Lprv /bin/sh out/bin/
 	mkdir -p out/usr/share/terminfo/x

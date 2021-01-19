@@ -1,0 +1,13 @@
+
+TODO: doesn't work yet
+For X11 support use a shell function instead:
+
+    function starcry {
+        xhost +
+        echo docker run -it --rm --name=starcry --privileged -v $PWD:$PWD \
+                   --workdir $PWD -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix \
+                   --net=host -v $HOME/.Xauthority:/root/.Xauthority \
+                   rayburgemeestre/starcry:v2 $* 
+    }
+    starcry --preview --gui test.js
+
