@@ -109,8 +109,9 @@ _ = {
     'grain_for_opacity': false,
   },
   'preview': {
-    'width': 1920 / 10.,
-    'height': 1080 / 10.,
+    'max_intermediates': 1.,
+    'width': 1920 / 5.,
+    'height': 1080 / 5.,
   },
   'scenes': [
     {
@@ -122,16 +123,14 @@ _ = {
     {
       'name': 'scene2',
       'duration': 1.0,
-      'objects':
-          [{'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}, {'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}]
+      'objects': []
     },
     {
       'name': 'scene3',
       'duration': 1.0,
-      'objects':
-          [{'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}, {'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}]
+      'objects': []
     },
-    //    {'name': 'scene4', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': -100, 'y': 0, 'z': 0, 'props': {}}]},
-    //    {'name': 'scene5', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': -100, 'y': 0, 'z': 0, 'props': {}}]},
+    // {'name': 'scene4', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': -100, 'y': 0, 'z': 0, 'props': {}}]},
+    // {'name': 'scene5', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': -100, 'y': 0, 'z': 0, 'props': {}}]},
   ]
 };

@@ -477,8 +477,8 @@ void starcry::save_images(std::shared_ptr<generator> gen,
     if (write_8bit_png) {
       png::image<png::rgb_pixel> image(width, height);
       copy_to_png(pixels_raw, width, height, image);
-      image.write(
-          fmt::format("output_frame_{}_seed_{}_{}x{}-{}.png", frame_number, gen->get_seed(), width, height, filename));
+      image.write(fmt::format(
+          "output_frame_{:05d}_seed_{}_{}x{}-{}.png", frame_number, gen->get_seed(), width, height, filename));
     }
 
     // Save TIFF through ImageMagick
@@ -539,7 +539,8 @@ void starcry::save_images(std::shared_ptr<generator> gen,
       header.channels().insert("B", Channel(Imf::FLOAT));
       header.channels().insert("Z", Channel(Imf::FLOAT));
       OutputFile file(
-          fmt::format("output_frame_{}_seed_{}_{}x{}-{}.exr", frame_number, gen->get_seed(), width, height, filename)
+          fmt::format(
+              "output_frame_{:05d}_seed_{}_{}x{}-{}.exr", frame_number, gen->get_seed(), width, height, filename)
               .c_str(),
           header);
       FrameBuffer frameBuffer;
