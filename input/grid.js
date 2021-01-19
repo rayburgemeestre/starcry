@@ -205,6 +205,11 @@ _ = {
     'max_intermediates': 10.,
     'update_positions': true,
   },
+  'preview': {
+    'width': 1920 / 5.,
+    'height': 1920 / 5.,
+    'max_intermediates': 1.,
+  },
   'scenes': [{
     'name': 'scene1',
     'objects': [
