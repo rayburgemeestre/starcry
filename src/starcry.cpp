@@ -42,6 +42,8 @@
 
 // TODO: re-organize this somehow
 #include <random>
+#include <utility>
+
 std::mt19937 mt_vx;
 double rand_fun_vx() {
   return (mt_vx() / (double)mt_vx.max());
@@ -70,7 +72,7 @@ starcry::starcry(size_t num_local_engines,
       jobs(system->create_queue("jobs", 10)),
       frames(system->create_queue("frames", 10)),
       mode(mode),
-      on_pipeline_initialized(on_pipeline_initialized),
+      on_pipeline_initialized(std::move(on_pipeline_initialized)),
       le(std::chrono::milliseconds(1000)),
       seed(rand_seed),
       command_handlers({
@@ -322,9 +324,9 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       process(width, height, pixels, pixels_raw, last_frame);
 
       if (job_msg->job_number == std::numeric_limits<uint32_t>::max()) {
-        save_images(gen, pixels_raw, width, height, frame_number, true, true);
+        save_images(pixels_raw, width, height, frame_number, true, true);
       } else {
-        save_images(gen, pixels_raw, width, height, frame_number, false, true);
+        save_images(pixels_raw, width, height, frame_number, false, true);
         current_frame++;
       }
     } else {
@@ -395,7 +397,7 @@ void starcry::run_client(const std::string &host) {
 
 // This function is used to send to framer and als the preview window
 std::vector<uint32_t> starcry::pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in,
-                                                        const data::settings &settings) const {
+                                                        const data::settings &settings) {
   std::vector<uint32_t> pixels_out;
   pixels_out.reserve(pixels_in.size());
 
@@ -453,15 +455,14 @@ std::vector<uint32_t> starcry::pixels_vec_to_pixel_data(const std::vector<data::
   return pixels_out;
 }
 
-void starcry::save_images(std::shared_ptr<generator> gen,
-                          std::vector<data::color> &pixels_raw,
+void starcry::save_images(std::vector<data::color> &pixels_raw,
                           size_t width,
                           size_t height,
                           size_t frame_number,
                           bool write_8bit_png,
                           bool write_32bit_exr) {
   auto filename = gen->filename();
-  auto pos = filename.rfind("/");
+  auto pos = filename.rfind('/');
   if (pos != std::string::npos) {
     filename = filename.substr(pos + 1);
   }

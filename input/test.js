@@ -120,16 +120,8 @@ _ = {
       'objects':
           [{'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}, {'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}]
     },
-    {
-      'name': 'scene2',
-      'duration': 1.0,
-      'objects': []
-    },
-    {
-      'name': 'scene3',
-      'duration': 1.0,
-      'objects': []
-    },
+    {'name': 'scene2', 'duration': 1.0, 'objects': []},
+    {'name': 'scene3', 'duration': 1.0, 'objects': []},
     // {'name': 'scene4', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': -100, 'y': 0, 'z': 0, 'props': {}}]},
     // {'name': 'scene5', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': -100, 'y': 0, 'z': 0, 'props': {}}]},
   ]

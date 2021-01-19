@@ -263,7 +263,7 @@ void generator::init_textures() {
   });
 }
 
-void generator::init_object_instances() {
+void generator::init_object_instances() const {
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();

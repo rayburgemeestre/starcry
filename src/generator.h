@@ -32,8 +32,7 @@ class generator {
 private:
   std::shared_ptr<metrics> metrics_;
   std::shared_ptr<data::job> job;
-  // TODO: seems unused??
-  uint32_t frame_number;
+  uint32_t frame_number = 0;
 
   size_t max_frames = 0;
   int32_t canvas_w = 0;
@@ -74,7 +73,7 @@ public:
     double scene_time;
   };
 
-  generator(std::shared_ptr<metrics>& metrics);
+  explicit generator(std::shared_ptr<metrics>& metrics);
   ~generator() = default;
 
   void init(const std::string& filename, std::optional<double> rand_seed, bool preview);
@@ -84,7 +83,7 @@ public:
   void init_video_meta_info(std::optional<double> rand_seed, bool preview);
   void init_gradients();
   void init_textures();
-  void init_object_instances();
+  void init_object_instances() const;
 
   void set_scene(size_t scene);
   bool generate_frame();
@@ -92,10 +91,10 @@ public:
                           v8::Local<v8::Array>& instances,
                           v8::Local<v8::Array>& next_instances,
                           v8::Local<v8::Array>& intermediates);
-  void revert_position_updates(v8_interact& i,
-                               v8::Local<v8::Array>& instances,
-                               v8::Local<v8::Array>& next_instances,
-                               v8::Local<v8::Array>& intermediates);
+  static void revert_position_updates(v8_interact& i,
+                                      v8::Local<v8::Array>& instances,
+                                      v8::Local<v8::Array>& next_instances,
+                                      v8::Local<v8::Array>& intermediates);
   void create_next_instance_mapping(v8_interact& i, v8::Local<v8::Array>& next_instances);
   void update_object_positions(v8_interact& i,
                                v8::Local<v8::Array>& next_instances,
@@ -109,7 +108,7 @@ public:
                          v8::Local<v8::Object> instance,
                          size_t index,
                          v8::Local<v8::Array> next_instances);
-  void handle_collision(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2);
+  static void handle_collision(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2);
   void update_time(v8_interact& i, v8::Local<v8::Object>& instance);
   int update_steps(double dist);
   double get_max_travel_of_object(v8_interact& i,
@@ -138,10 +137,10 @@ public:
   size_t get_max_frames() const {
     return max_frames;
   }
-  const data::settings settings() const {
+  data::settings settings() const {
     return settings_;
   }
-  const std::string filename() const {
+  std::string filename() const {
     return filename_;
   }
 

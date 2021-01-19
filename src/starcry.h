@@ -135,10 +135,9 @@ private:
   std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);
   void handle_frame(std::shared_ptr<render_msg> job_msg);
 
-  std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in,
-                                                 const data::settings &settings) const;
-  void save_images(std::shared_ptr<generator> gen,
-                   std::vector<data::color> &pixels_raw,
+  static std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in,
+                                                        const data::settings &settings);
+  void save_images(std::vector<data::color> &pixels_raw,
                    size_t width,
                    size_t height,
                    size_t frame_number,
