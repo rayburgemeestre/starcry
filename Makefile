@@ -191,13 +191,18 @@ dockerize:
 .PHONY: dockerize_run
 dockerize_run:
 	apt update
-	apt install python3-pip rsync git -y
+	apt install python3-pip rsync git ncurses-term -y
 	cd /tmp && git clone https://github.com/larsks/dockerize && cd dockerize && python3 setup.py install
 	# python3 -m pip install dockerize
 	cp -prv $$PWD/build/starcry /starcry
 	strip --strip-debug /starcry
+	# dockerize --verbose --debug -n -o out "/bin/sh -c 'echo 1;'"
 	dockerize --verbose --debug -n -o out /starcry
-	sed -i.bak '2 a ENV TERM=xterm' out/Dockerfile
+	# mkdir out/bin
+	# cp -Lprv /bin/sh out/bin/
+	mkdir -p out/usr/share/terminfo/x
+	cp -prv /usr/share/terminfo/x/xterm-16color out/usr/share/terminfo/x/
+	sed -i.bak '2 a ENV TERM=xterm-16color' out/Dockerfile
 
 gui:
 	#docker run -it --privileged -v /etc/hosts:/etc/hosts -v $$HOME:$$HOME -u 1144 --workdir $$HOME -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix rayburgemeestre/build-starcry-ubuntu:18.04 /bin/bash
