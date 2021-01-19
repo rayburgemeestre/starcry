@@ -48,7 +48,7 @@ else()
 endif()
 
 include_directories(
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/"
     "/opt/cppse/build/v8pp/include/"  # for v8pp
     "/opt/cppse/build/v8pp/include/v8"  # for v8
     "/opt/cppse/build/v8pp/include/v8/include" # for v8
@@ -70,7 +70,7 @@ include_directories(
     "/usr/include/SDL2/"
 )
 
-file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "include/**.hpp"  "include/**.h" "/opt/cppse/build/v8pp/include/v8pp/context.cpp" "libs/piper/src/**")
+file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "src/**.hpp"  "src/**.h" "/opt/cppse/build/v8pp/include/v8pp/context.cpp" "libs/piper/src/**")
 list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/client.cpp")
 list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/deprecated/generator.cpp")
 list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/deprecated/scripting.cpp")

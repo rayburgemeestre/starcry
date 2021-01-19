@@ -19,3 +19,4 @@ webroot/client.wasm
 node_modules
 *.png
 *.h264
+*.exr
