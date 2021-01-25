@@ -33,7 +33,7 @@ _ = {
     'camera': {
       'init': function() {},
       'time': function(t, e, s, gt) {
-        script.video.scale = 10 - 9.0 * logn(gt, 1000);
+        // script.video.scale = 10 - 9.0 * logn(gt, 1000);
       },
     },
     'background': {
@@ -54,27 +54,30 @@ _ = {
         if (false)
           this.subobj.push({
             'id': 'blue_circle',
-            'x': -450,
+            //'x': -450,
+            'x': -400,
             'y': 0,
-            'scale': 0.5,
+            //'scale': 0.5,
+            'scale': 1.0,
             'props': {'radius_limit': 60., 'opacity': 1.0}
           });  // 50.
         if (false)
           this.subobj.push({
             'id': 'blue_circle',
-            'x': 0,  // - 100,
+            'x': 400,
             'y': 0,
-            'scale': 0.75,
-            'props': {'radius_limit': 60., 'opacity': 1.0}
+            'scale': 1.0,
+            'props': {'radius_limit': 60., 'opacity': 1.0, 'scale': 1.0}
           });  // 20.
-        this.subobj.push({
-          'id': 'blue_circle',
-          //'x': 550,
-          'x': 0,
-          'y': 0,
-          'scale': 1.0,
-          'props': {'radius_limit': 5., 'opacity': 1.0, 'parent': false}
-        });  // was 5.
+        if (true)
+          this.subobj.push({
+            'id': 'blue_circle',
+            'x': 0,
+            'y': 0,
+            'scale': 1.0,
+            'pivot': true,
+            'props': {'radius_limit': 5., 'opacity': 1.0, 'parent': false, 'scale': 1.0}
+          });  // was 5.
       },
     },
     'blue_circle': {
@@ -89,10 +92,11 @@ _ = {
       'radiussize': 30.0,
       'opacity': 0.,
       'blending_type': blending_type.pinlight,
-      'angle': 1,
+      'angle': script.video.mode === 1 ? 1 : 0,
       'props': {
         'parent': false,
         'extra_radius': 0,
+        'scale': 1.0,
       },
       'scale': 1.0,
       'init': function() {
@@ -106,28 +110,32 @@ _ = {
         this.gradients[0][0] = 1.0 - global_time;
         this.gradients[1][0] = global_time;
         this.opacity = 1. * this.props.opacity;
-        if (this.radius > this.props.radius_limit && this.subobj.length == 0 && true) {
+        if (this.radius > this.props.radius_limit && this.subobj.length === 0) {
           var child_radius = this.radius * 0.67;
           this.subobj.push({
             'id': 'blue_circle',
             // keep somehow the parent radius...
             // // anyway going to render a nice vid anyway
-            'x': this.radius - child_radius,
+            'x': script.video.mode === 1 ?
+                (this.props.scale * this.props.parent.radius) - (this.props.scale * child_radius) :
+                0,
             'y': 0,
             'radius': child_radius,
-            'scale': this.scale,
+            'scale': script.video.mode === 1 ? this.scale : 1.0,
             'props': this.props,
-            'angle': 1,
+            'angle': script.video.mode === 1 ? 1 : 0,
           });
         }
-        if (this.level > 1) this.angle += elapsed * 5.;
+        // if (this.level > 1) this.angle += (elapsed * 5.) * this.level;
+        if (this.level > 1) this.angle += (elapsed * 5.);
 
         switch (scene) {
           case 0:
             break;
           case 1:
             this.radius += elapsed * 100;
-            this.x += elapsed * 1;
+            if (this.level > 1 && script.video.mode === 1)
+              this.x = (this.props.scale * this.props.parent.radius) - (this.props.scale * this.radius);
         }
 
         this.opacity = 1.0 * logn(1. - global_time * 1.0, 10000);
@@ -145,6 +153,7 @@ _ = {
     },
   },
   'video': {
+    'mode': 1,
     //'duration': 5,
     'fps': 25,
     //'width': 1920 * 2.,
@@ -152,7 +161,7 @@ _ = {
     //'scale': 10. * 2.,
     'width': 1920,
     'height': 1920,
-    'scale': 10.,
+    'scale': 1.0,
     'granularity': 1,
     'grain_for_opacity': true,
     'motion_blur': true,
@@ -161,8 +170,8 @@ _ = {
     'dithering': true,
   },
   'preview': {
-    'width': 320,
-    'height': 320,
+    // 'width': 320,
+    // 'height': 320,
     'granularity': 1,
     'motion_blur': false,
     'max_intermediates': 1.,

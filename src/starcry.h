@@ -115,7 +115,8 @@ public:
                    const std::string &output_file,
                    int num_chunks,
                    bool raw,
-                   bool preview);
+                   bool preview,
+                   size_t offset_frames);
 
   void run_server();
   void run_client(const std::string &host);

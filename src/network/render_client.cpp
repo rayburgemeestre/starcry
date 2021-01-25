@@ -121,7 +121,9 @@ void render_client::process() {
 }
 
 void render_client::register_me() {
-  send_msg(sockfd, starcry_msgs::register_me, "", 0);
+  char hostname[1024] = {0x00};
+  gethostname(hostname, 1024);
+  send_msg(sockfd, starcry_msgs::register_me, hostname, 0);
 }
 
 void render_client::pull_job(bool is_remote, int64_t timestamp) {

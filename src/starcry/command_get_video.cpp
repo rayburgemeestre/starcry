@@ -44,7 +44,10 @@ void command_get_video::to_job(std::shared_ptr<instruction> &cmd_def) {
   while (true) {
     auto ret = sc.gen->generate_frame();
     auto job_copy = std::make_shared<data::job>(*sc.gen->get_job());
-
+    if (job_copy->frame_number < cmd_def->offset_frames) {
+      sc.metrics_->skip_job(job_copy->job_number);
+      continue;
+    }
     // TODO: duplicated code, move to base class
     util::ImageSplitter<uint32_t> is{job_copy->canvas_w, job_copy->canvas_h};
     if (cmd_def->num_chunks == 1) {

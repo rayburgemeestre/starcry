@@ -94,6 +94,7 @@ void metrics::register_job(int number, int frame, int chunk, int num_chunks) {
                                num_chunks,
                                std::chrono::high_resolution_clock::now(),
                                std::chrono::high_resolution_clock::now(),
+                               false,
                                -1,
                                {}};
   jobs_[number].chunks.push_back(metrics::chunk{1,
@@ -106,6 +107,13 @@ void metrics::complete_job(int number) {
   std::unique_lock<std::mutex> lock(mut);
   if (jobs_.find(number) != jobs_.end()) {
     jobs_[number].generate_end = std::chrono::high_resolution_clock::now();
+  }
+}
+
+void metrics::skip_job(int number) {
+  std::unique_lock<std::mutex> lock(mut);
+  if (jobs_.find(number) != jobs_.end()) {
+    jobs_[number].skipped = true;
   }
 }
 
@@ -223,7 +231,7 @@ void metrics::display() {
 
   for (const auto &thread : threads_) {
     std::stringstream ss;
-    ss << "Thread: " << thread.first << " " << str(thread.second.state);
+    ss << "Thread: " << thread.first << " " << thread.second.name << " " << str(thread.second.state);
     if (thread.second.state == thread_state::idle) {
       ss << ": Seconds Idle: " << time_diff(thread.second.idle_begin, std::chrono::high_resolution_clock::now());
     } else if (thread.second.state == thread_state::busy) {
@@ -270,9 +278,13 @@ void metrics::display() {
     if (queued == job.chunks.size()) {
       s = job_state::queued;
     }
+    if (job.skipped) {
+      s = job_state::skipped;
+    }
     std::stringstream ss;
     switch (s) {
       case job_state::queued:
+      case job_state::skipped:
         ss << "Job: " << job.number << " " << str(s) << " "
            << "Gen.Time: " << time_diff(job.generate_begin, job.generate_end) << " ";
         break;
@@ -305,6 +317,7 @@ void metrics::display() {
           ss << " Chunk: " << chunk.chunk << " of " << chunk.num_chunks << " " << str(chunk.state) << " ";
           switch (chunk.state) {
             case job_state::queued:
+            case job_state::skipped:
               break;
             case job_state::rendering:
               ss << " Rendering T: " << time_diff(chunk.render_begin, std::chrono::high_resolution_clock::now()) << " ";

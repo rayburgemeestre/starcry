@@ -105,6 +105,8 @@ void generator::init_user_script() {
   }
   std::istreambuf_iterator<char> begin(filename() == "-" ? std::cin : stream), end;
   const auto source = std::string("script = ") + std::string(begin, end);
+  context->run("script = {\"video\": {}}");
+  context->run(source);
   context->run(source);
 }
 
@@ -780,6 +782,8 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto offset_y2 = static_cast<double>(0);
   double root_x = 0;
   double root_y = 0;
+  std::optional<double> pivot_x;
+  std::optional<double> pivot_y;
   double angle = i.double_number(previous_instance, "angle");
   while (level > 0) {
     level--;
@@ -804,7 +808,17 @@ double generator::get_max_travel_of_object(v8_interact& i,
     if (i.double_number(parents[level], "opacity") > 0) {
       root_x = i.double_number(parents[level], "x");
       root_y = i.double_number(parents[level], "y");
+      if (i.boolean(parents[level], "pivot")) {
+        pivot_x = std::make_optional<double>(root_x);
+        pivot_y = std::make_optional<double>(root_y);
+      }
     }
+    // auto s = i.double_number(parents[level], "scale");
+    // if (!std::isnan(s)) shape_scale *= s;
+  }
+  if (pivot_x && pivot_y) {
+    offset_x = *pivot_x;
+    offset_y = *pivot_y;
   }
 
   level = i.double_number(previous_instance, "level");
@@ -813,6 +827,7 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto prev_offset_y = static_cast<double>(0);
   auto prev_offset_x2 = static_cast<double>(0);
   auto prev_offset_y2 = static_cast<double>(0);
+  auto prev_shape_scale = i.has_field(previous_instance, "scale") ? i.double_number(previous_instance, "scale") : 1.0;
   while (level > 0) {
     level--;
     prev_offset_x += i.double_number(prev_parents[level], "x");
@@ -823,6 +838,8 @@ double generator::get_max_travel_of_object(v8_interact& i,
     }
     auto a = i.double_number(prev_parents[level], "angle");
     if (!std::isnan(a)) angle += a;
+    // auto s = i.double_number(prev_parents[level], "scale");
+    // if (!std::isnan(s)) prev_shape_scale *= s;
   }
 
   auto x = offset_x + i.double_number(instance, "x");
@@ -868,7 +885,6 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto prev_radiussize = i.double_number(previous_instance, "radiussize");
   auto prev_rad = prev_radius + prev_radiussize;
   auto rad = radius + radiussize;
-  auto prev_shape_scale = i.has_field(previous_instance, "scale") ? i.double_number(previous_instance, "scale") : 1.0;
 
   x *= scalesettings.video_scale_next * shape_scale;
   prev_x *= scalesettings.video_scale_intermediate * prev_shape_scale;
@@ -972,6 +988,10 @@ void generator::convert_object_to_render_job(
     level--;
     util::generator::copy_gradient_from_object_to_shape(i, parents[level], new_shape, gradients);
     util::generator::copy_texture_from_object_to_shape(i, parents[level], new_shape, textures);
+    auto s = i.double_number(parents[level], "scale");
+    if (!std::isnan(s)) {
+      scale *= s;
+    }
   }
   if (new_shape.gradients_.empty()) {
     new_shape.gradients_.emplace_back(1.0, data::gradient{});

@@ -27,6 +27,7 @@ private:
   po::variables_map vm;
   std::string output_file = "";
   size_t frame_of_interest = std::numeric_limits<size_t>::max();
+  size_t frame_offset = 0;
   double rand_seed = std::numeric_limits<double>::max();
   po::options_description desc = std::string("Allowed options");
   std::string script = "input/test.js";
@@ -45,6 +46,7 @@ public:
       ("script,s", po::value<std::string>(&script), "javascript file to use for processing")
       ("output,o", po::value<std::string>(&output_file), "filename for video output (default output_{seed}_{width}x{height}.h264)")
       ("frame,f", po::value<size_t>(&frame_of_interest), "specific frame to render and save as 8-bit PNG and 32-bit EXR file")
+      ("frame-offset", po::value<size_t>(&frame_offset), "frame offset (used to skip rendering frames)")
       ("seed", po::value<double>(&rand_seed), "override the random seed used")
       ("num_threads,t", po::value<size_t>(&num_worker_threads), "number of local render threads (default 1)")
       ("num_chunks,c", po::value<size_t>(&num_chunks), "number of chunks to chop frame into (default 1)")
@@ -127,7 +129,7 @@ public:
             nullptr, script, instruction_type::get_raw_image, frame_of_interest, num_chunks, is_raw, preview);
       } else {
         // render video
-        sc.add_command(nullptr, script, output_file, num_chunks, is_raw, preview);
+        sc.add_command(nullptr, script, output_file, num_chunks, is_raw, preview, frame_offset);
       }
     };
 

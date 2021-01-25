@@ -7,9 +7,11 @@
 #include "rendering_engine_wrapper.h"
 
 #include "cereal/archives/binary.hpp"
+#include "fmt/core.h"
 
 #include "data/settings.hpp"
 
+#include <sys/prctl.h>
 #include <unistd.h>  // getpid()
 #include <sstream>
 
@@ -45,6 +47,13 @@ bool server_message_handler::on_server_message(render_client &client,
 
       std::cout << "render client " << getpid() << " rendering job " << job.job_number << " shapes=" << num_shapes
                 << ", dimensions=" << job.width << "x" << job.height << std::endl;
+
+      prctl(PR_SET_NAME,
+            fmt::format("sc {} {}/{}", job.frame_number, job.chunk + 1, job.num_chunks).c_str(),
+            NULL,
+            NULL,
+            NULL);
+
       sc.render_job(getpid(), engine, job, bmp, settings);
       data::pixel_data2 dat;
       if (job.is_raw) {

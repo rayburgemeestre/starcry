@@ -41,6 +41,7 @@
 #include "starcry/server_message_handler.h"
 
 // TODO: re-organize this somehow
+#include <sys/prctl.h>
 #include <random>
 #include <utility>
 
@@ -112,9 +113,10 @@ void starcry::add_command(seasocks::WebSocket *client,
                           const std::string &output_file,
                           int num_chunks,
                           bool raw,
-                          bool preview) {
+                          bool preview,
+                          size_t offset_frames) {
   cmds->push(std::make_shared<instruction>(
-      client, instruction_type::get_video, script, output_file, num_chunks, raw, preview));
+      client, instruction_type::get_video, script, output_file, num_chunks, raw, preview, offset_frames));
 }
 
 void starcry::render_job(size_t thread_num,
@@ -122,6 +124,8 @@ void starcry::render_job(size_t thread_num,
                          const data::job &job,
                          image &bmp,
                          const data::settings &settings) {
+  prctl(PR_SET_NAME, fmt::format("sc {} {}/{}", job.frame_number, job.chunk, job.num_chunks).c_str(), NULL, NULL, NULL);
+
   engine.render(thread_num,
                 job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
                 job.chunk,
@@ -189,6 +193,10 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   gen->init(cmd_def->script, seed, cmd_def->preview);
 
   if (cmd_def->type == instruction_type::get_video) {
+    // Update current_frame if we fast-forward to a different offset frame.
+    if (cmd_def->offset_frames > 0) {
+      current_frame = cmd_def->offset_frames;
+    }
     command_handlers[cmd_def->type]->to_job(cmd_def);
   } else {
     command_handlers[instruction_type::get_bitmap]->to_job(cmd_def);

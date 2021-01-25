@@ -40,7 +40,10 @@ public:
   int num_chunks;
   bool raw = false;
   bool preview = false;
+  // TODO: can this be "merged" with "frame" ? so we can avoid introducing this offset_frame.
+  size_t offset_frames = 0;
 
+  // constructor for stills
   instruction(seasocks::WebSocket *client,
               instruction_type type,
               std::string script,
@@ -56,13 +59,16 @@ public:
         num_chunks(num_chunks),
         raw(raw),
         preview(preview) {}
+
+  // constructor for video
   instruction(seasocks::WebSocket *client,
               instruction_type type,
               std::string script,
               std::string output_file,
               int num_chunks,
               bool raw,
-              bool preview)
+              bool preview,
+              size_t offset_frames)
       : client(client),
         type(type),
         frame(0),
@@ -70,7 +76,8 @@ public:
         output_file(std::move(output_file)),
         num_chunks(num_chunks),
         raw(raw),
-        preview(preview) {}
+        preview(preview),
+        offset_frames(offset_frames) {}
 };
 
 class job_message : public message_type {

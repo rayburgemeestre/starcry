@@ -26,6 +26,7 @@ public:
       case thread_state::busy:
         return "BUSY";
     }
+    return "ERROR";
   }
   struct thread_data {
     int number;
@@ -41,6 +42,7 @@ public:
     queued,
     rendering,
     rendered,
+    skipped,
   };
   std::string str(job_state in) {
     switch (in) {
@@ -50,6 +52,8 @@ public:
         return "RENDERING";
       case job_state::rendered:
         return "RENDERED";
+      case job_state::skipped:
+        return "SKIPPED";
     }
   }
 
@@ -76,6 +80,7 @@ public:
     int num_chunks;
     std::chrono::time_point<std::chrono::high_resolution_clock> generate_begin;
     std::chrono::time_point<std::chrono::high_resolution_clock> generate_end;
+    bool skipped;
     int thread;
     std::vector<metrics::chunk> chunks;
   };
@@ -113,6 +118,7 @@ public:
   void set_render_job_object_state(int thread_num, int job_num, int chunk_num, int index, metrics::job_state state);
   void complete_render_job(int thread_number, int job_number, int chunk);
   void complete_job(int number);
+  void skip_job(int number);
   void display();
 
   void set_frame_mode();

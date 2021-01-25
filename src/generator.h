@@ -58,8 +58,8 @@ private:
   std::unordered_map<int64_t, size_t> next_instance_mapping;
   data::settings settings_;
 
-  size_t min_intermediates = 0.;
-  size_t max_intermediates = 30.;
+  int min_intermediates = 0.;
+  int max_intermediates = 30.;
 
   scale_settings scalesettings;
   scene_settings scenesettings;

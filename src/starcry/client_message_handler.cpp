@@ -20,7 +20,7 @@ bool client_message_handler::on_client_message(int sockfd, int type, size_t len,
                                 starcry_msgs::register_me_response,
                                 (const char *)&sc.num_queue_per_worker,
                                 sizeof(sc.num_queue_per_worker));
-      sc.metrics_->register_thread(1000 + sockfd, "remote");
+      sc.metrics_->register_thread(1000 + sockfd, data);
       break;
     }
     case starcry_msgs::pull_job: {
