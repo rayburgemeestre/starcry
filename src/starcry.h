@@ -16,6 +16,7 @@
 
 #include "data/job.hpp"
 #include "data/pixels.hpp"
+#include "data/viewpoint.hpp"
 
 #include "util/limited_executor.hpp"
 
@@ -60,7 +61,6 @@ public:
 private:
   size_t num_local_engines;
   bool enable_remote_workers;
-  bool is_interactive;
   bool start_webserver;
   bool enable_compression;
 
@@ -89,13 +89,14 @@ private:
   log_level log_level_;
   std::shared_ptr<metrics> metrics_;
 
+  data::viewpoint viewpoint;
+
 public:
   starcry(
       size_t num_local_engines,
       bool enable_remote_workers,
       log_level level,
       bool notty,
-      bool is_interactive,
       bool start_webserver,
       bool enable_compression,
       render_video_mode mode,
@@ -120,6 +121,9 @@ public:
 
   void run_server();
   void run_client(const std::string &host);
+
+  const data::viewpoint &get_viewpoint() const;
+  void set_viewpoint(data::viewpoint &vp);
 
 private:
   void render_job(size_t thread_num,

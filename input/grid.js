@@ -57,7 +57,7 @@ _ = {
         while (queue.length > 0) {
           var current = queue.shift();
 
-          if (get_distance(current[0], current[1], 0, 0) > 190.) {
+          if (get_distance(current[0], current[1], 0, 0) > 1900.) {
             break;
           }
 
@@ -113,11 +113,12 @@ _ = {
         }
       },
       'time': function(t, e, s) {
-        script.video.scale = 1.0 + t * 5;
+        // script.video.scale = 1.0 + t * 5;
         if (this.props.scale) {
           // this.scale = 1.0 + t * 1;
           // doesn't work?? this.scale += e * 100.;
         }
+        this.angle = 360. * t;  // elapsed * 10.;
       }
     },
     'test_line': {
@@ -159,7 +160,8 @@ _ = {
     */
       },
       'time': function(time, elapsed) {
-        this.angle += elapsed * 10.;
+        // if (this.level == 0)
+        //        this.angle = 360. * time; // elapsed * 10.;
       },
     },
     'test_line2': {

@@ -54,7 +54,6 @@ starcry::starcry(size_t num_local_engines,
                  bool enable_remote_workers,
                  log_level level,
                  bool notty,
-                 bool is_interactive,
                  bool start_webserver,
                  bool enable_compression,
                  starcry::render_video_mode mode,
@@ -62,7 +61,6 @@ starcry::starcry(size_t num_local_engines,
                  std::optional<double> rand_seed)
     : num_local_engines(num_local_engines),
       enable_remote_workers(enable_remote_workers),
-      is_interactive(is_interactive),
       start_webserver(start_webserver),
       enable_compression(enable_compression),
       bitmaps({}),
@@ -133,6 +131,8 @@ void starcry::render_job(size_t thread_num,
                 bmp,
                 job.background_color,
                 job.shapes,
+                job.view_x,
+                job.view_y,
                 job.offset_x,
                 job.offset_y,
                 job.canvas_w,
@@ -199,6 +199,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     }
     command_handlers[cmd_def->type]->to_job(cmd_def);
   } else {
+    cmd_def->viewpoint = viewpoint;
     command_handlers[instruction_type::get_bitmap]->to_job(cmd_def);
   }
   if (cmd_def->client == nullptr) {
@@ -401,6 +402,14 @@ void starcry::run_client(const std::string &host) {
   client.register_me();
   while (client.poll())
     ;
+}
+
+const data::viewpoint &starcry::get_viewpoint() const {
+  return viewpoint;
+}
+
+void starcry::set_viewpoint(data::viewpoint &vp) {
+  viewpoint = vp;
 }
 
 // This function is used to send to framer and als the preview window

@@ -23,6 +23,11 @@ void command_handler::to_job(std::shared_ptr<instruction> &cmd_def) {
   }
   auto the_job = sc.gen->get_job();
   util::ImageSplitter<uint32_t> is{the_job->canvas_w, the_job->canvas_h};
+
+  the_job->scale *= cmd_def->viewpoint.scale;
+  the_job->view_x = cmd_def->viewpoint.offset_x;
+  the_job->view_y = cmd_def->viewpoint.offset_y;
+
   if (cmd_def->num_chunks == 1) {
     sc.jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, the_job, cmd_def->raw));
   } else {

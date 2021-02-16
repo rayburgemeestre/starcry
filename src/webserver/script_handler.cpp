@@ -41,7 +41,7 @@ void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
       std::ifstream ifs(file);
       std::ostringstream ss;
       ss << ifs.rdbuf();
-      con->send((const uint8_t *)ss.str().c_str(), ss.str().size() * sizeof(uint8_t));
+      con->send(ss.str());
     }
   } else if (input == "list") {
     json result = {};

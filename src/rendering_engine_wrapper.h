@@ -40,6 +40,8 @@ public:
               image &bmp,
               const data::color &bg_color,
               const std::vector<std::vector<data::shape>> &shapes,
+              double view_x,
+              double view_y,
               uint32_t offset_x,
               uint32_t offset_y,
               uint32_t canvas_w,

@@ -27,7 +27,8 @@ webserver::webserver(starcry *sc)
       bitmap_handler(std::make_shared<BitmapHandler>(sc)),
       script_handler(std::make_shared<ScriptHandler>(sc)),
       stats_handler(std::make_shared<StatsHandler>(sc)),
-      objects_handler(std::make_shared<ObjectsHandler>(sc)) {
+      objects_handler(std::make_shared<ObjectsHandler>(sc)),
+      viewpoint_handler(std::make_shared<ViewPointHandler>(sc)) {
   auto root = std::make_shared<seasocks::RootPageHandler>();
   root->add(std::make_shared<seasocks::PathHandler>("data", std::make_shared<DataHandler>()));
   server->addPageHandler(root);
@@ -38,6 +39,7 @@ webserver::webserver(starcry *sc)
   server->addWebSocketHandler("/script", script_handler);
   server->addWebSocketHandler("/stats", stats_handler);
   server->addWebSocketHandler("/objects", objects_handler);
+  server->addWebSocketHandler("/viewpoint", viewpoint_handler);
 };
 
 void webserver::run() {

@@ -144,6 +144,10 @@ public:
     return filename_;
   }
 
+  scale_settings& scale_settings() {
+    return scalesettings;
+  }
+
   inline time_settings get_time() const;
 
 private:

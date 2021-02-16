@@ -187,14 +187,12 @@ void start(uint32_t width, uint32_t height) {
 #else
   render_shapes_to_texture();
   while (true) {
-    /*
     SDL_Event event;
     if (SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
         break;
       }
     }
-    */
     mainloop((void *)renderer);
   }
 #endif
@@ -233,7 +231,7 @@ int get_mouse_x() {
   return x;
 }
 int get_mouse_y() {
-  return x;
+  return y;
 }
 double get_scale() {
   return job.scale;
@@ -241,7 +239,7 @@ double get_scale() {
 
 int main() {
 #ifndef EMSCRIPTEN
-  start(1920, 1080);
+  start(1080, 1080);
 #endif
   return EXIT_SUCCESS;
 }

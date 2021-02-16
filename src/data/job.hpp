@@ -19,6 +19,8 @@ struct job {
   bool same_host;
   uint32_t width;
   uint32_t height;
+  double view_x;
+  double view_y;
   uint32_t offset_x;
   uint32_t offset_y;
   uint32_t canvas_w;
@@ -48,6 +50,8 @@ struct job {
     ar(same_host,
        width,
        height,
+       view_x,
+       view_y,
        offset_x,
        offset_y,
        canvas_w,

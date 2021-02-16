@@ -967,8 +967,8 @@ void generator::convert_object_to_render_job(
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
   auto seed = i.double_number(instance, "seed");
-  auto blending_type =
-      i.has_field(instance, "blending_type") ? i.integer_number(instance, "blending_type") : data::blending_type::add;
+  auto blending_type = i.has_field(instance, "blending_type") ? i.integer_number(instance, "blending_type")
+                                                              : data::blending_type::normal;
   auto scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
   auto unique_id = i.integer_number(instance, "unique_id");
   // auto video_scale = i.double_number(video, "scale");

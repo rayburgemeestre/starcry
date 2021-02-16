@@ -58,7 +58,8 @@ public:
       ("javascript-only", "render only the jobs, nothing graphical")
       ("spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")
       ("stream", "start embedded webserver and stream HLS to webroot")
-      ("interactive,i", "start embedded webserver and launch in interactive mode")
+      ("no-webserver", "do not start embedded webserver")
+      ("interactive,i", "start in interactive mode (user will input through webserver)")
       ("pipeline,p", "non-interactive pipeline mode")
       ("perf", "run performance tests")
       ("compression", "enable pixel compression on rendered pixels")
@@ -81,8 +82,8 @@ public:
       std::exit(1);
     }
 
+    bool start_webserver = !vm.count("no-webserver");
     bool is_interactive = vm.count("interactive");
-    bool start_webserver = is_interactive == true;
     bool preview = vm.count("preview");
 
     // configure streaming
@@ -144,7 +145,6 @@ public:
                vm.count("server"),
                level,
                vm.count("notty"),
-               is_interactive,
                start_webserver,
                vm.count("compression"),
                p_mode,

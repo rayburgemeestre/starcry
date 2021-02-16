@@ -7,21 +7,21 @@ fast-docker-build:
 
 client:
 	mkdir -p /tmp/ccache-root
-	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./include -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0"
+	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0"
 	# -I/usr/include -I/emsdk/upstream/emscripten/system/include/ -I/usr/include/x86_64-linux-gnu/
 
 client_desktop:
 	mkdir -p /tmp/ccache-root
-	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "c++ -DSC_CLIENT -O3 -o client_desktop src/client.cpp -I./include -I./libs/cereal/include -I./libs/perlin_noise/ -lSDL2 "
+	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "c++ -DSC_CLIENT -O3 -o client_desktop src/client.cpp -I src -I./libs/cereal/include -I./libs/perlin_noise/ -lSDL2 "
 
 client-ubuntu1804:
 	mkdir -p /tmp/ccache-root
-	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./include -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0"
+	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0"
 	# -I/usr/include -I/emsdk/upstream/emscripten/system/include/ -I/usr/include/x86_64-linux-gnu/
 
 client_debug:
 	mkdir -p /tmp/ccache-root
-	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 -g --bind -o webroot/client.js src/client.cpp -I./include -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1"
+	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 -g --bind -o webroot/client.js src/client.cpp -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1"
 
 ci:
 	# Only difference with above is: no -i flag

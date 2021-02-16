@@ -24,6 +24,7 @@ class starcry;
 #include "webserver/script_handler.h"
 #include "webserver/shapes_handler.h"
 #include "webserver/stats_handler.h"
+#include "webserver/viewpoint_handler.h"
 
 struct DataHandler : seasocks::CrackedUriPageHandler {
   virtual std::shared_ptr<seasocks::Response> handle(const seasocks::CrackedUri & /*uri*/,
@@ -41,6 +42,7 @@ private:
   std::shared_ptr<ScriptHandler> script_handler;
   std::shared_ptr<StatsHandler> stats_handler;
   std::shared_ptr<ObjectsHandler> objects_handler;
+  std::shared_ptr<ViewPointHandler> viewpoint_handler;
 
 public:
   explicit webserver(starcry *sc);

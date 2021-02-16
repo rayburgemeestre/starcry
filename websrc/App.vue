@@ -54,7 +54,7 @@
                 <div style="position: relative; z-index: 2;">
                     <canvas id="canvas2"
                             style="position: absolute; width: 100%; max-height: calc(100vh - 120px); left: 0; top: 0; z-index: 1; pointer-events: none /* saved my day */;"></canvas>
-                    <canvas id="canvas" v-on:mousemove="on_mouse_move"
+                    <canvas id="canvas" v-on:mousemove="on_mouse_move" v-on:wheel="on_wheel"
                             style="position: absolute; width: 100%; max-height: calc(100vh - 120px); left: 0; top: 0; z-index: 0;"></canvas>
                 </div>
             </div>
@@ -70,6 +70,8 @@
 
                 Current render mode: {{ render_mode }}<br/>
 
+                <view-point-component v-bind:value="scale" v-bind:x="view_x"  v-bind:y="view_y" />
+
                 <h2>{{ websock_status }}</h2>
                 <h2>{{ websock_status2 }}</h2>
                 <h2>{{ websock_status3 }}</h2>
@@ -82,6 +84,7 @@
                 <button v-shortkey="['.']" @shortkey="next_frame()">_</button>
                 <button v-shortkey="['shift', 'o']" @shortkey="get_objects()">_</button>
                 <button v-shortkey="['r']" @shortkey="open(filename)">_</button>
+                <button v-shortkey="['/']" @shortkey="set_frame(current_frame)">_</button>
 
                 <hr>
                 <stats-component />
@@ -99,6 +102,7 @@
     import ObjectsComponent from './components/ObjectsComponent.vue'
     import PlaybackComponent from './components/PlaybackComponent.vue'
     import StatsComponent from './components/StatsComponent.vue'
+    import ViewPointComponent from './components/ViewPointComponent.vue'
     import StarcryAPI from './util/StarcryAPI'
 
     export default {
@@ -116,7 +120,10 @@
                 max_queued: 10,
                 _play: false,
                 render_mode: 'server',
-                objects: []
+                objects: [],
+                scale: 1.,
+                view_x: 0,
+                view_y: 0,
             };
         },
         components: {
@@ -125,6 +132,7 @@
             ObjectsComponent,
             PlaybackComponent,
             StatsComponent,
+            ViewPointComponent,
         },
         methods: {
             open: function(filename) {
@@ -150,7 +158,9 @@
                 this.$data.current_frame++;
             },
             set_frame: function (frame) {
-                this.$data.current_frame = frame;
+                if (frame) {
+                    this.$data.current_frame = frame;
+                }
                 if (!this.$data._play) {
                     this._schedule_frame();
                 }
@@ -172,7 +182,20 @@
                 }
             },
             on_mouse_move: function(e) {
-                let [x, y] = [Module.get_mouse_x(), Module.get_mouse_y()];
+                this.$data.view_x = Module.get_mouse_x();
+                this.$data.view_y = Module.get_mouse_y();
+            },
+            on_wheel: function(event) {
+                event.preventDefault();
+                let delta = event.deltaY / 1000.;
+                if (event.deltaY < 0) {
+                    this.scale += delta * -1.;
+                } else {
+                    this.scale -= delta;
+                }
+                // Restrict scale
+                this.scale = Math.min(Math.max(1., this.scale), 10.);
+                console.log(this.scale);
             },
             get_objects: function () {
                 this.objects_endpoint.send(this.$data.filename + " " + this.$data.current_frame);

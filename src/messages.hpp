@@ -11,6 +11,7 @@
 #include "message_type.hpp"
 
 #include "data/color.hpp"
+#include "data/viewpoint.hpp"
 
 enum class instruction_type {
   get_image,
@@ -42,6 +43,8 @@ public:
   bool preview = false;
   // TODO: can this be "merged" with "frame" ? so we can avoid introducing this offset_frame.
   size_t offset_frames = 0;
+
+  data::viewpoint viewpoint;
 
   // constructor for stills
   instruction(seasocks::WebSocket *client,
@@ -107,6 +110,7 @@ public:
   std::vector<data::color> pixels_raw;
   uint32_t width;
   uint32_t height;
+
   render_msg(seasocks::WebSocket *client,
              instruction_type type,
              size_t job_number,

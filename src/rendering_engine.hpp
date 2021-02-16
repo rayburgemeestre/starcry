@@ -64,6 +64,8 @@ public:
               image &bmp,
               const data::color &bg_color,
               const std::vector<std::vector<data::shape>> &shapes,
+              double view_x,
+              double view_y,
               uint32_t offset_x,
               uint32_t offset_y,
               uint32_t canvas_w,
@@ -93,7 +95,7 @@ public:
 
     draw_logic_.width(width);
     draw_logic_.height(height);
-    draw_logic_.center(canvas_w / 2, canvas_h / 2);
+    draw_logic_.center(canvas_w / 2 - view_x, canvas_h / 2 - view_y);
     draw_logic_.offset(offset_x, offset_y);
 
     if (shapes.empty()) return;
