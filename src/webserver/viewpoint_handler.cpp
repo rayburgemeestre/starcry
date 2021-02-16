@@ -33,9 +33,11 @@ void ViewPointHandler::onData(seasocks::WebSocket *con, const char *data) {
     response["scale"] = vp.scale;
     response["offset_x"] = vp.offset_x;
     response["offset_y"] = vp.offset_y;
+    response["raw"] = vp.raw;
+    response["preview"] = vp.preview;
     con->send(response.dump());
   } else if (json["operation"] == "set") {
-    data::viewpoint vp{json["scale"], json["offset_x"], json["offset_y"]};
+    data::viewpoint vp{json["scale"], json["offset_x"], json["offset_y"], json["raw"], json["preview"]};
     sc->set_viewpoint(vp);
   }
 }

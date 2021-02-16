@@ -14,10 +14,12 @@ struct viewpoint {
   double scale = 1.;
   double offset_x = 0;
   double offset_y = 0;
+  bool raw = false;
+  bool preview = false;
 
   template <class Archive>
   void serialize(Archive &ar) {
-    ar(scale, offset_x, offset_y);
+    ar(scale, offset_x, offset_y, raw, preview);
   }
 };
 
