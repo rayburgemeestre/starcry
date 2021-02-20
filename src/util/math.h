@@ -56,7 +56,7 @@ inline double get_angle(const double& x1, const double& y1, const double& x2, co
 
 inline double triangular_wave(double x, double amplitude = 1., double period = 25.) {
   period *= 2.;
-  x += period / 4.;  // start at the top of the wave function¬
+  x += period / 4.;  // start at the top of the wave function
   double y = ((2. * amplitude) / pi) * asin(sin(x * ((2. * pi) / period)));
   return y;
 }

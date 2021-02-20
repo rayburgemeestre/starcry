@@ -29,6 +29,8 @@ _ = {
         // EDIT2: perhaps wasn't a good idea after all.
         var total_frames = script.video.duration * 25. /* DISABLED AGAIN! - 1.*/;
         var current_frame = total_frames * time;
+        // output('vibe current_frame: ' + current_frame);
+        // output('vibe: ' + triangular_wave(current_frame, 1., 1.0));
         if (this.props.mode == 1) {
           var q = current_frame - parseInt(current_frame);
           this.x = this.props.x + (q * 600. * this.props.wave_strength) - (300 * this.props.wave_strength);

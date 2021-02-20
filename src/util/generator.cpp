@@ -426,5 +426,23 @@ void find_new_objects(v8_interact& i,
   }
 }
 
+void monitor_subobj_changes(v8_interact& i, v8::Local<v8::Object> instance, std::function<void()> exec) {
+  size_t subobj_len_before = 0;
+  size_t subobj_len_after = 0;
+  if (i.has_field(instance, "subobj")) {
+    auto subobj = i.get(instance, "subobj").As<v8::Array>();
+    subobj_len_before = subobj->Length();
+  }
+  exec();
+  if (i.has_field(instance, "subobj")) {
+    auto subobj = i.get(instance, "subobj").As<v8::Array>();
+    subobj_len_after = subobj->Length();
+  }
+  i.set_field(
+      instance,
+      "new_objects",
+      v8::Boolean::New(i.get_isolate(), i.boolean(instance, "new_objects") || subobj_len_after > subobj_len_before));
+};
+
 }  // namespace generator
 }  // namespace util

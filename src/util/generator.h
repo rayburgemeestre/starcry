@@ -49,5 +49,7 @@ void find_new_objects(v8_interact& i,
                       v8::Local<v8::Array>& scene_instances_next,
                       v8::Local<v8::Array>& scene_instances_intermediate);
 
+void monitor_subobj_changes(v8_interact& i, v8::Local<v8::Object> instance, std::function<void()> exec);
+
 }  // namespace generator
 }  // namespace util

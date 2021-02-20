@@ -60,6 +60,7 @@ private:
 
   int min_intermediates = 0.;
   int max_intermediates = 30.;
+  bool fast_ff = false;
 
   scale_settings scalesettings;
   scene_settings scenesettings;
@@ -86,6 +87,7 @@ public:
   void init_object_instances() const;
 
   void set_scene(size_t scene);
+  void fast_forward(int frame_of_interest);
   bool generate_frame();
   void revert_all_changes(v8_interact& i,
                           v8::Local<v8::Array>& instances,
@@ -95,6 +97,7 @@ public:
                                       v8::Local<v8::Array>& instances,
                                       v8::Local<v8::Array>& next_instances,
                                       v8::Local<v8::Array>& intermediates);
+  void call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances);
   void create_next_instance_mapping(v8_interact& i, v8::Local<v8::Array>& next_instances);
   void update_object_positions(v8_interact& i,
                                v8::Local<v8::Array>& next_instances,

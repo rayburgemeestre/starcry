@@ -15,12 +15,9 @@
 command_handler::command_handler(starcry &sc) : sc(sc) {}
 
 void command_handler::to_job(std::shared_ptr<instruction> &cmd_def) {
-  size_t idx = 0;
-  while (sc.gen->generate_frame()) {
-    if (++idx >= cmd_def->frame) {
-      break;
-    }
-  }
+  sc.gen->fast_forward(cmd_def->frame);
+  sc.gen->generate_frame();
+
   auto the_job = sc.gen->get_job();
   util::ImageSplitter<uint32_t> is{the_job->canvas_w, the_job->canvas_h};
 

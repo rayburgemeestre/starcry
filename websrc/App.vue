@@ -45,7 +45,7 @@
         <scripts-component width="100%" height="100vh - 60px"/>
       </div>
       <div v-if="menu == 'script'" class="column" style="background-color: #c0c0c0; width: 38%;">
-        <editor-component v-model="cpp_code" name="js" language="javascript" width="100%" height="100vh - 60px"/>
+        <editor-component v-model="input_source" name="js" language="javascript" width="100%" height="100vh - 60px"/>
       </div>
       <div v-if="menu == 'objects'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
         <objects-component v-model="objects" width="100%" height="100vh - 60px"/>
@@ -104,11 +104,12 @@ import PlaybackComponent from './components/PlaybackComponent.vue'
 import StatsComponent from './components/StatsComponent.vue'
 import ViewPointComponent from './components/ViewPointComponent.vue'
 import StarcryAPI from './util/StarcryAPI'
+import JsonWithObjectsParser from './util/JsonWithObjectsParser'
 
 export default {
   data() {
     return {
-      cpp_code: 'Hello world',
+      input_source: 'Hello world',
       websock_status: '',
       websock_status2: '',
       websock_status3: '',
@@ -233,7 +234,9 @@ export default {
           this.$data.websock_status2 = msg;
         },
         buffer => {
-          this.$data.cpp_code = buffer;
+          let p = new JsonWithObjectsParser(buffer.substr(buffer.indexOf('{')));
+          console.log(p);
+          this.$data.input_source = buffer;
         },
         _ => {
           this.script_endpoint.send("open " + this.$data.filename);

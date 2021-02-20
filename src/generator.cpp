@@ -174,6 +174,7 @@ void generator::init_video_meta_info(std::optional<double> rand_seed, bool previ
     if (i.has_field(video, "dithering")) settings_.dithering = i.boolean(video, "dithering");
     if (i.has_field(video, "min_intermediates")) min_intermediates = i.integer_number(video, "min_intermediates");
     if (i.has_field(video, "max_intermediates")) max_intermediates = i.integer_number(video, "max_intermediates");
+    if (i.has_field(video, "fast_ff")) fast_ff = i.boolean(video, "fast_ff");
     if (i.has_field(video, "bg_color")) {
       auto bg = i.v8_obj(video, "bg_color");
       job->background_color.r = i.double_number(bg, "r");
@@ -310,6 +311,26 @@ void generator::set_scene(size_t scene) {
   }
 }
 
+void generator::fast_forward(int frame_of_interest) {
+  if (fast_ff && frame_of_interest > 2) {
+    int backup_min_intermediates = min_intermediates;
+    int backup_max_intermediates = max_intermediates;
+    min_intermediates = 1;
+    min_intermediates = 1;
+    for (int i = 2; i < frame_of_interest; i++) {
+      generate_frame();
+    }
+    min_intermediates = backup_min_intermediates;
+    min_intermediates = backup_max_intermediates;
+    // generate frame before with same stepsize
+    generate_frame();
+  } else if (frame_of_interest > 1) {
+    for (int i = 1; i < frame_of_interest; i++) {
+      generate_frame();
+    }
+  }
+}
+
 bool generator::generate_frame() {
   // no sampling
   if (sample_include == 0 || sample_exclude == 0) {
@@ -400,6 +421,9 @@ bool generator::_generate_frame() {
           if (scenesettings.update(get_time().time)) {
             set_scene(scenesettings.current_scene_next + 1);
           }
+          if (stepper.current_step == 0) {
+            call_next_frame_event(i, next_instances);
+          }
           create_next_instance_mapping(i, next_instances);
           update_object_positions(i, next_instances, stepper.max_step, video);
           update_object_interactions(i, next_instances, intermediates, video);
@@ -465,6 +489,16 @@ void generator::revert_position_updates(v8_interact& i,
     i.copy_field(dst2, "y", src, "y");
     i.copy_field(dst2, "x2", src, "x2");
     i.copy_field(dst2, "y2", src, "y2");
+  }
+}
+
+void generator::call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances) {
+  for (size_t j = 0; j < next_instances->Length(); j++) {
+    auto next = i.get_index(next_instances, j).As<v8::Object>();
+    auto on = i.get(next, "on").As<v8::Object>();
+    util::generator::monitor_subobj_changes(i, next, [&]() {
+      i.call_fun(on, next, "next_frame");
+    });
   }
 }
 
@@ -654,26 +688,14 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
   i.set_field(instance2, "last_collide", v8::Number::New(isolate, unique_id));
 
   // call 'on collision' event
-  auto on1 = i.get(instance, "on").As<v8::Object>();
-  auto on2 = i.get(instance2, "on").As<v8::Object>();
-
-  // TODO: proof-of-concept
-  auto emit_event = [&](v8::Local<v8::Object> on1, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2) {
-    size_t subobj_len_before = 0;
-    size_t subobj_len_after = 0;
-    if (i.has_field(instance, "subobj")) {
-      auto subobj = i.get(instance, "subobj").As<v8::Array>();
-      subobj_len_before = subobj->Length();
-    }
-    i.call_fun(on1, instance, "collide", instance2);
-    if (i.has_field(instance, "subobj")) {
-      auto subobj = i.get(instance, "subobj").As<v8::Array>();
-      subobj_len_after = subobj->Length();
-    }
-    i.set_field(instance, "new_objects", v8::Boolean::New(i.get_isolate(), subobj_len_after > subobj_len_before));
-  };
-  emit_event(on1, instance, instance2);
-  emit_event(on2, instance2, instance);
+  util::generator::monitor_subobj_changes(i, instance, [&]() {
+    auto on = i.get(instance, "on").As<v8::Object>();
+    i.call_fun(on, instance, "collide", instance2);
+  });
+  util::generator::monitor_subobj_changes(i, instance, [&]() {
+    auto on = i.get(instance2, "on").As<v8::Object>();
+    i.call_fun(on, instance2, "collide", instance);
+  });
 }
 
 inline generator::time_settings generator::get_time() const {
@@ -683,7 +705,7 @@ inline generator::time_settings generator::get_time() const {
   // Intermediate frames between 0 and 1, for two: [0.33, 0.66]
   // This will make vibrations invisible, as back and forth will be rendered the same way
   // NOTE: The only change is a +1 for max_step count.
-  const auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step + 1));
+  const auto extra = static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step + 1);
   // Another fix, to make t= not start at for example -0.002, and run up to 0.995, is to make sure we start counting
   // at one, instead of zero, because we subtract something to account for intermediate frames
   // const auto fn = static_cast<double>(job->frame_number - (1.0 - extra));
@@ -710,19 +732,10 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
   const auto time_settings = get_time();
 
   const auto execute = [&](double scene_time) {
-    size_t subobj_len_before = 0;
-    size_t subobj_len_after = 0;
-    if (i.has_field(instance, "subobj")) {
-      auto subobj = i.get(instance, "subobj").As<v8::Array>();
-      subobj_len_before = subobj->Length();
-    }
-    i.call_fun(
-        instance, "time", scene_time, time_settings.elapsed, scenesettings.current_scene_next, time_settings.time);
-    if (i.has_field(instance, "subobj")) {
-      auto subobj = i.get(instance, "subobj").As<v8::Array>();
-      subobj_len_after = subobj->Length();
-    }
-    i.set_field(instance, "new_objects", v8::Boolean::New(i.get_isolate(), subobj_len_after > subobj_len_before));
+    util::generator::monitor_subobj_changes(i, instance, [&]() {
+      i.call_fun(
+          instance, "time", scene_time, time_settings.elapsed, scenesettings.current_scene_next, time_settings.time);
+    });
     i.set_field(instance, "__time__", v8::Number::New(i.get_isolate(), scene_time));
     i.set_field(instance, "__global_time__", v8::Number::New(i.get_isolate(), time_settings.time));
     i.set_field(instance, "__elapsed__", v8::Number::New(i.get_isolate(), time_settings.elapsed));
