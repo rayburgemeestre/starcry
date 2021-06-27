@@ -19,9 +19,37 @@ std::shared_ptr<seasocks::Response> DataHandler::handle(const seasocks::CrackedU
   return seasocks::Response::jsonResponse("{}");
 }
 
+#include "seasocks/Logger.h"
+#include "util/logger.h"
+
+class MyLogger : public seasocks::Logger {
+public:
+  explicit MyLogger(Level minLevelToLog_ = Level::Debug) : minLevelToLog(minLevelToLog_) {}
+  ~MyLogger() = default;
+  virtual void log(Level level, const char *message) override {
+    if (level >= minLevelToLog) {
+      switch (level) {
+        case Level::Debug:
+          logger(DEBUG) << message << std::endl;
+          return;
+        case Level::Info:
+          logger(INFO) << message << std::endl;
+          return;
+        case Level::Warning:
+        case Level::Error:
+          logger(WARNING) << message << std::endl;
+          return;
+        case Level::Severe:
+          logger(FATAL) << message << std::endl;
+          return;
+      }
+    }
+  }
+  Level minLevelToLog;
+};
+
 webserver::webserver(starcry *sc)
-    : server(std::make_shared<seasocks::Server>(
-          std::make_shared<seasocks::PrintfLogger>(seasocks::PrintfLogger::Level::Info))),
+    : server(std::make_shared<seasocks::Server>(std::make_shared<MyLogger>(MyLogger::Level::Info))),
       image_handler(std::make_shared<ImageHandler>(sc)),
       shapes_handler(std::make_shared<ShapesHandler>(sc)),
       bitmap_handler(std::make_shared<BitmapHandler>(sc)),

@@ -86,6 +86,8 @@ void render_shapes_to_texture() {
                 bmp,
                 job.background_color,
                 job.shapes,
+                0,
+                0,
                 job.offset_x,
                 job.offset_y,
                 job.canvas_w,

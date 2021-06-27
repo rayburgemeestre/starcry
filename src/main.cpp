@@ -18,6 +18,7 @@
 // #include <Magick++.h>
 #include "generator.h"
 #include "starcry.h"
+#include "util/logger.h"
 
 namespace po = ::boost::program_options;
 // using namespace Magick;
@@ -160,6 +161,7 @@ public:
 };
 
 int main(int argc, char *argv[]) {
+  logger(DEBUG) << "Welcome to Starcry" << std::endl;
   // InitializeMagick(*argv);
   main_program prog{argc, argv};
   return 0;

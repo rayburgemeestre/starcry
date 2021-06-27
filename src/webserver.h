@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include "seasocks/PrintfLogger.h"
 #include "seasocks/Response.h"
 #include "seasocks/Server.h"
 #include "seasocks/StringUtil.h"

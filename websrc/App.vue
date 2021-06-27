@@ -201,7 +201,8 @@ export default {
         this.scale -= delta;
       }
       // Restrict scale
-      this.scale = Math.min(Math.max(1., this.scale), 10.);
+      // TODO: this 100 needs to come from some constant, or better yet, some actual setting somewhere..
+      this.scale = Math.min(Math.max(1., this.scale), 100.);
       console.log(this.scale);
     },
     get_objects: function () {
@@ -234,8 +235,8 @@ export default {
           this.$data.websock_status2 = msg;
         },
         buffer => {
-          let p = new JsonWithObjectsParser(buffer.substr(buffer.indexOf('{')));
-          console.log(p);
+          // let p = new JsonWithObjectsParser(buffer.substr(buffer.indexOf('{')));
+          // console.log(p);
           this.$data.input_source = buffer;
         },
         _ => {

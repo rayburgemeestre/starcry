@@ -135,6 +135,8 @@ public:
         buffer(std::move(buf)),
         width(width),
         height(height) {}
+
+  // non-raw pixels only
   render_msg(seasocks::WebSocket *client,
              instruction_type type,
              size_t job_number,
@@ -159,6 +161,8 @@ public:
         pixels(std::move(pixels)),
         width(width),
         height(height) {}
+
+  // raw pixels only
   render_msg(seasocks::WebSocket *client,
              instruction_type type,
              size_t job_number,
@@ -183,4 +187,38 @@ public:
         pixels_raw(std::move(pixels_raw)),
         width(width),
         height(height) {}
+
+  // non-raw and raw pixels
+  // TODO: remove this?
+  // switch to separate methods, such as set_raw instead?
+  //  render_msg(seasocks::WebSocket *client,
+  //             instruction_type type,
+  //             size_t job_number,
+  //             size_t frame_number,
+  //             size_t chunk,
+  //             size_t num_chunks,
+  //             size_t offset_x,
+  //             size_t offset_y,
+  //             bool last_frame,
+  //             uint32_t width,
+  //             uint32_t height,
+  //             std::vector<uint32_t> &pixels,
+  //             std::vector<data::color> &pixels_raw)
+  //      : job_number(job_number),
+  //        frame_number(frame_number),
+  //        chunk(chunk),
+  //        num_chunks(num_chunks),
+  //        offset_x(offset_x),
+  //        offset_y(offset_y),
+  //        last_frame(last_frame),
+  //        client(client),
+  //        type(type),
+  //        pixels(std::move(pixels)),
+  //        pixels_raw(std::move(pixels_raw)),
+  //        width(width),
+  //        height(height) {}
+
+  void set_raw(std::vector<data::color> &pixels_raw) {
+    std::swap(this->pixels_raw, pixels_raw);
+  }
 };

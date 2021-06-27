@@ -45,7 +45,6 @@ _ = {
         var queue = [[0, 0]];
         var existing_line = new Set();
 
-
         function line_exists(inp) {
           var k = key(inp);
           if (existing_line.has(inp)) {
@@ -76,7 +75,7 @@ _ = {
           }
           if (!line_exists(key([current[0] + -100, current[1] + 0, current[0], current[1]]))) {
             this.subobj.push({
-              'id': 'test_line',
+              'id': 'test_line2',
               'x': current[0] + -100.,
               'y': current[1] + 0,
               'x2': current[0],
@@ -88,7 +87,7 @@ _ = {
           }
           if (!line_exists(key([current[0] + 0, current[1] + 100, current[0], current[1]]))) {
             this.subobj.push({
-              'id': 'test_line',
+              'id': 'test_line3',
               'x': current[0] + 0.,
               'y': current[1] + 100,
               'x2': current[0],
@@ -100,7 +99,7 @@ _ = {
           }
           if (!line_exists(key([current[0] + 0, current[1] + -100, current[0], current[1]]))) {
             this.subobj.push({
-              'id': 'test_line',
+              'id': 'test_line4',
               'x': current[0] + 0.,
               'y': current[1] + -100,
               'x2': current[0],
@@ -147,17 +146,36 @@ _ = {
           'angle': 0,
           'props': {'grad': 'red', 'wave_strength': rand() * 2.}
         });
-        //                this.subobj.push({'id': 'test_line2', 'x':  0, 'y': 0, 'x2':  0, 'y2': 0, 'props': { 'grad':
-        //                'green', 'wave_strength': rand() * 20. } }); this.subobj.push({'id': 'test_line2', 'x': +s,
-        //                'y': 0, 'x2': +s, 'y2': 0, 'props': { 'grad': 'blue', 'wave_strength': rand() * 20. } });
-        /*
-        this.subobj.push({'id': 'test_line2', 'x': this.x, 'y': this.y, 'x2': this.x2, 'y2': this.y2, 'props': { 'grad':
-        'green' } });
-        */
-        /*
-        this.subobj.push({'id': 'test_line2', 'x': this.x + 10, 'y': this.y, 'x2': this.x2 + 10, 'y2': this.y2,
-        'props': { 'grad': 'blue' } });
-    */
+
+        this.subobj.push({
+          'id': 'test_line2',
+          'x': 0,
+          'y': 0,
+          'x2': 0,
+          'y2': 0,
+          'props': {'grad': 'green', 'wave_strength': rand() * 20.}
+        });
+
+        this.subobj.push({
+          'id': 'test_line2',
+          'x': +s,
+          'y': 0,
+          'x2': +s,
+          'y2': 0,
+          'props': {'grad': 'blue', 'wave_strength': rand() * 20.}
+        });
+
+        this.subobj.push(
+            {'id': 'test_line2', 'x': this.x, 'y': this.y, 'x2': this.x2, 'y2': this.y2, 'props': {'grad': 'green'}});
+
+        this.subobj.push({
+          'id': 'test_line2',
+          'x': this.x + 10,
+          'y': this.y,
+          'x2': this.x2 + 10,
+          'y2': this.y2,
+          'props': {'grad': 'blue'}
+        });
       },
       'time': function(time, elapsed) {
         // if (this.level == 0)

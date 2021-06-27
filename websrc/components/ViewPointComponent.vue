@@ -1,13 +1,14 @@
 <template>
   <div>
     Scale:
-    <b-slider style="width: calc(100%); margin-right: 10px; float: left;" :min="0" :max="10" v-model="scale" ticks></b-slider>
+    <b-slider style="width: calc(100%); margin-right: 10px; float: left;" :min="0" :max="100" v-model="scale" ticks></b-slider>
 
     <br/>
 
     <label class="checkbox"><input type="checkbox" v-model="auto_render"> <span>auto render</span></label> <br/>
     <label class="checkbox"><input type="checkbox" v-model="raw"> <span>raw</span></label> <br/>
     <label class="checkbox"><input type="checkbox" v-model="preview"> <span>preview</span></label> <br/>
+    <label class="checkbox"><input type="checkbox" v-model="save"> <span>save</span></label> <br/>
     <br/>
 
     Scale: {{ scale }} <br/>
@@ -52,10 +53,12 @@ export default {
       auto_render: true,
       raw: false,
       preview: true,
+      save: false,
     }
   },
   methods: {
     'update': function() {
+      console.log("update");
       if (timer !== false) {
         clearTimeout(timer);
         timer = false;
@@ -63,7 +66,6 @@ export default {
       timer = setTimeout(this.scheduled_update.bind(this), 50);
     },
     'scheduled_update': function() {
-      this.$data.previous_scale = this.$data.scale;
       this.viewpoint_endpoint.send(JSON.stringify({
         'operation': 'set',
         'scale': this.$data.scale,
@@ -71,9 +73,12 @@ export default {
         'offset_y': this.$data.offsetY,
         'raw': this.$data.raw,
         'preview': this.$data.preview,
+        'save': this.$data.save,
       }));
       if (this.$data.scale === this.$data.previous_scale) return;
-      if (this.$data.auto_render) { this.$parent.set_frame(); }
+      // Delay might not be needed, just want to be sure the viewpoint send above is received before the render request.
+      if (this.$data.auto_render) { setTimeout(function(){ this.$parent.set_frame(); }.bind(this), 10); }
+      this.$data.previous_scale = this.$data.scale;
     },
     'reset': function() {
       this.$data.scale = 1.;
@@ -81,6 +86,7 @@ export default {
       this.$data.offsetY = 0;
       this.$data.raw = false;
       this.$data.preview = false;
+      this.$data.save = false;
       this.update();
     }
   },
@@ -107,6 +113,9 @@ export default {
     preview(new_val) {
       this.update();
     },
+    save(new_val) {
+      this.update();
+    },
   },
   mounted: function() {
     this.viewpoint_endpoint = new StarcryAPI(
@@ -122,6 +131,7 @@ export default {
           this.$data.offsetY = buffer["offset_y"];
           this.$data.raw = buffer["raw"];
           this.$data.preview = buffer["preview"];
+          this.$data.save = buffer["save"];
         },
         _ => {
           this.viewpoint_endpoint.send(JSON.stringify({

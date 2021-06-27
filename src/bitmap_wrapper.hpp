@@ -28,6 +28,9 @@ public:
       bitmap.resize(width, height);
       bitmap_w = width;
       bitmap_h = height;
+    } else if (bitmap.pixels().empty()) {
+      // if the underlying bitmap was swapped it may have been swapped with an empty one
+      bitmap.resize(width, height);
     }
     return bitmap;
   }

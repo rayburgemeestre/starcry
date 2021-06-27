@@ -11,6 +11,7 @@
 #include "starcry/command_get_bitmap.h"
 
 #include "image.hpp"
+#include "util/logger.h"
 #include "webserver.h"  // BitmapHandler
 
 command_get_bitmap::command_get_bitmap(starcry &sc) : command_handler(sc) {}
@@ -19,18 +20,22 @@ std::shared_ptr<render_msg> command_get_bitmap::to_render_msg(std::shared_ptr<jo
   auto &job = *job_msg->job;
   job.job_number = std::numeric_limits<uint32_t>::max();
   auto transfer_pixels = sc.pixels_vec_to_pixel_data(bmp.pixels(), sc.gen->settings());
-  return std::make_shared<render_msg>(job_msg->client,
-                                      job_msg->type,
-                                      job.job_number,
-                                      job.frame_number,
-                                      job.chunk,
-                                      job.num_chunks,
-                                      job.offset_x,
-                                      job.offset_y,
-                                      job.last_frame,
-                                      job.width,
-                                      job.height,
-                                      transfer_pixels);
+  auto msg = std::make_shared<render_msg>(job_msg->client,
+                                          job_msg->type,
+                                          job.job_number,
+                                          job.frame_number,
+                                          job.chunk,
+                                          job.num_chunks,
+                                          job.offset_x,
+                                          job.offset_y,
+                                          job.last_frame,
+                                          job.width,
+                                          job.height,
+                                          transfer_pixels);
+  if (this->sc.get_viewpoint().raw || this->sc.get_viewpoint().save) {
+    msg->set_raw(bmp.pixels());
+  }
+  return msg;
 }
 
 void command_get_bitmap::handle_frame(std::shared_ptr<render_msg> &job_msg) {
