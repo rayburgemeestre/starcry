@@ -149,8 +149,10 @@ core_debug_sanit:
 	make VERBOSE=1 -j $$(nproc)
 
 core_format:
-	cmake --build build --target clangformat
+	mv -v webpack*.js input/
 	find ./input -name '*.js' -type f -exec clang-format-10 -i {} \;
+	mv -v input/webpack*.js ./
+	cmake --build build --target clangformat
 
 core_experimental:
 	# switch to clang compiler
