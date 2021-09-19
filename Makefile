@@ -14,26 +14,21 @@ client:  ## build webassembly javascript file using docker
 	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0"
 	# -I/usr/include -I/emsdk/upstream/emscripten/system/include/ -I/usr/include/x86_64-linux-gnu/
 
-client_desktop:
+client_desktop:  ## build webassembly client for desktop for testing purposes
 	mkdir -p /tmp/ccache-root
 	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "c++ -DSC_CLIENT -O3 -o client_desktop src/client.cpp -I src -I./libs/cereal/include -I./libs/perlin_noise/ -lSDL2 "
 
-client-ubuntu1804:
-	mkdir -p /tmp/ccache-root
-	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0"
-	# -I/usr/include -I/emsdk/upstream/emscripten/system/include/ -I/usr/include/x86_64-linux-gnu/
 
-client_debug:
+client_debug:  ## build webassembly javascript file using docker with debug
 	mkdir -p /tmp/ccache-root
 	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 -g --bind -o webroot/client.js src/client.cpp -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1"
 
-ci:
+ci:  ## TODO: ci build is used for gocd?
 	# Only difference with above is: no -i flag
 	mkdir -p /tmp/ccache-root
-	docker run -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 sh -c "make prepare && make core_"
+	docker run -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_"
 
-
-debug:
+debug:  ## build starcry binary using docker with debug
 	# build starcry with tailored image so we can invoke the make command straight away
 	mkdir -p /tmp/ccache-root
 	docker run -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_debug"
@@ -43,38 +38,23 @@ format:  ## format source code (build at least once first)
 	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_format"
 	stat -c 'chown %u:%g . -R' CMakeLists.txt | sudo sh -
 
-profile:
+profile:  ## run starcry with valgrind's callgrind for profiling
 	valgrind --tool=callgrind ./build/starcry input/test.js -v
 	ls -althrst | tail -n 1
 
-pull:
+pull:  ## pull the starcry docker build image
 	docker pull rayburgemeestre/build-starcry-ubuntu:20.04
 
-docker-ubuntu1804:
-	# build docker container specific for building starcry
-	docker build -t rayburgemeestre/build-starcry-ubuntu:18.04 -f Dockerfile-ubuntu1804 .
-
-docker-ubuntu2004:
-	# build docker container specific for building starcry
+docker-ubuntu2004:  ## build the starcry docker build image
 	docker build -t rayburgemeestre/build-starcry-ubuntu:20.04 -f Dockerfile-ubuntu2004 .
 
-ubuntu1804:
-	# build from a more generic ubuntu image
-	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-ubuntu:18.04 sh -c "make impl"
-
-impl:
-	make deps
-	make prepare
-	make core_
-
-runtime_deps:  ## Install run-time dependencies
+runtime_deps:  ## install run-time dependencies
 	# dependencies runtime
-	sudo apt-get install -y libomp5
-	echo cmake git wget bzip2 python-dev libbz2-dev \
+	sudo apt-get install -y libomp5 cmake git wget bzip2 python-dev libbz2-dev \
 				pkg-config curl \
 				liblzma-dev
 
-deps: ## Install dependencies required for running and building starcry
+deps: ## install dependencies required for running and building starcry
 	sudo apt-get update
 	sudo apt install -y lsb-release software-properties-common
 
@@ -108,12 +88,11 @@ deps: ## Install dependencies required for running and building starcry
 	# libwebp6: ..
 	# libarchive13: /usr/lib/x86_64-linux-gnu/libarchive.so.13
 	# libzstd1: /usr/lib/x86_64-linux-gnu/libzstd.so.1.4.4
-	#
 	# ncurses
 	sudo apt-get install -y libncurses-dev
 
 
-client_deps:
+client_deps:  ## install dependencies for building webassembly client
 	sudo apt-get update
 	sudo apt-get install -y libsdl2-dev
 	git clone https://github.com/emscripten-core/emsdk.git || true
@@ -122,7 +101,7 @@ client_deps:
 	./emsdk activate latest && \
 	sudo cp -prv ./emsdk_env.sh /etc/profile.d/
 
-prepare:
+prepare:  ## prepare environment before building (such as switch to clang)
 	# switch to clang compiler
 	update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-10 50
 	update-alternatives --install /usr/bin/cc cc /usr/bin/clang-10 50
@@ -132,59 +111,36 @@ prepare:
 	# prepare build dir
 	mkdir -p build
 
-core_:
+core_:  ## execute build steps for building starcry binary
 	pushd build && \
 	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(which c++) cmake .. && \
 	time make -j $$(nproc) starcry && \
 	strip --strip-debug starcry
 
-core_debug:
+core_debug:  ## execute build steps for building starcry binary with debug
 	pushd build && \
 	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(which c++) cmake -DDEBUG=on .. && \
 	time make VERBOSE=1 -j $$(nproc) starcry
 
-core_debug_sanit:
+core_debug_sanit:  ## execute build steps for building starcry binary with address sanitizer and debug
 	pushd build && \
 	CXX=$(which c++) cmake -DSANITIZER=1 -DDEBUG=on .. && \
 	make VERBOSE=1 -j $$(nproc)
 
-core_format:
+core_format:  ## execute formatting
 	mv -v webpack*.js input/
 	find ./input -name '*.js' -type f -exec clang-format-10 -i {} \;
 	mv -v input/webpack*.js ./
 	cmake --build build --target clangformat
 
-core_experimental:
-	# switch to clang compiler
-
-	update-alternatives --install /usr/bin/c++ c++ /home/trigen/projects/build-config/tmp/v8/third_party/llvm-build/Release+Asserts/bin/clang++ 40
-	update-alternatives --install /usr/bin/cc cc /home/trigen/projects/build-config/tmp/v8/third_party/llvm-build/Release+Asserts/bin/clang 40
-	update-alternatives --install /usr/bin/clang++ clang++ /home/trigen/projects/build-config/tmp/v8/third_party/llvm-build/Release+Asserts/bin/clang++ 40
-	update-alternatives --install /usr/bin/clang clang /home/trigen/projects/build-config/tmp/v8/third_party/llvm-build/Release+Asserts/bin/clang 40
-	update-alternatives --install /usr/bin/ld ld /home/trigen/projects/build-config/tmp/v8/third_party/llvm-build/Release+Asserts/bin/ld.lld 40
-	mkdir -p build
-	pushd build && \
-	CXX=/home/trigen/projects/build-config/tmp/v8/third_party/llvm-build/Release+Asserts/bin/clang++ cmake .. && \
-	CXX=/home/trigen/projects/build-config/tmp/v8/third_party/llvm-build/Release+Asserts/bin/clang++ make VERBOSE=1 -j $$(nproc)
-	# CXX=$(which c++) cmake -DDEBUG=on .. && ..
-
-.PHONY: build-shell
-build-shell:
-	docker run -i --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-ubuntu:18.04 /bin/bash
-
-.PHONY: build-shell2
-build-shell2:
-	mkdir -p /tmp/ccache-root
-	docker run -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:18.04 /bin/bash
-
 .PHONY: shell
-shell:
+shell:  ## start a shell in the starcry build image
 	xhost +
 	mkdir -p /tmp/ccache-root
 	docker run -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:/home/trigen -w /projects/starcry -e DISPLAY=$$DISPLAY -v /etc/passwd:/etc/passwd -v /etc/shadow:/etc/shadow -v /etc/sudoers:/etc/sudoers -v /tmp/.X11-unix:/tmp/.X11-unix -u 1144 rayburgemeestre/build-starcry-ubuntu:20.04 /bin/bash
 
 .PHONY: starcry
-clean:
+clean:  ## clean build artifacts
 	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "cd build && make clean"
 	rm -rf CMakeCache.txt
 	rm -rf build/CMakeCache.txt
@@ -194,7 +150,7 @@ clean:
 	rm -f webroot/stream/stream.m3u8*
 
 .PHONY: dockerize
-dockerize:
+dockerize:  ## dockerize starcry executable in stripped down docker image
 	mkdir -p /tmp/ccache-root
 	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_"
 	docker run $$FLAGS --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 /bin/sh -c "make dockerize_run"
@@ -203,49 +159,16 @@ dockerize:
 	docker push rayburgemeestre/starcry:v2
 
 .PHONY: dockerize_run
-dockerize_run:
+dockerize_run:  ## execute dockerize steps
 	apt update
 	apt install python3-pip rsync git ncurses-term -y
 	cd /tmp && git clone https://github.com/larsks/dockerize && cd dockerize && python3 setup.py install
-	# python3 -m pip install dockerize
 	cp -prv $$PWD/build/starcry /starcry
 	strip --strip-debug /starcry
-	# dockerize --verbose --debug -n -o out "/bin/sh -c 'echo 1;'"
-	#dockerize --verbose --debug -n -o out --buildcmd "/starcry --init-gfx" /starcry
-
-	#dockerize --verbose --debug -n -o out "/starcry --init-gfx"
-	#mkdir -p out/usr/lib/x86_64-linux-gnu
-	#mkdir -p out/lib/x86_64-linux-gnu
-	##cp -Lprv /usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.0 out/usr/lib/x86_64-linux-gnu/
-	#cp -Lprv /lib/x86_64-linux-gnu/libGLX_indirect.so.0 out/lib/x86_64-linux-gnu/
-	#cp -Lprv /usr/lib/x86_64-linux-gnu/libglapi.so.0 out/usr/lib/x86_64-linux-gnu/
-	#cp -Lprv /usr/lib/x86_64-linux-gnu/libdrm.so.2 out/usr/lib/x86_64-linux-gnu/
-	#cp -Lprv /usr/lib/x86_64-linux-gnu/libxcb-glx.so.0 out/usr/lib/x86_64-linux-gnu/
-	#cp -Lprv /usr/lib/x86_64-linux-gnu/libX11-xcb.so.1 out/usr/lib/x86_64-linux-gnu/
-	#cp -Lprv /usr/lib/x86_64-linux-gnu/libxcb-dri2.so.0 out/usr/lib/x86_64-linux-gnu/
-	#cp -Lprv /usr/lib/x86_64-linux-gnu/libXfixes.so.3 out/usr/lib/x86_64-linux-gnu/
-	#cp -Lprv /usr/lib/x86_64-linux-gnu/libXdamage.so.1 out/usr/lib/x86_64-linux-gnu/
-	#cp -Lprv /usr/lib/x86_64-linux-gnu/libXxf86vm.so.1 out/usr/lib/x86_64-linux-gnu/
-	#cp -Lprv /usr/lib/x86_64-linux-gnu/libexpat.so.1  out/usr/lib/x86_64-linux-gnu/
-	#cp -Lprv /usr/lib/x86_64-linux-gnu/libxcb-dri3.so.0 out/usr/lib/x86_64-linux-gnu/
-	#cp -Lprv /usr/lib/x86_64-linux-gnu/libxcb-present.so.0 out/usr/lib/x86_64-linux-gnu/
-	#cp -Lprv /usr/lib/x86_64-linux-gnu/libxcb-sync.so.1 out/usr/lib/x86_64-linux-gnu/
-	# after this test got..
-	#cp -Lprv /usr/lib/x86_64-linux-gnu/libx* out/usr/lib/x86_64-linux-gnu/
-	#libGL error: MESA-LOADER: failed to open swrast (search paths /usr/lib/x86_64-linux-gnu/dri:\$${ORIGIN}/dri:/usr/lib/dri)
-	# so for now let's abandon this approach.
-
 	dockerize --verbose --debug -n -o out "/starcry"
-	# mkdir out/bin
-	# cp -Lprv /bin/sh out/bin/
 	mkdir -p out/usr/share/terminfo/x
 	cp -prv /usr/share/terminfo/x/xterm-16color out/usr/share/terminfo/x/
 	sed -i.bak '2 a ENV TERM=xterm-16color' out/Dockerfile
-
-gui:
-	#docker run -it --privileged -v /etc/hosts:/etc/hosts -v $$HOME:$$HOME -u 1144 --workdir $$HOME -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix rayburgemeestre/build-starcry-ubuntu:18.04 /bin/bash
-	mkdir -p /tmp/ccache-root
-	docker run -it --privileged -v /tmp/ccache-root:/root/.ccache -v /etc/hosts:/etc/hosts -v $$HOME:$$HOME --workdir $$HOME -e DISPLAY=$$DISPLAY -u 1144 -v /etc:/etc -v /tmp/.X11-unix:/tmp/.X11-unix rayburgemeestre/build-starcry-ubuntu:18.04 /bin/bash
 
 build_web:  ## build web static files
 	npm install
