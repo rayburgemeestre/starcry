@@ -38,7 +38,7 @@ debug:
 	mkdir -p /tmp/ccache-root
 	docker run -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_debug"
 
-format:
+format:  ## format source code (build at least once first)
 	# build starcry with tailored image so we can invoke the make command straight away
 	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_format"
 	stat -c 'chown %u:%g . -R' CMakeLists.txt | sudo sh -
@@ -247,10 +247,10 @@ gui:
 	mkdir -p /tmp/ccache-root
 	docker run -it --privileged -v /tmp/ccache-root:/root/.ccache -v /etc/hosts:/etc/hosts -v $$HOME:$$HOME --workdir $$HOME -e DISPLAY=$$DISPLAY -u 1144 -v /etc:/etc -v /tmp/.X11-unix:/tmp/.X11-unix rayburgemeestre/build-starcry-ubuntu:18.04 /bin/bash
 
-build_web:  # build web static files
+build_web:  ## build web static files
 	npm install
 	npm run build
 
-run_web:  # run web in development hot-swappable mode
+run_web:  ## run web in development hot-swappable mode
 	npm run dev
 
