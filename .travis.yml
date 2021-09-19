@@ -8,7 +8,7 @@ before_install:
   - sudo apt install -y libpng16-16 libglu1-mesa libomp5
 
 script:
-  - make
+  - make fast-docker-build
 
 after_script:
   - ldd ./build/starcry
