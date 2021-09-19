@@ -7,3 +7,9 @@
 #include "logger.h"
 
 std::ofstream logger::fi{"sc.log", std::ios_base::out | std::ios_base::app};
+
+metrics* _metrics = nullptr;
+
+void set_metrics(metrics* ptr) {
+  _metrics = ptr;
+}

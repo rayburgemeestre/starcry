@@ -40,5 +40,7 @@ void command_get_shapes::handle_frame(std::shared_ptr<render_msg> &job_msg) {
   auto fun = [&](std::shared_ptr<ShapesHandler> shapes_handler, std::shared_ptr<render_msg> job_msg) {
     shapes_handler->callback(job_msg->client, job_msg->buffer);
   };
-  if (sc.webserv) sc.webserv->execute_shapes(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+  if (sc.webserv) {
+    sc.webserv->execute_shapes(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+  }
 }

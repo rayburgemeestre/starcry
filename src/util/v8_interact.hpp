@@ -166,7 +166,13 @@ public:
   template <class... Args>
   void call_fun(v8::Local<v8::Object> object, v8::Local<v8::Object> self, const std::string& field, Args... args) {
     auto v8_field = v8_str(context, field);
-    auto has_field = object.As<v8::Object>()->Has(isolate->GetCurrentContext(), v8_field).ToChecked();
+    auto a = isolate->GetCurrentContext();
+    auto b = object.As<v8::Object>();
+    if (!b->IsObject()) {
+      return;
+    }
+    auto c = b->Has(a, v8_field);
+    auto has_field = c.ToChecked();
     if (!has_field) return;
     auto funref = object.As<v8::Object>()->Get(isolate->GetCurrentContext(), v8_field);
     if (funref.IsEmpty()) {

@@ -70,7 +70,7 @@ metrics::metrics(bool notty) : notty(notty), nostdin(notty) {
 metrics::~metrics() {
   flag = false;
   curses.join();
-  for (const auto &line : ffmpeg) {
+  for (const auto &line : _output) {
     if (line.first <= 32) {
       std::cout << line.second;
     }
@@ -107,6 +107,7 @@ void metrics::complete_job(int number) {
   std::unique_lock<std::mutex> lock(mut);
   if (jobs_.find(number) != jobs_.end()) {
     jobs_[number].generate_end = std::chrono::high_resolution_clock::now();
+    jobs_[number].skipped = true;
   }
 }
 
@@ -344,10 +345,11 @@ void metrics::display() {
     }
   }
   y++;
-  for (int i = 0; i < 5; i++) {
-    int index = ffmpeg.size() - 1 - (5 - i);
+  const auto num_lines = 20;
+  for (int i = 0; i < num_lines; i++) {
+    int index = _output.size() - (num_lines - i);
     if (index >= 0) {
-      auto str = ffmpeg[index].second;
+      auto str = _output[index].second;
       output(y++, 0, str.c_str());
     }
   }
@@ -364,7 +366,7 @@ void metrics::set_total_frames(size_t frames) {
 }
 
 void metrics::log_callback(int level, const std::string &line) {
-  ffmpeg.push_back(std::make_pair(level, line));
+  _output.emplace_back(std::make_pair(level, line));
 }
 
 double metrics::time_diff(std::chrono::time_point<std::chrono::high_resolution_clock> begin,

@@ -1,11 +1,15 @@
 SHELL:=/bin/bash
 
-fast-docker-build:
+.PHONY: help
+help: # with thanks to Ben Rady
+	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+fast-docker-build:  ## build starcry binary using docker
 	# build starcry with tailored image so we can invoke the make command straight away
 	mkdir -p /tmp/ccache-root
 	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_"
 
-client:
+client:  ## build webassembly javascript file using docker
 	mkdir -p /tmp/ccache-root
 	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0"
 	# -I/usr/include -I/emsdk/upstream/emscripten/system/include/ -I/usr/include/x86_64-linux-gnu/
@@ -63,7 +67,14 @@ impl:
 	make prepare
 	make core_
 
-deps:
+runtime_deps:  ## Install run-time dependencies
+	# dependencies runtime
+	sudo apt-get install -y libomp5
+	echo cmake git wget bzip2 python-dev libbz2-dev \
+				pkg-config curl \
+				liblzma-dev
+
+deps: ## Install dependencies required for running and building starcry
 	sudo apt-get update
 	sudo apt install -y lsb-release software-properties-common
 
@@ -73,10 +84,10 @@ deps:
 	sudo apt-get install -y coz-profiler
 	sudo apt-get install -y ccache
 
-	# dependencies runtime
 	sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev \
 				pkg-config curl \
-				liblzma-dev
+				liblzma-dev libomp5
+
 	# ubuntu 18.04: sudo apt-get install -y libssl1.0-dev
 	sudo apt-get install -y libssl-dev
 	sudo apt-get install -y freeglut3-dev libgl1-mesa-dev libglu1-mesa-dev mesa-common-dev \
@@ -168,7 +179,7 @@ build-shell2:
 shell:
 	xhost +
 	mkdir -p /tmp/ccache-root
-	docker run -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:/home/trigen -e DISPLAY=$DISPLAY -v /etc/passwd:/etc/passwd -v /etc/shadow:/etc/shadow -v /etc/sudoers:/etc/sudoers -v /tmp/.X11-unix:/tmp/.X11-unix -u 1144 rayburgemeestre/build-starcry-ubuntu:20.04 /bin/bash
+	docker run -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:/home/trigen -w /projects/starcry -e DISPLAY=$$DISPLAY -v /etc/passwd:/etc/passwd -v /etc/shadow:/etc/shadow -v /etc/sudoers:/etc/sudoers -v /tmp/.X11-unix:/tmp/.X11-unix -u 1144 rayburgemeestre/build-starcry-ubuntu:20.04 /bin/bash
 
 .PHONY: starcry
 clean:

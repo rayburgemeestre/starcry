@@ -27,6 +27,7 @@
 #include "rendering_engine_wrapper.h"
 #include "streamer_output/sfml_window.h"
 #include "util/compress_vector.h"
+#include "util/logger.h"
 #include "webserver.h"
 
 #include "starcry/command_get_bitmap.h"
@@ -85,7 +86,10 @@ starcry::starcry(size_t num_local_engines,
       server_message_handler_(std::make_shared<server_message_handler>(*this)),
       client_message_handler_(std::make_shared<client_message_handler>(*this)),
       log_level_(level),
-      metrics_(std::make_shared<metrics>(notty)) {}
+      metrics_(std::make_shared<metrics>(notty)) {
+  set_metrics(&*metrics_);
+  logger(DEBUG) << "Metrics wired to ncurses UI" << std::endl;
+}
 
 starcry::~starcry() {
   le.cancel();
@@ -298,6 +302,11 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   };
 
   buffered_frames[job_msg->job_number].push_back(job_msg);
+
+  if (job_msg->type == instruction_type::get_shapes) {
+    // HACK ??
+    current_frame = job_msg->frame_number;
+  }
 
   while (true) {
     auto pos = buffered_frames.find(current_frame);

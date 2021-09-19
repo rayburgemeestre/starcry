@@ -20,6 +20,8 @@
 #include "starcry.h"
 #include "util/logger.h"
 
+#include "v8/v8-version.h"
+
 namespace po = ::boost::program_options;
 // using namespace Magick;
 
@@ -162,6 +164,9 @@ public:
 
 int main(int argc, char *argv[]) {
   logger(DEBUG) << "Welcome to Starcry" << std::endl;
+  logger(DEBUG) << "Integrated with v8 " << V8_MAJOR_VERSION << "." << V8_MINOR_VERSION << " build: " << V8_BUILD_NUMBER
+                << " patch lvl: " << V8_PATCH_LEVEL << " candidate: " << V8_IS_CANDIDATE_VERSION << std::endl;
+
   // InitializeMagick(*argv);
   main_program prog{argc, argv};
   return 0;

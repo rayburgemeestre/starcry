@@ -19,9 +19,16 @@ using std::chrono::system_clock;
 #include <sstream>
 #include <string>
 
+#include "starcry/metrics.h"
+
 static std::mutex logger_mut__;
 
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, FATAL };
+
+class metrics;
+extern metrics *_metrics;
+
+void set_metrics(metrics *ptr);
 
 class logger {
 public:
@@ -37,27 +44,32 @@ public:
     if (milliseconds_str.length() < 3) {
       milliseconds_str = std::string(3 - milliseconds_str.length(), '0') + milliseconds_str;
     }
-    l._holder->_os << std::put_time(timeinfo, "%Y-%m-%d %H:%M:%S.") << milliseconds_str;
+    std::stringstream ss;
+    ss << std::put_time(timeinfo, "%Y-%m-%d %H:%M:%S.") << milliseconds_str;
     switch (l._holder->_level) {
       case DEBUG:
-        l._holder->_os << " DEBUG ";
+        ss << " DEBUG ";
         break;
       case INFO:
-        l._holder->_os << "  INFO ";
+        ss << "  INFO ";
         break;
       case WARNING:
-        l._holder->_os << "  WARN ";
+        ss << "  WARN ";
         break;
       case ERROR:
-        l._holder->_os << " ERROR ";
+        ss << " ERROR ";
         break;
       case FATAL:
-        l._holder->_os << " FATAL ";
+        ss << " FATAL ";
         break;
       default:
         break;
     }
-    return l._holder->_os << t;
+    ss << t;
+    if (_metrics) {
+      _metrics->log_callback((int)l._holder->_level, ss.str());
+    }
+    return l._holder->_os << ss.str();
   }
 
 private:

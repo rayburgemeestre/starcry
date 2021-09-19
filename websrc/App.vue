@@ -30,9 +30,10 @@
       <div class="column is-narrow">
         <b-menu>
           <b-menu-list label="Menu">
-            <b-menu-item icon="information-outline" label="Files" :active="menu == 'files'" v-on:click="menu = menu == 'files' ? '' : 'files'"></b-menu-item>
-            <b-menu-item icon="cash-multiple" label="Script" :active="menu == 'script'" v-on:click="menu = menu == 'script' ? '' : 'script'"></b-menu-item>
-            <b-menu-item icon="table" label="Objects" :active="menu == 'objects'" v-on:click="menu = menu == 'objects' ? '' : 'objects'"></b-menu-item>
+            <b-menu-item icon="information-outline" label="Files" :active="menu === 'files'" v-on:click="menu = menu === 'files' ? '' : 'files'"></b-menu-item>
+            <b-menu-item icon="cash-multiple" label="Script" :active="menu === 'script'" v-on:click="menu = menu === 'script' ? '' : 'script'"></b-menu-item>
+            <b-menu-item icon="table" label="Objects" :active="menu === 'objects'" v-on:click="menu = menu === 'objects' ? '' : 'objects'"></b-menu-item>
+            <b-menu-item icon="table" label="Debug" :active="menu === 'debug'" v-on:click="menu = menu === 'debug' ? '' : 'debug'"></b-menu-item>
           </b-menu-list>
           <!--
           <b-menu-list label="Actions">
@@ -41,14 +42,17 @@
           -->
         </b-menu>
       </div>
-      <div v-if="menu == 'files'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
+      <div v-if="menu === 'files'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
         <scripts-component width="100%" height="100vh - 60px"/>
       </div>
-      <div v-if="menu == 'script'" class="column" style="background-color: #c0c0c0; width: 38%;">
+      <div v-if="menu === 'script'" class="column" style="background-color: #c0c0c0; width: 38%;">
         <editor-component v-model="input_source" name="js" language="javascript" width="100%" height="100vh - 60px"/>
       </div>
-      <div v-if="menu == 'objects'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
+      <div v-if="menu === 'objects'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
         <objects-component v-model="objects" width="100%" height="100vh - 60px"/>
+      </div>
+      <div v-if="menu === 'debug'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
+        <debug-component v-model="debug" width="100%" height="100vh - 60px"/>
       </div>
       <div class="column" style="background-color: black; max-height: calc(100vh - 120px);">
         <div style="position: relative; z-index: 2;">
@@ -77,9 +81,10 @@
         <h2>{{ websock_status3 }}</h2>
         <h2>{{ websock_status4 }}</h2>
 
-        <button v-shortkey="['ctrl', 's']" @shortkey="menu = menu == 'script' ? '' : 'script'">_</button>
-        <button v-shortkey="['ctrl', 'f']" @shortkey="menu = menu == 'files' ? '' : 'files'">_</button>
-        <button v-shortkey="['ctrl', 'o']" @shortkey="menu = menu == 'objects' ? '' : 'objects'">_</button>
+        <button v-shortkey="['ctrl', 's']" @shortkey="menu = menu === 'script' ? '' : 'script'">_</button>
+        <button v-shortkey="['ctrl', 'f']" @shortkey="menu = menu === 'files' ? '' : 'files'">_</button>
+        <button v-shortkey="['ctrl', 'o']" @shortkey="menu = menu === 'objects' ? '' : 'objects'">_</button>
+        <button v-shortkey="['ctrl', 'u']" @shortkey="menu = menu === 'debug' ? '' : 'debug'">_</button>
         <button v-shortkey="[',']" @shortkey="prev_frame()">_</button>
         <button v-shortkey="['.']" @shortkey="next_frame()">_</button>
         <button v-shortkey="['shift', 'o']" @shortkey="get_objects()">_</button>
@@ -103,6 +108,7 @@ import ObjectsComponent from './components/ObjectsComponent.vue'
 import PlaybackComponent from './components/PlaybackComponent.vue'
 import StatsComponent from './components/StatsComponent.vue'
 import ViewPointComponent from './components/ViewPointComponent.vue'
+import DebugComponent from './components/DebugComponent.vue'
 import StarcryAPI from './util/StarcryAPI'
 import JsonWithObjectsParser from './util/JsonWithObjectsParser'
 
@@ -122,6 +128,7 @@ export default {
       _play: false,
       render_mode: 'server',
       objects: [],
+      debug: [],
       scale: 1.,
       view_x: 0,
       view_y: 0,
@@ -134,11 +141,17 @@ export default {
     PlaybackComponent,
     StatsComponent,
     ViewPointComponent,
+    DebugComponent,
   },
   methods: {
     open: function(filename) {
       this.$data.filename = filename;
+      this.log('DEBUG', 'script', 'send', "open " + filename);
       this.script_endpoint.send("open " + filename);
+      this.log('DEBUG', 'bitmap', 'send', JSON.stringify({
+        'filename': filename,
+        'frame': 0,
+      }));
       this.bitmap_endpoint.send(JSON.stringify({
         'filename': filename,
         'frame': 0,
@@ -178,13 +191,18 @@ export default {
     },
     _schedule_frame: function () {
       this.$data.rendering++;
-      if (this.render_mode == 'server') {
+      if (this.render_mode === 'server') {
+        this.log('DEBUG', 'bitmap', 'send', JSON.stringify({
+          'filename': this.$data.filename,
+          'frame': this.$data.current_frame,
+        }));
         this.bitmap_endpoint.send(JSON.stringify({
           'filename': this.$data.filename,
           'frame': this.$data.current_frame,
         }));
       }
-      else if (this.render_mode == 'client') {
+      else if (this.render_mode === 'client') {
+        this.log('DEBUG', 'shapes', 'send', this.$data.filename + " " + this.$data.current_frame);
         this.shapes_endpoint.send(this.$data.filename + " " + this.$data.current_frame);
       }
     },
@@ -206,7 +224,18 @@ export default {
       console.log(this.scale);
     },
     get_objects: function () {
+      this.log('DEBUG', 'objects', 'send', this.$data.filename + " " + this.$data.current_frame);
       this.objects_endpoint.send(this.$data.filename + " " + this.$data.current_frame);
+    },
+    log: function(level, api, message, data) {
+      const ts = new Date().toISOString();
+      this.$data.debug.push({
+        'timestamp': ts,
+        'level': level,
+        'api': api,
+        'message': message,
+        'data': data,
+      });
     }
   },
   watch: {
@@ -222,12 +251,18 @@ export default {
           this.$data.websock_status = msg;
         },
         buffer => {
+          this.log('DEBUG', 'bitmap', 'received texture', 'num bytes: ' + buffer.byteLength);
           Module.set_texture(buffer);
           this.$data.rendering--;
           this.process_queue();
         },
-        _ => {}
-    );
+        _ => {
+          this.log('DEBUG', 'bitmap', 'websocket connected', '');
+        },
+        _ => {
+          this.log('DEBUG', 'bitmap', 'websocket disconnected', '');
+        }
+  );
     this.script_endpoint = new StarcryAPI(
         'script',
         StarcryAPI.text_type,
@@ -237,10 +272,16 @@ export default {
         buffer => {
           // let p = new JsonWithObjectsParser(buffer.substr(buffer.indexOf('{')));
           // console.log(p);
+          this.log('DEBUG', 'script', 'received buffer', 'buffer size: ' + buffer.length);
           this.$data.input_source = buffer;
         },
         _ => {
+          this.log('DEBUG', 'script', 'websocket connected', '');
+          this.log('DEBUG', 'script', 'send', 'open ' + this.$data.filename);
           this.script_endpoint.send("open " + this.$data.filename);
+        },
+        _ => {
+          this.log('DEBUG', 'script', 'websocket disconnected', '');
         }
     );
     this.shapes_endpoint = new StarcryAPI(
@@ -250,12 +291,17 @@ export default {
           this.$data.websock_status3 = msg;
         },
         buffer => {
+          this.log('DEBUG', 'shapes', 'received buffer', 'buffer size: ' + buffer.length);
           Module.set_shapes(buffer);
           this.$data.rendering--;
           this.process_queue();
         },
         _ => {
-        }
+          this.log('DEBUG', 'shapes', 'websocket connected', '');
+        },
+        _ => {
+          this.log('DEBUG', 'shapes', 'websocket disconnected', '');
+        },
     );
     this.objects_endpoint = new StarcryAPI(
         'objects',
@@ -264,6 +310,7 @@ export default {
           this.$data.websock_status4 = msg;
         },
         buffer => {
+          this.log('DEBUG', 'objects', 'received objects', 'objects size: ' + buffer.length);
           this.$data.objects = buffer;
           var canvas1 = document.getElementById("canvas");
           var canvas = document.getElementById("canvas2");
@@ -286,7 +333,11 @@ export default {
           }
         },
         _ => {
-        }
+          this.log('DEBUG', 'objects', 'websocket connected', '');
+        },
+        _ => {
+          this.log('DEBUG', 'objects', 'websocket disconnected', '');
+        },
     );
   }
 }

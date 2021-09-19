@@ -3,6 +3,7 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+#pragma once
 
 #include <atomic>
 #include <chrono>
@@ -134,7 +135,7 @@ private:
                    std::chrono::time_point<std::chrono::high_resolution_clock> end);
 
   std::thread curses;
-  std::vector<std::pair<int, std::string>> ffmpeg;
+  std::vector<std::pair<int, std::string>> _output;
 
   void output(int y, int x, std::string in);
 };
