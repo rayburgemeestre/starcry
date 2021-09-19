@@ -5,7 +5,7 @@ dist: focal
 
 before_install:
   - sudo apt update -y
-  - sudo apt install -y libpng16-16 libglu1-mesa libomp5 libswresample2
+  - sudo apt install -y libpng16-16 libglu1-mesa libomp5 libswresample4
 
 script:
   - make
