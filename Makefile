@@ -245,10 +245,10 @@ gui:
 	mkdir -p /tmp/ccache-root
 	docker run -it --privileged -v /tmp/ccache-root:/root/.ccache -v /etc/hosts:/etc/hosts -v $$HOME:$$HOME --workdir $$HOME -e DISPLAY=$$DISPLAY -u 1144 -v /etc:/etc -v /tmp/.X11-unix:/tmp/.X11-unix rayburgemeestre/build-starcry-ubuntu:18.04 /bin/bash
 
-build_web:
+build_web:  # build web static files
 	npm install
 	npm run build
 
-run_web:
+run_web:  # run web in development hot-swappable mode
 	npm run dev
 
