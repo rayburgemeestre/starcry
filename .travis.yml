@@ -1,5 +1,8 @@
 language: c++
 
+services:
+- docker
+
 sudo: required
 dist: focal
 
