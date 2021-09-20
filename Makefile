@@ -7,7 +7,7 @@ help: # with thanks to Ben Rady
 fast-docker-build:  ## build starcry binary using docker
 	# build starcry with tailored image so we can invoke the make command straight away
 	mkdir -p /tmp/ccache-root
-	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_"
+	docker run -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_"
 
 client:  ## build webassembly javascript file using docker
 	mkdir -p /tmp/ccache-root
@@ -22,11 +22,6 @@ client_desktop:  ## build webassembly client for desktop for testing purposes
 client_debug:  ## build webassembly javascript file using docker with debug
 	mkdir -p /tmp/ccache-root
 	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 -g --bind -o webroot/client.js src/client.cpp -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1"
-
-ci:  ## TODO: ci build is used for gocd?
-	# Only difference with above is: no -i flag
-	mkdir -p /tmp/ccache-root
-	docker run -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_"
 
 debug:  ## build starcry binary using docker with debug
 	# build starcry with tailored image so we can invoke the make command straight away
@@ -152,7 +147,7 @@ clean:  ## clean build artifacts
 .PHONY: dockerize
 dockerize:  ## dockerize starcry executable in stripped down docker image
 	mkdir -p /tmp/ccache-root
-	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_"
+	docker run $$FLAGS -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_"
 	docker run $$FLAGS --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 /bin/sh -c "make dockerize_run"
 	cd out && docker build . -t rayburgemeestre/starcry:v2
 	echo "$$DOCKER_PASSWORD" | docker login -u "$$DOCKER_USERNAME" --password-stdin
