@@ -86,6 +86,8 @@ deps: ## install dependencies required for running and building starcry
 	# ncurses
 	sudo apt-get install -y libncurses-dev
 
+	# clion dependencies
+	sudo apt install -y libxtst6
 
 client_deps:  ## install dependencies for building webassembly client
 	sudo apt-get update
