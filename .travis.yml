@@ -12,6 +12,8 @@ before_install:
 
 script:
   - make fast-docker-build
+  - make client
+  - make build_web
 
 after_script:
   - ldd ./build/starcry
