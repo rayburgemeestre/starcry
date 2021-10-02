@@ -1,5 +1,8 @@
 SHELL:=/bin/bash
 
+DATE_STR:=$(shell date +"%Y%m%d")
+TIME_STR:=$(shell date +'%H%M')
+
 .PHONY: help
 help: # with thanks to Ben Rady
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -110,18 +113,18 @@ prepare:  ## prepare environment before building (such as switch to clang)
 
 core_:  ## execute build steps for building starcry binary
 	pushd build && \
-	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(which c++) cmake .. && \
+	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake .. && \
 	time make -j $$(nproc) starcry && \
 	strip --strip-debug starcry
 
 core_debug:  ## execute build steps for building starcry binary with debug
 	pushd build && \
-	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(which c++) cmake -DDEBUG=on .. && \
+	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DDEBUG=on .. && \
 	time make VERBOSE=1 -j $$(nproc) starcry
 
 core_debug_sanit:  ## execute build steps for building starcry binary with address sanitizer and debug
 	pushd build && \
-	CXX=$(which c++) cmake -DSANITIZER=1 -DDEBUG=on .. && \
+	CXX=$$(which c++) cmake -DSANITIZER=1 -DDEBUG=on .. && \
 	make VERBOSE=1 -j $$(nproc)
 
 core_format:  ## execute formatting
@@ -145,6 +148,10 @@ clean:  ## clean build artifacts
 	rm -f callgrind.out.*
 	rm -f actor_log*.log
 	rm -f webroot/stream/stream.m3u8*
+
+attick:  ## clean local directory, move all untracked and ignored files to separate directory
+	mkdir -p ../starcry-attick-$(DATE_STR)$(TIME_STR)
+	git status -s --ignored | grep -E "^??|^!!" | cut -f 2 -d ' ' | xargs -I{} -n 1 mv "{}" ../starcry-attick-$(DATE_STR)$(TIME_STR)/
 
 .PHONY: dockerize
 dockerize:  ## dockerize starcry executable in stripped down docker image
