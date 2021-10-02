@@ -2,6 +2,8 @@ SHELL:=/bin/bash
 
 DATE_STR:=$(shell date +"%Y%m%d")
 TIME_STR:=$(shell date +'%H%M')
+UID:=$(shell id -u)
+GID:=$(shell id -g)
 
 .PHONY: help
 help: # with thanks to Ben Rady
@@ -9,31 +11,31 @@ help: # with thanks to Ben Rady
 
 fast-docker-build:  ## build starcry binary using docker
 	# build starcry with tailored image so we can invoke the make command straight away
-	mkdir -p /tmp/ccache-root
-	docker run -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_"
+	mkdir -p /tmp/ccache-user
+	docker run -t -v /tmp/ccache-user:/home/user/.ccache -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user make core_"
 
 client:  ## build webassembly javascript file using docker
-	mkdir -p /tmp/ccache-root
-	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0"
+	mkdir -p /tmp/ccache-user
+	docker run -it -v /tmp/ccache-user:/home/user/.ccache -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind -o webroot/client.js src/client.cpp -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0"
 	# -I/usr/include -I/emsdk/upstream/emscripten/system/include/ -I/usr/include/x86_64-linux-gnu/
 
 client_desktop:  ## build webassembly client for desktop for testing purposes
-	mkdir -p /tmp/ccache-root
-	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "c++ -DSC_CLIENT -O3 -o client_desktop src/client.cpp -I src -I./libs/cereal/include -I./libs/perlin_noise/ -lSDL2 "
+	mkdir -p /tmp/ccache-user
+	docker run -it -v /tmp/ccache-user:/home/user/.ccache -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user c++ -DSC_CLIENT -O3 -o client_desktop src/client.cpp -I src -I./libs/cereal/include -I./libs/perlin_noise/ -lSDL2 "
 
 
 client_debug:  ## build webassembly javascript file using docker with debug
-	mkdir -p /tmp/ccache-root
-	docker run -it -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "/emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 -g --bind -o webroot/client.js src/client.cpp -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1"
+	mkdir -p /tmp/ccache-user
+	docker run -it -v /tmp/ccache-user:/home/user/.ccache -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 -g --bind -o webroot/client.js src/client.cpp -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1"
 
 debug:  ## build starcry binary using docker with debug
 	# build starcry with tailored image so we can invoke the make command straight away
-	mkdir -p /tmp/ccache-root
-	docker run -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_debug"
+	mkdir -p /tmp/ccache-user
+	docker run -t -v /tmp/ccache-user:/home/user/.ccache -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user make core_debug"
 
 format:  ## format source code (build at least once first)
 	# build starcry with tailored image so we can invoke the make command straight away
-	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_format"
+	docker run -t -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user make core_format"
 	stat -c 'chown %u:%g . -R' CMakeLists.txt | sudo sh -
 
 profile:  ## run starcry with valgrind's callgrind for profiling
@@ -108,8 +110,13 @@ prepare:  ## prepare environment before building (such as switch to clang)
 	update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-10 50
 	update-alternatives --install /usr/bin/clang clang /usr/bin/clang-10 50
 	update-alternatives --install /usr/bin/ld ld /usr/bin/ld.lld-10 50
+	# create user and group inside docker
+	groupadd -g $$_GID user
+	useradd -r -u $$_UID -g $$_GID user
 	# prepare build dir
-	mkdir -p build
+	mkdir -p /home/user
+	chown $$_UID:$$_GID /home/user
+	sudo -u user -g user mkdir -p build
 
 core_:  ## execute build steps for building starcry binary
 	pushd build && \
@@ -155,12 +162,11 @@ attick:  ## clean local directory, move all untracked and ignored files to separ
 
 .PHONY: dockerize
 dockerize:  ## dockerize starcry executable in stripped down docker image
-	mkdir -p /tmp/ccache-root
-	docker run $$FLAGS -v /tmp/ccache-root:/root/.ccache -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && make core_"
-	docker run $$FLAGS --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 /bin/sh -c "make dockerize_run"
+	mkdir -p /tmp/ccache-user
+	docker run $$FLAGS -v /tmp/ccache-user:/home/user/.ccache -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user make core_"
+	docker run $$FLAGS  -e _UID=$(UID) -e _GID=$(GID) --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 /bin/sh -c "make prepare && make dockerize_run"
 	cd out && docker build . -t rayburgemeestre/starcry:v2
-	echo "$$DOCKER_PASSWORD" | docker login -u "$$DOCKER_USERNAME" --password-stdin
-	docker push rayburgemeestre/starcry:v2
+	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then echo "$$DOCKER_PASSWORD" | docker login -u "$$DOCKER_USERNAME" --password-stdin; docker push rayburgemeestre/starcry:v2; fi
 
 .PHONY: dockerize_run
 dockerize_run:  ## execute dockerize steps
@@ -169,10 +175,10 @@ dockerize_run:  ## execute dockerize steps
 	cd /tmp && git clone https://github.com/larsks/dockerize && cd dockerize && python3 setup.py install
 	cp -prv $$PWD/build/starcry /starcry
 	strip --strip-debug /starcry
-	dockerize --verbose --debug -n -o out "/starcry"
-	mkdir -p out/usr/share/terminfo/x
-	cp -prv /usr/share/terminfo/x/xterm-16color out/usr/share/terminfo/x/
-	sed -i.bak '2 a ENV TERM=xterm-16color' out/Dockerfile
+	sudo -u user -g user dockerize --verbose --debug -n -o out "/starcry"
+	sudo -u user -g user mkdir -p out/usr/share/terminfo/x
+	sudo -u user -g user cp -prv /usr/share/terminfo/x/xterm-16color out/usr/share/terminfo/x/
+	sudo -u user -g user sed -i.bak '2 a ENV TERM=xterm-16color' out/Dockerfile
 
 build_web:  ## build web static files
 	npm install
