@@ -54,7 +54,7 @@ runtime_deps:  ## install run-time dependencies
 
 deps: ## install dependencies required for running and building starcry
 	sudo apt-get update
-	sudo apt install -y lsb-release software-properties-common
+	sudo apt install -y lsb-release software-properties-common ca-certificates
 
 	sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5CE16B7B
 	sudo add-apt-repository "deb [arch=amd64] https://cppse.nl/repo/ $$(lsb_release -cs) main"
