@@ -181,7 +181,7 @@ dockerize_run:  ## execute dockerize steps
 	sudo -u user -g user sed -i.bak '2 a ENV TERM=xterm-16color' out/Dockerfile
 
 build_web:  ## build web static files
-	npm install
+	npm ci
 	npm run build
 
 run_web:  ## run web in development hot-swappable mode

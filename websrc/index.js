@@ -1,7 +1,10 @@
-import Vue from 'vue'
-import App from './App.vue'
 import Buefy from 'buefy'
 import 'buefy/dist/buefy.css'
+
+import './mystyles.scss'
+
+import Vue from 'vue'
+import App from './App.vue'
 
 Vue.use(Buefy);
 Vue.use(require('vue-shortkey'));
@@ -12,7 +15,6 @@ if (!window.included) {
         el: '#app',
         render: h => h(App)
     });
-    require('./mystyles.scss');
 }
 
 function uuidv4() {
