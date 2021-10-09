@@ -61,6 +61,7 @@ include_directories(
     "/opt/cppse/build/fmt/include/"
     "/opt/cppse/build/png++/"
     "/opt/cppse/build/openexr/include/OpenEXR/"
+    "/opt/cppse/build/tvision/include/"
     # "/opt/cppse/build/imagemagick/include/ImageMagick-7/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/cereal/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
@@ -190,6 +191,9 @@ endif()
 
 # fmt
 target_link_libraries(starcry /opt/cppse/build/fmt/lib/libfmt.a)
+
+# tvision
+target_link_libraries(starcry /opt/cppse/build/tvision/lib/libtvision.a)
 
 install (TARGETS starcry DESTINATION bin)
 
