@@ -18,6 +18,7 @@
 <script>
     import { initVimMode } from 'monaco-vim';
     import { EmacsExtension } from 'monaco-emacs';
+    import * as monaco from 'monaco-editor';
 
     export default {
         props: {

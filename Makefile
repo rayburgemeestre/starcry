@@ -21,7 +21,7 @@ client:  ## build webassembly javascript file using docker
 
 client_desktop:  ## build webassembly client for desktop for testing purposes
 	mkdir -p /tmp/ccache-user
-	docker run -it -v /tmp/ccache-user:/home/user/.ccache -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user c++ -DSC_CLIENT -O3 -o client_desktop src/client.cpp -I src -I./libs/cereal/include -I./libs/perlin_noise/ -lSDL2 "
+	docker run -it -v /tmp/ccache-user:/home/user/.ccache -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user c++ -DSC_CLIENT -O3 -o client_desktop src/client.cpp -I src -I./libs/cereal/include -I./libs/perlin_noise/ -I/usr/include/SDL2 -lSDL2 "
 
 
 client_debug:  ## build webassembly javascript file using docker with debug
