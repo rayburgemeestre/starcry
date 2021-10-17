@@ -121,6 +121,7 @@ public:
   void complete_job(int number);
   void skip_job(int number);
   void display();
+  void clear();
 
   void set_frame_mode();
   void set_total_frames(size_t frames);

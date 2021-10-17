@@ -5,6 +5,8 @@ if(CCACHE_PROGRAM)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
 endif()
 
+set(CMAKE_CXX_STANDARD 20)
+
 project(starcry VERSION 0.2 LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
@@ -42,9 +44,9 @@ if (SANITIZER)
 endif()
 if (DEBUG)
     # --no-rosegment is important for being able to let valgrind/callgrind read symbols
-    add_definitions("-std=c++17 -O0 -g -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3")
+    add_definitions("-std=c++20 -O0 -g -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3")
 else()
-    add_definitions("-std=c++17 -O3 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
+    add_definitions("-std=c++20 -O3 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
 endif()
 
 include_directories(

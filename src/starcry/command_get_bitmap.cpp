@@ -16,6 +16,11 @@
 
 command_get_bitmap::command_get_bitmap(starcry &sc) : command_handler(sc) {}
 
+void command_get_bitmap::to_job(std::shared_ptr<instruction> &cmd_def) {
+  sc.metrics_->clear();
+  command_handler::to_job(cmd_def);
+}
+
 std::shared_ptr<render_msg> command_get_bitmap::to_render_msg(std::shared_ptr<job_message> &job_msg, image &bmp) {
   auto &job = *job_msg->job;
   job.job_number = std::numeric_limits<uint32_t>::max();

@@ -9,6 +9,7 @@
 #include "image.hpp"
 #include "starcry.h"
 #include "starcry/command_get_image.h"
+#include "starcry/metrics.h"
 #include "webserver.h"  // ImageHandler
 
 #include <sstream>

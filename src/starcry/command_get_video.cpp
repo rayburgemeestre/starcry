@@ -12,6 +12,7 @@
 #include "starcry/command_get_video.h"
 #include "starcry/metrics.h"
 #include "util/image_splitter.hpp"
+#include "util/logger.h"
 
 command_get_video::command_get_video(starcry &sc) : command_handler(sc) {}
 

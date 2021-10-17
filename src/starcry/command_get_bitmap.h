@@ -11,6 +11,8 @@ class command_get_bitmap : public command_handler {
 public:
   command_get_bitmap(starcry& sc);
 
+  void to_job(std::shared_ptr<instruction>& cmd_def);
+
   std::shared_ptr<render_msg> to_render_msg(std::shared_ptr<job_message>& cmd_def, image& bmp);
 
   void handle_frame(std::shared_ptr<render_msg>& job_msg);

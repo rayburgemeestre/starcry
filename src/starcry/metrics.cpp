@@ -107,7 +107,6 @@ void metrics::complete_job(int number) {
   std::unique_lock<std::mutex> lock(mut);
   if (jobs_.find(number) != jobs_.end()) {
     jobs_[number].generate_end = std::chrono::high_resolution_clock::now();
-    jobs_[number].skipped = true;
   }
 }
 
@@ -353,6 +352,10 @@ void metrics::display() {
       output(y++, 0, str.c_str());
     }
   }
+}
+
+void metrics::clear() {
+  jobs_.clear();
 }
 
 void metrics::set_frame_mode() {

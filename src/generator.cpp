@@ -320,14 +320,17 @@ void generator::fast_forward(int frame_of_interest) {
     min_intermediates = 1;
     for (int i = 2; i < frame_of_interest; i++) {
       generate_frame();
+      metrics_->skip_job(job->job_number);
     }
     min_intermediates = backup_min_intermediates;
     min_intermediates = backup_max_intermediates;
     // generate frame before with same stepsize
     generate_frame();
+    metrics_->skip_job(job->job_number);
   } else if (frame_of_interest > 1) {
     for (int i = 1; i < frame_of_interest; i++) {
       generate_frame();
+      metrics_->skip_job(job->job_number);
     }
   }
 }
