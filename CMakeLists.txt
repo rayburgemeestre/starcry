@@ -11,7 +11,7 @@ project(starcry VERSION 0.2 LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-set(CLANGFORMAT_EXECUTABLE clang-format-10)
+set(CLANGFORMAT_EXECUTABLE clang-format-12)
 set(Boost_USE_STATIC_LIBS ON)
 set(BOOST_ROOT "/opt/cppse/build/boost/")
 
@@ -21,13 +21,13 @@ include(ClangFormat)
 find_package(V8 REQUIRED)
 find_package(Boost 1.52 COMPONENTS program_options system date_time thread chrono REQUIRED )
 #find_package(SFML 2.4 COMPONENTS graphics window system)
-find_package(OpenMP)
+#find_package(OpenMP)
 find_package(Threads)
 
-if (OPENMP_FOUND)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-endif()
+#if (OPENMP_FOUND)
+    #set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+#endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # don't use libc++ v8's third party libc++ with unstable abi doesn't bode well with caf
