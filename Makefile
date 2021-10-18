@@ -106,11 +106,7 @@ client_deps:  ## install dependencies for building webassembly client
 
 prepare:  ## prepare environment before building (such as switch to clang)
 	# switch to clang compiler
-	update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-10 50
-	update-alternatives --install /usr/bin/cc cc /usr/bin/clang-10 50
-	update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-10 50
-	update-alternatives --install /usr/bin/clang clang /usr/bin/clang-10 50
-	update-alternatives --install /usr/bin/ld ld /usr/bin/ld.lld-10 50
+	switch-to-latest-clang
 	# create user and group inside docker
 	groupadd -g $$_GID user
 	useradd -r -u $$_UID -g $$_GID user
