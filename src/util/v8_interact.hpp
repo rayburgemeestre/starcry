@@ -186,7 +186,10 @@ public:
       //      throw std::runtime_error("type not function");
     }
     auto fun = fundef.As<v8::Function>();
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wzero-length-array"
     v8::Handle<v8::Value> argz[sizeof...(Args)];
+#pragma clang diagnostic pop
     size_t index = 0;
     (void(argz[index++] = v8pp::to_v8(isolate, args)), ...);
     fun->Call(isolate->GetCurrentContext(), self, sizeof...(Args), argz).ToLocalChecked();

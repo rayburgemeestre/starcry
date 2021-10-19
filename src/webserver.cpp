@@ -29,6 +29,9 @@ public:
   virtual void log(Level level, const char *message) override {
     if (level >= minLevelToLog) {
       switch (level) {
+        case Level::Access:
+          logger(DEBUG) << "[access]" << message << std::endl;
+          return;
         case Level::Debug:
           logger(DEBUG) << message << std::endl;
           return;

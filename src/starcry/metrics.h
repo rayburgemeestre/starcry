@@ -7,14 +7,19 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
+#include <functional>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
 #include <unordered_map>
 #include <vector>
 
-class metrics {
+class TStarcry;
+
+class metrics : std::enable_shared_from_this<metrics> {
 public:
   enum thread_state {
     idle,
@@ -97,11 +102,9 @@ private:
   std::map<int, metrics::job> jobs_;
   std::mutex mut;
 
-  int max_keep_jobs = 20;
-  int y = 0;
+  int max_keep_jobs = 100;
 
   bool notty = false;
-  bool nostdin = false;
 
   size_t completed_frames = 0;
   size_t max_frames;
@@ -111,6 +114,7 @@ public:
   explicit metrics(bool notty);
   ~metrics();
 
+  void init();
   void register_thread(int number, std::string desc);
   void register_job(int number, int frame, int chunk, int num_chunks);
   void render_job(int thread_number, int job_number, int chunk);
@@ -120,18 +124,18 @@ public:
   void complete_render_job(int thread_number, int job_number, int chunk);
   void complete_job(int number);
   void skip_job(int number);
-  void display();
+  void display(std::function<void(const std::string&)> f1,
+               std::function<void(const std::string&)> f2,
+               std::function<void(int, const std::string&)> f3);
   void clear();
 
   void set_frame_mode();
   void set_total_frames(size_t frames);
 
   void log_callback(int level, const std::string& line);
+  void notify();
 
 private:
-  //  bool has_terminal();
-  //  bool thread_exists(int number);
-
   double time_diff(std::chrono::time_point<std::chrono::high_resolution_clock> begin,
                    std::chrono::time_point<std::chrono::high_resolution_clock> end);
 
@@ -139,4 +143,10 @@ private:
   std::vector<std::pair<int, std::string>> _output;
 
   void output(int y, int x, std::string in);
+
+  std::shared_ptr<TStarcry> program;
+
+  std::mutex cv_mut;
+  std::condition_variable cv;
+  bool ready = false;
 };

@@ -15,7 +15,6 @@ set(CLANGFORMAT_EXECUTABLE clang-format-12)
 set(Boost_USE_STATIC_LIBS ON)
 set(BOOST_ROOT "/opt/cppse/build/boost/")
 
-include(CheckIPOSupported)
 include(ClangFormat)
 
 find_package(V8 REQUIRED)
@@ -86,16 +85,6 @@ add_executable(starcry ${starcry_SOURCES})
 add_executable(sc_client ${sc_client_SOURCES})
 
 #target_compile_definitions(sc_client, "-DSC_CLIENT=1")
-
-# Optional IPO. Do not use IPO if it's not supported by compiler.
-if (NOT DEBUG)
-    check_ipo_supported(RESULT result OUTPUT output)
-    if(result)
-        set_property(TARGET starcry PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-    else()
-        message(WARNING "IPO is not supported: ${output}")
-    endif()
-endif()
 
 target_link_libraries(starcry -static-libgcc -static-libstdc++)
 
@@ -196,6 +185,11 @@ target_link_libraries(starcry /opt/cppse/build/fmt/lib/libfmt.a)
 
 # tvision
 target_link_libraries(starcry /opt/cppse/build/tvision/lib/libtvision.a)
+
+# ncursesw
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libncurses.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libncursesw.a)
+target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libtermcap.a)
 
 install (TARGETS starcry DESTINATION bin)
 

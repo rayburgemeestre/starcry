@@ -9,7 +9,6 @@
 #include <cstring>
 #include <sstream>
 
-//#include <Magick++.h>
 #include <coz.h>
 #include <fmt/core.h>
 
@@ -87,11 +86,13 @@ starcry::starcry(size_t num_local_engines,
       client_message_handler_(std::make_shared<client_message_handler>(*this)),
       log_level_(level),
       metrics_(std::make_shared<metrics>(notty)) {
+  metrics_->init();
   set_metrics(&*metrics_);
   logger(DEBUG) << "Metrics wired to ncurses UI" << std::endl;
 }
 
 starcry::~starcry() {
+  metrics_->notify();
   le.cancel();
 }
 

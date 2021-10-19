@@ -1,6 +1,4 @@
 #include "starcry/metrics.h"
-#include <fmt/core.h>
-// #include <fmt/ostream.h> // for printing thread_id
 
 #include <unistd.h>  // isatty
 #include <iostream>
@@ -10,7 +8,8 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+
+#include "tvision/tstarcry.h"
 
 static WINDOW *mainwin;
 std::atomic<bool> flag = true;
@@ -29,33 +28,27 @@ void my_handler(int s) {
   exit(1);
 }
 
-metrics::metrics(bool notty) : notty(notty), nostdin(notty) {
-  std::cout << "Switching to separate screen..." << std::endl;
+metrics::metrics(bool notty) : notty(notty) {
+  // caller needs to call init, so we can use shared_from_this()
+}
 
-  curses = std::thread([&, notty]() {
-    if (!notty) {
-      if ((mainwin = initscr()) == NULL) {
-        fprintf(stderr, "Error initialising ncurses.\n");
-        exit(EXIT_FAILURE);
-      }
-      output(0, 0, "Welcome to Starcry!");
-      timeout(100);
-      noecho();
-    }
+void metrics::init() {
+  std::cout << "Welcome to Starcry." << std::endl;
 
-    while (flag) {
-      if (!notty && !nostdin) {
-        int c = getch();  // timeout configured at 100ms
-        if (c != -1) {
-          output(1, 0, fmt::format("Last key pressed: {}  ", c));
-        }
-      } else {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-      }
-      this->display();
-      if (!notty) refresh();
+  auto *ptr = this;
+  curses = std::thread([=]() {
+    if (notty) {
+      std::cout << "notty" << std::endl;
+      std::unique_lock<std::mutex> lock(cv_mut);
+      cv.wait(lock, [&] {
+        return ready;
+      });
+    } else {
+      program = std::make_shared<TStarcry>(ptr);
+      program->run();
+      program->shutDown();
     }
-    if (!notty) cleanup_curses();
+    std::exit(0);
   });
 
   if (!notty) {
@@ -67,8 +60,21 @@ metrics::metrics(bool notty) : notty(notty), nostdin(notty) {
   }
 }
 
+void metrics::notify() {
+  if (notty) {
+    {
+      std::lock_guard<std::mutex> lock(cv_mut);
+      ready = true;
+    }
+    cv.notify_one();
+  } else {
+    program->exit();
+  }
+}
+
 metrics::~metrics() {
   flag = false;
+  notify();
   curses.join();
   for (const auto &line : _output) {
     if (line.first <= 32) {
@@ -201,33 +207,10 @@ void metrics::complete_render_job(int thread_number, int job_number, int chunk) 
   }
 }
 
-// bool metrics::has_terminal() {
-//  return isatty(fileno(stdin));
-//}
-
-// bool metrics::thread_exists(int number) {
-//  return threads_.find(number) != threads_.end();
-//}
-
-void metrics::display() {
+void metrics::display(std::function<void(const std::string &)> f1,
+                      std::function<void(const std::string &)> f2,
+                      std::function<void(int, const std::string &)> f3) {
   std::unique_lock<std::mutex> lock(mut);
-  output(0, 0, "Welcome to Starcry!");
-  y = 2;
-
-  std::stringstream ss;
-  ss << "DONE: " << completed_frames << " of " << max_frames;
-  output(y++, 0, ss.str().c_str());
-  ss.str("");
-  ss.clear();
-
-  // This calculation can be done much more accurately, this is just because at the time of writing I'm lazy and kind of
-  // fed up with working on this particular class for a while.
-  const auto remaining = (max_frames - completed_frames);
-  const auto eta = (remaining * hack_last_render_time) / (double)threads_.size();
-  ss << "ETA: " << (int)eta << " secs, since last frame took " << (int)hack_last_render_time << " secs, " << remaining
-     << " frames remaining, and " << threads_.size() << " worker threads.";
-  output(y++, 0, ss.str().c_str());
-  y++;
 
   for (const auto &thread : threads_) {
     std::stringstream ss;
@@ -238,9 +221,8 @@ void metrics::display() {
       ss << ": Job: " << thread.second.job_number << " Chunk: " << thread.second.chunk << " Seconds Busy: ";
       ss << time_diff(thread.second.idle_end, std::chrono::high_resolution_clock::now());
     }
-    output(y++, 0, ss.str().c_str());
+    f1(ss.str());
   }
-  y++;
 
   if (jobs_.empty()) return;
   auto first_key = jobs_.begin()->first;
@@ -306,11 +288,11 @@ void metrics::display() {
         for (const auto &chunk : job.chunks) {
           ss << "" << chunk.state;
         }
-        output(y++, 0, ss.str().c_str());
+        f2(ss.str());
         ss.clear();
         ss.str("");
       } else if (mode == modes::frame_mode) {
-        output(y++, 0, ss.str().c_str());
+        f2(ss.str());
         ss.clear();
         ss.str("");
         for (const auto &chunk : job.chunks) {
@@ -329,29 +311,24 @@ void metrics::display() {
           for (const auto &obj : chunk.objects) {
             ss << obj.state;
           }
-          output(y++, 0, ss.str().c_str());
+          f2(ss.str());
           ss.clear();
           ss.str("");
         }
-        output(y++, 0, ss.str().c_str());
+        f2(ss.str());
         ss.clear();
         ss.str("");
       }
     } else {
-      output(y++, 0, ss.str().c_str());
+      f2(ss.str());
       ss.clear();
       ss.str("");
     }
   }
-  y++;
-  const auto num_lines = 20;
-  for (int i = 0; i < num_lines; i++) {
-    int index = _output.size() - (num_lines - i);
-    if (index >= 0) {
-      auto str = _output[index].second;
-      output(y++, 0, str.c_str());
-    }
+  for (auto [level, str] : _output) {
+    f3(level, str);
   }
+  _output.clear();
 }
 
 void metrics::clear() {
