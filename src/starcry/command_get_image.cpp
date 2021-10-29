@@ -38,8 +38,8 @@ std::shared_ptr<render_msg> command_get_image::to_render_msg(std::shared_ptr<job
 }
 
 void command_get_image::handle_frame(std::shared_ptr<render_msg> &job_msg) {
-  auto fun = [&](std::shared_ptr<ImageHandler> chat_handler, std::shared_ptr<render_msg> job_msg) {
-    chat_handler->callback(job_msg->client, job_msg->buffer);
+  auto fun = [&](std::shared_ptr<ImageHandler> image_handler, std::shared_ptr<render_msg> job_msg) {
+    image_handler->callback(job_msg->client, job_msg->buffer);
   };
   if (sc.webserv) {
     sc.webserv->execute_image(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);

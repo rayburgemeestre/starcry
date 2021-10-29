@@ -142,8 +142,6 @@ private:
   std::thread curses;
   std::vector<std::pair<int, std::string>> _output;
 
-  void output(int y, int x, std::string in);
-
   std::shared_ptr<TStarcry> program;
 
   std::mutex cv_mut;

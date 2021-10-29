@@ -55,14 +55,14 @@
         <debug-component v-model="debug" width="100%" height="100vh - 60px"/>
       </div>
       <div class="column" style="background-color: black; max-height: calc(100vh - 120px);">
-        <div style="position: relative; z-index: 2;">
+        <div style="position: relative; z-index: 2; background-color: #880000; height: 100%;">
           <canvas id="canvas2"
                   style="position: absolute; width: 100%; max-height: calc(100vh - 120px); left: 0; top: 0; z-index: 1; pointer-events: none /* saved my day */;"></canvas>
-          <canvas id="canvas" v-on:mousemove="on_mouse_move" v-on:wheel="on_wheel"
+          <canvas id="canvas" v-on:mousemove="on_mouse_move" v-on:mousedown="on_mouse_down" v-on:wheel="on_wheel"
                   style="position: absolute; width: 100%; max-height: calc(100vh - 120px); left: 0; top: 0; z-index: 0;"></canvas>
         </div>
       </div>
-      <div class="column is-narrow">
+      <div class="column is-narrow" style="overflow: scroll; height: calc(100vh - 120px);">
         <form>
           <fieldset class="uk-fieldset">
             <div class="uk-margin uk-grid-small uk-child-width-auto uk-grid">
@@ -74,22 +74,25 @@
 
         Current render mode: {{ render_mode }}<br/>
 
-        <view-point-component v-bind:value="scale" v-bind:x="view_x"  v-bind:y="view_y" />
+        <view-point-component ref="vpc" v-bind:viewpoint_settings="viewpoint_settings" v-bind:video="video" v-bind:preview_settings="preview" />
 
         <h2>{{ websock_status }}</h2>
         <h2>{{ websock_status2 }}</h2>
         <h2>{{ websock_status3 }}</h2>
         <h2>{{ websock_status4 }}</h2>
 
-        <button v-shortkey="['ctrl', 's']" @shortkey="menu = menu === 'script' ? '' : 'script'">_</button>
-        <button v-shortkey="['ctrl', 'f']" @shortkey="menu = menu === 'files' ? '' : 'files'">_</button>
-        <button v-shortkey="['ctrl', 'o']" @shortkey="menu = menu === 'objects' ? '' : 'objects'">_</button>
-        <button v-shortkey="['ctrl', 'u']" @shortkey="menu = menu === 'debug' ? '' : 'debug'">_</button>
-        <button v-shortkey="[',']" @shortkey="prev_frame()">_</button>
-        <button v-shortkey="['.']" @shortkey="next_frame()">_</button>
-        <button v-shortkey="['shift', 'o']" @shortkey="get_objects()">_</button>
-        <button v-shortkey="['r']" @shortkey="open(filename)">_</button>
-        <button v-shortkey="['/']" @shortkey="set_frame(current_frame)">_</button>
+        <div style="display: none;">
+          <button v-shortkey="['ctrl', 's']" @shortkey="menu = menu === 'script' ? '' : 'script'">_</button>
+          <button v-shortkey="['ctrl', 'f']" @shortkey="menu = menu === 'files' ? '' : 'files'">_</button>
+          <button v-shortkey="['ctrl', 'o']" @shortkey="menu = menu === 'objects' ? '' : 'objects'">_</button>
+          <button v-shortkey="['ctrl', 'u']" @shortkey="menu = menu === 'debug' ? '' : 'debug'">_</button>
+          <button v-shortkey="[',']" @shortkey="prev_frame()">_</button>
+          <button v-shortkey="['.']" @shortkey="next_frame()">_</button>
+          <button v-shortkey="['shift', 'o']" @shortkey="get_objects()">_</button>
+          <button v-shortkey="['r']" @shortkey="open(filename)">_</button>
+          <button v-shortkey="['m']" @shortkey="toggle_pointer()">_</button>
+          <button v-shortkey="['/']" @shortkey="set_frame(current_frame)">_</button>
+        </div>
 
         <hr>
         <stats-component />
@@ -129,9 +132,15 @@ export default {
       render_mode: 'server',
       objects: [],
       debug: [],
-      scale: 1.,
-      view_x: 0,
-      view_y: 0,
+      viewpoint_settings: {
+        scale: 1.,
+        view_x: 0,
+        view_y: 0,
+        canvas_w: 1920,
+        canvas_h: 1080,
+      },
+      video: {},
+      preview: {},
     };
   },
   components: {
@@ -156,6 +165,9 @@ export default {
         'filename': filename,
         'frame': 0,
       }));
+    },
+    toggle_pointer: function() {
+      Module.toggle_pointer();
     },
     process_queue: function () {
       this._schedule_frames();
@@ -207,21 +219,26 @@ export default {
       }
     },
     on_mouse_move: function(e) {
-      this.$data.view_x = Module.get_mouse_x();
-      this.$data.view_y = Module.get_mouse_y();
+      this.$data.viewpoint_settings.view_x = Module.get_mouse_x();
+      this.$data.viewpoint_settings.view_y = Module.get_mouse_y();
+    },
+    on_mouse_down: function(e) {
+      if (e.ctrlKey) {
+        this.$refs.vpc.select();
+      }
     },
     on_wheel: function(event) {
       event.preventDefault();
       let delta = event.deltaY / 1000.;
       if (event.deltaY < 0) {
-        this.scale += delta * -1.;
+        this.viewpoint_settings.scale += delta * -1.;
       } else {
-        this.scale -= delta;
+        this.viewpoint_settings.scale -= delta;
       }
       // Restrict scale
       // TODO: this 100 needs to come from some constant, or better yet, some actual setting somewhere..
-      this.scale = Math.min(Math.max(1., this.scale), 100.);
-      console.log(this.scale);
+      this.viewpoint_settings.scale = Math.min(Math.max(1., this.viewpoint_settings.scale), 100.);
+      console.log(this.viewpoint_settings.scale);
     },
     get_objects: function () {
       this.log('DEBUG', 'objects', 'send', this.$data.filename + " " + this.$data.current_frame);
@@ -244,6 +261,49 @@ export default {
     }
   },
   mounted: function() {
+    Module = {
+      canvas: (function() { return document.getElementById('canvas'); })(),
+      onRuntimeInitialized: function() {
+        console.log("Setting Initial Full HD dimensions");
+        Module.start(1920, 1080, 1920, 1080);
+      }
+    };
+    let time1 = null;
+    let previous_w = 1920;
+    let previous_h = 1080;
+    let update_size = function () {
+      let cvs = document.getElementById('canvas').parentNode;
+      let w = cvs.clientWidth;
+      w -= w % 2;
+      let h = cvs.clientHeight;
+      h -= h % 2;
+      if (Math.abs(previous_w - w) < 2 && Math.abs(previous_h - h) < 2) {
+        return;
+      }
+      if (time1) clearTimeout(time1);
+      time1 = setTimeout(update_size, 1000);
+      Module.stop();
+      previous_w = w;
+      previous_h = h;
+      // start might throw
+      try {
+        this.$data.viewpoint_settings.canvas_w = w;
+        this.$data.viewpoint_settings.canvas_h = h;
+        Module.start(w, h, w, h);
+      } catch (e) {
+        console.log(e);
+      }
+      if (Module.last_buffer) {
+        setTimeout(function() { Module.set_texture(Module.last_buffer); }, 10);
+      }
+    }.bind(this);
+    window.addEventListener('resize', update_size);
+    time1 = setTimeout(update_size, 1000);
+    var s = document.createElement('script');
+    s.setAttribute("src", "client.js");
+    document.body.appendChild(s);
+    //--------------
+
     this.bitmap_endpoint = new StarcryAPI(
         'bitmap',
         StarcryAPI.binary_type,
@@ -252,6 +312,7 @@ export default {
         },
         buffer => {
           this.log('DEBUG', 'bitmap', 'received texture', 'num bytes: ' + buffer.byteLength);
+          Module.last_buffer = buffer;
           Module.set_texture(buffer);
           this.$data.rendering--;
           this.process_queue();
@@ -270,10 +331,11 @@ export default {
           this.$data.websock_status2 = msg;
         },
         buffer => {
-          // let p = new JsonWithObjectsParser(buffer.substr(buffer.indexOf('{')));
-          // console.log(p);
           this.log('DEBUG', 'script', 'received buffer', 'buffer size: ' + buffer.length);
+          let p = new JsonWithObjectsParser(buffer.substr(buffer.indexOf('{')));
           this.$data.input_source = buffer;
+          this.$data.video = p.parsed()['video'];
+          this.$data.preview = p.parsed()['preview'];
         },
         _ => {
           this.log('DEBUG', 'script', 'websocket connected', '');

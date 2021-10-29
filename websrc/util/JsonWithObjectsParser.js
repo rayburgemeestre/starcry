@@ -1,7 +1,15 @@
 export default class JsonWithObjectsParser {
     constructor(json_str) {
         this.json_str = json_str;
+        this.obj = undefined;
+        this.functions = [];
         this._parse();
+    }
+    parsed() {
+        return this.obj;
+    }
+    funs() {
+        return this.functions;
     }
     _parse() {
         console.log("handle:");
@@ -107,13 +115,14 @@ export default class JsonWithObjectsParser {
             }
         }
 
-        console.log(this.json_str);
-        console.log(trail);
-        console.log(functions);
+        // console.log(this.json_str);
+        // console.log(trail);
+        // console.log(functions);
+        this.functions = functions;
         let obj = eval('(function() { return ' + trail + '; })()');
         //
         // let obj = eval('(function() { return ' + this.json_str + '; })()');
-        console.log(obj);
+        this.obj = obj;
         // console.log(JSON.parse(trail));
     }
 }

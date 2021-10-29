@@ -421,7 +421,8 @@ bool generator::_generate_frame() {
         job->resize_for_num_steps(stepper.max_step);
 
         stepper.rewind();
-        while (stepper.has_next_step()) {
+        bool detected_too_many_steps = false;
+        while (stepper.has_next_step() && !detected_too_many_steps) {
           qts.clear();
           if (scenesettings.update(get_time().time)) {
             set_scene(scenesettings.current_scene_next + 1);
@@ -437,13 +438,15 @@ bool generator::_generate_frame() {
           util::generator::copy_instances(i, intermediates, next_instances);
           scalesettings.update();
           scenesettings.update();
-          if (job->shapes.size() != stepper.max_step) {
+          detected_too_many_steps = job->shapes.size() != stepper.max_step;
+        }
+        if (!detected_too_many_steps) {                 // didn't bail out with break above
+          if (stepper.max_step == max_intermediates) {  // config doesn't allow finer granularity any way, break.
             break;
+          } else if (stepper.max_step > max_intermediates) {
+            throw std::logic_error("TODO: shouldn't happen??");
           }
         }
-        if (job->shapes.size() == stepper.max_step)   // didn't bail out with break above
-          if (stepper.max_step == max_intermediates)  // config doesn't allow finer granularity any way, break.
-            break;
       }
 
       if (!settings_.update_positions) {

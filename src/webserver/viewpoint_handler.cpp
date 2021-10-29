@@ -10,6 +10,7 @@
 using json = nlohmann::json;
 
 #include "data/viewpoint.hpp"
+#include "util/logger.h"
 
 #include <sstream>
 
@@ -26,7 +27,7 @@ void ViewPointHandler::onDisconnect(seasocks::WebSocket *con) {
 void ViewPointHandler::onData(seasocks::WebSocket *con, const char *data) {
   std::string input(data);
   auto json = nlohmann::json::parse(input);
-
+  logger(DEBUG) << "ViewPointHandler::onData - " << input << std::endl;
   if (json["operation"] == "read") {
     nlohmann::json response;
     const auto &vp = sc->get_viewpoint();
@@ -38,7 +39,14 @@ void ViewPointHandler::onData(seasocks::WebSocket *con, const char *data) {
     response["save"] = vp.save;
     con->send(response.dump());
   } else if (json["operation"] == "set") {
-    data::viewpoint vp{json["scale"], json["offset_x"], json["offset_y"], json["raw"], json["preview"], json["save"]};
+    data::viewpoint vp{json["scale"],
+                       json["offset_x"],
+                       json["offset_y"],
+                       json["raw"],
+                       json["preview"],
+                       json["save"],
+                       json["canvas_w"],
+                       json["canvas_h"]};
     sc->set_viewpoint(vp);
   }
 }

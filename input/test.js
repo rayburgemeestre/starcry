@@ -78,7 +78,7 @@ _ = {
       'props': {
         'maxradius': 250.0,
       },
-      'blending_type': blending_type.pinlight,
+      'blending_type': blending_type.normal,
       'init': function() {
         this.radius = 0;
       },
@@ -104,14 +104,15 @@ _ = {
     'scale': 1,
     'rand_seed': 5,
     'granularity': 1,
+    'min_intermediates': 5.,
     'max_intermediates': 50.,
-    'bg_color': {'r': 1., 'g': 1., 'b': 1., 'a': 0},
+    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 0},
     'grain_for_opacity': false,
   },
   'preview': {
     'max_intermediates': 1.,
-    'width': 1920 / 5.,
-    'height': 1080 / 5.,
+    'width': 512,
+    'height': 512,
   },
   'scenes': [
     {

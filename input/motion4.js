@@ -63,7 +63,7 @@ _ = {
         let x = 0;
         let y = stepsize / 2;
         // for (let i = 0; i < 210; i++) {
-        for (let i = 0; i < 42; i++) {
+        for (let i = 0; i < 100; i++) {
           x += directions[this.props.direction][0];
           y += directions[this.props.direction][1];
           if (this.props.step === this.props.steps) {

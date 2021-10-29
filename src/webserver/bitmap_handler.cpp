@@ -7,6 +7,8 @@
 #include "webserver.h"
 
 #include "nlohmann/json.hpp"
+#include "util/logger.h"
+
 using json = nlohmann::json;
 
 BitmapHandler::BitmapHandler(starcry *sc) : sc(sc) {}
@@ -21,6 +23,7 @@ void BitmapHandler::onDisconnect(seasocks::WebSocket *con) {
 
 void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
   std::string input(data);
+  logger(DEBUG) << "BitmapHandler::onData - " << input << std::endl;
   auto json = nlohmann::json::parse(input);
   sc->add_command(con,
                   json["filename"],

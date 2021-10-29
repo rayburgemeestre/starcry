@@ -21,6 +21,7 @@ void ShapesHandler::onData(seasocks::WebSocket *con, const char *data) {
   std::string input(data);
   auto find = input.find(" ");
   if (find != std::string::npos) {
+    logger(DEBUG) << "ShapesHandler::onData - " << input << std::endl;
     // logger(INFO) << "ShapesHandler::onData received script: " << input.substr(0, find) << " get shapes for: " <<
     // std::atoi(input.substr(find + 1).c_str()) << std::endl; logger(INFO) << "ShapesHandler::onData recv: " << input
     // << std::endl;

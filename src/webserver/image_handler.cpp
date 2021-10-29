@@ -4,6 +4,7 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #include "starcry.h"
+#include "util/logger.h"
 #include "webserver.h"
 
 ImageHandler::ImageHandler(starcry *sc) : sc(sc) {}
@@ -20,6 +21,7 @@ void ImageHandler::onData(seasocks::WebSocket *con, const char *data) {
   std::string input(data);
   auto find = input.find(" ");
   if (find != std::string::npos) {
+    logger(DEBUG) << "ImageHandler::onData - " << input << std::endl;
     sc->add_command(con,
                     input.substr(0, find),
                     instruction_type::get_image,

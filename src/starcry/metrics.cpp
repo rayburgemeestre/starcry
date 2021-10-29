@@ -1,32 +1,15 @@
+/*
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 #include "starcry/metrics.h"
-
-#include <unistd.h>  // isatty
-#include <iostream>
-#include <sstream>
-
-#include <curses.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "tvision/tstarcry.h"
 
-static WINDOW *mainwin;
-std::atomic<bool> flag = true;
-
-void cleanup_curses() {
-  flag = false;
-  delwin(mainwin);
-  endwin();
-  refresh();
-  std::cout << "\nWelcome back..." << std::endl;
-}
-
-void my_handler(int s) {
-  printf("Caught signal %d\n", s);
-  cleanup_curses();
-  exit(1);
-}
+#include <stdlib.h>
+#include <iostream>
+#include <sstream>
 
 metrics::metrics(bool notty) : notty(notty) {
   // caller needs to call init, so we can use shared_from_this()
@@ -38,7 +21,7 @@ void metrics::init() {
   auto *ptr = this;
   curses = std::thread([=]() {
     if (notty) {
-      std::cout << "notty" << std::endl;
+      std::cout << "noTTY" << std::endl;
       std::unique_lock<std::mutex> lock(cv_mut);
       cv.wait(lock, [&] {
         return ready;
@@ -50,14 +33,6 @@ void metrics::init() {
     }
     std::exit(0);
   });
-
-  if (!notty) {
-    struct sigaction sigIntHandler;
-    sigIntHandler.sa_handler = my_handler;
-    sigemptyset(&sigIntHandler.sa_mask);
-    sigIntHandler.sa_flags = 0;
-    sigaction(SIGINT, &sigIntHandler, NULL);
-  }
 }
 
 void metrics::notify() {
@@ -73,7 +48,6 @@ void metrics::notify() {
 }
 
 metrics::~metrics() {
-  flag = false;
   notify();
   curses.join();
   for (const auto &line : _output) {
@@ -353,17 +327,4 @@ double metrics::time_diff(std::chrono::time_point<std::chrono::high_resolution_c
                           std::chrono::time_point<std::chrono::high_resolution_clock> end) {
   std::chrono::duration<double, std::milli> diff = end - begin;
   return diff.count() / 1000.;
-}
-
-void metrics::output(int y, int x, std::string out) {
-  if (out.empty()) return;
-  if (notty) {
-    std::cout << out;
-    if (out[out.size() - 1] != '\n') {
-      std::cout << std::endl;
-    }
-  } else {
-    mvaddstr(y, x, out.c_str());
-    clrtobot();
-  }
 }

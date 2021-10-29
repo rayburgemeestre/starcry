@@ -12,25 +12,25 @@
 #include "data/job.hpp"
 #include "data/shape.hpp"
 
-#include "bitmap_wrapper.hpp"
-// #include "primitives/color.cpp"
 #include "rendering_engine_wrapper.cpp"
 #include "rendering_engine_wrapper.h"
 
 bool initialized = false;
 std::chrono::high_resolution_clock::time_point begin_time, end_time;
 rendering_engine_wrapper engine;
-bitmap_wrapper bitmap;
 data::job job;
 std::vector<uint32_t> transfer_pixels;
 SDL_Texture *texture = nullptr;
 SDL_Renderer *renderer = nullptr;
 int x = 0, y = 0;
+bool pointer_state = true;
 
 struct context {
   SDL_Renderer *renderer;
   int iteration;
 };
+
+void render_shapes_to_texture();
 
 void mainloop(void *arg) {
 #ifdef EMSCRIPTEN
@@ -50,15 +50,28 @@ void mainloop(void *arg) {
   r.y = y;
   r2.x = x;
   r2.y = 0;
-  r.w = job.width;
+  r.w = job.canvas_w;
   r.h = 1;
   r2.w = 1;
-  r2.h = job.height;
+  r2.h = job.canvas_h;
 
   SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
-  SDL_RenderCopy(renderer, texture, NULL, NULL);
-  SDL_RenderFillRect(renderer, &r);
-  SDL_RenderFillRect(renderer, &r2);
+
+#ifndef EMSCRIPTEN
+  render_shapes_to_texture();
+#endif
+
+  SDL_Rect texture_rect;
+  texture_rect.x = 0;
+  texture_rect.y = 0;
+  texture_rect.w = job.canvas_w;
+  texture_rect.h = job.canvas_h;
+  SDL_RenderCopy(renderer, texture, NULL, &texture_rect);
+
+  if (pointer_state) {
+      SDL_RenderFillRect(renderer, &r);
+      SDL_RenderFillRect(renderer, &r2);
+  }
 
   SDL_RenderPresent(renderer);
 
@@ -76,14 +89,12 @@ void mainloop(void *arg) {
 }
 
 void render_shapes_to_texture() {
-  auto &bmp = bitmap.get(job.width, job.height);
   data::settings settings_;
   std::shared_ptr<metrics> tmp = nullptr;
-  engine.render(0,
+  auto &bmp = engine.render(0,
                 job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
                 job.chunk,
                 tmp,
-                bmp,
                 job.background_color,
                 job.shapes,
                 0,
@@ -125,15 +136,18 @@ void render_shapes_to_texture() {
   SDL_UpdateTexture(texture, NULL, (void *)&(transfer_pixels[0]), job.width * sizeof(Uint32));
 }
 
-void initialize(uint32_t width, uint32_t height) {
+void initialize(uint32_t width, uint32_t height, uint32_t canvas_w, uint32_t canvas_h) {
   engine.initialize();
 
   memset(&job, 0x00, sizeof(job));
   job.width = width;
   job.height = height;
-  job.canvas_w = width;
-  job.canvas_h = height;
+  job.width = canvas_w;
+  job.height = canvas_h;
+  job.canvas_w = canvas_w;
+  job.canvas_h = canvas_h;
   job.scale = 1;
+  job.scales = {1.};
 
   data::gradient gradient;
   data::color color1;
@@ -148,12 +162,28 @@ void initialize(uint32_t width, uint32_t height) {
   color2.a = 1.0;
   gradient.colors.emplace_back(std::make_tuple(0.0, color1));
   gradient.colors.emplace_back(std::make_tuple(1.0, color2));
+
+#ifndef EMSCRIPTEN
+  data::shape circle;
+  circle.gradients_.push_back(std::make_pair(1.0, gradient));
+  circle.x = 0;
+  circle.y = 0;
+  circle.z = 0;
+  circle.radius = 600;
+  circle.radius_size = 600;
+  circle.blending_ = data::blending_type::normal;
+  circle.opacity = 1.;
+  circle.scale= 1.;
+  circle.type = data::shape_type::circle;
+  if (job.shapes.empty()) {
+    job.shapes.emplace_back();
+  }
+  job.shapes[0].push_back(circle);
+#endif
 }
 
-void start(uint32_t width, uint32_t height) {
-  if (!initialized) {
-    initialize(width, height);
-  }
+void start(uint32_t width, uint32_t height, uint32_t canvas_w, uint32_t canvas_h) {
+  initialize(width, height, canvas_w, canvas_h);
 
   SDL_Init(SDL_INIT_VIDEO);
   SDL_Window *window;
@@ -163,7 +193,7 @@ void start(uint32_t width, uint32_t height) {
   SDL_EventState(SDL_KEYUP, SDL_DISABLE);
 
   SDL_Renderer *renderer;
-  SDL_CreateWindowAndRenderer(width, height, 0, &window, &renderer);
+  SDL_CreateWindowAndRenderer(canvas_w, canvas_h, 0, &window, &renderer);
   context ctx;
   ctx.renderer = renderer;
   ctx.iteration = 0;
@@ -191,16 +221,35 @@ void start(uint32_t width, uint32_t height) {
   while (true) {
     SDL_Event event;
     if (SDL_PollEvent(&event)) {
+      if (event.type == SDL_KEYUP) {
+        if (event.key.keysym.sym == SDLK_ESCAPE) {
+          std::exit(0);
+        }
+      }
       if (event.type == SDL_QUIT) {
         break;
       }
     }
     mainloop((void *)renderer);
+    int width = 0;
+    int height = 0;
+    SDL_GetWindowSize(window, &width, &height);
+    // this is a test
+    job.width = width;
+    job.height = height;
+    job.canvas_w = width;
+    job.canvas_h = height;
   }
 #endif
 
   SDL_DestroyWindow(window);
   SDL_Quit();
+}
+
+void stop() {
+#ifdef EMSCRIPTEN
+  emscripten_cancel_main_loop();
+#endif
 }
 
 void set_shapes(std::string data) {
@@ -224,9 +273,8 @@ void set_texture(std::string data) {
     SDL_DestroyTexture(texture);
     texture = nullptr;
   }
-  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, job.width, job.height);
-  // todo, hardcoded
-  SDL_UpdateTexture(texture, NULL, (void *)&(data[0]), job.width * sizeof(Uint32));
+  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, job.canvas_w, job.canvas_h);
+  SDL_UpdateTexture(texture, NULL, (void *)&(data[0]), job.canvas_w * sizeof(Uint32));
 }
 
 int get_mouse_x() {
@@ -238,10 +286,13 @@ int get_mouse_y() {
 double get_scale() {
   return job.scale;
 }
+void toggle_pointer() {
+  pointer_state = !pointer_state;
+}
 
 int main() {
 #ifndef EMSCRIPTEN
-  start(1080, 1080);
+  start(1080, 1080, 1080, 1080);
 #endif
   return EXIT_SUCCESS;
 }
@@ -249,10 +300,12 @@ int main() {
 #ifdef EMSCRIPTEN
 EMSCRIPTEN_BINDINGS(my_module) {
   emscripten::function("start", &start);
+  emscripten::function("stop", &stop);
   emscripten::function("set_shapes", &set_shapes);
   emscripten::function("set_texture", &set_texture);
   emscripten::function("get_mouse_x", &get_mouse_x);
   emscripten::function("get_mouse_y", &get_mouse_y);
   emscripten::function("get_scale", &get_scale);
+  emscripten::function("toggle_pointer", &toggle_pointer);
 }
 #endif

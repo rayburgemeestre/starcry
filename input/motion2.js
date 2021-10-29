@@ -38,7 +38,7 @@ _ = {
       'radius': 0,
       'radiussize': 10.0,
       'init': function() {
-        const stepsize = 70;
+        const stepsize = 50;
         let directions = [
           [0, -stepsize],  // up
           [stepsize, 0],   // right
@@ -64,7 +64,7 @@ _ = {
           this.props.step++;
 
           this.subobj.push({
-            'id': i < 30 ? 'red_ball' : 'ball',
+            'id': i < 25 ? 'red_ball' : 'ball',
             'x': x,
             'y': y,
             'z': 0,
@@ -100,12 +100,13 @@ _ = {
           for (let obj of this.subobj) {
             let velocity = new vector2d(rand(), 0);
             velocity.rotate(rand() * 360);
-            obj.velocity = 50;
+            obj.velocity = 1;
             obj.vel_x = velocity.x;
             obj.vel_y = velocity.y;
           }
         }
         if (t > 0.75) {
+          /*
           var ss = 0.25 / 25.0;
           for (let obj of this.subobj) {
             if (obj.vel_x > ss) obj.vel_x -= ss;
@@ -113,15 +114,11 @@ _ = {
             if (obj.vel_y > ss) obj.vel_y -= ss;
             if (obj.vel_y < -ss) obj.vel_y += ss;
           }
+          */
         }
-        if (t > 0) {
+        if (t > 0 && t < 0.7) {
           for (let obj of this.subobj) {
             if (obj.radiussize < 20) obj.radiussize += 5 * e;
-          }
-        }
-        if (t > 0.7) {
-          for (let obj of this.subobj) {
-            obj.radiussize += 20 * e;
           }
         }
         // TODO: manipulating sub object gradients does not propagate
@@ -131,7 +128,7 @@ _ = {
     'ball': {
       'type': 'circle',
       'collision_group': 'cg1',
-      'blending_type': blending_type.pinlight,
+      'blending_type': blending_type.normal,
       'gradients': [
         [1.0, 'white'],
         [0.0, 'white_2'],
@@ -149,17 +146,15 @@ _ = {
           this.gradients[0][0] = 1.0 - q;
           this.gradients[1][0] = q;
         }
-        if (t >= 0.5) return;
-        while (this.x + (1920 / 2) < 0) this.x += 1920;
-        while (this.y + (1080 / 2) < 0) this.y += 1080;
-        while (this.x + (1920 / 2) > 1920) this.x -= 1920;
-        while (this.y + (1080 / 2) > 1080) this.y -= 1080;
+        this.velocity = t * 100;
+          if (t >= 0.7) this.velocity = (1.0 - (t - 0.6/*to stop earlier*/) / 0.3) * 100;
+          if (this.velocity < 0) this.velocity = 0;
       },
     },
     'red_ball': {
       'type': 'circle',
       'collision_group': 'cg2',
-      'blending_type': blending_type.pinlight,
+      'blending_type': blending_type.normal,
       'gradients': [
         [1.0, 'red'],
       ],
@@ -172,6 +167,9 @@ _ = {
         while (this.y + (1080 / 2) < 0) this.y += 1080;
         while (this.x + (1920 / 2) > 1920) this.x -= 1920;
         while (this.y + (1080 / 2) > 1080) this.y -= 1080;
+        this.velocity = t * 100;
+          if (t >= 0.7) this.velocity = (1.0 - (t - 0.6/*to stop earlier*/) / 0.3) * 100;
+          if (this.velocity < 0) this.velocity = 0;
       },
     },
     'bg': {
@@ -212,8 +210,17 @@ _ = {
     'scale': 1,
     'rand_seed': 3,
     'granularity': 1,
-    'grain_for_opacity': false,
+    'grain_for_opacity': true,
     'dithering': true,
+  },
+  'preview': {
+    'motion_blur': false,
+    'min_intermediates': 2,
+    'max_intermediates': 2,
+    'grain_for_opacity': false,
+    'dithering': false,
+    'width': 1920/2,
+    'height': 1080/2,
   },
   'scenes': [{
     'name': 'scene1',

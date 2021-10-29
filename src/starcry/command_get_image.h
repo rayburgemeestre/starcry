@@ -13,5 +13,5 @@ public:
 
   std::shared_ptr<render_msg> to_render_msg(std::shared_ptr<job_message>& cmd_def, image& bmp);
 
-  void handle_frame(std::shared_ptr<render_msg>& job_msg);
+  void handle_frame(std::shared_ptr<render_msg>& image_handler);
 };

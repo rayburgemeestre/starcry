@@ -25,18 +25,19 @@ std::shared_ptr<render_msg> command_get_bitmap::to_render_msg(std::shared_ptr<jo
   auto &job = *job_msg->job;
   job.job_number = std::numeric_limits<uint32_t>::max();
   auto transfer_pixels = sc.pixels_vec_to_pixel_data(bmp.pixels(), sc.gen->settings());
-  auto msg = std::make_shared<render_msg>(job_msg->client,
-                                          job_msg->type,
-                                          job.job_number,
-                                          job.frame_number,
-                                          job.chunk,
-                                          job.num_chunks,
-                                          job.offset_x,
-                                          job.offset_y,
-                                          job.last_frame,
-                                          job.width,
-                                          job.height,
-                                          transfer_pixels);
+  auto msg =
+      std::make_shared<render_msg>(job_msg->client,
+                                   job_msg->type,
+                                   job.job_number,
+                                   job.frame_number,
+                                   job.chunk,
+                                   job.num_chunks,
+                                   job.offset_x,
+                                   job.offset_y,
+                                   job.last_frame,
+                                   this->sc.get_viewpoint().canvas_w ? this->sc.get_viewpoint().canvas_w : job.width,
+                                   this->sc.get_viewpoint().canvas_h ? this->sc.get_viewpoint().canvas_h : job.height,
+                                   transfer_pixels);
   if (this->sc.get_viewpoint().raw || this->sc.get_viewpoint().save) {
     msg->set_raw(bmp.pixels());
   }

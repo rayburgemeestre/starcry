@@ -33,25 +33,24 @@ public:
 
   void initialize();
 
-  void render(size_t thread_num,
-              size_t job_num,
-              size_t chunk_num,
-              std::shared_ptr<metrics> &metrics,
-              image &bmp,
-              const data::color &bg_color,
-              const std::vector<std::vector<data::shape>> &shapes,
-              double view_x,
-              double view_y,
-              uint32_t offset_x,
-              uint32_t offset_y,
-              uint32_t canvas_w,
-              uint32_t canvas_h,
-              uint32_t width,
-              uint32_t height,
-              double scale,
-              std::vector<double> scales,
-              bool verbose,
-              const data::settings &settings);
+  image &render(size_t thread_num,
+                size_t job_num,
+                size_t chunk_num,
+                std::shared_ptr<metrics> &metrics,
+                const data::color &bg_color,
+                const std::vector<std::vector<data::shape>> &shapes,
+                double view_x,
+                double view_y,
+                uint32_t offset_x,
+                uint32_t offset_y,
+                uint32_t canvas_w,
+                uint32_t canvas_h,
+                uint32_t width,
+                uint32_t height,
+                double scale,
+                std::vector<double> scales,
+                bool verbose,
+                const data::settings &settings);
 
   void write_image(image &bmp, const std::string &filename);
 

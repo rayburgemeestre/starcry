@@ -71,7 +71,7 @@ long THeapView::heapSize() {
       mallinfo()
 #endif
           .uordblks;
-  totalStr << std::setw(12) << allocatedBytes;
+  totalStr << std::setw(12) << int(allocatedBytes / 1024. / 1024.);
   strncpy(heapStr, totalStr.str().c_str(), sizeof heapStr);
   return allocatedBytes;
 #else

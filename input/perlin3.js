@@ -95,12 +95,13 @@ _ = {
   'video': {
     'duration': 5,
     'fps': 25,
-    'width': 1920,
-    'height': 1920,
+    'width': 3840,
+    'height': 2160,
     'scale': 1.,
     'rand_seed': 1,
     'granularity': 1000,
     'update_positions': false,
+    //'grain_for_opacity': false,
     // 'sample': {
     //   'include': 1.,  // include one second.
     //   'exclude': 5.,  // then skip 5 seconds, and so on.

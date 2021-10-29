@@ -8,6 +8,7 @@
 #include <iostream>
 #include <mutex>
 
+#include "data/bounding_box.hpp"
 #include "data/color.hpp"
 
 class image {
@@ -22,6 +23,23 @@ public:
 
   std::vector<data::color> &pixels() {
     return pixels_;
+  }
+
+  void copy_from(const image &other, bounding_box *box_in = nullptr) {
+    if (box_in) {
+      bounding_box &box = *box_in;
+      for (size_t y = box.top_left.y; y < box.bottom_right.y; y++) {
+        size_t offset_y = y * width;
+        for (size_t x = box.top_left.x; x < box.bottom_right.x; x++) {
+          size_t offset = offset_y + y;
+          pixels_[offset] = other.pixels_[offset];
+        }
+      }
+      return;
+    }
+    if (width == other.width && height == other.height) {
+      pixels_.assign(other.pixels_.begin(), other.pixels_.end());
+    }
   }
 
   void resize(int width, int height) {

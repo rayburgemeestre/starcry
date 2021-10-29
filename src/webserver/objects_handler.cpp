@@ -4,6 +4,7 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #include "starcry.h"
+#include "util/logger.h"
 #include "webserver.h"
 
 ObjectsHandler::ObjectsHandler(starcry *sc) : sc(sc) {}
@@ -20,6 +21,7 @@ void ObjectsHandler::onData(seasocks::WebSocket *con, const char *data) {
   std::string input(data);
   auto find = input.find(" ");
   if (find != std::string::npos) {
+    logger(DEBUG) << "ObjectsHandler::onData - " << input << std::endl;
     sc->add_command(con,
                     input.substr(0, find),
                     instruction_type::get_objects,

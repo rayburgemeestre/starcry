@@ -19,6 +19,16 @@ void command_handler::to_job(std::shared_ptr<instruction> &cmd_def) {
   sc.gen->generate_frame();
 
   auto the_job = sc.gen->get_job();
+
+  if (cmd_def->viewpoint.canvas_w) {
+    the_job->canvas_w = cmd_def->viewpoint.canvas_w;
+    the_job->width = cmd_def->viewpoint.canvas_w;
+  }
+  if (cmd_def->viewpoint.canvas_h) {
+    the_job->canvas_h = cmd_def->viewpoint.canvas_h;
+    the_job->height = cmd_def->viewpoint.canvas_h;
+  }
+
   util::ImageSplitter<uint32_t> is{the_job->canvas_w, the_job->canvas_h};
 
   the_job->scale *= cmd_def->viewpoint.scale;

@@ -7,6 +7,7 @@
 
 // #define DEBUGMODE
 
+#include "bitmap_wrapper.hpp"
 #include "util/scope_exit.hpp"
 
 #include <cmath>
@@ -57,28 +58,31 @@ class rendering_engine {
 public:
   void initialize() {}
 
-  void render(size_t thread_num,
-              size_t job_num,
-              size_t chunk_num,
-              std::shared_ptr<metrics> &metrics,
-              image &bmp,
-              const data::color &bg_color,
-              const std::vector<std::vector<data::shape>> &shapes,
-              double view_x,
-              double view_y,
-              uint32_t offset_x,
-              uint32_t offset_y,
-              uint32_t canvas_w,
-              uint32_t canvas_h,
-              uint32_t width,
-              uint32_t height,
-              double scale,
-              std::vector<double> scales,
-              bool verbose,
-              const data::settings &settings) {
+  image &render(size_t thread_num,
+                size_t job_num,
+                size_t chunk_num,
+                std::shared_ptr<metrics> &metrics,
+                const data::color &bg_color,
+                const std::vector<std::vector<data::shape>> &shapes,
+                double view_x,
+                double view_y,
+                uint32_t offset_x,
+                uint32_t offset_y,
+                uint32_t canvas_w,
+                uint32_t canvas_h,
+                uint32_t width,
+                uint32_t height,
+                double scale,
+                std::vector<double> scales,
+                bool verbose,
+                const data::settings &settings) {
+    auto &bmp = bitmap.get(width, height);
+    auto &bmp_prev = bitmap_back.get(width, height);
+
     // this lock is no longer needed since we got rid of all dependencies
     // std::unique_lock<std::mutex> lock(m);
     bmp.clear_to_color(bg_color);
+    bmp_prev.clear_to_color(bg_color);
 
     // debug font
     // if (!font) {
@@ -95,10 +99,10 @@ public:
 
     draw_logic_.width(width);
     draw_logic_.height(height);
-    draw_logic_.center(canvas_w / 2 - view_x, canvas_h / 2 - view_y);
+    draw_logic_.center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
     draw_logic_.offset(offset_x, offset_y);
 
-    if (shapes.empty()) return;
+    if (shapes.empty()) return bmp;
 
 #ifndef EMSCRIPTEN
 #ifndef SC_CLIENT
@@ -122,7 +126,7 @@ public:
             opacity /= (shape.indexes.size() + 1);
           }
           draw_logic_.scale(scales[scales.size() - 1] * scale_ratio);
-          draw_logic_.render_circle(bmp, shape, opacity, settings);
+          auto box = draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings);
 
           // the rest...
           for (const auto &index_data : shape.indexes) {
@@ -130,9 +134,10 @@ public:
             const auto &index = index_data.second;
             const auto &shape = shapes[step][index];
             draw_logic_.scale(scales[step] * scale_ratio);  // TODO: fix this
-            draw_logic_.render_circle(bmp, shape, opacity, settings);
+            box.update(draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings));
           }
-
+          box.normalize(width, height);
+          bmp_prev.copy_from(bmp, &box);
         } else if (shape.type == data::shape_type::line) {
           // first one
           double opacity = 1.0;
@@ -140,7 +145,7 @@ public:
             opacity /= (shape.indexes.size() + 1);
           }
           draw_logic_.scale(scales[scales.size() - 1] * scale_ratio);  // TODO: fix this
-          draw_logic_.render_line(bmp, shape, opacity, settings);
+          draw_logic_.render_line(bmp, bmp_prev, shape, opacity, settings);
 
           // the rest...
           for (const auto &index_data : shape.indexes) {
@@ -148,7 +153,7 @@ public:
             const auto &index = index_data.second;
             const auto &shape = shapes[step][index];
             draw_logic_.scale(scales[step] * scale_ratio);  // TODO: fix this
-            draw_logic_.render_line(bmp, shape, opacity, settings);
+            draw_logic_.render_line(bmp, bmp_prev, shape, opacity, settings);
           }
         } else if (shape.type == data::shape_type::text) {
           draw_logic_.scale(scales[scales.size() - 1] * scale_ratio);  // TODO: fix this
@@ -161,6 +166,7 @@ public:
 #endif
         index++;
       }
+      return bmp;
     }
     //    // test
     //    double x = 1.;
@@ -183,6 +189,7 @@ public:
     //   draw_logic_.center(width / 2, height / 2);
     //   draw_logic_.render_text(0, 0, 14, ss.str().c_str(), "left");
     // }
+    return bmp;
   }
 
   void write_image(image &bmp, std::string filename) {
@@ -193,4 +200,6 @@ public:
   }
 
   draw_logic::draw_logic draw_logic_;
+  bitmap_wrapper bitmap;
+  bitmap_wrapper bitmap_back;
 };

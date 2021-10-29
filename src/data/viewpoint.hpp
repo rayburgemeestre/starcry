@@ -17,10 +17,12 @@ struct viewpoint {
   bool raw = false;
   bool preview = false;
   bool save = false;
+  int canvas_w = 0;
+  int canvas_h = 0;
 
   template <class Archive>
   void serialize(Archive &ar) {
-    ar(scale, offset_x, offset_y, raw, preview, save);
+    ar(scale, offset_x, offset_y, raw, preview, save, canvas_w, canvas_h);
   }
 };
 

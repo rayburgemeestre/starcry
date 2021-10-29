@@ -9,6 +9,8 @@
 #include <random>
 
 #include "color_blender.hpp"
+#include "data/bounding_box.hpp"
+#include "data/coord.hpp"
 #include "data/gradient.hpp"
 #include "data/settings.hpp"
 #include "data/shape.hpp"
@@ -24,14 +26,6 @@ double rand_fun_v3() {
 }
 
 namespace draw_logic {
-
-class coord {
-public:
-  double x;
-  double y;
-
-  coord(double x, double y) : x(x), y(y) {}
-};
 
 class line {
 public:
@@ -159,7 +153,9 @@ public:
    *   circle). For this we calculate the half of the "x chord length" for both the outer- and inner circle, and
    *   substract them.
    */
-  inline void render_circle(image &bmp, const data::shape &shape, double opacity, const data::settings &settings) {
+  inline bounding_box render_circle(
+      image &bmp, image &bmp_prev, const data::shape &shape, double opacity, const data::settings &settings) {
+    bounding_box box;
     double circle_x = ((shape.x * scale_) + center_x_) - offset_x_;
     double circle_y = ((shape.y * scale_) + center_y_) - offset_y_;
     auto radius = shape.radius * scale_ * shape.scale;
@@ -180,6 +176,10 @@ public:
       int abs_y_top = static_cast<int>(circle_y - rel_y) - 1;
       int abs_y_bottom = static_cast<int>(circle_y + rel_y);
 
+      // TODO: optimize
+      box.top_left.y = std::min(abs_y_top, (int)box.top_left.y);
+      box.bottom_right.y = std::max(abs_y_bottom, (int)box.bottom_right.y);
+
       if ((abs_y_top < 0) && (abs_y_bottom > static_cast<int>(height_))) break;
 
       int hxcl_outer = half_chord_length<decltype(radius_outer_circle), double>(radius_outer_circle, rel_y);
@@ -192,11 +192,16 @@ public:
         int abs_x_left = static_cast<int>(circle_x - rel_x);
         int abs_x_right = static_cast<int>(circle_x + rel_x);
 
+        // TODO: optimize
+        box.top_left.x = std::min(abs_x_left, (int)box.top_left.x);
+        box.bottom_right.x = std::max(abs_x_right, (int)box.bottom_right.x);
+
         if (abs_x_left < 0 && abs_x_right > static_cast<int>(width_)) continue;
 
         double diff_from_center = reuse_sqrt ? distance<double>(abs_x_left, circle_x, abs_y_top, circle_y) : -1;
 
         render_circle_pixel(bmp,
+                            bmp_prev,
                             shape,
                             radius,
                             radius_size,
@@ -211,6 +216,7 @@ public:
         // bottom left
         if (rel_y != 0)
           render_circle_pixel(bmp,
+                              bmp_prev,
                               shape,
                               radius,
                               radius_size,
@@ -225,6 +231,7 @@ public:
         // top right
         if (rel_x != 0)
           render_circle_pixel(bmp,
+                              bmp_prev,
                               shape,
                               radius,
                               radius_size,
@@ -238,6 +245,7 @@ public:
         // bottom right
         if (rel_x != 0 && rel_y != 0)
           render_circle_pixel(bmp,
+                              bmp_prev,
                               shape,
                               radius,
                               radius_size,
@@ -250,9 +258,10 @@ public:
                               settings);
       }
     }
+    return box;
   }
 
-  inline void render_text(double textX, double textY, double textsize, string text, string align) {
+  inline void render_text(double textX, double textY, double textsize, std::string text, std::string align) {
     textX = ((textX * scale_) + center_x_) - offset_x_;
     textY = ((textY * scale_) + center_y_) - offset_y_;
 #if 1 == 0
@@ -281,6 +290,7 @@ public:
   }
 
   void render_circle_pixel(image &bmp,
+                           image &bmp_prev,
                            const data::shape &shape,
                            double radius,
                            double radiussize,
@@ -314,23 +324,32 @@ public:
       throw std::runtime_error("gradients cannot not be empty");
     }
 
-    render_pixel(bmp, shape, posX, posY, absX, absY, Opacity, opacity, settings);
+    render_pixel(bmp, bmp_prev, shape, posX, posY, absX, absY, Opacity, opacity, settings);
   }
 
   template <typename blending_type_>
-  void blend_pixel(image &bmp, const int &absX, const int &absY, const data::color &clr) {
+  void blend_pixel(
+      image &bmp, image &bmp_prev, double opacity, const int &absX, const int &absY, const data::color &clr) {
     // auto clr2 = blender<blending_type_>(color(bg.r * (1.0 - clr.a), bg.g * (1.0 - clr.a), bg.b * (1.0 - clr.a), 0.0),
     // color(clr.r * clr.a, clr.g * clr.a, clr.b * clr.a, 1.0));
-    auto &bg = bmp.get(absX, absY);
+    auto &bg = bmp_prev.get(absX, absY);
     auto clr2 = blender<blending_type_>(color(bg.r, bg.g, bg.b, bg.a), color(clr.r, clr.g, clr.b, clr.a));
     double r = (bg.r * (1.0 - clr2.get_a())) + (clr2.get_r() * clr2.get_a());
     double g = (bg.g * (1.0 - clr2.get_a())) + (clr2.get_g() * clr2.get_a());
     double b = (bg.b * (1.0 - clr2.get_a())) + (clr2.get_b() * clr2.get_a());
     double a = 0;
+    auto &pix = bmp.get(absX, absY);
+    r = pix.r + (r * opacity);
+    g = pix.g + (g * opacity);
+    b = pix.b + (b * opacity);
+    if (r > 1) r = 1;
+    if (g > 1) g = 1;
+    if (b > 1) b = 1;
     bmp.set(absX, absY, r, g, b, a);
   }
 
-  void render_line(image &bmp, const data::shape &shape, double opacity, const data::settings &settings) {
+  void render_line(
+      image &bmp, image &bmp_prev, const data::shape &shape, double opacity, const data::settings &settings) {
     auto x1 = ((shape.x * scale_) + center_x_) - offset_x_;
     auto y1 = ((shape.y * scale_) + center_y_) - offset_y_;
     auto x2 = ((shape.x2 * scale_) + center_x_) - offset_x_;
@@ -475,6 +494,7 @@ public:
             double normalized_dist_from_center = (dist_pixel / dist_max);
             double normalized_dist_from_line = (dist_from_center_line / aline.size);
             render_line_pixel(bmp,
+                              bmp_prev,
                               shape,
                               aline.center().x,
                               aline.center().y,
@@ -495,6 +515,7 @@ public:
   }
 
   void render_line_pixel(image &bmp,
+                         image &bmp_prev,
                          const data::shape &shape,
                          double posX,
                          double posY,
@@ -545,10 +566,11 @@ public:
     // bg.g = min(1., bg.g + gradient_.get(num).g);
     // bg.b = min(1., bg.b + gradient_.get(num).b);
 
-    render_pixel(bmp, shape, posX, posY, absX, absY, num, opacity, settings);
+    render_pixel(bmp, bmp_prev, shape, posX, posY, absX, absY, num, opacity, settings);
   }
 
   void render_pixel(image &bmp,
+                    image &bmp_prev,
                     const data::shape &shape,
                     double posX,
                     double posY,
@@ -578,7 +600,7 @@ public:
     // auto max = 10.0;  // TODO: tweak this a bit, or make configurable at least.
     // auto maxexp = log(max + 1.0) / log(2.0);
 
-    auto linear = clr.a * opacity;
+    auto linear = clr.a;  // commented out, because this is for motion blur only:  * opacity;
     // auto expf = ((pow(2.0, (linear)*maxexp)) - 1.0) / max;
 
     // auto maxpow = pow(2.0, maxexp);
@@ -607,12 +629,12 @@ public:
 
     // ------------motion blur------------
 
-    // clr.a *= opacity;
+    // clr.a *= opacity; // do not uncomment this?
     // clr.a *= expf;
     // clr.a *= logn;
 
     auto rand1 = (rand_fun_v3() * 2.0) - 1.0;  // -1 .. +1
-    auto amount_of_blur = 1.0 - opacity;       // i.e. 0.5 blur
+    auto amount_of_blur = 1.0 - linear;        // was: ?? opacity;       // i.e. 0.5 blur
     amount_of_blur += settings.extra_grain;    // extra default grain amount
     // clr.a = logn * noise * (1.0 - amount_of_blur * rand1);
     // use noise to dial down opacity
@@ -630,92 +652,92 @@ public:
 
     switch (shape.blending_.type()) {
       case data::blending_type::lighten:
-        blend_pixel<lighten>(bmp, absX, absY, clr);
+        blend_pixel<lighten>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::darken:
-        blend_pixel<darken>(bmp, absX, absY, clr);
+        blend_pixel<darken>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::multiply:
-        blend_pixel<multiply>(bmp, absX, absY, clr);
+        blend_pixel<multiply>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::average:
-        blend_pixel<average>(bmp, absX, absY, clr);
+        blend_pixel<average>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::add:
-        blend_pixel<add>(bmp, absX, absY, clr);
+        blend_pixel<add>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::subtract:
-        blend_pixel<subtract>(bmp, absX, absY, clr);
+        blend_pixel<subtract>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::difference:
-        blend_pixel<difference>(bmp, absX, absY, clr);
+        blend_pixel<difference>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::negation_:
-        blend_pixel<negation_>(bmp, absX, absY, clr);
+        blend_pixel<negation_>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::screen:
-        blend_pixel<screen>(bmp, absX, absY, clr);
+        blend_pixel<screen>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::exclusion:
-        blend_pixel<exclusion>(bmp, absX, absY, clr);
+        blend_pixel<exclusion>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::overlay:
-        blend_pixel<overlay>(bmp, absX, absY, clr);
+        blend_pixel<overlay>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::softlight:
-        blend_pixel<softlight>(bmp, absX, absY, clr);
+        blend_pixel<softlight>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::hardlight:
-        blend_pixel<hardlight>(bmp, absX, absY, clr);
+        blend_pixel<hardlight>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::colordodge:
-        blend_pixel<colordodge>(bmp, absX, absY, clr);
+        blend_pixel<colordodge>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::colorburn:
-        blend_pixel<colorburn>(bmp, absX, absY, clr);
+        blend_pixel<colorburn>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::lineardodge:
-        blend_pixel<lineardodge>(bmp, absX, absY, clr);
+        blend_pixel<lineardodge>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::linearburn:
-        blend_pixel<linearburn>(bmp, absX, absY, clr);
+        blend_pixel<linearburn>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::linearlight:
-        blend_pixel<linearlight>(bmp, absX, absY, clr);
+        blend_pixel<linearlight>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::vividlight:
-        blend_pixel<vividlight>(bmp, absX, absY, clr);
+        blend_pixel<vividlight>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::pinlight:
-        blend_pixel<pinlight>(bmp, absX, absY, clr);
+        blend_pixel<pinlight>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::hardmix:
-        blend_pixel<hardmix>(bmp, absX, absY, clr);
+        blend_pixel<hardmix>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::reflect:
-        blend_pixel<reflect>(bmp, absX, absY, clr);
+        blend_pixel<reflect>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::glow:
-        blend_pixel<glow>(bmp, absX, absY, clr);
+        blend_pixel<glow>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::phoenix:
-        blend_pixel<phoenix>(bmp, absX, absY, clr);
+        blend_pixel<phoenix>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::hue:
-        blend_pixel<hue>(bmp, absX, absY, clr);
+        blend_pixel<hue>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::saturation:
-        blend_pixel<saturation>(bmp, absX, absY, clr);
+        blend_pixel<saturation>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::color:
-        blend_pixel<color_blend>(bmp, absX, absY, clr);
+        blend_pixel<color_blend>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::luminosity:
-        blend_pixel<luminosity>(bmp, absX, absY, clr);
+        blend_pixel<luminosity>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
       case data::blending_type::normal:
       default:
-        blend_pixel<normal>(bmp, absX, absY, clr);
+        blend_pixel<normal>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
     }
   };

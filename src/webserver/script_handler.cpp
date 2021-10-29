@@ -4,6 +4,7 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #include "starcry.h"
+#include "util/logger.h"
 #include "webserver.h"
 
 #include "nlohmann/json.hpp"
@@ -38,12 +39,14 @@ void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
     const auto cmd = input.substr(0, find);
     const auto file = input.substr(find + 1);
     if (cmd == "open") {
+      logger(DEBUG) << "ScriptHandler::onData - " << input << std::endl;
       std::ifstream ifs(file);
       std::ostringstream ss;
       ss << ifs.rdbuf();
       con->send(ss.str());
     }
   } else if (input == "list") {
+    logger(DEBUG) << "ScriptHandler::onData - " << input << std::endl;
     json result = {};
     using recursive_directory_iterator = std::filesystem::recursive_directory_iterator;
     for (const auto &entry : recursive_directory_iterator("input")) {

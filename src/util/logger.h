@@ -21,9 +21,9 @@ using std::chrono::system_clock;
 
 #include "starcry/metrics.h"
 
-static std::mutex logger_mut__;
+static std::recursive_mutex logger_mut__;
 
-enum LogLevel { DEBUG, INFO, WARNING, ERROR, FATAL };
+enum LogLevel { DEBUG, INFO, WARNING, ERROR, FATAL, _NONE };
 
 class metrics;
 extern metrics *_metrics;
@@ -31,11 +31,23 @@ extern metrics *_metrics;
 void set_metrics(metrics *ptr);
 
 class logger {
+  std::stringstream ss_;
+
 public:
-  explicit logger(LogLevel level) : _holder(std::make_shared<holder>(level, fi)) {}
+  explicit logger(std::ostream &os, std::stringstream &ss) : _holder(std::make_shared<holder>(os, ss)) {}
+  explicit logger(LogLevel level) : _holder(std::make_shared<holder>(level, fi, ss_)) {}
+
+  friend logger operator<<(const logger &l, std::ostream &(*fun)(std::ostream &)) {
+    if (_metrics) {
+      l._holder->_ss << "\n";
+      const auto line = l._holder->_ss.str();
+      _metrics->log_callback((int)l._holder->_level, line);
+    }
+    return logger(l._holder->_os, l._holder->_ss);
+  }
 
   template <class T>
-  friend std::ostream &operator<<(const logger &l, const T &t) {
+  friend logger operator<<(const logger &l, const T &t) {
     system_clock::time_point tp = system_clock::now();
     time_t raw_time = system_clock::to_time_t(tp);
     struct tm *timeinfo = std::localtime(&raw_time);
@@ -45,39 +57,44 @@ public:
       milliseconds_str = std::string(3 - milliseconds_str.length(), '0') + milliseconds_str;
     }
     std::stringstream ss;
-    ss << std::put_time(timeinfo, "%Y-%m-%d %H:%M:%S.") << milliseconds_str;
-    switch (l._holder->_level) {
-      case DEBUG:
-        ss << " DEBUG ";
-        break;
-      case INFO:
-        ss << "  INFO ";
-        break;
-      case WARNING:
-        ss << "  WARN ";
-        break;
-      case ERROR:
-        ss << " ERROR ";
-        break;
-      case FATAL:
-        ss << " FATAL ";
-        break;
-      default:
-        break;
+    if (l._holder->_level != _NONE) {
+      ss << std::put_time(timeinfo, "%Y-%m-%d %H:%M:%S.") << milliseconds_str;
+      switch (l._holder->_level) {
+        case DEBUG:
+          ss << " DEBUG ";
+          break;
+        case INFO:
+          ss << "  INFO ";
+          break;
+        case WARNING:
+          ss << "  WARN ";
+          break;
+        case ERROR:
+          ss << " ERROR ";
+          break;
+        case FATAL:
+          ss << " FATAL ";
+          break;
+        default:
+          break;
+      }
     }
     ss << t;
-    if (_metrics) {
-      _metrics->log_callback((int)l._holder->_level, ss.str());
-    }
-    return l._holder->_os << ss.str();
+    const auto line = ss.str();
+    l._holder->_ss << line;
+    return logger(l._holder->_os << line, l._holder->_ss);  //._holder->_os;
   }
 
 private:
   struct holder {
-    explicit holder(LogLevel level, std::ostream &os) : _level(level), _os(os), _lock(logger_mut__) {}
+    explicit holder(LogLevel level, std::ostream &os, std::stringstream &ss)
+        : _level(level), _os(os), _ss(ss), _lock(logger_mut__) {}
+    explicit holder(std::ostream &os, std::stringstream &ss)
+        : _level(LogLevel::_NONE), _os(os), _ss(ss), _lock(logger_mut__) {}
     LogLevel _level = LogLevel::DEBUG;
     std::ostream &_os;
-    std::lock_guard<std::mutex> _lock;
+    std::stringstream &_ss;
+    std::lock_guard<std::recursive_mutex> _lock;
   };
 
   static std::ofstream fi;
