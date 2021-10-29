@@ -55,7 +55,7 @@
         <debug-component v-model="debug" width="100%" height="100vh - 60px"/>
       </div>
       <div class="column" style="background-color: black; max-height: calc(100vh - 120px);">
-        <div style="position: relative; z-index: 2; background-color: #880000; height: 100%;">
+        <div style="position: relative; z-index: 2; /* background-color: #880000; */ height: 100%;">
           <canvas id="canvas2"
                   style="position: absolute; width: 100%; max-height: calc(100vh - 120px); left: 0; top: 0; z-index: 1; pointer-events: none /* saved my day */;"></canvas>
           <canvas id="canvas" v-on:mousemove="on_mouse_move" v-on:mousedown="on_mouse_down" v-on:wheel="on_wheel"
@@ -114,6 +114,10 @@ import ViewPointComponent from './components/ViewPointComponent.vue'
 import DebugComponent from './components/DebugComponent.vue'
 import StarcryAPI from './util/StarcryAPI'
 import JsonWithObjectsParser from './util/JsonWithObjectsParser'
+
+let time1 = null;
+let previous_w = 1920;
+let previous_h = 1080;
 
 export default {
   data() {
@@ -253,26 +257,9 @@ export default {
         'message': message,
         'data': data,
       });
-    }
-  },
-  watch: {
-    queued_frames(new_value) {
-      this.process_queue();
-    }
-  },
-  mounted: function() {
-    Module = {
-      canvas: (function() { return document.getElementById('canvas'); })(),
-      onRuntimeInitialized: function() {
-        console.log("Setting Initial Full HD dimensions");
-        Module.start(1920, 1080, 1920, 1080);
-      }
-    };
-    let time1 = null;
-    let previous_w = 1920;
-    let previous_h = 1080;
-    let update_size = function () {
-      let cvs = document.getElementById('canvas').parentNode;
+    },
+    update_size: function () {
+      let cvs = document.getElementById('canvas').parentNode.parentNode;
       let w = cvs.clientWidth;
       w -= w % 2;
       let h = cvs.clientHeight;
@@ -281,7 +268,7 @@ export default {
         return;
       }
       if (time1) clearTimeout(time1);
-      time1 = setTimeout(update_size, 1000);
+      time1 = setTimeout(this.update_size, 1000);
       Module.stop();
       previous_w = w;
       previous_h = h;
@@ -296,9 +283,26 @@ export default {
       if (Module.last_buffer) {
         setTimeout(function() { Module.set_texture(Module.last_buffer); }, 10);
       }
-    }.bind(this);
-    window.addEventListener('resize', update_size);
-    time1 = setTimeout(update_size, 1000);
+    }
+  },
+  watch: {
+    menu(new_value) {
+      this.update_size();
+    },
+    queued_frames(new_value) {
+      this.process_queue();
+    }
+  },
+  mounted: function() {
+    Module = {
+      canvas: (function() { return document.getElementById('canvas'); })(),
+      onRuntimeInitialized: function() {
+        console.log("Setting Initial Full HD dimensions");
+        Module.start(1920, 1080, 1920, 1080);
+      }
+    };
+    window.addEventListener('resize', this.update_size);
+    time1 = setTimeout(this.update_size, 1000);
     var s = document.createElement('script');
     s.setAttribute("src", "client.js");
     document.body.appendChild(s);
