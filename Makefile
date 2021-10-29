@@ -163,8 +163,8 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 	mkdir -p /tmp/ccache-user
 	docker run $$FLAGS -v /tmp/ccache-user:/home/user/.ccache -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user make core_"
 	docker run $$FLAGS  -e _UID=$(UID) -e _GID=$(GID) --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 /bin/sh -c "make prepare && make dockerize_run"
-	cd out && docker build . -t rayburgemeestre/starcry:v2
-	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then echo "$$DOCKER_PASSWORD" | docker login -u "$$DOCKER_USERNAME" --password-stdin; docker push rayburgemeestre/starcry:v2; fi
+	cd out && docker build . -t rayburgemeestre/starcry:v3
+	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then echo "$$DOCKER_PASSWORD" | docker login -u "$$DOCKER_USERNAME" --password-stdin; docker push rayburgemeestre/starcry:v3; fi
 
 .PHONY: dockerize_run
 dockerize_run:  ## execute dockerize steps

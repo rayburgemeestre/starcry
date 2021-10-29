@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div style="height: 100vh;">
     <div class="columns toolbar">
       <b-navbar>
         <template slot="brand">
@@ -62,7 +62,7 @@
                   style="position: absolute; width: 100%; max-height: calc(100vh - 120px); left: 0; top: 0; z-index: 0;"></canvas>
         </div>
       </div>
-      <div class="column is-narrow" style="overflow: scroll; height: calc(100vh - 120px);">
+      <div class="column is-narrow" style="overflow: auto; overflow-x: hidden; height: calc(100vh - 120px);">
         <form>
           <fieldset class="uk-fieldset">
             <div class="uk-margin uk-grid-small uk-child-width-auto uk-grid">
@@ -98,7 +98,7 @@
         <stats-component />
       </div>
     </div>
-    <div class="columns" style="margin: 0px 20px">
+    <div class="columns bottom">
       <playback-component v-bind:value="current_frame" />
     </div>
   </div>
@@ -406,29 +406,54 @@ export default {
 
 </script>
 
-<style scoped>
-html, body {
-  height: 100%;
-  margin: 0;
+<style>
+html, body, body > div {
+  overflow: hidden;
+}
+* {
+  font-family: Consolas,monaco,monospace;
+  font-size: 95%;
 }
 
 .toolbar {
   margin: 0 !important;
+  height: 60px;
 }
 .toolbar, .toolbar > * {
-  background-color: #b1eedb;
+  background-color: #333333;
+  color: white;
 }
-
+.columns.bottom {
+  background-color: #333333;
+  color: white;
+  height: 60px;
+  /* some tweaking to get slider and buttons neatly aligned */
+  padding: 8px 30px;
+}
 .main-columns {
   min-height: calc(100vh - 60px*2);
   margin: 0;
-  background-color: #f3f3f3;
+  background-color: #333333;
+  color: white;
 }
-
+.column.is-narrow {
+    width: 200px;
+}
 canvas {
   cursor: none !important;
 }
 canvas:active {
   cursor: none !important;
+}
+
+/* fixes for dark bg */
+.menu-list a, .navbar-link {
+    color: white;
+}
+.navbar-item.has-dropdown a.navbar-item:focus, a.navbar-item:focus-within, a.navbar-item:hover, a.navbar-item.is-active, .navbar-link:focus, .navbar-link:focus-within, .navbar-link:hover, .navbar-link.is-active {
+    color: black;
+}
+.navbar-dropdown .navbar-item {
+    font-size: 90%;
 }
 </style>

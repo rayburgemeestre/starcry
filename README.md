@@ -10,11 +10,16 @@ Javascript engine.
 
 The interface to the user is either the Javascript file or the VueJS based UI.
 
+## UI
+
+<img src="https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/webui.png" width="256">
+
+<img src="https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/tvui.png" width="256">
 
 ## Quickstart
 
     # create alias
-    alias starcry='docker run -it -v `pwd`:`pwd` -w `pwd` rayburgemeestre/starcry:v2'
+    alias starcry='docker run --pull -it -v `pwd`:`pwd` -w `pwd` rayburgemeestre/starcry:v3'
 
     # get a video definition file
     wget https://raw.githubusercontent.com/rayburgemeestre/starcry/master/input/test.js
