@@ -51,5 +51,6 @@ Ubuntu 20.04.
 - `fmt` - used for string formatting
 - `SFML` - used for preview window
 - `OpenEXR` - used for writing exr files
+- `tvision` - used for the console UI
 
 Almost everything is statically linked, resulting in a relatively portable binary.
