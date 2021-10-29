@@ -29,7 +29,7 @@ void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
                   json["filename"],
                   instruction_type::get_bitmap,
                   json["frame"],
-                  1,
+                  16,
                   sc->get_viewpoint().raw,
                   sc->get_viewpoint().preview);
 }

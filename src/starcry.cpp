@@ -298,6 +298,8 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       }
       return;
     }
+    std::swap(job_msg->pixels, pixels);
+    std::swap(job_msg->pixels_raw, pixels_raw);
     command_handlers[job_msg->type]->handle_frame(job_msg);
   };
 
