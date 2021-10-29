@@ -10,11 +10,7 @@ Javascript engine.
 
 The interface to the user is either the Javascript file or the VueJS based UI.
 
-## UI
-
 <img src="https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/webui.png" width="100%">
-
-<img src="https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/tvui.png" width="100%">
 
 ## Quickstart
 
@@ -59,3 +55,8 @@ Ubuntu 20.04.
 - `tvision` - used for the console UI
 
 Almost everything is statically linked, resulting in a relatively portable binary.
+
+## Rendering UI
+
+<img src="https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/tvui.png" width="100%">
+
