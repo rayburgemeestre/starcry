@@ -46,7 +46,12 @@
                 this.$data.websock_status = msg;
               },
               buffer => {
-                this.$data.data = buffer;
+                if (buffer[0] == '1') {
+                  this.$parent.filename = buffer.slice(1);
+                }
+                else if (buffer[0] == '2') {
+                  this.$data.data = buffer.slice(1);
+                }
               },
               _ => {
                 this.script_endpoint.send("open " + this.$data.filename);

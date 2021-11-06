@@ -28,6 +28,12 @@
 class step_calculator;
 class metrics;
 
+namespace util {
+namespace generator {
+extern int64_t counter;
+}
+}  // namespace util
+
 class generator {
 private:
   std::shared_ptr<metrics> metrics_;
@@ -65,6 +71,16 @@ private:
   scale_settings scalesettings;
   scene_settings scenesettings;
 
+  struct cache {
+    bool enabled = false;
+    bool use = false;
+    std::unordered_map<size_t, bool> job_cache;
+    std::map<size_t, std::unordered_map<int64_t, size_t>> next_instance_mapping;
+    std::map<size_t, int64_t> counter;
+    std::map<size_t, scale_settings> scalesettings;
+    std::map<size_t, scene_settings> scenesettings;
+  } cache;
+
   std::string filename_;
 
 public:
@@ -77,7 +93,7 @@ public:
   explicit generator(std::shared_ptr<metrics>& metrics);
   ~generator() = default;
 
-  void init(const std::string& filename, std::optional<double> rand_seed, bool preview);
+  void init(const std::string& filename, std::optional<double> rand_seed, bool preview, bool caching);
   void init_context();
   void init_user_script();
   void init_job();
@@ -155,6 +171,19 @@ public:
 
 private:
   bool _generate_frame();
+  bool _forward_latest_cached_frame(int frame_of_interest);
+  void _load_cache();
+  void _save_cache();
+  void _load_js_cache(v8_interact& i,
+                      v8::Local<v8::Object> cache,
+                      v8::Local<v8::Array>& instances,
+                      v8::Local<v8::Array>& intermediates,
+                      v8::Local<v8::Array>& next_instances);
+  void _save_js_cache(v8_interact& i,
+                      v8::Local<v8::Object> cache,
+                      v8::Local<v8::Array>* instances,
+                      v8::Local<v8::Array>* intermediates,
+                      v8::Local<v8::Array>* next_instances);
 };
 
 void call_print_exception(const std::string& fn);

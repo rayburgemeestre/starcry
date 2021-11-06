@@ -88,6 +88,12 @@ add_executable(sc_client ${sc_client_SOURCES})
 
 target_link_libraries(starcry -static-libgcc -static-libstdc++)
 
+if (SANITIZER)
+    # ASAN
+    target_link_libraries(starcry /usr/lib/llvm-12/lib/clang/12.0.1/lib/linux/libclang_rt.asan-x86_64.a)
+    # target_link_libraries(starcry -lclang_rt.asan-x86_64)
+endif()
+
 # boost
 target_link_libraries(starcry ${Boost_LIBRARIES})
 
@@ -174,11 +180,6 @@ target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libz.a)
 # curses
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libcurses.a)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libtinfo.a)
-
-if (SANITIZER)
-# ASAN
-target_link_libraries(starcry /usr/lib/clang/10.0.1/lib/linux/libclang_rt.asan-x86_64.a)
-endif()
 
 # fmt
 target_link_libraries(starcry /opt/cppse/build/fmt/lib/libfmt.a)

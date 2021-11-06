@@ -34,8 +34,9 @@ generator::generator(std::shared_ptr<metrics>& metrics) : metrics_(metrics) {
   });
 }
 
-void generator::init(const std::string& filename, std::optional<double> rand_seed, bool preview) {
+void generator::init(const std::string& filename, std::optional<double> rand_seed, bool preview, bool caching) {
   filename_ = filename;
+  cache.enabled = caching;
   init_context();
   init_user_script();
   init_job();
@@ -47,9 +48,10 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
 }
 
 void generator::init_context() {
-  if (context == nullptr) {
-    context = std::make_shared<v8_wrapper>(filename());
+  if (context != nullptr) {
+    return;
   }
+  context = std::make_shared<v8_wrapper>(filename());
   context->reset();
   context->add_fun("output", &output_fun);
   context->add_fun("rand", &rand_fun_v2);
@@ -100,14 +102,27 @@ void generator::init_context() {
 }
 
 void generator::init_user_script() {
+  //  {
+  //    std::ifstream stream("webroot/lodash.js");
+  //    std::istreambuf_iterator<char> begin(stream), end;
+  //    const auto source = std::string(begin, end);
+  //    context->run(source);
+  //    // context->run("var a = {};");
+  //    // context->run("var b = _.cloneDeep(a);");
+  //  }
   std::ifstream stream(filename().c_str());
   if (!stream && filename() != "-") {
     throw std::runtime_error("could not locate file " + filename());
   }
   std::istreambuf_iterator<char> begin(filename() == "-" ? std::cin : stream), end;
+  // remove "_ =" part from script (which is a workaround to silence 'not in use' linting)
+  if (*begin == '_') {
+    while (*begin != '=') begin++;
+    begin++;
+  }
   const auto source = std::string("script = ") + std::string(begin, end);
-  context->run("script = {\"video\": {}}");
-  context->run(source);
+  context->run("cache = typeof cache == 'undefined' ? {} : cache;");
+  context->run("script = {\"video\": {}};");
   context->run(source);
 }
 
@@ -313,6 +328,9 @@ void generator::set_scene(size_t scene) {
 }
 
 void generator::fast_forward(int frame_of_interest) {
+  if (_forward_latest_cached_frame(frame_of_interest)) {
+    return;
+  }
   if (fast_ff && frame_of_interest > 2) {
     int backup_min_intermediates = min_intermediates;
     int backup_max_intermediates = max_intermediates;
@@ -333,6 +351,33 @@ void generator::fast_forward(int frame_of_interest) {
       metrics_->skip_job(job->job_number);
     }
   }
+}
+
+bool generator::_forward_latest_cached_frame(int frame_of_interest) {
+  if (!cache.enabled) return false;
+  cache.use = false;
+  int offset = 0;
+  // minus one, because frame of interest doesn't start counting at zero
+  if (cache.job_cache.find(frame_of_interest - 1) != cache.job_cache.end()) {
+    job->job_number = frame_of_interest - 1;
+    job->frame_number = frame_of_interest - 1;
+    cache.use = true;
+    return true;
+  }
+  for (int i = 1; frame_of_interest - 1 - i > 0; i++) {
+    if (cache.job_cache.find(frame_of_interest - 1 - i) != cache.job_cache.end()) {
+      job->job_number = frame_of_interest - 1 - i;
+      job->frame_number = frame_of_interest - 1 - i;
+      for (int j = 0; j < i; j++) {
+        cache.use = j == 0;
+        generate_frame();
+        metrics_->skip_job(job->job_number);
+      }
+      cache.use = false;
+      return true;
+    }
+  }
+  return false;
 }
 
 bool generator::generate_frame() {
@@ -367,12 +412,27 @@ bool generator::_generate_frame() {
 
     // job_number is incremented later, hence we do a +1 on the next line.
     metrics_->register_job(job->job_number + 1, job->frame_number, job->chunk, job->num_chunks);
-    // logger(INFO) << "Registering job: " << (job->job_number + 1) << std::endl;
+
+    if (cache.enabled) {
+      if (cache.use) {
+        _load_cache();
+      } else {
+        _save_cache();
+      }
+    }
 
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
       v8_interact i(isolate);
+
+      v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
+      auto cache_ = global->Get(isolate->GetCurrentContext(), v8_str(context, "cache")).ToLocalChecked();
+      auto cache = cache_.As<v8::Object>();
+
       auto obj = val.As<v8::Object>();
       auto scenes = i.v8_array(obj, "scenes");
+      if (!cache->IsObject()) {
+        throw std::runtime_error("Could not access cache object.");
+      }
       auto video = i.v8_obj(obj, "video");
       auto objects = i.v8_array(obj, "objects");
       auto current_scene = i.get_index(scenes, scenesettings.current_scene_next);
@@ -382,6 +442,17 @@ bool generator::_generate_frame() {
       auto intermediates = i.v8_array(sceneobj, "instances_intermediate");
       auto next_instances = i.v8_array(sceneobj, "instances_next");
       if (!next_instances->IsArray()) return;
+
+      if (this->cache.enabled) {
+        logger(INFO) << "cache enabled." << std::endl;
+        if (this->cache.use) {
+          logger(INFO) << "cache enabled + use." << std::endl;
+          _load_js_cache(i, cache, instances, intermediates, next_instances);
+        } else {
+          logger(INFO) << "cache enabled + no use." << std::endl;
+          _save_js_cache(i, cache, &instances, &intermediates, &next_instances);
+        }
+      }
 
       parents.clear();
       prev_parents.clear();
@@ -444,7 +515,8 @@ bool generator::_generate_frame() {
           if (stepper.max_step == max_intermediates) {  // config doesn't allow finer granularity any way, break.
             break;
           } else if (stepper.max_step > max_intermediates) {
-            throw std::logic_error("TODO: shouldn't happen??");
+            throw std::logic_error(
+                fmt::format("stepper.max_step > max_intermediates ({} > {})", stepper.max_step, max_intermediates));
           }
         }
       }
@@ -457,15 +529,73 @@ bool generator::_generate_frame() {
       scalesettings.commit();
       scenesettings.commit();
     });
+    if (cache.enabled) {
+      cache.job_cache[job->frame_number] = true;
+    }
     job->job_number++;
     job->frame_number++;
     metrics_->complete_job(job->job_number);
-    // logger(INFO) << "Completing job: " << (job->job_number) << std::endl;
   } catch (std::exception& ex) {
     std::cout << ex.what() << std::endl;
   }
   job->last_frame = job->frame_number == max_frames;
   return job->frame_number != max_frames;
+}
+
+void generator::_load_cache() {
+  scenesettings = cache.scenesettings[job->job_number];
+  scalesettings = cache.scalesettings[job->job_number];
+  next_instance_mapping = cache.next_instance_mapping[job->job_number];
+  util::generator::counter = cache.counter[job->job_number];
+}
+
+void generator::_save_cache() {
+  cache.scenesettings[job->job_number] = scenesettings;
+  cache.scalesettings[job->job_number] = scalesettings;
+  cache.next_instance_mapping[job->job_number] = next_instance_mapping;
+  cache.counter[job->job_number] = util::generator::counter;
+}
+
+void generator::_load_js_cache(v8_interact& i,
+                               v8::Local<v8::Object> cache,
+                               v8::Local<v8::Array>& instances,
+                               v8::Local<v8::Array>& intermediates,
+                               v8::Local<v8::Array>& next_instances) {
+  std::string frame_index = std::string("frame") + std::to_string(job->job_number);
+  auto frame_cache = i.v8_obj(cache, frame_index);
+  if (frame_cache->IsObject()) {
+    auto cache_instances = i.v8_array(frame_cache, "instances");
+    auto cache_intermediates = i.v8_array(frame_cache, "instances_intermediate");
+    auto cache_next_instances = i.v8_array(frame_cache, "instances_next");
+    i.empty_and_resize(instances, cache_instances->Length());
+    i.empty_and_resize(intermediates, cache_intermediates->Length());
+    i.empty_and_resize(next_instances, cache_next_instances->Length());
+    util::generator::copy_instances(i, instances, cache_instances, false);
+    util::generator::copy_instances(i, intermediates, cache_intermediates, false);
+    util::generator::copy_instances(i, next_instances, cache_next_instances, false);
+  }
+}
+
+void generator::_save_js_cache(v8_interact& i,
+                               v8::Local<v8::Object> cache,
+                               v8::Local<v8::Array>* instances,
+                               v8::Local<v8::Array>* intermediates,
+                               v8::Local<v8::Array>* next_instances) {
+  std::string frame_index = std::string("frame") + std::to_string(job->job_number);
+  i.set_field(cache, frame_index, v8::Object::New(i.get_isolate()));
+  auto frame_cache = i.v8_obj(cache, frame_index);
+  i.set_field(frame_cache, "instances", v8::Array::New(i.get_isolate()));
+  i.set_field(frame_cache, "instances_intermediate", v8::Array::New(i.get_isolate()));
+  i.set_field(frame_cache, "instances_next", v8::Array::New(i.get_isolate()));
+  auto cache_instances = i.v8_array(frame_cache, "instances");
+  auto cache_intermediates = i.v8_array(frame_cache, "instances_intermediate");
+  auto cache_next_instances = i.v8_array(frame_cache, "instances_next");
+  i.empty_and_resize(cache_instances, (*instances)->Length());
+  i.empty_and_resize(cache_intermediates, (*intermediates)->Length());
+  i.empty_and_resize(cache_next_instances, (*next_instances)->Length());
+  util::generator::copy_instances(i, cache_instances, *instances, false);
+  util::generator::copy_instances(i, cache_intermediates, *intermediates, false);
+  util::generator::copy_instances(i, cache_next_instances, *next_instances, false);
 }
 
 void generator::revert_all_changes(v8_interact& i,
@@ -701,7 +831,7 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
     auto on = i.get(instance, "on").As<v8::Object>();
     i.call_fun(on, instance, "collide", instance2);
   });
-  util::generator::monitor_subobj_changes(i, instance, [&]() {
+  util::generator::monitor_subobj_changes(i, instance2, [&]() {
     auto on = i.get(instance2, "on").As<v8::Object>();
     i.call_fun(on, instance2, "collide", instance);
   });
@@ -1001,20 +1131,23 @@ void generator::convert_object_to_render_job(
   new_shape.time = time;
   new_shape.x = transitive_x;
   new_shape.y = transitive_y;
+  new_shape.level = level;
 
   new_shape.gradients_.clear();
   new_shape.textures.clear();
-  util::generator::copy_gradient_from_object_to_shape(i, instance, new_shape, gradients);
+  std::string gradient_id_str;
+  util::generator::copy_gradient_from_object_to_shape(i, instance, new_shape, gradients, &gradient_id_str);
   util::generator::copy_texture_from_object_to_shape(i, instance, new_shape, textures);
   while (level > 0) {
     level--;
-    util::generator::copy_gradient_from_object_to_shape(i, parents[level], new_shape, gradients);
+    util::generator::copy_gradient_from_object_to_shape(i, parents[level], new_shape, gradients, &gradient_id_str);
     util::generator::copy_texture_from_object_to_shape(i, parents[level], new_shape, textures);
     auto s = i.double_number(parents[level], "scale");
     if (!std::isnan(s)) {
       scale *= s;
     }
   }
+  new_shape.gradient_id_str = gradient_id_str;
   if (new_shape.gradients_.empty()) {
     new_shape.gradients_.emplace_back(1.0, data::gradient{});
     new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
@@ -1031,7 +1164,6 @@ void generator::convert_object_to_render_job(
   new_shape.seed = seed;
   new_shape.id = id;
   new_shape.label = label;
-  new_shape.level = level;
   new_shape.motion_blur = motion_blur;
 
   if (type == "circle") {

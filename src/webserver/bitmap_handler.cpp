@@ -19,10 +19,12 @@ void BitmapHandler::onConnect(seasocks::WebSocket *con) {
 
 void BitmapHandler::onDisconnect(seasocks::WebSocket *con) {
   _cons.erase(con);
+  unlink(con);
 }
 
 void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
   std::string input(data);
+  if (link(input, con)) return;
   logger(DEBUG) << "BitmapHandler::onData - " << input << std::endl;
   auto json = nlohmann::json::parse(input);
   sc->add_command(con,

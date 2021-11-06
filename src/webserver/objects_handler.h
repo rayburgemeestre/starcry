@@ -5,7 +5,7 @@
  */
 #pragma once
 
-struct ObjectsHandler : seasocks::WebSocket::Handler {
+struct ObjectsHandler : seasocks::WebSocket::Handler, public starcry_handler {
   starcry *sc;
   std::set<seasocks::WebSocket *> _cons;
 

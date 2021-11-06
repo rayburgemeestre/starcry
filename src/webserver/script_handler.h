@@ -5,11 +5,14 @@
  */
 #pragma once
 
-struct ScriptHandler : seasocks::WebSocket::Handler {
+struct ScriptHandler : seasocks::WebSocket::Handler, public starcry_handler {
   starcry *sc;
   std::set<seasocks::WebSocket *> _cons;
+  std::string script_;
 
   ScriptHandler(starcry *sc);
+
+  void set_script(const std::string &script);
 
   void onConnect(seasocks::WebSocket *con) override;
   void onDisconnect(seasocks::WebSocket *con) override;

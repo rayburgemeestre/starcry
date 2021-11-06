@@ -142,6 +142,8 @@ export default {
         view_y: 0,
         canvas_w: 1920,
         canvas_h: 1080,
+        offset_x: 0,
+        offset_y: 0,
       },
       video: {},
       preview: {},
@@ -197,6 +199,15 @@ export default {
       if (!this.$data._play) {
         this._schedule_frame();
       }
+    },
+    reset_labels_canvas() {
+      var canvas = document.getElementById("canvas2");
+      var ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    },
+    set_offset: function (x, y) {
+      this.$data.viewpoint_settings.offset_x = x;
+      this.$data.viewpoint_settings.offset_y = y;
     },
     _schedule_frames: function () {
       if (!this.$data._play) return;
@@ -327,7 +338,7 @@ export default {
         _ => {
           this.log('DEBUG', 'bitmap', 'websocket disconnected', '');
         }
-  );
+    );
     this.script_endpoint = new StarcryAPI(
         'script',
         StarcryAPI.text_type,
@@ -335,11 +346,17 @@ export default {
           this.$data.websock_status2 = msg;
         },
         buffer => {
-          this.log('DEBUG', 'script', 'received buffer', 'buffer size: ' + buffer.length);
-          let p = new JsonWithObjectsParser(buffer.substr(buffer.indexOf('{')));
-          this.$data.input_source = buffer;
-          this.$data.video = p.parsed()['video'];
-          this.$data.preview = p.parsed()['preview'];
+          if (buffer[0] === '1') {
+            this.$data.filename = buffer.slice(1);
+          }
+          else if (buffer[0] === '2') {
+            buffer = buffer.slice(1);
+            this.log('DEBUG', 'script', 'received buffer', 'buffer size: ' + buffer.length);
+            let p = new JsonWithObjectsParser(buffer.substr(buffer.indexOf('{')));
+            this.$data.input_source = buffer;
+            this.$data.video = p.parsed()['video'];
+            this.$data.preview = p.parsed()['preview'];
+          }
         },
         _ => {
           this.log('DEBUG', 'script', 'websocket connected', '');
@@ -387,15 +404,14 @@ export default {
           ctx.font = "12px Monaco";
           ctx.fillStyle = "yellow";
           ctx.strokeStyle = 'yellow';
-          var canvas_w = 1920.;
-          var canvas_h = 1080.;
-          var scale = Module.get_scale();
+          var canvas_w = Module.get_canvas_w();
+          var canvas_h = Module.get_canvas_h();
+          // var scale = Module.get_scale();
+          var scale = this.viewpoint_settings.scale;
           for (let obj of buffer) {
-            var x = obj.x * scale + canvas_w/2.;
-            var y = obj.y * scale + canvas_h/2.
-            var offset = 0;
-            offset += obj.level;
-            ctx.fillText(obj.label, x / canvas_w * canvas.width, y / canvas_h * canvas.height + offset++ * 20);
+            var x = (obj.x - this.viewpoint_settings.offset_x) * scale + canvas_w/2.;
+            var y = (obj.y - this.viewpoint_settings.offset_y) * scale + canvas_h/2.;
+            ctx.fillText(obj.label, x, y);
           }
         },
         _ => {

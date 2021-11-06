@@ -26,6 +26,7 @@ std::shared_ptr<render_msg> command_get_raw_image::to_render_msg(std::shared_ptr
                                       job.offset_x,
                                       job.offset_y,
                                       job.last_frame,
+                                      false,
                                       job.width,
                                       job.height,
                                       bmp.pixels());

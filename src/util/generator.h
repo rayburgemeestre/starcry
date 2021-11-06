@@ -15,7 +15,8 @@ namespace generator {
 void copy_gradient_from_object_to_shape(v8_interact& i,
                                         v8::Local<v8::Object>& source_object,
                                         data::shape& destination_shape,
-                                        std::unordered_map<std::string, data::gradient>& known_gradients_map);
+                                        std::unordered_map<std::string, data::gradient>& known_gradients_map,
+                                        std::string* gradient_id_str = nullptr);
 
 void copy_texture_from_object_to_shape(v8_interact& i,
                                        v8::Local<v8::Object>& source_object,

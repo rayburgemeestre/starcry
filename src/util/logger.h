@@ -43,6 +43,7 @@ public:
       const auto line = l._holder->_ss.str();
       _metrics->log_callback((int)l._holder->_level, line);
     }
+    l._holder->_os << std::endl;
     return logger(l._holder->_os, l._holder->_ss);
   }
 

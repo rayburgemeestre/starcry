@@ -12,6 +12,12 @@ export default class StarcryAPI {
         this.on_disconnected = on_disconnected;
         this.ws = false;
         this.retry = false;
+
+        if (!localStorage.getItem('client-data')) {
+            throw 'client-data could not be read from local storage.';
+        }
+
+        this.client_data = JSON.parse(localStorage.getItem('client-data'));
         this.connect();
     }
 
@@ -19,13 +25,14 @@ export default class StarcryAPI {
         this.on_status_change('connecting');
         let protocol = document.location.protocol.replace('http', 'ws');
         if (document.location.href.indexOf('localhost')) {
-            this.ws = new WebSocket(protocol + '//' + document.location.host.replace(':8080', ':18080') + '/' + this.endpoint, ['tag_test']);
+            this.ws = new WebSocket(protocol + '//' + document.location.host.replace(':8080', ':18080') + '/' + this.endpoint, [this.client_data['ID']]);
         } else {
-            this.ws = new WebSocket(protocol + '//' + document.location.host + '/' + this.endpoint, ['tag_test']);
+            this.ws = new WebSocket(protocol + '//' + document.location.host + '/' + this.endpoint, [this.client_data['ID']]);
         }
         this.ws.onopen = function () {
             clearTimeout(this.retry);
             this.on_status_change('connected');
+            this.send("LINK " + this.client_data['ID']);
             this.on_connected();
         }.bind(this);
         this.ws.onclose = function () {

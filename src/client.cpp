@@ -283,6 +283,14 @@ int get_mouse_x() {
 int get_mouse_y() {
   return y;
 }
+
+int get_canvas_w() {
+  return job.canvas_w;
+}
+int get_canvas_h() {
+  return job.canvas_h;
+}
+
 double get_scale() {
   return job.scale;
 }
@@ -305,6 +313,8 @@ EMSCRIPTEN_BINDINGS(my_module) {
   emscripten::function("set_texture", &set_texture);
   emscripten::function("get_mouse_x", &get_mouse_x);
   emscripten::function("get_mouse_y", &get_mouse_y);
+  emscripten::function("get_canvas_w", &get_canvas_w);
+  emscripten::function("get_canvas_h", &get_canvas_h);
   emscripten::function("get_scale", &get_scale);
   emscripten::function("toggle_pointer", &toggle_pointer);
 }

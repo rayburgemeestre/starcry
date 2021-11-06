@@ -42,6 +42,10 @@
             label: 'Type',
           },
           {
+            field: 'gradient',
+            label: 'Gradient',
+          },
+          {
             field: 'x',
             label: 'X',
           },

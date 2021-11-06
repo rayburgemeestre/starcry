@@ -15,12 +15,20 @@ using json = nlohmann::json;
 
 ScriptHandler::ScriptHandler(starcry *sc) : sc(sc) {}
 
+void ScriptHandler::set_script(const std::string &script) {
+  script_ = script;
+}
+
 void ScriptHandler::onConnect(seasocks::WebSocket *con) {
   _cons.insert(con);
+  std::ostringstream ss;
+  ss << "1" << script_;
+  con->send(ss.str());
 }
 
 void ScriptHandler::onDisconnect(seasocks::WebSocket *con) {
   _cons.erase(con);
+  unlink(con);
 }
 
 // Source https://stackoverflow.com/a/61067330
@@ -34,6 +42,7 @@ std::time_t to_time_t(TP tp) {
 
 void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
   std::string input(data);
+  if (link(input, con)) return;
   const auto find = input.find(" ");
   if (find != std::string::npos) {
     const auto cmd = input.substr(0, find);
@@ -42,7 +51,7 @@ void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
       logger(DEBUG) << "ScriptHandler::onData - " << input << std::endl;
       std::ifstream ifs(file);
       std::ostringstream ss;
-      ss << ifs.rdbuf();
+      ss << "2" << ifs.rdbuf();
       con->send(ss.str());
     }
   } else if (input == "list") {

@@ -109,6 +109,7 @@ void metrics::render_job(int thread_number, int job_number, int chunk) {
     if (chunk > 0) {
       chunk--;
     }
+    if (chunk >= jobs_[job_number].chunks.size()) return;
     jobs_[job_number].chunks[chunk].render_begin = std::chrono::high_resolution_clock::now();
     jobs_[job_number].chunks[chunk].state = metrics::job_state::rendering;
   }
@@ -138,6 +139,7 @@ void metrics::resize_job_objects(int number, int job_number, int chunk, int num_
   if (jobs_.find(job_number) != jobs_.end()) {
     if (chunk > 0) chunk--;
     for (int i = 0; i < num_objects; i++) {
+      if (jobs_[job_number].chunks.size() <= chunk) continue;
       jobs_[job_number].chunks[chunk].objects.push_back(metrics::object{i,
                                                                         std::chrono::high_resolution_clock::now(),
                                                                         std::chrono::high_resolution_clock::now(),
@@ -153,6 +155,9 @@ void metrics::set_render_job_object_state(
   // TODO: Possibly do not need thread number ????
   if (jobs_.find(job_number) != jobs_.end()) {
     if (chunk > 0) chunk--;
+    if (jobs_.find(job_number) == jobs_.end()) return;
+    if (jobs_[job_number].chunks.size() <= chunk) return;
+    if (jobs_[job_number].chunks[chunk].objects.size() <= index) return;
     jobs_[job_number].chunks[chunk].objects[index].state = state;
     if (state == metrics::job_state::rendering) {
       jobs_[job_number].chunks[chunk].objects[index].render_begin = std::chrono::high_resolution_clock::now();
@@ -172,6 +177,7 @@ void metrics::complete_render_job(int thread_number, int job_number, int chunk) 
     if (chunk > 0) {
       chunk--;
     }
+    if (chunk >= jobs_[job_number].chunks.size()) return;
     jobs_[job_number].chunks[chunk].render_end = std::chrono::high_resolution_clock::now();
     jobs_[job_number].chunks[chunk].state = metrics::job_state::rendered;
     for (const auto &chunk : jobs_[job_number].chunks) {
@@ -306,6 +312,7 @@ void metrics::display(std::function<void(const std::string &)> f1,
 }
 
 void metrics::clear() {
+  std::unique_lock<std::mutex> lock(mut);
   jobs_.clear();
 }
 
@@ -320,6 +327,7 @@ void metrics::set_total_frames(size_t frames) {
 }
 
 void metrics::log_callback(int level, const std::string &line) {
+  std::unique_lock<std::mutex> lock(mut);
   _output.emplace_back(std::make_pair(level, line));
 }
 

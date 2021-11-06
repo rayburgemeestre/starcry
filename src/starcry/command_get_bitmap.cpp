@@ -9,6 +9,7 @@
 #include "generator.h"
 #include "starcry.h"
 #include "starcry/command_get_bitmap.h"
+#include "starcry/command_get_objects.h"
 
 #include "image.hpp"
 #include "util/logger.h"
@@ -35,10 +36,20 @@ std::shared_ptr<render_msg> command_get_bitmap::to_render_msg(std::shared_ptr<jo
                                    job.offset_x,
                                    job.offset_y,
                                    job.last_frame,
+                                   this->sc.get_viewpoint().labels,
                                    this->sc.get_viewpoint().canvas_w ? this->sc.get_viewpoint().canvas_w : job.width,
                                    this->sc.get_viewpoint().canvas_h ? this->sc.get_viewpoint().canvas_h : job.height,
                                    transfer_pixels);
-  if (this->sc.get_viewpoint().raw || this->sc.get_viewpoint().save) {
+
+  if (this->sc.get_viewpoint().labels) {
+    // TODO: refactor the logic out of the commands
+    auto json_msg = command_get_objects(sc).to_render_msg(job_msg, bmp);
+    msg->buffer.assign(json_msg->buffer);
+  }
+
+  sc.features().caching = this->sc.get_viewpoint().caching;
+
+  if (job_msg->raw || this->sc.get_viewpoint().raw || this->sc.get_viewpoint().save) {
     msg->set_raw(bmp.pixels());
   }
   return msg;
@@ -52,5 +63,11 @@ void command_get_bitmap::handle_frame(std::shared_ptr<render_msg> &job_msg) {
     }
     bmp_handler->callback(job_msg->client, buffer);
   };
+
   if (sc.webserv) sc.webserv->execute_bitmap(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+
+  if (job_msg->labels) {
+    job_msg->ID = sc.webserv->get_client_id(job_msg->client);
+    command_get_objects(sc).handle_frame(job_msg);
+  }
 }

@@ -85,7 +85,8 @@ starcry::starcry(size_t num_local_engines,
       server_message_handler_(std::make_shared<server_message_handler>(*this)),
       client_message_handler_(std::make_shared<client_message_handler>(*this)),
       log_level_(level),
-      metrics_(std::make_shared<metrics>(notty)) {
+      metrics_(std::make_shared<metrics>(notty)),
+      script_("input/test.js") {
   metrics_->init();
   set_metrics(&*metrics_);
   logger(DEBUG) << "Metrics wired to ncurses UI" << std::endl;
@@ -94,6 +95,17 @@ starcry::starcry(size_t num_local_engines,
 starcry::~starcry() {
   metrics_->notify();
   le.cancel();
+}
+
+feature_settings &starcry::features() {
+  return features_;
+}
+
+void starcry::set_script(const std::string &script) {
+  script_ = script;
+  if (webserv) {
+    webserv->set_script(script_);
+  }
 }
 
 void starcry::add_command(seasocks::WebSocket *client,
@@ -194,7 +206,7 @@ void starcry::copy_to_png(const std::vector<data::color> &source,
 
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   if (!gen) gen = std::make_shared<generator>(metrics_);
-  gen->init(cmd_def->script, seed, cmd_def->preview);
+  gen->init(cmd_def->script, seed, cmd_def->preview, features_.caching);
 
   if (cmd_def->type == instruction_type::get_video) {
     // Update current_frame if we fast-forward to a different offset frame.
@@ -226,6 +238,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
                                         job.offset_x,
                                         job.offset_y,
                                         job.last_frame,
+                                        false,
                                         0,
                                         0,
                                         transfer_pixels);
@@ -305,8 +318,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
 
   buffered_frames[job_msg->job_number].push_back(job_msg);
 
-  if (job_msg->type == instruction_type::get_shapes) {
-    // HACK ??
+  if (job_msg->type == instruction_type::get_shapes || job_msg->type == instruction_type::get_objects) {
     current_frame = job_msg->frame_number;
   }
 
@@ -346,7 +358,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       if (job_msg->job_number == std::numeric_limits<uint32_t>::max()) {
         save_images(pixels_raw, width, height, frame_number, true, true);
       } else {
-        save_images(pixels_raw, width, height, frame_number, false, true);
+        save_images(pixels_raw, width, height, frame_number, true, true);
         current_frame++;
       }
     } else {
@@ -392,6 +404,7 @@ void starcry::run_server() {
   on_pipeline_initialized(*this);
   if (start_webserver) {
     webserv = std::make_shared<webserver>(this);
+    webserv->set_script(script_);
     webserv->run();  // blocks
   }
   system->explicit_join();

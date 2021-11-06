@@ -73,6 +73,10 @@ webserver::webserver(starcry *sc)
   server->addWebSocketHandler("/viewpoint", viewpoint_handler);
 };
 
+void webserver::set_script(const std::string &script) {
+  script_handler->set_script(script);
+}
+
 void webserver::run() {
   server->serve("webroot", 18080);
 }

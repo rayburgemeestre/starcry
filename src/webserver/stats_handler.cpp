@@ -14,6 +14,10 @@ void StatsHandler::onConnect(seasocks::WebSocket *con) {
 
 void StatsHandler::onDisconnect(seasocks::WebSocket *con) {
   _cons.erase(con);
+  unlink(con);
 }
 
-void StatsHandler::onData(seasocks::WebSocket *con, const char *data) {}
+void StatsHandler::onData(seasocks::WebSocket *con, const char *data) {
+  std::string input(data);
+  if (link(input, con)) return;
+}

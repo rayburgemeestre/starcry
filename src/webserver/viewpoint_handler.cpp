@@ -22,10 +22,12 @@ void ViewPointHandler::onConnect(seasocks::WebSocket *con) {
 
 void ViewPointHandler::onDisconnect(seasocks::WebSocket *con) {
   _cons.erase(con);
+  unlink(con);
 }
 
 void ViewPointHandler::onData(seasocks::WebSocket *con, const char *data) {
   std::string input(data);
+  if (link(input, con)) return;
   auto json = nlohmann::json::parse(input);
   logger(DEBUG) << "ViewPointHandler::onData - " << input << std::endl;
   if (json["operation"] == "read") {
@@ -37,6 +39,8 @@ void ViewPointHandler::onData(seasocks::WebSocket *con, const char *data) {
     response["raw"] = vp.raw;
     response["preview"] = vp.preview;
     response["save"] = vp.save;
+    response["labels"] = vp.labels;
+    response["caching"] = vp.caching;
     con->send(response.dump());
   } else if (json["operation"] == "set") {
     data::viewpoint vp{json["scale"],
@@ -45,6 +49,8 @@ void ViewPointHandler::onData(seasocks::WebSocket *con, const char *data) {
                        json["raw"],
                        json["preview"],
                        json["save"],
+                       json["labels"],
+                       json["caching"],
                        json["canvas_w"],
                        json["canvas_h"]};
     sc->set_viewpoint(vp);

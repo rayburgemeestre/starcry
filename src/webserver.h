@@ -22,6 +22,7 @@ class starcry;
 #include "webserver/objects_handler.h"
 #include "webserver/script_handler.h"
 #include "webserver/shapes_handler.h"
+#include "webserver/starcry_handler.hpp"
 #include "webserver/stats_handler.h"
 #include "webserver/viewpoint_handler.h"
 
@@ -48,6 +49,8 @@ public:
 
   void run();
 
+  void set_script(const std::string &script);
+
   template <typename T>
   void execute_image(T fun, std::shared_ptr<render_msg> job_msg) {
     if (server) {
@@ -71,6 +74,17 @@ public:
     if (server) {
       server->execute(std::bind(fun, objects_handler, job_msg));
     }
+  }
+
+  std::string get_client_id(seasocks::WebSocket *con) {
+    if (server) {
+      for (const auto &link : bitmap_handler->_links) {
+        if (link.second == con) {
+          return link.first;
+        }
+      }
+    }
+    return "";
   }
 
   void send_stats(const stats &s);

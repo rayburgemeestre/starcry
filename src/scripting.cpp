@@ -5,12 +5,13 @@
  */
 
 #include "scripting.h"
+#include "util/logger.h"
 
 #include <iostream>
 #include <random>
 
 void output_fun(const std::string& s) {
-  std::cout << s << std::endl;
+  logger(INFO) << "script: " << s << std::endl;
 }
 
 std::mt19937 mt_v2;

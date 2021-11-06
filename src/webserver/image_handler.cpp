@@ -15,10 +15,12 @@ void ImageHandler::onConnect(seasocks::WebSocket *con) {
 
 void ImageHandler::onDisconnect(seasocks::WebSocket *con) {
   _cons.erase(con);
+  unlink(con);
 }
 
 void ImageHandler::onData(seasocks::WebSocket *con, const char *data) {
   std::string input(data);
+  if (link(input, con)) return;
   auto find = input.find(" ");
   if (find != std::string::npos) {
     logger(DEBUG) << "ImageHandler::onData - " << input << std::endl;

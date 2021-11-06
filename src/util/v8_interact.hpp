@@ -234,4 +234,12 @@ public:
       }
     }
   }
+  void empty_and_resize(v8::Local<v8::Array>& obj, size_t len) {
+    while (obj->Length() > 0) {
+      call_fun(obj, "pop");
+    }
+    for (size_t j = 0; j < len; j++) {
+      call_fun(obj, "push", v8::Object::New(get_isolate()));
+    }
+  }
 };

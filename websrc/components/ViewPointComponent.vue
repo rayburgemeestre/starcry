@@ -8,7 +8,9 @@
     <label class="checkbox"><input type="checkbox" v-model="auto_render"> <span>auto render</span></label> <br/>
     <label class="checkbox"><input type="checkbox" v-model="raw"> <span>raw</span></label> <br/>
     <label class="checkbox"><input type="checkbox" v-model="preview"> <span>preview</span></label> <br/>
+    <label class="checkbox"><input type="checkbox" v-model="labels"> <span>labels</span></label> <br/>
     <label class="checkbox"><input type="checkbox" v-model="save"> <span>save</span></label> <br/>
+    <label class="checkbox"><input type="checkbox" v-model="caching"> <span>caching</span></label> <br/>
     <br/>
 
     <strong>Viewpoint</strong> <br/>
@@ -64,9 +66,11 @@ export default {
       view_scale: 1.,
       offsetX: 0.,
       offsetY: 0.,
-      auto_render: true,
+      auto_render: false,
       raw: false,
       preview: true,
+      labels: false,
+      caching: false,
       save: false,
       canvas_w: 0.,
       canvas_h: 0.,
@@ -85,6 +89,7 @@ export default {
         timer = false;
       }
       timer = setTimeout(this.scheduled_update.bind(this), 50);
+      if (!this.$data.labels) this.$parent.reset_labels_canvas();
     },
     'scheduled_update': function() {
       this.viewpoint_endpoint.send(JSON.stringify({
@@ -94,10 +99,16 @@ export default {
         'offset_y': this.$data.offsetY,
         'raw': this.$data.raw,
         'preview': this.$data.preview,
+        'labels': this.$data.labels,
+        'caching': this.$data.caching,
         'save': this.$data.save,
         'canvas_w': this.$data.canvas_w,
         'canvas_h': this.$data.canvas_h,
       }));
+
+      // communicate offset_x and offset_y back to parent.
+      this.$parent.set_offset(this.$data.offsetX, this.$data.offsetY);
+
       if (this.$data.scale === this.$data.previous_scale) return;
       // Delay might not be needed, just want to be sure the viewpoint send above is received before the render request.
       if (this.$data.auto_render) { setTimeout(function(){ this.$parent.set_frame(); }.bind(this), 10); }
@@ -109,6 +120,8 @@ export default {
       this.$data.offsetY = 0;
       this.$data.raw = false;
       this.$data.preview = false;
+      this.$data.labels = false;
+      this.$data.caching = true;
       this.$data.save = false;
       this.update();
     }
@@ -134,6 +147,12 @@ export default {
     save(new_val) {
       this.update();
     },
+    labels(new_val) {
+      this.update();
+    },
+    caching(new_val) {
+      this.update();
+    }
   },
   mounted: function() {
     this.viewpoint_endpoint = new StarcryAPI(
@@ -150,6 +169,8 @@ export default {
           this.$data.raw = buffer["raw"];
           this.$data.preview = buffer["preview"];
           this.$data.save = buffer["save"];
+          this.$data.labels = buffer["labels"];
+          this.$data.caching = buffer["caching"];
         },
         _ => {
           this.viewpoint_endpoint.send(JSON.stringify({

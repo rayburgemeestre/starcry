@@ -22,4 +22,17 @@ function uuidv4() {
         (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
     );
 }
-console.log(uuidv4());
+
+function load_client_data() {
+    return localStorage.getItem('client-data') ? JSON.parse(localStorage.getItem('client-data')) : {
+        'ID': uuidv4()
+    };
+}
+
+let client_data = load_client_data();
+
+function save_client_data(client_data) {
+    localStorage.setItem('client-data', JSON.stringify(client_data));
+}
+
+save_client_data(client_data);

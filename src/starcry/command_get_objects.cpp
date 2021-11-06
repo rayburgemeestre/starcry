@@ -27,6 +27,7 @@ std::shared_ptr<render_msg> command_get_objects::to_render_msg(std::shared_ptr<j
             {"id", shape.id},
             {"label", shape.label.empty() ? shape.id : shape.label},
             {"level", shape.level},
+            {"gradient", shape.gradient_id_str},
             {"type", "circle"},
             {"x", shape.x},
             {"y", shape.y},
@@ -39,6 +40,7 @@ std::shared_ptr<render_msg> command_get_objects::to_render_msg(std::shared_ptr<j
             {"id", shape.id},
             {"label", shape.label.empty() ? shape.id : shape.label},
             {"level", shape.level},
+            {"gradient", shape.gradient_id_str},
             {"type", "line"},
             {"x", shape.x},
             {"y", shape.y},
@@ -59,6 +61,7 @@ std::shared_ptr<render_msg> command_get_objects::to_render_msg(std::shared_ptr<j
                                       job.offset_x,
                                       job.offset_y,
                                       job.last_frame,
+                                      false,
                                       job.width,
                                       job.height,
                                       shapes_json.dump());
@@ -66,7 +69,10 @@ std::shared_ptr<render_msg> command_get_objects::to_render_msg(std::shared_ptr<j
 
 void command_get_objects::handle_frame(std::shared_ptr<render_msg> &job_msg) {
   auto fun = [&](std::shared_ptr<ObjectsHandler> objects_handler, std::shared_ptr<render_msg> job_msg) {
-    objects_handler->callback(job_msg->client, job_msg->buffer);
+    if (objects_handler->_links.find(job_msg->ID) != objects_handler->_links.end()) {
+      auto con = objects_handler->_links[job_msg->ID];  // find con that matches ID this msg is from
+      objects_handler->callback(con, job_msg->buffer);
+    }
   };
   if (sc.webserv) sc.webserv->execute_objects(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
 }

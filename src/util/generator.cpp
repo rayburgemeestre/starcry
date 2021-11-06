@@ -5,18 +5,25 @@
  */
 
 #include "util/generator.h"
+#include "util/logger.h"
+
+#include "signal.h"
 
 namespace util {
 namespace generator {
 
-static int64_t counter = 0;
+int64_t counter = 0;
 
 void copy_gradient_from_object_to_shape(v8_interact& i,
                                         v8::Local<v8::Object>& source_object,
                                         data::shape& destination_shape,
-                                        std::unordered_map<std::string, data::gradient>& known_gradients_map) {
+                                        std::unordered_map<std::string, data::gradient>& known_gradients_map,
+                                        std::string* gradient_id_str) {
   std::string gradient_id = i.str(source_object, "gradient");
   if (!gradient_id.empty()) {
+    if (gradient_id_str) {
+      *gradient_id_str += gradient_id;
+    }
     if (destination_shape.gradients_.empty()) {
       if (known_gradients_map.find(gradient_id) != known_gradients_map.end()) {
         destination_shape.gradients_.emplace_back(1.0, known_gradients_map[gradient_id]);
@@ -32,6 +39,10 @@ void copy_gradient_from_object_to_shape(v8_interact& i,
       }
       auto opacity = i.double_number(gradient_data, size_t(0));
       auto gradient_id = i.str(gradient_data, size_t(1));
+      if (gradient_id_str) {
+        if (!gradient_id_str->empty()) *gradient_id_str += ",";
+        *gradient_id_str += gradient_id;
+      }
       destination_shape.gradients_.emplace_back(opacity, known_gradients_map[gradient_id]);
     }
   }
@@ -226,6 +237,20 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field(dst, "gradient", src);
     i.copy_field(dst, "texture", src);
     i.copy_field(dst, "seed", src);
+
+    // TODO: check more fields we potentially miss
+    i.copy_field(dst, "id", src);
+    i.copy_field(dst, "label", src);
+    i.copy_field(dst, "level", src);
+    i.copy_field(dst, "__time__", src);
+    i.copy_field(dst, "unique_id", src);
+    i.copy_field(dst, "type", src);
+    i.copy_field(dst, "collision_group", src);
+    i.copy_field(dst, "on", src);    // hmmm...
+    i.copy_field(dst, "init", src);  // hmmm...
+    i.copy_field(dst, "time", src);  // hmmm...
+    // i.copy_field(dst, "exists", src);
+
     // TODO: move has_field check into copy_field
     if (i.has_field(src, "blending_type")) {
       i.copy_field(dst, "blending_type", src);
@@ -265,17 +290,47 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     if (i.has_field(src, "new_objects")) {
       i.copy_field(dst, "new_objects", src);
     }
+
+    // Ensure subobj exists
+    if (!i.has_field(dst, "subobj")) {
+      i.set_field(dst, "subobj", v8::Array::New(i.get_isolate()));
+    }
+    // Then copy all of them
     if (i.has_field(src, "subobj")) {
       const auto s = i.get(src, "subobj").As<v8::Array>();
       const auto d = i.get(dst, "subobj").As<v8::Array>();
       // for each non-instance restore it
-      for (size_t j = 0; j < s->Length(); j++) {
-        const auto elem = i.get_index(s, j);
-        if (!i.has_field(elem.As<v8::Object>(), "__instance__")) {
-          i.set_field(d, "subobj", elem);
+      for (size_t k = 0; k < s->Length(); k++) {
+        if (d->Length() < s->Length()) {
+          i.call_fun(d, "push", v8::Object::New(i.get_isolate()));
         }
+        const auto elem = i.get_index(s, k);
+        i.set_field(d, k, elem);
+      }
+      while (d->Length() > s->Length()) {
+        i.call_fun(d, "pop");
       }
     }
+
+    // gradient_s_
+    if (!i.has_field(dst, "gradients")) {
+      i.set_field(dst, "gradients", v8::Array::New(i.get_isolate()));
+    }
+    if (i.has_field(src, "gradients")) {
+      const auto s = i.get(src, "gradients").As<v8::Array>();
+      const auto d = i.get(dst, "gradients").As<v8::Array>();
+      for (size_t k = 0; k < s->Length(); k++) {
+        if (d->Length() < s->Length()) {
+          i.call_fun(d, "push", v8::Object::New(i.get_isolate()));
+        }
+        const auto elem = i.get_index(s, k);
+        i.set_field(d, k, elem);
+      }
+      while (d->Length() > s->Length()) {
+        i.call_fun(d, "pop");
+      }
+    }
+
     if (i.has_field(src, "exists")) {
       i.copy_field(dst, "exists", src);
     }

@@ -31,6 +31,7 @@ std::shared_ptr<render_msg> command_get_shapes::to_render_msg(std::shared_ptr<jo
                                       job.offset_x,
                                       job.offset_y,
                                       job.last_frame,
+                                      false,
                                       job.width,
                                       job.height,
                                       os.str());

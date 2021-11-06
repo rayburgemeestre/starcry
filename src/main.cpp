@@ -69,6 +69,7 @@ public:
       ("verbose,v", "enable verbose output (default no)")
       ("quiet,q", "disable verbose progress (default no)")
       ("notty,n", "disable terminal (default tty is assumed)")
+      ("caching", "enable caching (experimental feature)")
       ("raw,r", "write raw 32-bit EXR frames (default no)");
     // clang-format on
 
@@ -122,6 +123,7 @@ public:
     })();
 
     auto render_command = [&](starcry &sc) {
+      sc.set_script(script);
       if (is_interactive) {
         // in interactive mode commands come from the web interface
         return;
@@ -153,6 +155,9 @@ public:
                p_mode,
                render_command,
                rand_seed != std::numeric_limits<double>::max() ? std::make_optional<double>(rand_seed) : std::nullopt);
+    if (vm.count("caching")) {
+      sc.features().caching = true;
+    }
 
     if (vm.count("client")) {
       sc.run_client(host);

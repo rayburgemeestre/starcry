@@ -15,10 +15,12 @@ void ShapesHandler::onConnect(seasocks::WebSocket *con) {
 
 void ShapesHandler::onDisconnect(seasocks::WebSocket *con) {
   _cons.erase(con);
+  unlink(con);
 }
 
 void ShapesHandler::onData(seasocks::WebSocket *con, const char *data) {
   std::string input(data);
+  if (link(input, con)) return;
   auto find = input.find(" ");
   if (find != std::string::npos) {
     logger(DEBUG) << "ShapesHandler::onData - " << input << std::endl;

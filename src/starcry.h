@@ -43,6 +43,10 @@ class WebSocket;
 class command_handler;
 class metrics;
 
+struct feature_settings {
+  bool caching = false;
+};
+
 class starcry {
   friend class command_handler;
   friend class command_get_video;
@@ -63,6 +67,7 @@ private:
   bool enable_remote_workers;
   bool start_webserver;
   bool enable_compression;
+  feature_settings features_;
 
   std::map<int, std::shared_ptr<bitmap_wrapper>> bitmaps;
   std::shared_ptr<generator> gen;
@@ -91,6 +96,8 @@ private:
 
   data::viewpoint viewpoint;
 
+  std::string script_;
+
 public:
   starcry(
       size_t num_local_engines,
@@ -103,6 +110,10 @@ public:
       std::function<void(starcry &sc)> on_pipeline_initialized = [](auto &) {},
       std::optional<double> rand_seed = std::nullopt);
   ~starcry();
+
+  feature_settings &features();
+
+  void set_script(const std::string &script);
 
   void add_command(seasocks::WebSocket *client,
                    const std::string &script,

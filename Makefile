@@ -34,6 +34,19 @@ debug:  ## build starcry binary using docker with debug
 	mkdir -p /tmp/ccache-user
 	docker run -t -v /tmp/ccache-user:/home/user/.ccache -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user make core_debug"
 
+debug-sanitizer:  ## build starcry binary using docker with debug + address sanitizer
+	@echo use make shell
+	@echo then type sudo make prepare
+	@echo then type make core_debug_sanit
+	@echo ignore the errors
+	@echo run the compiled executable in docker
+	@echo port is exposed as 18081 instead of 18080
+
+debug-last:
+	rm -rf dbg
+	apport-unpack /var/crash/_home_trigen_system_data_projects_starcry_build_starcry.1144.crash dbg
+	gdb ./build/starcry dbg/CoreDump
+
 format:  ## format source code (build at least once first)
 	# build starcry with tailored image so we can invoke the make command straight away
 	docker run -t -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user make core_format"
@@ -129,8 +142,8 @@ core_debug:  ## execute build steps for building starcry binary with debug
 
 core_debug_sanit:  ## execute build steps for building starcry binary with address sanitizer and debug
 	pushd build && \
-	CXX=$$(which c++) cmake -DSANITIZER=1 -DDEBUG=on .. && \
-	make VERBOSE=1 -j $$(nproc)
+	ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer  ASAN_OPTIONS=symbolize=1 CXX=$$(which c++) cmake -DSANITIZER=1 -DDEBUG=on .. && \
+	ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer  ASAN_OPTIONS=symbolize=1  make VERBOSE=1 -j $$(nproc)
 
 core_format:  ## execute formatting
 	mv -v webpack*.js input/
@@ -142,7 +155,7 @@ core_format:  ## execute formatting
 shell:  ## start a shell in the starcry build image
 	xhost +
 	mkdir -p /tmp/ccache-root
-	docker run -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:/home/trigen -w /projects/starcry -e DISPLAY=$$DISPLAY -v /etc/passwd:/etc/passwd -v /etc/shadow:/etc/shadow -v /etc/sudoers:/etc/sudoers -v /tmp/.X11-unix:/tmp/.X11-unix -u 1144 rayburgemeestre/build-starcry-ubuntu:20.04 /bin/bash
+	docker run -p 18081:18080 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:/home/trigen -w /projects/starcry -e DISPLAY=$$DISPLAY -v /etc/passwd:/etc/passwd -v /etc/shadow:/etc/shadow -v /etc/sudoers:/etc/sudoers -v /tmp/.X11-unix:/tmp/.X11-unix -u 1144 rayburgemeestre/build-starcry-ubuntu:20.04 /bin/bash
 
 .PHONY: starcry
 clean:  ## clean build artifacts

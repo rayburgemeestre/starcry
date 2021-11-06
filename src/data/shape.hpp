@@ -100,6 +100,7 @@ struct shape {
   std::string align;
   std::vector<std::pair<double, gradient>> gradients_;
   std::vector<std::pair<double, texture>> textures;
+  std::string gradient_id_str;
   blending_type blending_;
   std::map<int, size_t> indexes;
   double seed;
@@ -134,6 +135,7 @@ struct shape {
        align,
        gradients_,
        textures,
+       gradient_id_str,
        blending_,
        indexes,
        seed,
