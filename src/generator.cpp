@@ -570,9 +570,9 @@ void generator::_load_js_cache(v8_interact& i,
     i.empty_and_resize(instances, cache_instances->Length());
     i.empty_and_resize(intermediates, cache_intermediates->Length());
     i.empty_and_resize(next_instances, cache_next_instances->Length());
-    util::generator::copy_instances(i, instances, cache_instances, false);
-    util::generator::copy_instances(i, intermediates, cache_intermediates, false);
-    util::generator::copy_instances(i, next_instances, cache_next_instances, false);
+    util::generator::copy_instances(i, instances, cache_instances);
+    util::generator::copy_instances(i, intermediates, cache_intermediates);
+    util::generator::copy_instances(i, next_instances, cache_next_instances);
   }
 }
 
@@ -593,9 +593,9 @@ void generator::_save_js_cache(v8_interact& i,
   i.empty_and_resize(cache_instances, (*instances)->Length());
   i.empty_and_resize(cache_intermediates, (*intermediates)->Length());
   i.empty_and_resize(cache_next_instances, (*next_instances)->Length());
-  util::generator::copy_instances(i, cache_instances, *instances, false);
-  util::generator::copy_instances(i, cache_intermediates, *intermediates, false);
-  util::generator::copy_instances(i, cache_next_instances, *next_instances, false);
+  util::generator::copy_instances(i, cache_instances, *instances);
+  util::generator::copy_instances(i, cache_intermediates, *intermediates);
+  util::generator::copy_instances(i, cache_next_instances, *next_instances);
 }
 
 void generator::revert_all_changes(v8_interact& i,

@@ -30,17 +30,17 @@ spec:
         #args: ["-i", "--notty"]
         args: ["-i", "-t", "8", "-c", "8", "--caching", "input/motion4.js"]
         workingDir: /workdir
-        volumeMounts:
-        - mountPath: /workdir
-          name: workdir-volume
+#        volumeMounts:
+#        - mountPath: /workdir
+#          name: workdir-volume
         imagePullPolicy: Always
         ports:
         - containerPort: 18080
           name: http
-      volumes:
-      - name: workdir-volume
-        hostPath:
-          path: /mnt2/NAS/projects/starcry
+#      volumes:
+#      - name: workdir-volume
+#        hostPath:
+#          path: /mnt2/NAS/projects/starcry
 ---
 apiVersion: v1
 kind: Service

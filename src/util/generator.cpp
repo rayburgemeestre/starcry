@@ -218,10 +218,11 @@ v8::Local<v8::Object> instantiate_objects(v8_interact& i,
   return next;
 }
 
-void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Array> source, bool exclude_props) {
+void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Array> source) {
   for (size_t j = 0; j < source->Length(); j++) {
     auto src = i.get_index(source, j).As<v8::Object>();
     auto dst = i.get_index(dest, j).As<v8::Object>();
+
     i.copy_field(dst, "x", src);
     i.copy_field(dst, "y", src);
     i.copy_field(dst, "x2", src);
@@ -242,7 +243,7 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field(dst, "id", src);
     i.copy_field(dst, "label", src);
     i.copy_field(dst, "level", src);
-    i.copy_field(dst, "__time__", src);
+    // i.copy_field(dst, "__time__", src);
     i.copy_field(dst, "unique_id", src);
     i.copy_field(dst, "type", src);
     i.copy_field(dst, "collision_group", src);
@@ -273,8 +274,11 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field(dst, "__time__", src);
     i.copy_field(dst, "__elapsed__", src);
 
-    // if (!exclude_props) {
-    if (i.has_field(src, "props") && i.has_field(dst, "props")) {
+    if (!i.has_field(dst, "props")) {
+      i.set_field(dst, "props", v8::Object::New(i.get_isolate()));
+    }
+
+    if (i.has_field(src, "props")) {
       i.set_field(dst, "props", v8::Object::New(i.get_isolate()));
       const auto d = i.get(dst, "props").As<v8::Object>();
       const auto s = i.get(src, "props").As<v8::Object>();
@@ -285,7 +289,7 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
         i.set_field(d, prop_key, prop_value);
       }
     }
-    // }
+
     // TODO: move has_field check into copy_field
     if (i.has_field(src, "new_objects")) {
       i.copy_field(dst, "new_objects", src);

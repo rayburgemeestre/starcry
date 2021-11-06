@@ -47,6 +47,9 @@ debug-last:
 	apport-unpack /var/crash/_home_trigen_system_data_projects_starcry_build_starcry.1144.crash dbg
 	gdb ./build/starcry dbg/CoreDump
 
+debug-clean:
+	rm -rf /var/crash/_home_trigen_system_data_projects_starcry_build_starcry.1144.crash
+
 format:  ## format source code (build at least once first)
 	# build starcry with tailored image so we can invoke the make command straight away
 	docker run -t -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user make core_format"
@@ -185,6 +188,9 @@ dockerize_run:  ## execute dockerize steps
 	apt install python3-pip rsync git ncurses-term -y
 	cd /tmp && git clone https://github.com/larsks/dockerize && cd dockerize && python3 setup.py install
 	cp -prv $$PWD/build/starcry /starcry
+	sudo -u user -g user mkdir -p out/workdir
+	sudo -u user -g user cp -prv $$PWD/webroot out/workdir/webroot
+	sudo -u user -g user cp -prv $$PWD/input out/workdir/input
 	strip --strip-debug /starcry
 	sudo -u user -g user dockerize --verbose --debug -n -o out "/starcry"
 	sudo -u user -g user mkdir -p out/usr/share/terminfo/x
