@@ -36,8 +36,14 @@ void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
                   sc->get_viewpoint().preview);
 }
 
-void BitmapHandler::callback(seasocks::WebSocket *recipient, std::string s) {
+void BitmapHandler::callback(seasocks::WebSocket *recipient, std::string s, uint32_t width, uint32_t height) {
   if (_cons.find(recipient) != _cons.end()) {
+    size_t n = s.size();
+    // append 8 chars (room for 2 32-bit ints)
+    s.append("        ");
+    char *ptr = s.data() + n;
+    memcpy(ptr, &width, sizeof(width));
+    memcpy(ptr + sizeof(uint32_t), &height, sizeof(height));
     recipient->send((const uint8_t *)s.c_str(), s.size() * sizeof(uint8_t));
   }
 }

@@ -2,6 +2,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: starcry
+  annotations:
+    scheduler.alpha.kubernetes.io/node-selector: server=deskmini
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -26,7 +28,7 @@ spec:
         image: rayburgemeestre/starcry:v3
         command: ["/starcry"]
         #args: ["-i", "--notty"]
-        args: ["-i", "--notty", "-t", "8", "-c", "8", "--caching"]
+        args: ["-i", "-t", "8", "-c", "8", "--caching", "input/motion4.js"]
         workingDir: /workdir
         volumeMounts:
         - mountPath: /workdir

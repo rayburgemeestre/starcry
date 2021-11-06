@@ -75,7 +75,9 @@ void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
       };
       result.push_back(j);
     }
-    con->send(result.dump());
+    std::stringstream ss;
+    ss << "3" << result.dump();
+    con->send(ss.str());
   }
 }
 

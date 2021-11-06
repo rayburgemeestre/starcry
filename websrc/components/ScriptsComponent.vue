@@ -41,7 +41,7 @@
     mounted: function() {
       this.script_endpoint = new StarcryAPI(
               'script',
-              StarcryAPI.json_type,
+              StarcryAPI.text_type,
               msg => {
                 this.$data.websock_status = msg;
               },
@@ -50,11 +50,14 @@
                   this.$parent.filename = buffer.slice(1);
                 }
                 else if (buffer[0] == '2') {
-                  this.$data.data = buffer.slice(1);
+                  // script contents
+                }
+                else if (buffer[0] == '3') {
+                  // script listing
+                  this.$data.data = JSON.parse(buffer.slice(1));
                 }
               },
               _ => {
-                this.script_endpoint.send("open " + this.$data.filename);
                 this.script_endpoint.send("list");
               }
       );

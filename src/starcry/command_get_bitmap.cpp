@@ -61,7 +61,7 @@ void command_get_bitmap::handle_frame(std::shared_ptr<render_msg> &job_msg) {
     for (const auto &i : job_msg->pixels) {
       buffer.append((char *)&i, sizeof(i));
     }
-    bmp_handler->callback(job_msg->client, buffer);
+    bmp_handler->callback(job_msg->client, buffer, job_msg->width, job_msg->height);
   };
 
   if (sc.webserv) sc.webserv->execute_bitmap(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);

@@ -273,19 +273,19 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field(dst, "__time__", src);
     i.copy_field(dst, "__elapsed__", src);
 
-    if (!exclude_props) {
-      if (i.has_field(src, "props") && i.has_field(dst, "props")) {
-        i.set_field(dst, "props", v8::Object::New(i.get_isolate()));
-        const auto d = i.get(dst, "props").As<v8::Object>();
-        const auto s = i.get(src, "props").As<v8::Object>();
-        auto prop_fields = s->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
-        for (size_t k = 0; k < prop_fields->Length(); k++) {
-          auto prop_key = i.get_index(prop_fields, k).As<v8::String>();
-          auto prop_value = i.get(s, prop_key);
-          i.set_field(d, prop_key, prop_value);
-        }
+    // if (!exclude_props) {
+    if (i.has_field(src, "props") && i.has_field(dst, "props")) {
+      i.set_field(dst, "props", v8::Object::New(i.get_isolate()));
+      const auto d = i.get(dst, "props").As<v8::Object>();
+      const auto s = i.get(src, "props").As<v8::Object>();
+      auto prop_fields = s->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+      for (size_t k = 0; k < prop_fields->Length(); k++) {
+        auto prop_key = i.get_index(prop_fields, k).As<v8::String>();
+        auto prop_value = i.get(s, prop_key);
+        i.set_field(d, prop_key, prop_value);
       }
     }
+    // }
     // TODO: move has_field check into copy_field
     if (i.has_field(src, "new_objects")) {
       i.copy_field(dst, "new_objects", src);

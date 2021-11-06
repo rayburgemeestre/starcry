@@ -127,6 +127,10 @@ export default {
       websock_status2: '',
       websock_status3: '',
       websock_status4: '',
+      connected_bitmap: false,
+      connected_shapes: false,
+      connected_script: false,
+      connected_objects: false,
       menu: '',
       filename: 'input/test.js',
       current_frame : 0,
@@ -148,6 +152,11 @@ export default {
       video: {},
       preview: {},
     };
+  },
+  computed: {
+    connected: function () {
+      return this.connected_bitmap && this.connected_objects && this.connected_shapes && this.connected_script;
+    }
   },
   components: {
     EditorComponent,
@@ -298,7 +307,7 @@ export default {
   },
   watch: {
     menu(new_value) {
-      this.update_size();
+      setTimeout(this.update_size, 100);
     },
     queued_frames(new_value) {
       this.process_queue();
@@ -334,11 +343,14 @@ export default {
         },
         _ => {
           this.log('DEBUG', 'bitmap', 'websocket connected', '');
+          this.$data.connected_bitmap = true;
         },
         _ => {
           this.log('DEBUG', 'bitmap', 'websocket disconnected', '');
+          this.$data.connected_bitmap = false;
         }
     );
+
     this.script_endpoint = new StarcryAPI(
         'script',
         StarcryAPI.text_type,
@@ -348,6 +360,7 @@ export default {
         buffer => {
           if (buffer[0] === '1') {
             this.$data.filename = buffer.slice(1);
+            this.$data.connected_script = true;
           }
           else if (buffer[0] === '2') {
             buffer = buffer.slice(1);
@@ -365,6 +378,7 @@ export default {
         },
         _ => {
           this.log('DEBUG', 'script', 'websocket disconnected', '');
+          this.$data.connected_script = false;
         }
     );
     this.shapes_endpoint = new StarcryAPI(
@@ -380,12 +394,15 @@ export default {
           this.process_queue();
         },
         _ => {
+          this.$data.connected_shapes = true;
           this.log('DEBUG', 'shapes', 'websocket connected', '');
         },
         _ => {
+          this.$data.connected_shapes = false;
           this.log('DEBUG', 'shapes', 'websocket disconnected', '');
         },
     );
+
     this.objects_endpoint = new StarcryAPI(
         'objects',
         StarcryAPI.json_type,
@@ -416,9 +433,11 @@ export default {
         },
         _ => {
           this.log('DEBUG', 'objects', 'websocket connected', '');
+          this.$data.connected_objects = true;
         },
         _ => {
           this.log('DEBUG', 'objects', 'websocket disconnected', '');
+          this.$data.connected_objects = false;
         },
     );
   }

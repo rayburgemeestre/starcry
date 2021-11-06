@@ -21,6 +21,8 @@ rendering_engine_wrapper engine;
 data::job job;
 std::vector<uint32_t> transfer_pixels;
 SDL_Texture *texture = nullptr;
+int texture_w = 0;
+int texture_h = 0;
 SDL_Renderer *renderer = nullptr;
 int x = 0, y = 0;
 bool pointer_state = true;
@@ -66,7 +68,25 @@ void mainloop(void *arg) {
   texture_rect.y = 0;
   texture_rect.w = job.canvas_w;
   texture_rect.h = job.canvas_h;
-  SDL_RenderCopy(renderer, texture, NULL, &texture_rect);
+
+  SDL_Rect texture_source_rect;
+  texture_source_rect.x = 0;
+  texture_source_rect.y = 0;
+  texture_source_rect.w = texture_w;
+  texture_source_rect.h = texture_h;
+
+  double ratio_w = double(job.canvas_w) / double(texture_w);
+  // double ratio_h = double(job.canvas_h) / double(texture_h);
+  double ratio = ratio_w; // std::min(ratio_w, ratio_h);
+
+  texture_rect.w = texture_w * ratio;
+  texture_rect.h = texture_h * ratio;
+  texture_rect.x = (int(job.canvas_w) - texture_rect.w) / 2;
+  texture_rect.y = (int(job.canvas_h) - texture_rect.h) / 2;
+
+  // SDL_RenderCopy(renderer, texture, &texture_source_rect, &texture_rect);
+  // This will not resize, so if it's too big or small, just put it at 0,0
+  SDL_RenderCopy(renderer, texture, &texture_source_rect, &texture_rect);
 
   if (pointer_state) {
       SDL_RenderFillRect(renderer, &r);
@@ -117,6 +137,8 @@ void render_shapes_to_texture() {
     texture = nullptr;
   }
   texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, job.width, job.height);
+  texture_w = job.width;
+  texture_h = job.height;
 
   auto &pixels = bmp.pixels();
   transfer_pixels.clear();
@@ -273,8 +295,12 @@ void set_texture(std::string data) {
     SDL_DestroyTexture(texture);
     texture = nullptr;
   }
-  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, job.canvas_w, job.canvas_h);
-  SDL_UpdateTexture(texture, NULL, (void *)&(data[0]), job.canvas_w * sizeof(Uint32));
+  size_t n = data.size() - 8;
+  char *ptr = &(data[0]);
+  memcpy(&texture_w, ptr + n, sizeof(uint32_t));
+  memcpy(&texture_h, ptr + n + sizeof(uint32_t), sizeof(uint32_t));
+  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, texture_w, texture_h);
+  SDL_UpdateTexture(texture, NULL, (void *)&(data[0]), texture_w * sizeof(Uint32));
 }
 
 int get_mouse_x() {
@@ -289,6 +315,13 @@ int get_canvas_w() {
 }
 int get_canvas_h() {
   return job.canvas_h;
+}
+
+int get_texture_w() {
+  return texture_w;
+}
+int get_texture_h() {
+  return texture_h;
 }
 
 double get_scale() {
@@ -315,6 +348,8 @@ EMSCRIPTEN_BINDINGS(my_module) {
   emscripten::function("get_mouse_y", &get_mouse_y);
   emscripten::function("get_canvas_w", &get_canvas_w);
   emscripten::function("get_canvas_h", &get_canvas_h);
+  emscripten::function("get_texture_w", &get_texture_w);
+  emscripten::function("get_texture_h", &get_texture_h);
   emscripten::function("get_scale", &get_scale);
   emscripten::function("toggle_pointer", &toggle_pointer);
 }
