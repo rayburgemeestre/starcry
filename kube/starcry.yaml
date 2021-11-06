@@ -23,10 +23,10 @@ spec:
     spec:
       containers:
       - name: starcrycontainer
-        image: rayburgemeestre/starcry:v2
+        image: rayburgemeestre/starcry:v3
         command: ["/starcry"]
         #args: ["-i", "--notty"]
-        args: ["-i", "--notty", "-t", "8", "-c", "8"]
+        args: ["-i", "--notty", "-t", "8", "-c", "8", "--caching"]
         workingDir: /workdir
         volumeMounts:
         - mountPath: /workdir
