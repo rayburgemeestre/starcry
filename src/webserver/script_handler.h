@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include "webserver/starcry_handler.hpp"
+
 struct ScriptHandler : seasocks::WebSocket::Handler, public starcry_handler {
   starcry *sc;
   std::set<seasocks::WebSocket *> _cons;

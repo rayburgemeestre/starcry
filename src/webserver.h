@@ -22,7 +22,6 @@ class starcry;
 #include "webserver/objects_handler.h"
 #include "webserver/script_handler.h"
 #include "webserver/shapes_handler.h"
-#include "webserver/starcry_handler.hpp"
 #include "webserver/stats_handler.h"
 #include "webserver/viewpoint_handler.h"
 
