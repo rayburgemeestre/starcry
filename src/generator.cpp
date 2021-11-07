@@ -444,12 +444,9 @@ bool generator::_generate_frame() {
       if (!next_instances->IsArray()) return;
 
       if (this->cache.enabled) {
-        logger(INFO) << "cache enabled." << std::endl;
         if (this->cache.use) {
-          logger(INFO) << "cache enabled + use." << std::endl;
           _load_js_cache(i, cache, instances, intermediates, next_instances);
         } else {
-          logger(INFO) << "cache enabled + no use." << std::endl;
           _save_js_cache(i, cache, &instances, &intermediates, &next_instances);
         }
       }

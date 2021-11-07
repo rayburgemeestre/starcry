@@ -72,7 +72,7 @@ starcry::starcry(size_t num_local_engines,
       frames(system->create_queue("frames", 10)),
       mode(mode),
       on_pipeline_initialized(std::move(on_pipeline_initialized)),
-      le(std::chrono::milliseconds(1000)),
+      pe(std::chrono::milliseconds(1000)),
       seed(rand_seed),
       command_handlers({
           {instruction_type::get_bitmap, std::make_shared<command_get_bitmap>(*this)},
@@ -94,7 +94,7 @@ starcry::starcry(size_t num_local_engines,
 
 starcry::~starcry() {
   metrics_->notify();
-  le.cancel();
+  pe.cancel();
 }
 
 feature_settings &starcry::features() {
@@ -116,9 +116,10 @@ void starcry::add_command(seasocks::WebSocket *client,
                           bool raw,
                           bool preview) {
   cmds->push(std::make_shared<instruction>(client, it, script, frame_num, num_chunks, raw, preview));
-  le.run([=]() {
+  pe.run([=]() {
     if (webserv) {
       webserv->send_stats(system->get_stats());
+      webserv->send_metrics(metrics_->to_json());
     }
   });
 }

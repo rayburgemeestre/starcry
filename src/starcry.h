@@ -18,7 +18,7 @@
 #include "data/pixels.hpp"
 #include "data/viewpoint.hpp"
 
-#include "util/limited_executor.hpp"
+#include "util/periodic_executor.hpp"
 
 class sfml_window;
 class bitmap_wrapper;
@@ -86,7 +86,7 @@ private:
 
   std::map<size_t, std::vector<std::shared_ptr<render_msg>>> buffered_frames;
   size_t current_frame = 1;
-  limited_executor le;
+  periodic_executor pe;
   std::optional<double> seed;
   std::map<instruction_type, std::shared_ptr<command_handler>> command_handlers;
   std::shared_ptr<server_message_handler> server_message_handler_;

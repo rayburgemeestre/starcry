@@ -95,11 +95,21 @@ void webserver::send_stats(const stats &stats_) {
     };
     result.push_back(j);
   }
-  str = result.dump();
+  str = json{{"type", "stats"}, {"data", result}}.dump();
   for (const auto &con : stats_handler->_cons) {
     if (server) {
       server->execute([=]() {
         con->send(str);
+      });
+    }
+  }
+}
+
+void webserver::send_metrics(const std::string &json) {
+  for (const auto &con : stats_handler->_cons) {
+    if (server) {
+      server->execute([=]() {
+        con->send(json);
       });
     }
   }

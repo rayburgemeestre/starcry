@@ -207,3 +207,12 @@ run_web:  ## run web in development hot-swappable mode
 clion:
 	sudo switch-to-latest-clang
 	clion
+
+release:
+	make clean
+	make fast-docker-build
+	make build_web
+	make client
+	make dockerize
+	echo docker push rayburgemeestre/starcry:v3
+	echo kubectl apply -f kube/starcry.yaml

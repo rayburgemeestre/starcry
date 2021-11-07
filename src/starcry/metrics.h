@@ -134,6 +134,7 @@ public:
 
   void log_callback(int level, const std::string& line);
   void notify();
+  std::string to_json();
 
 private:
   double time_diff(std::chrono::time_point<std::chrono::high_resolution_clock> begin,

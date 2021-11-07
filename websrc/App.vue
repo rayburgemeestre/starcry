@@ -41,6 +41,9 @@
           </b-menu-list>
           -->
         </b-menu>
+
+        <hr>
+        <stats-component />
       </div>
       <div v-if="menu === 'files'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
         <scripts-component width="100%" height="100vh - 60px"/>
@@ -93,9 +96,6 @@
           <button v-shortkey="['m']" @shortkey="toggle_pointer()">_</button>
           <button v-shortkey="['/']" @shortkey="set_frame(current_frame)">_</button>
         </div>
-
-        <hr>
-        <stats-component />
       </div>
     </div>
     <div class="columns bottom">

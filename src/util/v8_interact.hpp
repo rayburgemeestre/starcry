@@ -176,14 +176,14 @@ public:
     if (!has_field) return;
     auto funref = object.As<v8::Object>()->Get(isolate->GetCurrentContext(), v8_field);
     if (funref.IsEmpty()) {
-      std::cout << "exit 1" << std::endl;
+      // std::cout << "exit 1" << std::endl;
       return;
     }
     auto fundef = funref.ToLocalChecked();
     if (!fundef->IsFunction()) {
-      std::cout << "exit 2" << std::endl;
+      // std::cout << "exit 2" << std::endl;
       return;
-      //      throw std::runtime_error("type not function");
+      // throw std::runtime_error("type not function");
     }
     auto fun = fundef.As<v8::Function>();
 #pragma clang diagnostic push
