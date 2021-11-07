@@ -28,7 +28,7 @@ spec:
         image: rayburgemeestre/starcry:v3
         command: ["/starcry"]
         #args: ["-i", "--notty"]
-        args: ["-i", "-t", "8", "-c", "8", "--caching", "input/motion4.js"]
+        args: ["-i", "-t", "8", "-c", "8", "--caching", "input/perlin3.js"]
         workingDir: /workdir
 #        volumeMounts:
 #        - mountPath: /workdir

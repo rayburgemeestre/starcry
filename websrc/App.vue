@@ -1,5 +1,5 @@
 <template>
-  <div style="height: 100vh;">
+  <div class="top extended" style="height: 100vh;">
     <div class="columns toolbar">
       <b-navbar>
         <template slot="brand">
@@ -25,6 +25,12 @@
           </b-navbar-dropdown>
         </template>
       </b-navbar>
+      <div style="width: 200px; padding-top: 18px">
+        <b-progress :value="connected_percentage" size="is-medium" show-value>
+          <span v-if="connected" style="color: white;">OK</span>
+          <span v-if="!connected" style="color: red;">CONNECTING</span>
+        </b-progress>
+      </div>
     </div>
     <div class="columns main-columns">
       <div class="column is-narrow">
@@ -57,12 +63,12 @@
       <div v-if="menu === 'debug'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
         <debug-component v-model="debug" width="100%" height="100vh - 60px"/>
       </div>
-      <div class="column" style="background-color: black; max-height: calc(100vh - 120px);">
+      <div class="column canvas">
         <div style="position: relative; z-index: 2; /* background-color: #880000; */ height: 100%;">
           <canvas id="canvas2"
-                  style="position: absolute; width: 100%; max-height: calc(100vh - 120px); left: 0; top: 0; z-index: 1; pointer-events: none /* saved my day */;"></canvas>
+                  style="z-index: 1; pointer-events: none /* saved my day */;"></canvas>
           <canvas id="canvas" v-on:mousemove="on_mouse_move" v-on:mousedown="on_mouse_down" v-on:wheel="on_wheel"
-                  style="position: absolute; width: 100%; max-height: calc(100vh - 120px); left: 0; top: 0; z-index: 0;"></canvas>
+                  style="z-index: 0;"></canvas>
         </div>
       </div>
       <div class="column is-narrow" style="overflow: auto; overflow-x: hidden; height: calc(100vh - 120px);">
@@ -78,12 +84,6 @@
         Current render mode: {{ render_mode }}<br/>
 
         <view-point-component ref="vpc" v-bind:viewpoint_settings="viewpoint_settings" v-bind:video="video" v-bind:preview_settings="preview" />
-
-        <h2>{{ websock_status }}</h2>
-        <h2>{{ websock_status2 }}</h2>
-        <h2>{{ websock_status3 }}</h2>
-        <h2>{{ websock_status4 }}</h2>
-
         <div style="display: none;">
           <button v-shortkey="['ctrl', 's']" @shortkey="menu = menu === 'script' ? '' : 'script'">_</button>
           <button v-shortkey="['ctrl', 'f']" @shortkey="menu = menu === 'files' ? '' : 'files'">_</button>
@@ -95,6 +95,7 @@
           <button v-shortkey="['r']" @shortkey="open(filename)">_</button>
           <button v-shortkey="['m']" @shortkey="toggle_pointer()">_</button>
           <button v-shortkey="['/']" @shortkey="set_frame(current_frame)">_</button>
+          <button v-shortkey="['t']" @shortkey="toggle_menus()">_</button>
         </div>
       </div>
     </div>
@@ -123,10 +124,6 @@ export default {
   data() {
     return {
       input_source: 'Hello world',
-      websock_status: '',
-      websock_status2: '',
-      websock_status3: '',
-      websock_status4: '',
       connected_bitmap: false,
       connected_shapes: false,
       connected_script: false,
@@ -155,7 +152,17 @@ export default {
   },
   computed: {
     connected: function () {
-      return this.connected_bitmap && this.connected_objects && this.connected_shapes && this.connected_script;
+      let b = this.connected_bitmap && this.connected_objects && this.connected_shapes && this.connected_script;
+      if (b) this.toggle_menus();
+      return b;
+    },
+    connected_percentage: function() {
+      let counter = 0;
+      if (this.connected_bitmap) counter++;
+      if (this.connected_objects) counter++;
+      if (this.connected_shapes) counter++;
+      if (this.connected_script) counter++;
+      return (counter / 4) * 100;
     }
   },
   components: {
@@ -183,6 +190,14 @@ export default {
     },
     toggle_pointer: function() {
       Module.toggle_pointer();
+    },
+    toggle_menus: function() {
+      let top = document.querySelector('.top');
+      if (top.classList.contains('extended')) {
+        top.classList.remove('extended');
+      } else {
+        top.classList.add('extended');
+      }
     },
     process_queue: function () {
       this._schedule_frames();
@@ -332,7 +347,7 @@ export default {
         'bitmap',
         StarcryAPI.binary_type,
         msg => {
-          this.$data.websock_status = msg;
+          // this.$data.websock_status = msg;
         },
         buffer => {
           this.log('DEBUG', 'bitmap', 'received texture', 'num bytes: ' + buffer.byteLength);
@@ -355,7 +370,7 @@ export default {
         'script',
         StarcryAPI.text_type,
         msg => {
-          this.$data.websock_status2 = msg;
+          // this.$data.websock_status2 = msg;
         },
         buffer => {
           if (buffer[0] === '1') {
@@ -385,7 +400,7 @@ export default {
         'shapes',
         StarcryAPI.text_type,
         msg => {
-          this.$data.websock_status3 = msg;
+          // this.$data.websock_status3 = msg;
         },
         buffer => {
           this.log('DEBUG', 'shapes', 'received buffer', 'buffer size: ' + buffer.length);
@@ -407,7 +422,7 @@ export default {
         'objects',
         StarcryAPI.json_type,
         msg => {
-          this.$data.websock_status4 = msg;
+          // this.$data.websock_status4 = msg;
         },
         buffer => {
           this.log('DEBUG', 'objects', 'received objects', 'objects size: ' + buffer.length);
@@ -475,6 +490,9 @@ html, body, body > div {
   background-color: #333333;
   color: white;
 }
+.extended .main-columns {
+  min-height: calc(100vh - 60px * 1);
+}
 .column.is-narrow {
     width: 200px;
 }
@@ -494,5 +512,28 @@ canvas:active {
 }
 .navbar-dropdown .navbar-item {
     font-size: 90%;
+}
+
+/* canvas */
+.column.canvas {
+  background-color: black;
+  max-height: calc(100vh - 120px);
+}
+.column.canvas canvas {
+  position: absolute;
+  width: 100%;
+  max-height: calc(100vh - 120px);
+  left: 0;
+  top: 0;
+}
+.extended .column.canvas, .extended .column.canvas canvas {
+  max-height: calc(100vh - 60px);
+}
+.extended .column.is-narrow, .extended .columns.bottom {
+  display: none;
+}
+
+.progress-wrapper {
+  height: 24px;
 }
 </style>

@@ -30,9 +30,11 @@
           frame
         </b-progress>
       </div>
+      <!--
       <div v-for="dat in statistics">
-            <b>{{ dat.name }}</b> {{ dat.counter }} <br/>
-        </div>
+          <b>{{ dat.name }}</b> {{ dat.counter }} <br/>
+      </div>
+      -->
     </div>
 </template>
 

@@ -2,9 +2,7 @@
   <div>
     Scale:
     <b-slider style="width: calc(100%); margin-right: 10px; float: left;" :min="0" :max="100" v-model="scale" ticks></b-slider>
-
     <br/>
-
     <label class="checkbox"><input type="checkbox" v-model="auto_render"> <span>auto render</span></label> <br/>
     <label class="checkbox"><input type="checkbox" v-model="raw"> <span>raw</span></label> <br/>
     <label class="checkbox"><input type="checkbox" v-model="preview"> <span>preview</span></label> <br/>
@@ -151,6 +149,9 @@ export default {
       this.update();
     },
     caching(new_val) {
+      this.update();
+    },
+    scale(new_val) {
       this.update();
     }
   },
