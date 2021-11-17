@@ -119,7 +119,7 @@ _ = {
       'name': 'scene1',
       'duration': 5.0,
       'objects':
-          [{'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}, {'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}]
+          [{'id': 'obj0', 'x': 5, 'y': 0, 'z': 0, 'props': {}}, {'id': 'obj0', 'x': -5, 'y': 0, 'z': 0, 'props': {}}]
     },
     {'name': 'scene2', 'duration': 1.0, 'objects': []},
     {'name': 'scene3', 'duration': 1.0, 'objects': []},

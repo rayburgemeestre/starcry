@@ -150,7 +150,7 @@ core_debug_sanit:  ## execute build steps for building starcry binary with addre
 
 core_format:  ## execute formatting
 	mv -v webpack*.js input/
-	find ./input -name '*.js' -type f -exec clang-format-10 -i {} \;
+	find ./input -name '*.js' -type f -exec clang-format-12 -i {} \;
 	mv -v input/webpack*.js ./
 	cmake --build build --target clangformat
 

@@ -45,6 +45,9 @@
 #include <random>
 #include <utility>
 
+#include <inotify-cpp/FileSystemAdapter.h>
+#include <inotify-cpp/NotifierBuilder.h>
+
 std::mt19937 mt_vx;
 double rand_fun_vx() {
   return (mt_vx() / (double)mt_vx.max());
@@ -86,15 +89,37 @@ starcry::starcry(size_t num_local_engines,
       client_message_handler_(std::make_shared<client_message_handler>(*this)),
       log_level_(level),
       metrics_(std::make_shared<metrics>(notty)),
-      script_("input/test.js") {
+      script_("input/test.js"),
+      notifier(nullptr) {
   metrics_->init();
   set_metrics(&*metrics_);
   logger(DEBUG) << "Metrics wired to ncurses UI" << std::endl;
+
+  inotifypp::filesystem::path path("input");
+  auto handleNotification = [&](inotify::Notification notification) {
+    logger(DEBUG) << "File modified on disk: " << notification.path.string() << std::endl;
+    if (notification.path.string() == script_) {
+      // TODO: for the future implement HOT swapping (requires parsing JSON and merging intelligently)
+      gen->reset_context();
+      gen->init(script_, {}, viewpoint.preview, features_.caching);
+    }
+  };
+  auto handleUnexpectedNotification = [](inotify::Notification notification) {};
+  auto events = {inotify::Event::close_write};
+  notifier = std::make_unique<inotify::NotifierBuilder>();
+  notifier->watchPathRecursively(path)
+      .onEvents(events, handleNotification)
+      .onUnexpectedEvent(handleUnexpectedNotification);
+  notifier_thread = std::thread([&]() {
+    notifier->run();
+  });
 }
 
 starcry::~starcry() {
+  notifier->stop();
   metrics_->notify();
   pe.cancel();
+  notifier_thread.join();
 }
 
 feature_settings &starcry::features() {

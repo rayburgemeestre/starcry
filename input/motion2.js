@@ -147,8 +147,8 @@ _ = {
           this.gradients[1][0] = q;
         }
         this.velocity = t * 100;
-          if (t >= 0.7) this.velocity = (1.0 - (t - 0.6/*to stop earlier*/) / 0.3) * 100;
-          if (this.velocity < 0) this.velocity = 0;
+        if (t >= 0.7) this.velocity = (1.0 - (t - 0.6 /*to stop earlier*/) / 0.3) * 100;
+        if (this.velocity < 0) this.velocity = 0;
       },
     },
     'red_ball': {
@@ -168,8 +168,8 @@ _ = {
         while (this.x + (1920 / 2) > 1920) this.x -= 1920;
         while (this.y + (1080 / 2) > 1080) this.y -= 1080;
         this.velocity = t * 100;
-          if (t >= 0.7) this.velocity = (1.0 - (t - 0.6/*to stop earlier*/) / 0.3) * 100;
-          if (this.velocity < 0) this.velocity = 0;
+        if (t >= 0.7) this.velocity = (1.0 - (t - 0.6 /*to stop earlier*/) / 0.3) * 100;
+        if (this.velocity < 0) this.velocity = 0;
       },
     },
     'bg': {
@@ -219,8 +219,8 @@ _ = {
     'max_intermediates': 2,
     'grain_for_opacity': false,
     'dithering': false,
-    'width': 1920/2,
-    'height': 1080/2,
+    'width': 1920 / 2,
+    'height': 1080 / 2,
   },
   'scenes': [{
     'name': 'scene1',

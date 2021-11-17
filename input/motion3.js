@@ -180,7 +180,7 @@ _ = {
   'scenes': [{
     'name': 'scene1',
     'objects': [
-      // {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+      {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
       {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
     ],
   }]

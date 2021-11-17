@@ -47,6 +47,10 @@ struct feature_settings {
   bool caching = false;
 };
 
+namespace inotify {
+class NotifierBuilder;
+}
+
 class starcry {
   friend class command_handler;
   friend class command_get_video;
@@ -97,6 +101,8 @@ private:
   data::viewpoint viewpoint;
 
   std::string script_;
+  std::unique_ptr<inotify::NotifierBuilder> notifier;
+  std::thread notifier_thread;
 
 public:
   starcry(

@@ -69,6 +69,7 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/json/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/perlin_noise/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libs/inotify-cpp/src/include/"
     "/usr/include/SDL2/"
 )
 
@@ -191,6 +192,8 @@ target_link_libraries(starcry /opt/cppse/build/tvision/lib/libtvision.a)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libncurses.a)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libncursesw.a)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libtermcap.a)
+
+target_link_libraries(starcry "${CMAKE_CURRENT_SOURCE_DIR}/libs/inotify-cpp/src/libinotify-cpp.a")
 
 install (TARGETS starcry DESTINATION bin)
 

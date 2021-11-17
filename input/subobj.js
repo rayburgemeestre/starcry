@@ -21,15 +21,15 @@ _ = {
           'vel_y': 0,
         });
         this.subobj.push({
-            'id': 'ball',
-            'label': 'ball_2',
-            'x': 100,
-            'y': 0,
-            'z': 0,
-            'velocity': -10,
-            'vel_x': 1,
-            'vel_y': 0,
-          });
+          'id': 'ball',
+          'label': 'ball_2',
+          'x': 100,
+          'y': 0,
+          'z': 0,
+          'velocity': -10,
+          'vel_x': 1,
+          'vel_y': 0,
+        });
       },
       'time': function(t, e) {},
     },

@@ -34,25 +34,20 @@ generator::generator(std::shared_ptr<metrics>& metrics) : metrics_(metrics) {
   });
 }
 
-void generator::init(const std::string& filename, std::optional<double> rand_seed, bool preview, bool caching) {
-  filename_ = filename;
-  cache.enabled = caching;
-  init_context();
-  init_user_script();
-  init_job();
-  init_video_meta_info(rand_seed, preview);
-  init_gradients();
-  init_textures();
-  scenesettings.scene_initialized = std::numeric_limits<size_t>::max();
-  set_scene(0);
-}
+void generator::reset_context() {
+  // clear c++ caches
+  cache.job_cache.clear();
+  cache.next_instance_mapping.clear();
+  cache.scalesettings.clear();
+  cache.scenesettings.clear();
 
-void generator::init_context() {
-  if (context != nullptr) {
-    return;
-  }
-  context = std::make_shared<v8_wrapper>(filename());
+  // clear js caches
+  context->run("cache = {};");
+
+  // reset context
   context->reset();
+
+  // add context global functions
   context->add_fun("output", &output_fun);
   context->add_fun("rand", &rand_fun_v2);
   context->add_fun("random_velocity", &random_velocity);
@@ -66,7 +61,7 @@ void generator::init_context() {
   context->add_fun("triangular_wave", &triangular_wave);
   context->add_include_fun();
 
-  // TODO: wrap this also in context (wrapper)
+  // add blending constants
   v8::HandleScope scope(context->context->isolate());
   v8pp::module consts(context->isolate);
   consts.set_const("normal", data::blending_type::normal)
@@ -99,6 +94,26 @@ void generator::init_context() {
       .set_const("color", data::blending_type::color)
       .set_const("luminosity", data::blending_type::luminosity);
   context->context->set("blending_type", consts);
+}
+void generator::init(const std::string& filename, std::optional<double> rand_seed, bool preview, bool caching) {
+  filename_ = filename;
+  cache.enabled = caching;
+  init_context();
+  init_user_script();
+  init_job();
+  init_video_meta_info(rand_seed, preview);
+  init_gradients();
+  init_textures();
+  scenesettings.scene_initialized = std::numeric_limits<size_t>::max();
+  set_scene(0);
+}
+
+void generator::init_context() {
+  if (context != nullptr) {
+    return;
+  }
+  context = std::make_shared<v8_wrapper>(filename());
+  reset_context();
 }
 
 void generator::init_user_script() {

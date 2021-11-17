@@ -93,6 +93,7 @@ public:
   explicit generator(std::shared_ptr<metrics>& metrics);
   ~generator() = default;
 
+  void reset_context();
   void init(const std::string& filename, std::optional<double> rand_seed, bool preview, bool caching);
   void init_context();
   void init_user_script();
