@@ -144,7 +144,7 @@ target_link_libraries(starcry -ldl)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libpng16.a)
 
 # fastpfor
-target_link_libraries(starcry /opt/cppse/build/fastpfor/lib/libFastPFor.a)
+target_link_libraries(starcry /opt/cppse/build/fastpfor/lib/libFastPFOR.a)
 
 # v8
 target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libv8_monolith.a)
