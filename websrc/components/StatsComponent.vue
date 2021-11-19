@@ -89,6 +89,12 @@ export default {
           else if (buffer['type'] === 'metrics') {
             this.$data.metrics = buffer['data'];
           }
+          else if (buffer['type'] === 'fs_change') {
+            console.log(buffer['file'], this.$parent.filename);
+            if (buffer['file'] === this.$parent.filename) {
+              this.$parent.set_frame(this.$parent.current_frame);
+            }
+          }
         },
         _ => {}
     );

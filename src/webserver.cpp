@@ -114,3 +114,13 @@ void webserver::send_metrics(const std::string &json) {
     }
   }
 }
+
+void webserver::send_fs_change(const std::string &json) {
+  for (const auto &con : stats_handler->_cons) {
+    if (server) {
+      server->execute([=]() {
+        con->send(json);
+      });
+    }
+  }
+}

@@ -64,7 +64,7 @@ _ = {
     'fps': 25,
     'width': 1920,
     'height': 1920,
-    'scale': 1.,
+    'scale': 0.5,
     'granularity': 1,
     'grain_for_opacity': false,
     'motion_blur': true,

@@ -1,7 +1,7 @@
 <template>
   <div>
     Scale:
-    <b-slider style="width: calc(100%); margin-right: 10px; float: left;" :min="0" :max="100" v-model="scale" ticks></b-slider>
+    <b-slider style="width: calc(100%); margin-right: 10px; float: left;" :min="0" :max="100" v-model="viewpoint_settings.scale" ticks></b-slider>
     <br/>
     <label class="checkbox"><input type="checkbox" v-model="auto_render"> <span>auto render</span></label> <br/>
     <label class="checkbox"><input type="checkbox" v-model="raw"> <span>raw</span></label> <br/>
@@ -64,7 +64,7 @@ export default {
       view_scale: 1.,
       offsetX: 0.,
       offsetY: 0.,
-      auto_render: false,
+      auto_render: true,
       raw: false,
       preview: true,
       labels: false,
@@ -86,7 +86,7 @@ export default {
         clearTimeout(timer);
         timer = false;
       }
-      timer = setTimeout(this.scheduled_update.bind(this), 50);
+      timer = setTimeout(this.scheduled_update.bind(this), 100);
       if (!this.$data.labels) this.$parent.reset_labels_canvas();
     },
     'scheduled_update': function() {
@@ -114,6 +114,7 @@ export default {
     },
     'reset': function() {
       this.$data.scale = 1.;
+      this.$data.viewpoint_settings.scale = 1.;
       this.$data.offsetX = 0;
       this.$data.offsetY = 0;
       this.$data.raw = false;
@@ -163,6 +164,7 @@ export default {
         buffer => {
           this.$parent.scale = buffer["scale"];
           this.$data.scale = buffer["scale"];
+          this.$data.viewpoint_settings.scale = buffer["scale"];
           // this.$data.view_x = buffer["offset_x"] / buffer["scale"];
           // this.$data.view_y = buffer["offset_y"] / buffer["scale"];
           // this.$data.offsetX = buffer["offset_x"];
@@ -183,4 +185,5 @@ export default {
 </script>
 
 <style scoped>
+strong { color: white; }
 </style>

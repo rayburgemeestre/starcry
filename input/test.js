@@ -101,7 +101,7 @@ _ = {
     'fps': 25,
     'width': 1920,
     'height': 1080,
-    'scale': 1,
+    'scale': 1.0,
     'rand_seed': 5,
     'granularity': 1,
     'min_intermediates': 5.,

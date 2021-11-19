@@ -88,4 +88,5 @@ public:
 
   void send_stats(const stats &s);
   void send_metrics(const std::string &json);
+  void send_fs_change(const std::string &json);
 };

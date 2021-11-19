@@ -17,7 +17,9 @@ export default class JsonWithObjectsParser {
         this.json_str = this.json_str.replaceAll("'", '"');
 
         let trail = '';
-        let in_comment = false;
+        let in_cpp_comment = false;
+        let in_c_comment = false;
+        let in_string = false;
         let in_function = false;
         let brace = 0;
         let bracket = 0;
@@ -30,19 +32,34 @@ export default class JsonWithObjectsParser {
         let in_blending_type = false;
         for (let i=0; i<this.json_str.length; i++) {
             const s = this.json_str[i];
+
+            if (s === '*' && this.json_str.substr(i, "*/".length) === '*/') {
+                in_c_comment = false;
+            }
+            if (s === '/' && this.json_str.substr(i, "/*".length) === '/*') {
+                in_c_comment = true;
+            }
+
+            if (in_cpp_comment && s === '\n') {
+                in_cpp_comment = false;
+            }
+            if (s === '/' && this.json_str.substr(i, "//".length) === '//') {
+                in_cpp_comment = true;
+            }
+
             // skip spaces and tabs, unless inside a comment
-            if (in_comment === false && in_function === false) {
+            if (in_string === false && in_function === false) {
                 if (s === ' ' || s === '\t') continue;
             }
             if (in_function !== false) {
                 function_str += s;
             }
             // no support for escaping
-            if (s === '"' || s === "'") {
-                if (in_comment === s) {
-                    in_comment = false;
+            if (!in_c_comment && !in_cpp_comment && (s === '"' || s === "'")) {
+                if (in_string === s) {
+                    in_string = false;
                 } else {
-                    in_comment = s;
+                    in_string = s;
                 }
             }
             if (in_function === false) {
@@ -88,30 +105,33 @@ export default class JsonWithObjectsParser {
                 function_str = 'f';
                 function_num++;
             }
-            if (!in_comment) {
+            if (!in_string) {
                 if (in_blending_type === true && ',;'.indexOf(s) !== -1) {
                     trail += '"';
                     in_blending_type = false;
                 }
-                if (in_blending_type === false && s === 'b' && this.json_str.substr(i, "blending_type".length) === 'blending_type') {
+                if (in_blending_type === false && s === 'b' && this.json_str.substr(i, "blending_type".length) === 'blending_type'
+                    && previous_char !== '"'
+                ){
                     in_blending_type = true;
                     trail += '"b'; // stringize it
                     continue;
                 }
             }
             if (in_function === false) {
+                if (",;".indexOf(s) !== -1 &&
+                    previous_char === '.' &&
+                    "0123456789".indexOf(previous_char2) !== -1
+                ) {
+                    trail += '0';
+                }
+
                 trail += s;
                 if (s !== '\r' && s !== '\n') {
                     previous_char2 = previous_char;
                     previous_char = s;
                     previous_char_pos = trail.length;
                 }
-            }
-            if (",.;".indexOf(s) !== -1 &&
-                previous_char === '.' &&
-                "0123456789".indexOf(previous_char2) !== -1
-                ) {
-                trail += '0';
             }
         }
 

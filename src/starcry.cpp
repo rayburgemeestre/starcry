@@ -48,6 +48,9 @@
 #include <inotify-cpp/FileSystemAdapter.h>
 #include <inotify-cpp/NotifierBuilder.h>
 
+#include "nlohmann/json.hpp"
+using json = nlohmann::json;
+
 std::mt19937 mt_vx;
 double rand_fun_vx() {
   return (mt_vx() / (double)mt_vx.max());
@@ -102,6 +105,11 @@ starcry::starcry(size_t num_local_engines,
       // TODO: for the future implement HOT swapping (requires parsing JSON and merging intelligently)
       gen->reset_context();
       gen->init(script_, {}, viewpoint.preview, features_.caching);
+      json j{
+          {"type", "fs_change"},
+          {"file", script_},
+      };
+      webserv->send_fs_change(j.dump());
     }
   };
   auto handleUnexpectedNotification = [](inotify::Notification notification) {};

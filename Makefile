@@ -170,10 +170,6 @@ clean:  ## clean build artifacts
 	rm -f actor_log*.log
 	rm -f webroot/stream/stream.m3u8*
 
-attick:  ## clean local directory, move all untracked and ignored files to separate directory
-	mkdir -p ../starcry-attick-$(DATE_STR)$(TIME_STR)
-	git status -s --ignored | grep -E "^??|^!!" | cut -f 2 -d ' ' | xargs -I{} -n 1 mv "{}" ../starcry-attick-$(DATE_STR)$(TIME_STR)/
-
 .PHONY: dockerize
 dockerize:  ## dockerize starcry executable in stripped down docker image
 	mkdir -p /tmp/ccache-user

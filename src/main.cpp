@@ -15,7 +15,6 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-// #include <Magick++.h>
 #include "generator.h"
 #include "starcry.h"
 #include "util/logger.h"
@@ -23,12 +22,11 @@
 #include "v8/v8-version.h"
 
 namespace po = ::boost::program_options;
-// using namespace Magick;
 
 class main_program {
 private:
   po::variables_map vm;
-  std::string output_file = "";
+  std::string output_file;
   size_t frame_of_interest = std::numeric_limits<size_t>::max();
   size_t frame_offset = 0;
   double rand_seed = std::numeric_limits<double>::max();
@@ -92,7 +90,7 @@ public:
 
     // configure streaming
     if (vm.count("stream")) {
-      if (output_file == "") {  // default
+      if (output_file.empty()) {  // default
         output_file = "webroot/stream/stream.m3u8";
         // clean up left-over streaming artifacts
         namespace fs = std::experimental::filesystem;
@@ -111,7 +109,7 @@ public:
       start_webserver = true;
     }
 
-    auto p_mode = ([&]() {
+    auto p_mode = ([this]() {
       if (vm.count("gui"))
         return starcry::render_video_mode::video_with_gui;
       else if (vm.count("gui-only"))
@@ -122,7 +120,7 @@ public:
         return starcry::render_video_mode::video_only;
     })();
 
-    auto render_command = [&](starcry &sc) {
+    auto render_command = [this, preview, is_interactive](starcry &sc) {
       sc.set_script(script);
       if (is_interactive) {
         // in interactive mode commands come from the web interface
@@ -172,7 +170,6 @@ int main(int argc, char *argv[]) {
   logger(DEBUG) << "Integrated with v8 " << V8_MAJOR_VERSION << "." << V8_MINOR_VERSION << " build: " << V8_BUILD_NUMBER
                 << " patch lvl: " << V8_PATCH_LEVEL << " candidate: " << V8_IS_CANDIDATE_VERSION << std::endl;
 
-  // InitializeMagick(*argv);
   main_program prog{argc, argv};
   return 0;
 }

@@ -50,6 +50,10 @@
 
         <hr>
         <stats-component />
+
+        <br/>
+        TRANSIT: {{ rendering }}
+
       </div>
       <div v-if="menu === 'files'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
         <scripts-component width="100%" height="100vh - 60px"/>
@@ -129,7 +133,7 @@ export default {
       connected_script: false,
       connected_objects: false,
       menu: '',
-      filename: 'input/test.js',
+      filename: '',
       current_frame : 0,
       rendering: 0,
       max_queued: 10,
@@ -276,7 +280,7 @@ export default {
       }
       // Restrict scale
       // TODO: this 100 needs to come from some constant, or better yet, some actual setting somewhere..
-      this.viewpoint_settings.scale = Math.min(Math.max(1., this.viewpoint_settings.scale), 100.);
+      this.viewpoint_settings.scale = Math.min(Math.max(0., this.viewpoint_settings.scale), 100.);
       console.log(this.viewpoint_settings.scale);
     },
     get_objects: function () {
@@ -376,6 +380,9 @@ export default {
           if (buffer[0] === '1') {
             this.$data.filename = buffer.slice(1);
             this.$data.connected_script = true;
+
+            this.log('DEBUG', 'script', 'send', 'open ' + this.$data.filename);
+            this.script_endpoint.send("open " + this.$data.filename);
           }
           else if (buffer[0] === '2') {
             buffer = buffer.slice(1);
@@ -384,12 +391,11 @@ export default {
             this.$data.input_source = buffer;
             this.$data.video = p.parsed()['video'];
             this.$data.preview = p.parsed()['preview'];
+            this.$data.viewpoint_settings.scale = this.$data.video['scale'];
           }
         },
         _ => {
           this.log('DEBUG', 'script', 'websocket connected', '');
-          this.log('DEBUG', 'script', 'send', 'open ' + this.$data.filename);
-          this.script_endpoint.send("open " + this.$data.filename);
         },
         _ => {
           this.log('DEBUG', 'script', 'websocket disconnected', '');

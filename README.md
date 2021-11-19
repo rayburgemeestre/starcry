@@ -53,6 +53,7 @@ Ubuntu 20.04.
 - `SFML` - used for preview window
 - `OpenEXR` - used for writing exr files
 - `tvision` - used for the console UI
+- `inotify-cpp` - used for monitoring changes to loaded js file on disk.
 
 Almost everything is statically linked, resulting in a relatively portable binary.
 
