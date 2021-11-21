@@ -52,7 +52,9 @@
         <stats-component />
 
         <br/>
-        TRANSIT: {{ rendering }}
+        TRANSIT: {{ rendering }}<br/>
+        FRAME: {{ current_frame }}<br/>
+        LAST FRAME: {{ max_frames }}<br/>
 
       </div>
       <div v-if="menu === 'files'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
@@ -104,7 +106,7 @@
       </div>
     </div>
     <div class="columns bottom">
-      <playback-component v-bind:value="current_frame" />
+      <playback-component v-bind:value="current_frame" v-bind:max_frames="max_frames" />
     </div>
   </div>
 </template>
@@ -135,6 +137,7 @@ export default {
       menu: '',
       filename: '',
       current_frame : 0,
+      max_frames : 250,
       rendering: 0,
       max_queued: 10,
       _play: false,
@@ -392,6 +395,13 @@ export default {
             this.$data.video = p.parsed()['video'];
             this.$data.preview = p.parsed()['preview'];
             this.$data.viewpoint_settings.scale = this.$data.video['scale'];
+            let total_duration = 0;
+            for (let scene of p.parsed()['scenes']) {
+              if (scene.duration) {
+                total_duration += scene.duration;
+              }
+              this.$data.max_frames = Math.floor(total_duration * this.$data.video['fps']);
+            }
           }
         },
         _ => {

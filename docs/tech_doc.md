@@ -66,7 +66,8 @@ The Web UI communicates with various websockets, each dedicated to parsing certa
 | `BitmapHandler` | `{filename: "foo.js", frame: 1 }` | `get_bitmap` + ViewPoint | `RGBA8888` binary data. (Viewpoint can also define `raw` and `preview`, `raw` will be written to disk as a side-effect.) |
 | `ImageHandler` | `"foo.js 1"` | `get_bitmap` (raw=false, preview=false) | `PNG` image binary data in `std::string buffer`). |
 | `ObjectsHandler` | `"foo.js 1"` | `get_objects` (raw=false, preview=false) | `JSON` data containing all objects in `std::string buffer`). |
-| `ScriptHandler` | `"open foo.js"` | reads file (e.g., `input/foo.js`) contents | Javascript file contents as string |
+| `ScriptHandler` | - | on connect | Sends active script filename to client. |
+|  ...  | `"open foo.js"` | reads file (e.g., `input/foo.js`) contents | Javascript file contents as string |
 | ... | `"list"` | reads input directory | `JSON` data containing all files with file name, size and modified. |
 | `ShapesHandler` | `"foo.js 1"` | `get_shapes` (raw=false, preview=false) | `JSON` serialized `data::job` (which is input for the Renderer) in `std::string buffer`). |
 | `StatsHandler` | - | - | Asynchronously server-side can send statistics to client (unidirectional). See `webserver::send_stats`. |

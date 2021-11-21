@@ -66,7 +66,7 @@ export default {
       offsetY: 0.,
       auto_render: true,
       raw: false,
-      preview: true,
+      preview: false,
       labels: false,
       caching: false,
       save: false,
