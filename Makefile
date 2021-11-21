@@ -9,7 +9,8 @@ GID:=$(shell id -g)
 help: # with thanks to Ben Rady
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-fast-docker-build:  ## build starcry binary using docker
+.PHONY: build
+build:  ## build starcry binary using docker
 	# build starcry with tailored image so we can invoke the make command straight away
 	mkdir -p /tmp/ccache-user
 	docker run -t -v /tmp/ccache-user:/home/user/.ccache -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user make core_"
@@ -44,11 +45,11 @@ debug-sanitizer:  ## build starcry binary using docker with debug + address sani
 
 debug-last:
 	rm -rf dbg
-	apport-unpack /var/crash/_home_trigen_system_data_projects_starcry_build_starcry.1144.crash dbg
+	apport-unpack /var/crash/_home_trigen_projects_starcry_build_starcry.1144.crash dbg
 	gdb ./build/starcry dbg/CoreDump
 
 debug-clean:
-	rm -rf /var/crash/_home_trigen_system_data_projects_starcry_build_starcry.1144.crash
+	rm -rf /var/crash/_home_trigen_projects_starcry_build_starcry.1144.crash
 
 format:  ## format source code (build at least once first)
 	# build starcry with tailored image so we can invoke the make command straight away
@@ -112,6 +113,8 @@ deps: ## install dependencies required for running and building starcry
 	# clion dependencies
 	sudo apt install -y libxtst6
 
+	sudo apt install -y ninja-build
+
 client_deps:  ## install dependencies for building webassembly client
 	sudo apt-get update
 	sudo apt-get install -y libsdl2-dev
@@ -134,8 +137,8 @@ prepare:  ## prepare environment before building (such as switch to clang)
 
 core_:  ## execute build steps for building starcry binary
 	pushd build && \
-	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake .. && \
-	time make -j $$(nproc) starcry && \
+	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -GNinja .. && \
+	time cmake --build build --target starcry && \
 	strip --strip-debug starcry
 
 core_debug:  ## execute build steps for building starcry binary with debug
@@ -162,7 +165,6 @@ shell:  ## start a shell in the starcry build image
 
 .PHONY: starcry
 clean:  ## clean build artifacts
-	docker run -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "cd build && make clean"
 	rm -rf CMakeCache.txt
 	rm -rf build/CMakeCache.txt
 	rm -rf out
