@@ -173,8 +173,8 @@ public:
       // I fixed this here, as well as added - 1 to bottom left and right as "abs_y_bottom - 1".
       // In the end this was the easier fixed, for some reason extending the radius_outer_circle with more pixels
       // doesn't have an effect.
-      int abs_y_top = static_cast<int>(circle_y - rel_y) - 1;
-      int abs_y_bottom = static_cast<int>(circle_y + rel_y);
+      int abs_y_top = static_cast<int>(circle_y - rel_y + 0.5);
+      int abs_y_bottom = static_cast<int>(circle_y + rel_y + 0.5);
 
       // TODO: optimize
       box.top_left.y = std::min(abs_y_top, (int)box.top_left.y);
@@ -189,8 +189,8 @@ public:
         hxcl_inner = half_chord_length<decltype(radius_inner_circle), double>(radius_inner_circle, rel_y);
 
       for (int rel_x = hxcl_inner; rel_x < hxcl_outer; rel_x++) {
-        int abs_x_left = static_cast<int>(circle_x - rel_x);
-        int abs_x_right = static_cast<int>(circle_x + rel_x);
+        int abs_x_left = static_cast<int>(circle_x - rel_x + 0.5);
+        int abs_x_right = static_cast<int>(circle_x + rel_x + 0.5);
 
         // TODO: optimize
         box.top_left.x = std::min(abs_x_left, (int)box.top_left.x);
@@ -223,7 +223,7 @@ public:
                               circle_x,
                               circle_y,
                               abs_x_left,
-                              abs_y_bottom - 1,  // workaround for off-by-one error
+                              abs_y_bottom,
                               diff_from_center,
                               opacity,
                               settings);
@@ -252,7 +252,7 @@ public:
                               circle_x,
                               circle_y,
                               abs_x_right,
-                              abs_y_bottom - 1,  // workaround for off-by-one error
+                              abs_y_bottom,
                               diff_from_center,
                               opacity,
                               settings);
