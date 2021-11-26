@@ -23,6 +23,11 @@ find_package(Boost 1.52 COMPONENTS program_options system date_time thread chron
 #find_package(OpenMP)
 find_package(Threads)
 
+# catch2
+add_subdirectory(libs/Catch2)
+add_executable(tests test/test.cpp)
+target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+
 #if (OPENMP_FOUND)
     #set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -35,7 +40,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # set(CMAKE_EXE_LINKER_FLAGS "-Wl,--no-rosegment ")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold")
 else()
-    #set (CLANG_FLAGS "")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,notext -Wno-unknown-pragmas")
 endif()
 
 if (SANITIZER)
@@ -43,9 +48,13 @@ if (SANITIZER)
 endif()
 if (DEBUG)
     # --no-rosegment is important for being able to let valgrind/callgrind read symbols
-    add_definitions("-std=c++20 -O0 -g -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3")
+    add_definitions("-std=c++-O0 -g -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3")
 else()
-    add_definitions("-std=c++20 -O3 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        add_definitions("-std=c++20 -O3 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
+    else()
+        add_definitions("-std=c++2a -O3 -funsigned-char                   -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
+    endif()
 endif()
 
 include_directories(

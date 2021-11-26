@@ -12,7 +12,6 @@
 #include "image.hpp"
 #include "messages.hpp"
 #include "piper.h"
-#include "png.hpp"
 
 #include "data/job.hpp"
 #include "data/pixels.hpp"
@@ -148,10 +147,6 @@ private:
                   const data::job &job,
                   image &bmp,
                   const data::settings &settings);
-  void copy_to_png(const std::vector<data::color> &source,
-                   uint32_t width,
-                   uint32_t height,
-                   png::image<png::rgb_pixel> &dest);
 
   void command_to_jobs(std::shared_ptr<instruction> cmd_def);
   std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);

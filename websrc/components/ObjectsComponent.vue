@@ -53,6 +53,10 @@
             field: 'y',
             label: 'Y',
           },
+          {
+            field: '#',
+            label: '#',
+          },
         ],
         selected: null,
         websock_status: "",

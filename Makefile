@@ -136,10 +136,14 @@ prepare:  ## prepare environment before building (such as switch to clang)
 	sudo -u user -g user mkdir -p build
 
 core_:  ## execute build steps for building starcry binary
-	pushd build && \
-	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -GNinja .. && \
+	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -GNinja -B build && \
 	time cmake --build build --target starcry && \
-	strip --strip-debug starcry
+	strip --strip-debug build/starcry
+
+core_gcc_:
+	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which g++) cmake -GNinja -B build && \
+	time cmake --build build --target starcry && \
+	strip --strip-debug build/starcry
 
 core_debug:  ## execute build steps for building starcry binary with debug
 	pushd build && \
@@ -203,8 +207,12 @@ run_web:  ## run web in development hot-swappable mode
 	npm run dev
 
 clion:
-	sudo switch-to-latest-clang
-	clion
+	xhost +
+	mkdir -p /tmp/ccache-root
+	docker run --rm --name starcry -p 18081:18080 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:/home/trigen -w /projects/starcry -e DISPLAY=$$DISPLAY -v /etc/passwd:/etc/passwd -v /etc/shadow:/etc/shadow -v /etc/sudoers:/etc/sudoers -v /tmp/.X11-unix:/tmp/.X11-unix -u 1144 rayburgemeestre/build-starcry-ubuntu:20.04 /bin/bash -c "sudo switch-to-latest-clang; /home/trigen/system/superprofile/dot-files/.bin/clion"
+
+attach:
+	docker exec -it starcry /bin/bash
 
 release:
 	make clean

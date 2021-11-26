@@ -26,12 +26,23 @@ public:
   }
 
   void copy_from(const image &other, bounding_box *box_in = nullptr) {
+    // #define DEBUG_BOX
     if (box_in) {
       bounding_box &box = *box_in;
       for (size_t y = box.top_left.y; y < box.bottom_right.y; y++) {
         size_t offset_y = y * width;
         for (size_t x = box.top_left.x; x < box.bottom_right.x; x++) {
-          size_t offset = offset_y + y;
+          size_t offset = offset_y + x;
+#ifdef DEBUG_BOX
+          if (y == box.top_left.y || x == box.top_left.x || y == box.bottom_right.y - 1 ||
+              x == box.bottom_right.x - 1) {
+            pixels_[offset].r = 1;
+            pixels_[offset].g = 1;
+            pixels_[offset].b = 1;
+            pixels_[offset].a = 1;
+            continue;
+          }
+#endif
           pixels_[offset] = other.pixels_[offset];
         }
       }

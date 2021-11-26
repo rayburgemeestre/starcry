@@ -52,7 +52,7 @@ public:
                 bool verbose,
                 const data::settings &settings);
 
-  void write_image(image &bmp, const std::string &filename);
+  void write_image(image &bmp, int width, int height, const std::string &filename);
 
   std::shared_ptr<rendering_engine_wrapper_class_data> data;
 };

@@ -153,7 +153,7 @@ _ = {
     },
     'red_ball': {
       'type': 'circle',
-      'collision_group': 'cg2',
+      'collision_group': 'cg1',
       'blending_type': blending_type.normal,
       'gradients': [
         [1.0, 'red'],
@@ -210,17 +210,22 @@ _ = {
     'scale': 1,
     'rand_seed': 3,
     'granularity': 1,
+    // TODO: grain moet ergens anders toegevoegd gaan worden, tijdens dubbel bufferen??
     'grain_for_opacity': true,
     'dithering': true,
+    // TODO: avoid harsch transitions from movement
+    // problem is that steps won't be updated.
+    'min_intermediates': 5,
+    'minimize_steps_per_object': false,
   },
   'preview': {
-    'motion_blur': false,
-    'min_intermediates': 2,
-    'max_intermediates': 2,
-    'grain_for_opacity': false,
-    'dithering': false,
-    'width': 1920 / 2,
-    'height': 1080 / 2,
+      // 'motion_blur': false,
+      // 'min_intermediates': 2,
+      // 'max_intermediates': 2,
+      // 'grain_for_opacity': false,
+      // 'dithering': false,
+      // 'width': 1920 / 2,
+      // 'height': 1080 / 2,
   },
   'scenes': [{
     'name': 'scene1',

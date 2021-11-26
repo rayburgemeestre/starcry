@@ -54,6 +54,7 @@
         <br/>
         TRANSIT: {{ rendering }}<br/>
         FRAME: {{ current_frame }}<br/>
+        <b-input type="number" v-model="current_frame"></b-input>
         LAST FRAME: {{ max_frames }}<br/>
 
       </div>
@@ -328,6 +329,9 @@ export default {
     }
   },
   watch: {
+    current_frame(new_value) {
+      this.$data.current_frame = parseInt(new_value);
+    },
     menu(new_value) {
       setTimeout(this.update_size, 100);
     },
@@ -400,8 +404,10 @@ export default {
               if (scene.duration) {
                 total_duration += scene.duration;
               }
-              this.$data.max_frames = Math.floor(total_duration * this.$data.video['fps']);
             }
+            if (!total_duration)
+              total_duration = this.$data.video['duration'];
+            this.$data.max_frames = Math.floor(total_duration * this.$data.video['fps']);
           }
         },
         _ => {

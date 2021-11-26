@@ -13,3 +13,6 @@
 [submodule "libs/perlin_noise"]
 	path = libs/perlin_noise
 	url = https://github.com/rayburgemeestre/perlin_noise
+[submodule "libs/Catch2"]
+	path = libs/Catch2
+	url = https://github.com/catchorg/Catch2

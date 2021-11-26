@@ -197,6 +197,7 @@ void generator::init_video_meta_info(std::optional<double> rand_seed, bool previ
     canvas_h = i.double_number(video, "height");
     seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
     tolerated_granularity = i.double_number(video, "granularity");
+    minimize_steps_per_object = i.double_number(video, "minimize_steps_per_object");
     if (i.has_field(video, "perlin_noise")) settings_.perlin_noise = i.boolean(video, "perlin_noise");
     if (i.has_field(video, "motion_blur")) settings_.motion_blur = i.boolean(video, "motion_blur");
     if (i.has_field(video, "grain_for_opacity")) settings_.grain_for_opacity = i.boolean(video, "grain_for_opacity");
@@ -802,8 +803,8 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
   auto y2 = i.double_number(instance2, "y");
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
-  auto radius2 = i.double_number(instance, "radius");
-  auto radiussize2 = i.double_number(instance, "radiussize");
+  auto radius2 = i.double_number(instance2, "radius");
+  auto radiussize2 = i.double_number(instance2, "radiussize");
 
   // If the quadtree reported a match, it doesn't mean the objects fully collide
   circle a(position(x, y), radius, radiussize);
@@ -1116,10 +1117,9 @@ void generator::convert_object_to_render_job(
 
   // See if we require this step for this object
   auto steps = i.integer_number(instance, "steps");
-  if (!sc.do_step(steps, stepper.next_step)) {
-    // TODO: make flag, to force all intermediate frames.
-    // TODO#2: make this a property also for objects, if they are vibrating they need this
-    // return;
+  if (minimize_steps_per_object && !sc.do_step(steps, stepper.next_step)) {
+    // TODO: make this a property also for objects, if they are vibrating they need this
+    return;
   }
   auto id = i.str(instance, "id");
   auto label = i.str(instance, "label");

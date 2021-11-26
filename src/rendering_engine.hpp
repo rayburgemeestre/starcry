@@ -8,6 +8,7 @@
 // #define DEBUGMODE
 
 #include "bitmap_wrapper.hpp"
+#include "util/image_utils.h"
 #include "util/scope_exit.hpp"
 
 #include <cmath>
@@ -136,8 +137,16 @@ public:
             draw_logic_.scale(scales[step] * scale_ratio);  // TODO: fix this
             box.update(draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings));
           }
+          // TODO: find a better solution for this
+          // 1 works
+          // box.normalize(width, height);
+          // bmp_prev.copy_from(bmp);
+          // bmp.clear_to_color(bg_color);
+          // std::swap(bmp, bmp_prev);
+          // 2
           box.normalize(width, height);
           bmp_prev.copy_from(bmp, &box);
+          std::swap(bmp, bmp_prev);
         } else if (shape.type == data::shape_type::line) {
           // first one
           double opacity = 1.0;
@@ -192,11 +201,10 @@ public:
     return bmp;
   }
 
-  void write_image(image &bmp, std::string filename) {
-    // TODO, see logic for PNG generation
-    // std::unique_lock<std::mutex> lock(m);
-    // bool ret = al_save_bitmap(filename.c_str(), bmp);
-    // if (!ret) throw std::runtime_error("rendering_engine::write_image al_save_bitmap() returned false");
+  void write_image(image &bmp, int width, int height, std::string filename) {
+    png::image<png::rgb_pixel> image(width, height);
+    copy_to_png(bmp.pixels(), width, height, image, false);
+    image.write(filename);
   }
 
   draw_logic::draw_logic draw_logic_;

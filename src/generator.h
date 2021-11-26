@@ -45,6 +45,7 @@ private:
   int32_t canvas_h = 0;
   double seed = 1;
   double tolerated_granularity = 1;
+  bool minimize_steps_per_object = true;
   size_t use_fps = 25;
   std::unordered_map<std::string, data::gradient> gradients;
   std::unordered_map<std::string, data::texture> textures;
@@ -164,7 +165,7 @@ public:
     return filename_;
   }
 
-  scale_settings& scale_settings() {
+  scale_settings& get_scale_settings() {
     return scalesettings;
   }
 
