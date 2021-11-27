@@ -4,12 +4,12 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <fmt/core.h>
-
+#include "starcry/command_get_image.h"
+#include "generator.h"
 #include "image.hpp"
 #include "starcry.h"
-#include "starcry/command_get_image.h"
 #include "starcry/metrics.h"
+#include "util/image_utils.h"
 #include "webserver.h"  // ImageHandler
 
 #include <sstream>
@@ -20,7 +20,7 @@ std::shared_ptr<render_msg> command_get_image::to_render_msg(std::shared_ptr<job
   auto &job = *job_msg->job;
   job.job_number = std::numeric_limits<uint32_t>::max();
   png::image<png::rgb_pixel> image(job.width, job.height);
-  sc.copy_to_png(bmp.pixels(), job.width, job.height, image);
+  copy_to_png(bmp.pixels(), job.width, job.height, image, sc.gen->settings().dithering);
   std::ostringstream ss;
   image.write_stream(ss);
   return std::make_shared<render_msg>(job_msg->client,

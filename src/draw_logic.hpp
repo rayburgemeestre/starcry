@@ -173,12 +173,11 @@ public:
       // I fixed this here, as well as added - 1 to bottom left and right as "abs_y_bottom - 1".
       // In the end this was the easier fixed, for some reason extending the radius_outer_circle with more pixels
       // doesn't have an effect.
-      int abs_y_top = static_cast<int>(circle_y - rel_y + 0.5);
+      int abs_y_top = static_cast<int>(circle_y - rel_y + 0.5) - 1;
       int abs_y_bottom = static_cast<int>(circle_y + rel_y + 0.5);
 
-      // TODO: optimize
-      box.top_left.y = std::min(abs_y_top, (int)box.top_left.y);
-      box.bottom_right.y = std::max(abs_y_bottom, (int)box.bottom_right.y);
+      box.update_y(abs_y_top);
+      box.update_y(abs_y_bottom);
 
       if ((abs_y_top < 0) && (abs_y_bottom > static_cast<int>(height_))) break;
 
@@ -189,12 +188,11 @@ public:
         hxcl_inner = half_chord_length<decltype(radius_inner_circle), double>(radius_inner_circle, rel_y);
 
       for (int rel_x = hxcl_inner; rel_x < hxcl_outer; rel_x++) {
-        int abs_x_left = static_cast<int>(circle_x - rel_x + 0.5);
-        int abs_x_right = static_cast<int>(circle_x + rel_x + 0.5);
+        int abs_x_left = static_cast<int>(circle_x - rel_x + 0.5) - 1;
+        int abs_x_right = static_cast<int>(circle_x + rel_x + 0.5) - 1;
 
-        // TODO: optimize
-        box.top_left.x = std::min(abs_x_left, (int)box.top_left.x);
-        box.bottom_right.x = std::max(abs_x_right, (int)box.bottom_right.x);
+        box.update_x(abs_x_left);
+        box.update_x(abs_x_right);
 
         if (abs_x_left < 0 && abs_x_right > static_cast<int>(width_)) continue;
 
@@ -223,7 +221,7 @@ public:
                               circle_x,
                               circle_y,
                               abs_x_left,
-                              abs_y_bottom,
+                              abs_y_bottom - 1,  // workaround for off-by-one error
                               diff_from_center,
                               opacity,
                               settings);
@@ -252,7 +250,7 @@ public:
                               circle_x,
                               circle_y,
                               abs_x_right,
-                              abs_y_bottom,
+                              abs_y_bottom - 1,  // workaround for off-by-one error
                               diff_from_center,
                               opacity,
                               settings);
@@ -329,22 +327,32 @@ public:
 
   template <typename blending_type_>
   void blend_pixel(
-      image &bmp, image &bmp_prev, double opacity, const int &absX, const int &absY, const data::color &clr) {
-    // auto clr2 = blender<blending_type_>(color(bg.r * (1.0 - clr.a), bg.g * (1.0 - clr.a), bg.b * (1.0 - clr.a), 0.0),
-    // color(clr.r * clr.a, clr.g * clr.a, clr.b * clr.a, 1.0));
+      image &bmp, image &bmp_prev, double opacity, const int &absX, const int &absY, const data::color &fg_color) {
+    // original background color
     auto &bg = bmp_prev.get(absX, absY);
-    auto clr2 = blender<blending_type_>(color(bg.r, bg.g, bg.b, bg.a), color(clr.r, clr.g, clr.b, clr.a));
-    double r = (bg.r * (1.0 - clr2.get_a())) + (clr2.get_r() * clr2.get_a());
-    double g = (bg.g * (1.0 - clr2.get_a())) + (clr2.get_g() * clr2.get_a());
-    double b = (bg.b * (1.0 - clr2.get_a())) + (clr2.get_b() * clr2.get_a());
+
+    // blend it with foreground color
+    auto new_clr =
+        blender<blending_type_>(color(bg.r, bg.g, bg.b, bg.a), color(fg_color.r, fg_color.g, fg_color.b, fg_color.a));
+
+    // with correct alpha value
+    double r = (bg.r * (1.0 - new_clr.get_a())) + (new_clr.get_r() * new_clr.get_a());
+    double g = (bg.g * (1.0 - new_clr.get_a())) + (new_clr.get_g() * new_clr.get_a());
+    double b = (bg.b * (1.0 - new_clr.get_a())) + (new_clr.get_b() * new_clr.get_a());
     double a = 0;
+
+    // current pixel color
     auto &pix = bmp.get(absX, absY);
-    r = pix.r + (r * opacity);
-    g = pix.g + (g * opacity);
-    b = pix.b + (b * opacity);
+
+    // add blended pixel to current pixel
+    r = pix.r * (1.0 - opacity) + (r * opacity);
+    g = pix.g * (1.0 - opacity) + (g * opacity);
+    b = pix.b * (1.0 - opacity) + (b * opacity);
+
     if (r > 1) r = 1;
     if (g > 1) g = 1;
     if (b > 1) b = 1;
+
     bmp.set(absX, absY, r, g, b, a);
   }
 

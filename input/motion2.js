@@ -4,6 +4,10 @@ _ = {
       {'position': 0.0, 'r': 0, 'g': 0, 'b': 1, 'a': 1},
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
     ],
+    'green': [
+      {'position': 0.0, 'r': 0, 'g': 1, 'b': 0, 'a': 1},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+    ],
     'yellow': [
       {'position': 0.0, 'r': 1, 'g': 1, 'b': 0, 'a': 1},
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
@@ -27,7 +31,18 @@ _ = {
       {'position': 0.8, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
       {'position': 0.9, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
-    ]
+    ],
+    'black': [
+      {'position': 0.0, 'r': 0, 'g': 0, 'b': 0, 'a': 1},
+      {'position': 0.9, 'r': 0, 'g': 0, 'b': 0, 'a': 1},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+    ],
+    'black_2': [
+      {'position': 0.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 0.8, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 0.9, 'r': 0, 'g': 0, 'b': 0, 'a': 1},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+    ],
   },
   'objects': {
     'balls': {
@@ -70,7 +85,7 @@ _ = {
             'z': 0,
             'vel_x': 0,
             'vel_y': 0,
-            'props': {'grad': i === 0 || i === 3 ? 'red' : 'white'}
+            'props': {'grad': i === 0 || i === 3 ? 'red' : 'black'}
           });
         }
       },
@@ -130,12 +145,12 @@ _ = {
       'collision_group': 'cg1',
       'blending_type': blending_type.normal,
       'gradients': [
-        [1.0, 'white'],
-        [0.0, 'white_2'],
+        [1.0, 'black'],
+        [0.0, 'black_2'],
       ],
       'radius': 0,
       'radiussize': 0.0,
-      'props': {'grad': 'white', 'grad1': 1.0, 'grad2': 0.0},
+      'props': {'grad': 'black', 'grad1': 1.0, 'grad2': 0.0},
       'init': function() {
         this.gradients[0][1] = this.props.grad;
       },
@@ -153,14 +168,14 @@ _ = {
     },
     'red_ball': {
       'type': 'circle',
-      'collision_group': 'cg2',
+      'collision_group': 'cg1',
       'blending_type': blending_type.normal,
       'gradients': [
         [1.0, 'red'],
       ],
       'radius': 0,
       'radiussize': 0.0,
-      'props': {'grad': 'white', 'grad1': 1.0, 'grad2': 0.0},
+      'props': {'grad': 'black', 'grad1': 1.0, 'grad2': 0.0},
       'init': function() {},
       'time': function(t, elapsed) {
         while (this.x + (1920 / 2) < 0) this.x += 1920;
@@ -175,15 +190,15 @@ _ = {
     'bg': {
       'type': 'circle',
       'gradients': [
-        [1.0, 'blue'],
+        [1.0, 'green'],
         [0.0, 'yellow'],
       ],
       'radius': 0,
       'radiussize': 2500,
       'init': function() {},
       'time': function(t, elapsed) {
-        // this.gradients[0][0] = 1.0 - t;
-        // this.gradients[1][0] = t;
+        this.gradients[0][0] = 1.0 - t;
+        this.gradients[1][0] = t;
       },
     },
     'bg2': {
@@ -210,8 +225,13 @@ _ = {
     'scale': 1,
     'rand_seed': 3,
     'granularity': 1,
+    // TODO: grain moet ergens anders toegevoegd gaan worden, tijdens dubbel bufferen??
     'grain_for_opacity': true,
     'dithering': true,
+    // TODO#2: avoid harsch transitions from movement
+    //  (problem is that steps won't be updated.)
+    'min_intermediates': 5,
+    'minimize_steps_per_object': false,
   },
   'preview': {
     'motion_blur': false,
@@ -226,7 +246,6 @@ _ = {
     'name': 'scene1',
     'objects': [
       {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
-      // {'id': 'bg2', 'x': -1920 / 2.0, 'y': 0, 'z': 0, 'props': {}},
       {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
     ],
   }]

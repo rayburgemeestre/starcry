@@ -11,6 +11,8 @@ public:
   virtual void update();
   virtual void draw();
 
+  void setText(const std::string& str);
+
 private:
   std::string str;
 };

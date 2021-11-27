@@ -81,6 +81,10 @@ void webserver::run() {
   server->serve("webroot", 18080);
 }
 
+void webserver::stop() {
+  server->terminate();
+}
+
 void webserver::send_stats(const stats &stats_) {
   json result = {};
   std::string str;

@@ -13,19 +13,34 @@ public:
   coord bottom_right;
   bool initialized;
 
-  bounding_box() : initialized(false) {}
+  bounding_box()
+      : top_left(std::numeric_limits<double>::max(), std::numeric_limits<double>::max()),
+        bottom_right(std::numeric_limits<double>::min(), std::numeric_limits<double>::min()),
+        initialized(false) {}
+
   void update(bounding_box&& other) {
     if (!initialized) {
       top_left = other.top_left;
       bottom_right = other.bottom_right;
       initialized = true;
     } else {
-      top_left.x = std::min(other.top_left.x, top_left.x);
-      top_left.y = std::min(other.top_left.y, top_left.y);
-      bottom_right.x = std::max(other.bottom_right.x, bottom_right.x);
-      bottom_right.y = std::max(other.bottom_right.y, bottom_right.y);
+      update_x(other.top_left.x);
+      update_x(other.bottom_right.x);
+      update_y(other.top_left.y);
+      update_y(other.bottom_right.y);
     }
   }
+
+  void update_x(double x) {
+    top_left.x = std::min(top_left.x, x);
+    bottom_right.x = std::max(bottom_right.x, x);
+  }
+
+  void update_y(double y) {
+    top_left.y = std::min(top_left.y, y);
+    bottom_right.y = std::max(bottom_right.y, y);
+  }
+
   void normalize(int width, int height) {
     if (top_left.x < 0) top_left.x = 0;
     if (top_left.y < 0) top_left.y = 0;

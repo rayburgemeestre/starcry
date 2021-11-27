@@ -110,10 +110,13 @@ private:
   size_t max_frames;
   double hack_last_render_time = 0.;
 
+  std::string script_ = "input/test.js";
+
 public:
   explicit metrics(bool notty);
   ~metrics();
 
+  void set_script(const std::string& script);
   void init();
   void register_thread(int number, std::string desc);
   void register_job(int number, int frame, int chunk, int num_chunks);

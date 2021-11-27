@@ -29,6 +29,8 @@ public:
   virtual void handleEvent(TEvent &Event);
   virtual void getEvent(TEvent &event);
   virtual void idle();
+  void setScript(const std::string &script);
+  void setProgress(int current_frame, int last_frame);
   void exit();
 
 private:
@@ -46,4 +48,6 @@ private:
   void openFile(const char *fileSpec);
   metrics *metrics_;
   std::atomic<bool> exited = false;
+
+  TView *script_filename_view = nullptr;
 };

@@ -20,6 +20,15 @@ std::shared_ptr<render_msg> command_get_objects::to_render_msg(std::shared_ptr<j
   auto &shapes = job_msg->job->shapes;
   size_t index = 0;
   if (!shapes.empty()) {
+#define DEBUG_NUM_SHAPES
+#ifdef DEBUG_NUM_SHAPES
+    std::unordered_map<int64_t, int64_t> nums;
+    for (size_t i = 0; i < shapes.size(); i++) {
+      for (const auto &shape : shapes[i]) {
+        nums[shape.unique_id]++;
+      }
+    }
+#endif
     for (const auto &shape : shapes[shapes.size() - 1]) {
       if (shape.type == data::shape_type::circle) {
         json circle = {
@@ -31,11 +40,16 @@ std::shared_ptr<render_msg> command_get_objects::to_render_msg(std::shared_ptr<j
             {"type", "circle"},
             {"x", shape.x},
             {"y", shape.y},
+#ifdef DEBUG_NUM_SHAPES
+            {"#", nums[shape.unique_id]},
+#else
+            {"#", -1},
+#endif
         };
         shapes_json.push_back(circle);
       }
       if (shape.type == data::shape_type::line) {
-        json circle = {
+        json line = {
             {"index", index},
             {"id", shape.id},
             {"label", shape.label.empty() ? shape.id : shape.label},
@@ -46,8 +60,13 @@ std::shared_ptr<render_msg> command_get_objects::to_render_msg(std::shared_ptr<j
             {"y", shape.y},
             {"x2", shape.x2},
             {"y2", shape.y2},
+#ifdef DEBUG_NUM_SHAPES
+            {"#", nums[shape.unique_id]},
+#else
+            {"#", -1},
+#endif
         };
-        shapes_json.push_back(circle);
+        shapes_json.push_back(line);
       }
       index++;
     }

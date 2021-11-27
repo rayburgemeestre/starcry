@@ -47,7 +47,7 @@ public:
   explicit webserver(starcry *sc);
 
   void run();
-
+  void stop();
   void set_script(const std::string &script);
 
   template <typename T>

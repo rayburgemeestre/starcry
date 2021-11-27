@@ -19,7 +19,9 @@
 #include "loggerview.h"
 #include "tstarcry.h"
 
-#include <thread>
+#include <cmath>
+#include <sstream>
+
 #include "starcry/metrics.h"
 
 #pragma clang diagnostic pop
@@ -55,8 +57,8 @@ TStarcry::TStarcry(metrics *metrics)
   heap->growMode = gfGrowLoX | gfGrowHiX;
   insert(heap);
 
-  TView *w = validView(new TFileWindow("../starcry/input/test.js", []() {}));
-  if (w != 0) deskTop->insert(w);
+  script_filename_view = validView(new TFileWindow("input/test.js", []() {}));
+  if (script_filename_view != nullptr) deskTop->insert(script_filename_view);
 
   startFileViewer(&meta_viewer_win, ":meta");
   startFileViewer(&stdout_viewer_win, ":stdout");
@@ -151,6 +153,7 @@ void TStarcry::idle() {
   TProgram::idle();
   clock->update();
   heap->update();
+  eta->update();
 
   if (deskTop->firstThat(isTileable, 0) != 0) {
     enableCommand(cmTile);
@@ -200,6 +203,23 @@ void TStarcry::idle() {
     void *p1 = 0;
     message(this, evCommand, cmQuit, p1);
   }
+}
+
+void TStarcry::setScript(const std::string &script) {
+  if (script_filename_view != nullptr) deskTop->remove(script_filename_view);
+  TView *script_filename_view = validView(new TFileWindow(script.c_str(), []() {}));
+  if (script_filename_view != nullptr) deskTop->insert(script_filename_view);
+  void *p1 = 0;
+  message(this, evCommand, cmTile, p1);
+}
+
+void TStarcry::setProgress(int current_frame, int last_frame) {
+  double progress = double(current_frame) / double(last_frame);
+  progress *= 100;
+  int percentage = round(progress);
+  std::stringstream ss;
+  ss << percentage << "%";
+  eta->setText(ss.str());
 }
 
 TMenuBar *TStarcry::initMenuBar(TRect r) {

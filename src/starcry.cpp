@@ -26,9 +26,11 @@
 #include "rendering_engine_wrapper.h"
 #include "streamer_output/sfml_window.h"
 #include "util/compress_vector.h"
+#include "util/image_utils.h"
 #include "util/logger.h"
 #include "webserver.h"
 
+#include "starcry/client_message_handler.h"
 #include "starcry/command_get_bitmap.h"
 #include "starcry/command_get_image.h"
 #include "starcry/command_get_objects.h"
@@ -36,8 +38,6 @@
 #include "starcry/command_get_shapes.h"
 #include "starcry/command_get_video.h"
 #include "starcry/metrics.h"
-
-#include "starcry/client_message_handler.h"
 #include "starcry/server_message_handler.h"
 
 // TODO: re-organize this somehow
@@ -94,6 +94,7 @@ starcry::starcry(size_t num_local_engines,
       metrics_(std::make_shared<metrics>(notty)),
       script_("input/test.js"),
       notifier(nullptr) {
+  metrics_->set_script(script_);
   metrics_->init();
   set_metrics(&*metrics_);
   logger(DEBUG) << "Metrics wired to ncurses UI" << std::endl;
@@ -136,9 +137,8 @@ feature_settings &starcry::features() {
 
 void starcry::set_script(const std::string &script) {
   script_ = script;
-  if (webserv) {
-    webserv->set_script(script_);
-  }
+  if (metrics_) metrics_->set_script(script_);
+  if (webserv) webserv->set_script(script_);
 }
 
 void starcry::add_command(seasocks::WebSocket *client,
@@ -193,49 +193,6 @@ void starcry::render_job(size_t thread_num,
                       job.scales,
                       log_level_ == starcry::log_level::debug,
                       settings);
-}
-
-void starcry::copy_to_png(const std::vector<data::color> &source,
-                          uint32_t width,
-                          uint32_t height,
-                          png::image<png::rgb_pixel> &dest) {
-  size_t index = 0;
-  auto m = std::numeric_limits<uint8_t>::max();
-  auto settings = gen->settings();
-  for (uint32_t y = 0; y < height; y++) {
-    for (uint32_t x = 0; x < width; x++) {
-      // BGRA -> RGB
-      // uint8_t *data = (uint8_t *)&(source[index]);
-      // dest[y][x] = png::rgb_pixel(*(data + 2), *(data + 1), *(data + 0));
-
-      // My attempt at "random" dithering, probably inefficient
-      double r1 = source[index].r;
-      double g1 = source[index].g;
-      double b1 = source[index].b;
-      uint8_t r = r1 * m;
-      uint8_t g = g1 * m;
-      uint8_t b = b1 * m;
-      if (settings.dithering) {
-        double r_dbl = r1 * m;
-        double g_dbl = g1 * m;
-        double b_dbl = b1 * m;
-        double r_offset = r_dbl - static_cast<double>(r);
-        double g_offset = g_dbl - static_cast<double>(g);
-        double b_offset = b_dbl - static_cast<double>(b);
-        if (rand_fun_vx() >= r_offset && r > 0) {
-          r -= 1;
-        }
-        if (rand_fun_vx() >= g_offset && g > 0) {
-          g -= 1;
-        }
-        if (rand_fun_vx() >= b_offset && b > 0) {
-          b -= 1;
-        }
-      }
-      dest[y][x] = png::rgb_pixel(r, g, b);
-      index++;
-    }
-  }
 }
 
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
@@ -309,6 +266,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 }
 
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
+  bool finished = false;
   if (log_level_ != starcry::log_level::silent) {
     const auto frame = job_msg->job_number == std::numeric_limits<size_t>::max() ? 0 : job_msg->job_number;
     static auto prev_frame = 0;
@@ -328,6 +286,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
                      std::vector<uint32_t> &pixels,
                      std::vector<data::color> &pixels_raw,
                      bool last_frame) {
+    bool finished = false;
     if (job_msg->client == nullptr) {
       // get pixels from raw pixels for the ffmpeg video
       if (pixels.empty() && !pixels_raw.empty()) {
@@ -341,13 +300,15 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
           for (int i = 0; i < 50; i++) {
             framer->add_frame(pixels);
           }
+          finished = true;
         }
       }
-      return;
+      return finished;
     }
     std::swap(job_msg->pixels, pixels);
     std::swap(job_msg->pixels_raw, pixels_raw);
     command_handlers[job_msg->type]->handle_frame(job_msg);
+    return finished;
   };
 
   buffered_frames[job_msg->job_number].push_back(job_msg);
@@ -387,7 +348,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
         frame_number = chunk->frame_number;
       }
 
-      process(width, height, pixels, pixels_raw, last_frame);
+      finished = process(width, height, pixels, pixels_raw, last_frame);
 
       if (job_msg->job_number == std::numeric_limits<uint32_t>::max()) {
         save_images(pixels_raw, width, height, frame_number, true, true);
@@ -399,6 +360,9 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       break;
     }
     buffered_frames.erase(pos);
+  }
+  if (finished && webserv) {
+    webserv->stop();
   }
 }
 
@@ -552,7 +516,7 @@ void starcry::save_images(std::vector<data::color> &pixels_raw,
     // version. png::image<png::rgb_pixel_16> image(job.width, job.height);
     if (write_8bit_png) {
       png::image<png::rgb_pixel> image(width, height);
-      copy_to_png(pixels_raw, width, height, image);
+      copy_to_png(pixels_raw, width, height, image, gen->settings().dithering);
       image.write(fmt::format(
           "output_frame_{:05d}_seed_{}_{}x{}-{}.png", frame_number, gen->get_seed(), width, height, filename));
     }

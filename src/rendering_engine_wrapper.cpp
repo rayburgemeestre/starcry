@@ -57,6 +57,6 @@ image &rendering_engine_wrapper::render(size_t thread_num,
                              settings);
 }
 
-void rendering_engine_wrapper::write_image(image &bmp, const std::string &filename) {
-  return data->engine.write_image(bmp, filename);
+void rendering_engine_wrapper::write_image(image &bmp, int width, int height, const std::string &filename) {
+  return data->engine.write_image(bmp, width, height, filename);
 }

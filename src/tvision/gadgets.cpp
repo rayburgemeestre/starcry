@@ -16,7 +16,7 @@
 #include <sstream>
 
 TQuickInfoView::TQuickInfoView(TRect &r) : TView(r) {
-  str = "TODO";
+  str = "INIT";
 }
 
 void TQuickInfoView::draw() {
@@ -26,6 +26,10 @@ void TQuickInfoView::draw() {
   buf.moveChar(0, ' ', c, (short)size.x);
   buf.moveStr(0, str.c_str(), c);
   writeLine(0, 0, (short)size.x, 1, buf);
+}
+
+void TQuickInfoView::setText(const std::string &str) {
+  this->str = str;
 }
 
 void TQuickInfoView::update() {

@@ -18,6 +18,13 @@ metrics::metrics(bool notty) : notty(notty) {
   // caller needs to call init, so we can use shared_from_this()
 }
 
+void metrics::set_script(const std::string &script) {
+  script_ = script;
+  if (program) {
+    program->setScript(script_);
+  }
+}
+
 void metrics::init() {
   std::cout << "Welcome to Starcry." << std::endl;
 
@@ -432,6 +439,10 @@ void metrics::display(std::function<void(const std::string &)> f1,
       ss.str("");
     }
   }
+  if (program) {
+    program->setProgress(completed_frames, max_frames);
+  }
+
   for (auto [level, str] : _output) {
     f3(level, str);
   }
