@@ -176,7 +176,7 @@ shell:  ## start a shell in the starcry build image
 .PHONY: starcry
 clean:  ## clean build artifacts
 	rm -rf CMakeCache.txt
-	rm -rf build/CMakeCache.txt
+	rm -rf build
 	rm -rf out
 	rm -f callgrind.out.*
 	rm -f actor_log*.log
@@ -222,7 +222,7 @@ attach:
 
 release:
 	make clean
-	make fast-docker-build
+	make build
 	make build_web
 	make client
 	make dockerize

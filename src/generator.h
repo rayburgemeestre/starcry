@@ -18,6 +18,7 @@
 #include "data/job.hpp"
 #include "data/settings.hpp"
 #include "data/texture.hpp"
+#include "data/toroidal.hpp"
 
 #include "util/frame_stepper.hpp"
 #include "util/v8_interact.hpp"
@@ -49,6 +50,7 @@ private:
   size_t use_fps = 25;
   std::unordered_map<std::string, data::gradient> gradients;
   std::unordered_map<std::string, data::texture> textures;
+  std::unordered_map<std::string, data::toroidal> toroidals;
   std::unordered_map<size_t, std::map<int, size_t>> indexes;
   frame_stepper stepper;
   std::unordered_map<int64_t, v8::Local<v8::Object>> parents;
@@ -102,6 +104,7 @@ public:
   void init_video_meta_info(std::optional<double> rand_seed, bool preview);
   void init_gradients();
   void init_textures();
+  void init_toroidals();
   void init_object_instances() const;
 
   void set_scene(size_t scene);
@@ -121,6 +124,7 @@ public:
                                v8::Local<v8::Array>& next_instances,
                                int max_step,
                                v8::Local<v8::Object>& video);
+  void update_object_toroidal(v8_interact& i, v8::Local<v8::Object>& instance, double& x, double& y);
   void update_object_interactions(v8_interact& i,
                                   v8::Local<v8::Array>& next_instances,
                                   v8::Local<v8::Array>& intermediates,

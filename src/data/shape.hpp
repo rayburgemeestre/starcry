@@ -114,6 +114,8 @@ struct shape {
   std::string label;
   int level;
   bool motion_blur = true;
+  int warp_width = 0;
+  int warp_height = 0;
 
   template <class Archive>
   void serialize(Archive &ar) {
@@ -145,7 +147,9 @@ struct shape {
        id,
        label,
        level,
-       motion_blur);
+       motion_blur,
+       warp_width,
+       warp_height);
   }
 };
 

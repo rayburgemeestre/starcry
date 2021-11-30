@@ -104,6 +104,7 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
   init_video_meta_info(rand_seed, preview);
   init_gradients();
   init_textures();
+  init_toroidals();
   scenesettings.scene_initialized = std::numeric_limits<size_t>::max();
   set_scene(0);
 }
@@ -117,14 +118,14 @@ void generator::init_context() {
 }
 
 void generator::init_user_script() {
-  //  {
-  //    std::ifstream stream("webroot/lodash.js");
-  //    std::istreambuf_iterator<char> begin(stream), end;
-  //    const auto source = std::string(begin, end);
-  //    context->run(source);
-  //    // context->run("var a = {};");
-  //    // context->run("var b = _.cloneDeep(a);");
-  //  }
+  // {
+  //   std::ifstream stream("webroot/lodash.js");
+  //   std::istreambuf_iterator<char> begin(stream), end;
+  //   const auto source = std::string(begin, end);
+  //   context->run(source);
+  //   // context->run("var a = {};");
+  //   // context->run("var b = _.cloneDeep(a);");
+  // }
   std::ifstream stream(filename().c_str());
   if (!stream && filename() != "-") {
     throw std::runtime_error("could not locate file " + filename());
@@ -294,6 +295,24 @@ void generator::init_textures() {
         textures[id].end = i.double_number(range, 2);
         textures[id].toX = i.double_number(range, 3);
       }
+    }
+  });
+}
+
+void generator::init_toroidals() {
+  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+    v8_interact i(isolate);
+    auto obj = val.As<v8::Object>();
+    if (!i.has_field(obj, "toroidal")) return;
+    auto toroidal_objects = i.v8_obj(obj, "toroidal");
+    auto toroidal_fields = toroidal_objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+    for (size_t k = 0; k < toroidal_fields->Length(); k++) {
+      auto toroidal_id = i.get_index(toroidal_fields, k);
+      auto toroidal_settings = i.get(toroidal_objects, toroidal_id).As<v8::Object>();
+      auto id = v8_str(isolate, toroidal_id.As<v8::String>());
+      auto type = i.str(toroidal_settings, "type");
+      toroidals[id].width = i.integer_number(toroidal_settings, "width");
+      toroidals[id].height = i.integer_number(toroidal_settings, "height");
     }
   });
 }
@@ -711,6 +730,7 @@ void generator::update_object_positions(v8_interact& i,
 
     // For now we only care about circles
     if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
+      update_object_toroidal(i, instance, x, y);
       if (qts.find(collision_group) == qts.end()) {
         qts.insert(std::make_pair(collision_group,
                                   quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32)));
@@ -729,6 +749,38 @@ void generator::update_object_positions(v8_interact& i,
     if (attempt == 1) {
       i.set_field(instance, "steps", v8::Number::New(isolate, 1));
     }
+  }
+}
+
+void generator::update_object_toroidal(v8_interact& i, v8::Local<v8::Object>& instance, double& x, double& y) {
+  auto toroidal = i.has_field(instance, "toroidal") ? i.str(instance, "toroidal") : "";
+  if (!toroidal.empty()) {
+    auto the_width = toroidals[toroidal].width;
+    auto the_height = toroidals[toroidal].height;
+    auto diff_x = 0;
+    auto diff_y = 0;
+
+    while (x + (the_width / 2) < 0) {
+      x += the_width;
+      diff_x += the_width;
+    }
+    while (y + (the_height / 2) < 0) {
+      y += the_height;
+      diff_y += the_height;
+    }
+    while (x + (the_width / 2) > the_width) {
+      x -= the_width;
+      diff_x -= the_width;
+    }
+    while (y + (the_height / 2) > the_height) {
+      y -= the_height;
+      diff_y -= the_height;
+    }
+    const auto warped_dist = get_distance(0, 0, diff_x, diff_y);
+    auto isolate = i.get_isolate();
+    i.set_field(instance, "__warp_width__", v8::Number::New(isolate, the_width));
+    i.set_field(instance, "__warp_height__", v8::Number::New(isolate, the_height));
+    i.set_field(instance, "__warped_dist__", v8::Number::New(isolate, warped_dist));
   }
 }
 
@@ -1081,15 +1133,22 @@ double generator::get_max_travel_of_object(v8_interact& i,
     prev_y2 *= scalesettings.video_scale_intermediate * prev_shape_scale;
     dist = std::max(dist, sqrt(pow(x2 - prev_x2, 2) + pow(y2 - prev_y2, 2)));
   }
-  // TODO: stupid warp hack
-  while (dist >= 1920 * 0.9) dist -= 1920;
-  while (dist >= 1080 * 0.9) dist -= 1080;
   // radius
   rad *= scalesettings.video_scale_next * shape_scale;
   prev_rad *= scalesettings.video_scale_intermediate * prev_shape_scale;
   job->scale = scalesettings.video_scale_next;
   auto new_dist = fabs(prev_rad - rad);
   dist = std::max(dist, new_dist);
+
+  // Make sure that we do not include any warped distance
+  if (i.has_field(instance, "__warped_dist__")) {
+    dist -= i.double_number(instance, "__warped_dist__");
+    // If object moves two pixels to the right, is then warped 500 px to the left
+    // It has traveled 498, and the above statement has resulted in a value of -2.
+    // If it moves to the left for 2 pixels, and is moved 500px to the right, the
+    // distance is 502px - 500px = 2px as well.
+    dist = fabs(dist);
+  }
   return dist;
 }
 
@@ -1138,6 +1197,8 @@ void generator::convert_object_to_render_job(
   // auto video_scale = i.double_number(video, "scale");
   auto shape_opacity = i.double_number(instance, "opacity");
   auto motion_blur = i.boolean(instance, "motion_blur");
+  auto warp_width = i.has_field(instance, "__warp_width__") ? i.integer_number(instance, "__warp_width__") : 0;
+  auto warp_height = i.has_field(instance, "__warp_height__") ? i.integer_number(instance, "__warp_height__") : 0;
 
   data::shape new_shape;
   new_shape.time = time;
@@ -1177,6 +1238,8 @@ void generator::convert_object_to_render_job(
   new_shape.id = id;
   new_shape.label = label;
   new_shape.motion_blur = motion_blur;
+  new_shape.warp_width = warp_width;
+  new_shape.warp_height = warp_height;
 
   if (type == "circle") {
     new_shape.type = data::shape_type::circle;

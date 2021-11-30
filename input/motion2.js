@@ -44,6 +44,12 @@ _ = {
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
     ],
   },
+  'toroidal': {
+    't1': {
+      'width': 1920,
+      'height': 1080,
+    }
+  },
   'objects': {
     'balls': {
       'x': 0,
@@ -113,11 +119,14 @@ _ = {
           }
 
           for (let obj of this.subobj) {
-            let velocity = new vector2d(rand(), 0);
-            velocity.rotate(rand() * 360);
-            obj.velocity = 1;
-            obj.vel_x = velocity.x;
-            obj.vel_y = velocity.y;
+            let angle = get_angle(obj.x, obj.y, 0, 0);
+            var rads = angle * Math.PI / 180.;
+            var move = 0.5;
+            var new_x = (Math.cos(rads) * move);
+            var new_y = (Math.sin(rads) * move);
+            obj.velocity = obj.x === 0 && obj.y === 0 ? 0 : 0.5;
+            obj.vel_x = new_x;
+            obj.vel_y = new_y;
           }
         }
         if (t > 0.75) {
@@ -143,6 +152,7 @@ _ = {
     'ball': {
       'type': 'circle',
       'collision_group': 'cg1',
+      'toroidal': 't1',
       'blending_type': blending_type.normal,
       'gradients': [
         [1.0, 'black'],
@@ -154,7 +164,7 @@ _ = {
       'init': function() {
         this.gradients[0][1] = this.props.grad;
       },
-      'time': function(t, elapsed) {
+      'time': function(t) {
         if (t > 0.5) {
           let q = (t - 0.5) / 0.1;
           if (q > 1.0) q = 1.0;
@@ -169,19 +179,16 @@ _ = {
     'red_ball': {
       'type': 'circle',
       'collision_group': 'cg1',
+      'toroidal': 't1',
       'blending_type': blending_type.normal,
       'gradients': [
         [1.0, 'red'],
       ],
       'radius': 0,
-      'radiussize': 0.0,
+      'radiussize': 5.0,
       'props': {'grad': 'black', 'grad1': 1.0, 'grad2': 0.0},
       'init': function() {},
       'time': function(t, elapsed) {
-        while (this.x + (1920 / 2) < 0) this.x += 1920;
-        while (this.y + (1080 / 2) < 0) this.y += 1080;
-        while (this.x + (1920 / 2) > 1920) this.x -= 1920;
-        while (this.y + (1080 / 2) > 1080) this.y -= 1080;
         this.velocity = t * 100;
         if (t >= 0.7) this.velocity = (1.0 - (t - 0.6 /*to stop earlier*/) / 0.3) * 100;
         if (this.velocity < 0) this.velocity = 0;
@@ -193,6 +200,9 @@ _ = {
         [1.0, 'green'],
         [0.0, 'yellow'],
       ],
+      'blending_type': blending_type.normal,
+      'x': 0,
+      'y': 0,
       'radius': 0,
       'radiussize': 2500,
       'init': function() {},
@@ -230,8 +240,8 @@ _ = {
     'dithering': true,
     // TODO#2: avoid harsch transitions from movement
     //  (problem is that steps won't be updated.)
-    'min_intermediates': 5,
-    'minimize_steps_per_object': false,
+    // 'min_intermediates': 5,
+    'minimize_steps_per_object': true,
   },
   'preview': {
     'motion_blur': false,
@@ -239,8 +249,8 @@ _ = {
     'max_intermediates': 2,
     'grain_for_opacity': false,
     'dithering': false,
-    'width': 1920 / 2,
-    'height': 1080 / 2,
+    'width': 1920,
+    'height': 1080,
   },
   'scenes': [{
     'name': 'scene1',

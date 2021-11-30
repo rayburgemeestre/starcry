@@ -126,26 +126,55 @@ public:
           if (shape.indexes.size() > 0) {
             opacity /= (shape.indexes.size() + 1);
           }
-          draw_logic_.scale(scales[scales.size() - 1] * scale_ratio);
+          const auto scale = scales[scales.size() - 1] * scale_ratio;
+          draw_logic_.scale(scale);
           auto box = draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings);
-
+          bounding_box box_x;
+          bounding_box box_y;
+          const auto warp_data = [&](const auto &box, const auto &shape) {
+            // zero is potential future pivot (e.g., from parent)
+            const auto [a, b, c, d] = std::make_tuple(canvas_w / 2. + 0. - shape.warp_width / 2.,
+                                                      canvas_w / 2. + 0. + shape.warp_width / 2.,
+                                                      canvas_h / 2. + 0. - shape.warp_height / 2.,
+                                                      canvas_h / 2. + 0. + shape.warp_height / 2.);
+            return std::make_tuple(box.top_left.x <= a || box.bottom_right.x >= b,
+                                   box.top_left.y <= c || box.bottom_right.y >= d,
+                                   (box.top_left.x <= a) ? -shape.warp_width : shape.warp_width,
+                                   (box.top_left.y <= c) ? -shape.warp_height : shape.warp_height);
+          };
+          const auto [warp_x, warp_y, warp_view_x, warp_view_y] = warp_data(box, shape);
+          const auto draw_warped = [&, this](const auto &scale,
+                                             auto &warp_view,
+                                             const auto &warp_value,
+                                             auto &box,
+                                             const auto &view_x,
+                                             const auto &view_y) {
+            warp_view += double(warp_value);
+            draw_logic_.center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
+            box = draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings);
+            warp_view -= double(warp_value);
+            draw_logic_.center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
+          };
+          if (warp_x) draw_warped(scale, view_x, warp_view_x, box_x, view_x, view_y);
+          if (warp_y) draw_warped(scale, view_y, warp_view_y, box_y, view_x, view_y);
           // the rest...
           for (const auto &index_data : shape.indexes) {
             const auto &step = index_data.first;
             const auto &index = index_data.second;
             const auto &shape = shapes[step][index];
-            draw_logic_.scale(scales[step] * scale_ratio);  // TODO: fix this
+            const auto scale = scales[step] * scale_ratio;
+            draw_logic_.scale(scale);
             box.update(draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings));
+            const auto [warp_x, warp_y, warp_view_x, warp_view_y] = warp_data(box, shape);
+            if (warp_x) draw_warped(scale, view_x, warp_view_x, box_x, view_x, view_y);
+            if (warp_y) draw_warped(scale, view_y, warp_view_y, box_y, view_x, view_y);
           }
-          // TODO: find a better solution for this
-          // 1 works
-          // box.normalize(width, height);
-          // bmp_prev.copy_from(bmp);
-          // bmp.clear_to_color(bg_color);
-          // std::swap(bmp, bmp_prev);
-          // 2
           box.normalize(width, height);
+          box_x.normalize(width, height);
+          box_y.normalize(width, height);
           bmp_prev.copy_from(bmp, &box);
+          bmp_prev.copy_from(bmp, &box_x);
+          bmp_prev.copy_from(bmp, &box_y);
           std::swap(bmp, bmp_prev);
         } else if (shape.type == data::shape_type::line) {
           // first one
