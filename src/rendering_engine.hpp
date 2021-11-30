@@ -143,20 +143,26 @@ public:
                                    (box.top_left.y <= c) ? -shape.warp_height : shape.warp_height);
           };
           const auto [warp_x, warp_y, warp_view_x, warp_view_y] = warp_data(box, shape);
-          const auto draw_warped = [&, this](const auto &scale,
+          const auto draw_warped = [&, this](const auto &shape,
+                                             const auto &scale,
                                              auto &warp_view,
                                              const auto &warp_value,
                                              auto &box,
                                              const auto &view_x,
-                                             const auto &view_y) {
+                                             const auto &view_y,
+                                             bool update = false) {
             warp_view += double(warp_value);
             draw_logic_.center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
-            box = draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings);
+            if (!update) {
+              box = draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings);
+            } else {
+              box.update(draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings));
+            }
             warp_view -= double(warp_value);
             draw_logic_.center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
           };
-          if (warp_x) draw_warped(scale, view_x, warp_view_x, box_x, view_x, view_y);
-          if (warp_y) draw_warped(scale, view_y, warp_view_y, box_y, view_x, view_y);
+          if (warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y);
+          if (warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y);
           // the rest...
           for (const auto &index_data : shape.indexes) {
             const auto &step = index_data.first;
@@ -166,8 +172,8 @@ public:
             draw_logic_.scale(scale);
             box.update(draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings));
             const auto [warp_x, warp_y, warp_view_x, warp_view_y] = warp_data(box, shape);
-            if (warp_x) draw_warped(scale, view_x, warp_view_x, box_x, view_x, view_y);
-            if (warp_y) draw_warped(scale, view_y, warp_view_y, box_y, view_x, view_y);
+            if (warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y);
+            if (warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y);
           }
           box.normalize(width, height);
           box_x.normalize(width, height);
