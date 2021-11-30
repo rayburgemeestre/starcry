@@ -172,8 +172,8 @@ public:
             draw_logic_.scale(scale);
             box.update(draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings));
             const auto [warp_x, warp_y, warp_view_x, warp_view_y] = warp_data(box, shape);
-            if (warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y);
-            if (warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y);
+            if (warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y, true);
+            if (warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y, true);
           }
           box.normalize(width, height);
           box_x.normalize(width, height);
