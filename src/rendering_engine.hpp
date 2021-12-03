@@ -123,8 +123,8 @@ public:
         if (shape.type == data::shape_type::circle) {
           // first one
           double opacity = 1.0;
-          if (shape.indexes.size() > 0) {
-            opacity /= (shape.indexes.size() + 1);
+          if (shape.indexes.size() > 1) {
+            opacity /= shape.indexes.size();
           }
           const auto scale = scales[scales.size() - 1] * scale_ratio;
           draw_logic_.scale(scale);
@@ -175,6 +175,7 @@ public:
             if (warp_view_x && warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y, true);
             if (warp_view_y && warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y, true);
           }
+          // TODO: comment out entire blug to find some bugs in blending_types.js
           box.normalize(width, height);
           box_x.normalize(width, height);
           box_y.normalize(width, height);
@@ -185,8 +186,8 @@ public:
         } else if (shape.type == data::shape_type::line) {
           // first one
           double opacity = 1.0;
-          if (shape.indexes.size() > 0) {
-            opacity /= (shape.indexes.size() + 1);
+          if (shape.indexes.size() > 1) {
+            opacity /= shape.indexes.size();
           }
           draw_logic_.scale(scales[scales.size() - 1] * scale_ratio);  // TODO: fix this
           draw_logic_.render_line(bmp, bmp_prev, shape, opacity, settings);
@@ -202,8 +203,8 @@ public:
         } else if (shape.type == data::shape_type::text) {
           // first one
           double opacity = 1.0;
-          if (shape.indexes.size() > 0) {
-            opacity /= (shape.indexes.size() + 1);
+          if (shape.indexes.size() > 1) {
+            opacity /= shape.indexes.size();
           }
           draw_logic_.scale(scales[scales.size() - 1] * scale_ratio);  // TODO: fix this
           auto box = draw_logic_.render_text(bmp, bmp_prev, shape, opacity, settings);

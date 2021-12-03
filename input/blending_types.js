@@ -9,6 +9,10 @@ _ = {
       {'position': 6 / 7., 'r': 194 / 255., 'g': 16 / 255., 'b': 169 / 255., 'a': 1},
       {'position': 7 / 7., 'r': 194 / 255., 'g': 16 / 255., 'b': 169 / 255., 'a': 0},
     ],
+    'full_white': [
+      {'position': 0, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
+      {'position': 1, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
+    ],
   },
   'toroidal': {
     't1': {
@@ -49,14 +53,28 @@ _ = {
         for (let type of types) {
           let velocity = new vector2d(rand(), 0);
           velocity.rotate(rand() * 360);
+
+          let x = 0, y = 0;
+          let collides = true;
+          while (collides) {
+            x = (rand() * 1920) - 1920 / 2.;
+            y = (rand() * 1080) - 1080 / 2.;
+            collides = false;
+            for (let subobj of this.subobj) {
+              let d = get_distance(subobj.x, subobj.y, x, y);
+              if (d <= 200.) {
+                collides = true;
+              }
+            }
+          }
           this.subobj.push({
             'id': 'rainbow',
             'blending_type': type,
-            'x': (rand() * 1920) - 1920 / 2.,
-            'y': (rand() * 1080) - 1080 / 2.,
+            'x': x,
+            'y': y,
             'vel_x': velocity.x,
             'vel_y': velocity.y,
-            'velocity': (rand() * 5.) + 5.,
+            'velocity': (rand() * 10.) + 10.,
             'z': 0,
             'props': {}
           });
@@ -64,15 +82,41 @@ _ = {
       },
       'time': function(t, e, scene) {},
     },
+    'bg': {
+      'type': 'circle',
+      'gradient': 'rainbow',
+      'radius': 0,
+      'radiussize': 1200.0,
+    },
     'rainbow': {
       'type': 'circle',
       'gradient': 'rainbow',
+      'collision_group': 'c1',
       'toroidal': 't1',
       'x': 0,
       'y': 0,
       'radius': 0,
-      'radiussize': 300.0,
+      'radiussize': 100.0,
       'angle': 0.,
+      'subobj': [],
+      'init': function() {
+        this.subobj.push({'id': 'text', 'text': blending_type_str(this.blending_type), 'x': 0, 'y': 0});
+      },
+      'time': function(t, e, scene) {
+        if (this.subobj.length === 0) {
+          this.subobj.push({'id': 'text', 'text': blending_type_str(this.blending_type), 'x': 0, 'y': 0});
+        }
+      },
+    },
+    'text': {
+      'type': 'text',
+      'gradient': 'full_white',
+      'toroidal': 't1',
+      'text': '',
+      'text_size': 30,
+      'text_align': 'center',
+      'x': 0,
+      'y': 0,
       'init': function() {},
       'time': function(t, e, scene) {},
     },
@@ -97,6 +141,7 @@ _ = {
       'name': 'scene1',
       'duration': 30,
       'objects': [
+        {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
         {'id': 'mother', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
       ]
     },

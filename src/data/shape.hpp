@@ -72,6 +72,8 @@ public:
     return type_;
   }
 
+  static inline std::string to_str(int type);
+
   template <class Archive>
   void serialize(Archive &ar) {
     ar(type_);
@@ -80,6 +82,71 @@ public:
 public:
   int type_;
 };
+
+inline std::string blending_type::to_str(int type) {
+  switch (type) {
+    case data::blending_type::lighten:
+      return "lighten";
+    case data::blending_type::darken:
+      return "darken";
+    case data::blending_type::multiply:
+      return "multiply";
+    case data::blending_type::average:
+      return "average";
+    case data::blending_type::add:
+      return "add";
+    case data::blending_type::subtract:
+      return "subtract";
+    case data::blending_type::difference:
+      return "difference";
+    case data::blending_type::negation_:
+      return "negation_";
+    case data::blending_type::screen:
+      return "screen";
+    case data::blending_type::exclusion:
+      return "exclusion";
+    case data::blending_type::overlay:
+      return "overlay";
+    case data::blending_type::softlight:
+      return "softlight";
+    case data::blending_type::hardlight:
+      return "hardlight";
+    case data::blending_type::colordodge:
+      return "colordodge";
+    case data::blending_type::colorburn:
+      return "colorburn";
+    case data::blending_type::lineardodge:
+      return "lineardodge";
+    case data::blending_type::linearburn:
+      return "linearburn";
+    case data::blending_type::linearlight:
+      return "linearlight";
+    case data::blending_type::vividlight:
+      return "vividlight";
+    case data::blending_type::pinlight:
+      return "pinlight";
+    case data::blending_type::hardmix:
+      return "hardmix";
+    case data::blending_type::reflect:
+      return "reflect";
+    case data::blending_type::glow:
+      return "glow";
+    case data::blending_type::phoenix:
+      return "phoenix";
+    case data::blending_type::hue:
+      return "hue";
+    case data::blending_type::saturation:
+      return "saturation";
+    case data::blending_type::color:
+      return "color";
+    case data::blending_type::luminosity:
+      return "luminosity";
+    case data::blending_type::normal:
+      return "normal";
+    default:
+      return "";
+  }
+}
 
 struct shape {
   double time;
@@ -118,6 +185,8 @@ struct shape {
   int warp_width = 0;
   int warp_height = 0;
 
+  double dist = 0.;
+
   template <class Archive>
   void serialize(Archive &ar) {
     ar(time,
@@ -151,7 +220,8 @@ struct shape {
        level,
        motion_blur,
        warp_width,
-       warp_height);
+       warp_height,
+       dist);
   }
 };
 

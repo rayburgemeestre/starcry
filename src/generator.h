@@ -128,6 +128,7 @@ public:
   void update_object_interactions(v8_interact& i,
                                   v8::Local<v8::Array>& next_instances,
                                   v8::Local<v8::Array>& intermediates,
+                                  v8::Local<v8::Array>& previous_instances,
                                   v8::Local<v8::Object>& video);
   void handle_collisions(v8_interact& i,
                          v8::Local<v8::Object> instance,

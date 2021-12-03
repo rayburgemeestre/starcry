@@ -59,6 +59,7 @@ void generator::reset_context() {
   context->add_fun("get_distance", &get_distance);
   context->add_fun("get_angle", &get_angle);
   context->add_fun("triangular_wave", &triangular_wave);
+  context->add_fun("blending_type_str", &data::blending_type::to_str);
   context->add_include_fun();
 
   // add blending constants
@@ -535,7 +536,7 @@ bool generator::_generate_frame() {
           }
           create_next_instance_mapping(i, next_instances);
           update_object_positions(i, next_instances, stepper.max_step, video);
-          update_object_interactions(i, next_instances, intermediates, video);
+          update_object_interactions(i, next_instances, intermediates, instances, video);
           util::generator::find_new_objects(i, objects, instances, next_instances, intermediates);
           convert_objects_to_render_job(i, next_instances, sc, video);
           util::generator::copy_instances(i, intermediates, next_instances);
@@ -787,22 +788,26 @@ void generator::update_object_toroidal(v8_interact& i, v8::Local<v8::Object>& in
 void generator::update_object_interactions(v8_interact& i,
                                            v8::Local<v8::Array>& next_instances,
                                            v8::Local<v8::Array>& intermediates,
+                                           v8::Local<v8::Array>& previous_instances,
                                            v8::Local<v8::Object>& video) {
   stepper.reset_current();
   const auto isolate = i.get_isolate();
   for (size_t index = 0; index < next_instances->Length(); index++) {
     auto next_instance = i.get_index(next_instances, index).As<v8::Object>();
-    auto previous_instance = i.get_index(intermediates, index).As<v8::Object>();
-    if (!next_instance->IsObject() || !previous_instance->IsObject()) continue;
+    auto intermediate_instance = i.get_index(intermediates, index).As<v8::Object>();
+    auto previous_instance = i.get_index(previous_instances, index).As<v8::Object>();
+    if (!next_instance->IsObject() || !intermediate_instance->IsObject()) continue;
     auto motion_blur = !i.has_field(next_instance, "motion_blur") || i.boolean(next_instance, "motion_blur");
     if (!motion_blur) {
       i.set_field(next_instance, "steps", v8::Number::New(isolate, 1));
     } else {
-      auto dist = get_max_travel_of_object(i, previous_instance, next_instance);
+      double dist = get_max_travel_of_object(i, intermediate_instance, next_instance);
+      double cum_dist = get_max_travel_of_object(i, previous_instance, next_instance);
       auto steps = update_steps(dist);
       if (attempt > 1) {
         steps = std::max(steps, (int)i.integer_number(next_instance, "steps"));
       }
+      i.set_field(next_instance, "__dist__", v8::Number::New(isolate, cum_dist));
       i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
     }
     handle_collisions(i, next_instance, index, next_instances);
@@ -1205,11 +1210,15 @@ void generator::convert_object_to_render_job(
   auto text_size = i.integer_number(instance, "text_size");
   auto text_fixed = i.boolean(instance, "text_fixed");
 
+  // TODO: might not need this param after all
+  auto dist = i.double_number(instance, "__dist__");
+
   data::shape new_shape;
   new_shape.time = time;
   new_shape.x = transitive_x;
   new_shape.y = transitive_y;
   new_shape.level = level;
+  new_shape.dist = dist;
 
   new_shape.gradients_.clear();
   new_shape.textures.clear();
