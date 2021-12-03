@@ -10,6 +10,12 @@ _ = {
       {'position': 7 / 7., 'r': 194 / 255., 'g': 16 / 255., 'b': 169 / 255., 'a': 0},
     ],
   },
+  'toroidal': {
+    't1': {
+      'width': 1920,
+      'height': 1080,
+    },
+  },
   'objects': {
     'mother': {
       'init': function() {
@@ -61,18 +67,14 @@ _ = {
     'rainbow': {
       'type': 'circle',
       'gradient': 'rainbow',
+      'toroidal': 't1',
       'x': 0,
       'y': 0,
       'radius': 0,
       'radiussize': 300.0,
       'angle': 0.,
       'init': function() {},
-      'time': function(t, e, scene) {
-        while (this.x + (1920 / 2) < 0) this.x += 1920;
-        while (this.y + (1080 / 2) < 0) this.y += 1080;
-        while (this.x + (1920 / 2) > 1920) this.x -= 1920;
-        while (this.y + (1080 / 2) > 1080) this.y -= 1080;
-      },
+      'time': function(t, e, scene) {},
     },
   },
   'video': {
