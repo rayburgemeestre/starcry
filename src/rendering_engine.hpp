@@ -161,8 +161,8 @@ public:
             warp_view -= double(warp_value);
             draw_logic_.center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
           };
-          if (warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y);
-          if (warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y);
+          if (warp_view_x && warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y);
+          if (warp_view_y && warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y);
           // the rest...
           for (const auto &index_data : shape.indexes) {
             const auto &step = index_data.first;
@@ -172,8 +172,8 @@ public:
             draw_logic_.scale(scale);
             box.update(draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings));
             const auto [warp_x, warp_y, warp_view_x, warp_view_y] = warp_data(box, shape);
-            if (warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y, true);
-            if (warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y, true);
+            if (warp_view_x && warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y, true);
+            if (warp_view_y && warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y, true);
           }
           box.normalize(width, height);
           box_x.normalize(width, height);
@@ -200,8 +200,25 @@ public:
             draw_logic_.render_line(bmp, bmp_prev, shape, opacity, settings);
           }
         } else if (shape.type == data::shape_type::text) {
+          // first one
+          double opacity = 1.0;
+          if (shape.indexes.size() > 0) {
+            opacity /= (shape.indexes.size() + 1);
+          }
           draw_logic_.scale(scales[scales.size() - 1] * scale_ratio);  // TODO: fix this
-          draw_logic_.render_text(shape.x, shape.y, shape.text_size, shape.text, shape.align);
+          auto box = draw_logic_.render_text(bmp, bmp_prev, shape, opacity, settings);
+
+          // the rest...
+          for (const auto &index_data : shape.indexes) {
+            const auto &step = index_data.first;
+            const auto &index = index_data.second;
+            const auto &shape = shapes[step][index];
+            draw_logic_.scale(scales[step] * scale_ratio);  // TODO: fix this
+            box.update(draw_logic_.render_text(bmp, bmp_prev, shape, opacity, settings));
+          }
+          box.normalize(width, height);
+          bmp_prev.copy_from(bmp, &box);
+          std::swap(bmp, bmp_prev);
         }
 #ifndef EMSCRIPTEN
 #ifndef SC_CLIENT

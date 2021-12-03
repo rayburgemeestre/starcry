@@ -129,6 +129,18 @@ void instantiate_object(v8_interact& i,
     if (i.has_field(*scene_obj, "pivot")) {
       i.copy_field(new_instance, "pivot", *scene_obj);
     }
+    if (i.has_field(*scene_obj, "text")) {
+      i.copy_field(new_instance, "text", *scene_obj);
+    }
+    if (i.has_field(*scene_obj, "text_align")) {
+      i.copy_field(new_instance, "text_align", *scene_obj);
+    }
+    if (i.has_field(*scene_obj, "text_size")) {
+      i.copy_field(new_instance, "text_size", *scene_obj);
+    }
+    if (i.has_field(*scene_obj, "text_fixed")) {
+      i.copy_field(new_instance, "text_fixed", *scene_obj);
+    }
   }
 
   i.set_field(new_instance, "subobj", v8::Array::New(isolate));
@@ -270,6 +282,18 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     }
     if (i.has_field(src, "pivot")) {
       i.copy_field(dst, "pivot", src);
+    }
+    if (i.has_field(src, "text")) {
+      i.copy_field(dst, "text", src);
+    }
+    if (i.has_field(src, "text_align")) {
+      i.copy_field(dst, "text_align", src);
+    }
+    if (i.has_field(src, "text_size")) {
+      i.copy_field(dst, "text_size", src);
+    }
+    if (i.has_field(src, "text_fixed")) {
+      i.copy_field(dst, "text_fixed", src);
     }
     i.copy_field(dst, "__time__", src);
     i.copy_field(dst, "__elapsed__", src);

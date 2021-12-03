@@ -1200,6 +1200,11 @@ void generator::convert_object_to_render_job(
   auto warp_width = i.has_field(instance, "__warp_width__") ? i.integer_number(instance, "__warp_width__") : 0;
   auto warp_height = i.has_field(instance, "__warp_height__") ? i.integer_number(instance, "__warp_height__") : 0;
 
+  auto text = i.str(instance, "text");
+  auto text_align = i.str(instance, "text_align");
+  auto text_size = i.integer_number(instance, "text_size");
+  auto text_fixed = i.boolean(instance, "text_fixed");
+
   data::shape new_shape;
   new_shape.time = time;
   new_shape.x = transitive_x;
@@ -1247,6 +1252,12 @@ void generator::convert_object_to_render_job(
     new_shape.type = data::shape_type::line;
     new_shape.x2 = transitive_x2;
     new_shape.y2 = transitive_y2;
+  } else if (type == "text") {
+    new_shape.type = data::shape_type::text;
+    new_shape.text = text;
+    new_shape.text_size = text_size;
+    new_shape.align = text_align;
+    new_shape.text_fixed = text_fixed;
   } else {
     new_shape.type = data::shape_type::none;
   }

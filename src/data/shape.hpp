@@ -98,6 +98,7 @@ struct shape {
   double text_size;
   std::string text;
   std::string align;
+  bool text_fixed;
   std::vector<std::pair<double, gradient>> gradients_;
   std::vector<std::pair<double, texture>> textures;
   std::string gradient_id_str;
@@ -135,6 +136,7 @@ struct shape {
        radius_size,
        text,
        align,
+       text_fixed,
        gradients_,
        textures,
        gradient_id_str,

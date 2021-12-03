@@ -15,7 +15,9 @@
 #include "data/settings.hpp"
 #include "data/shape.hpp"
 #include "data/texture.hpp"
+#include "util/logger.h"
 #include "util/math.h"
+#include "util/text_drawer.hpp"
 
 static std::mt19937 mt_v3;
 void set_rand_seed_v3(double seed) {
@@ -125,12 +127,10 @@ public:
    * Constructor
    */
   draw_logic() {
-#if 1 == 0
     font_.reserve(1024);
     for (size_t i = 0; i < 1024; i++) {
       font_.push_back(nullptr);
     }
-#endif
   }
 
   /**
@@ -259,32 +259,62 @@ public:
     return box;
   }
 
-  inline void render_text(double textX, double textY, double textsize, std::string text, std::string align) {
-    textX = ((textX * scale_) + center_x_) - offset_x_;
-    textY = ((textY * scale_) + center_y_) - offset_y_;
-#if 1 == 0
-    size_t index = textsize * scale_;
-    auto alignment =
-        align == "center" ? ALLEGRO_ALIGN_CENTER : (align == "left" ? ALLEGRO_ALIGN_LEFT : ALLEGRO_ALIGN_RIGHT);
+  inline bounding_box render_text(
+      image &bmp, image &bmp_prev, const data::shape &shape, double opacity, const data::settings &settings) {
+    bounding_box bound_box;
+    double textX = ((shape.x * scale_) + center_x_) - offset_x_;
+    double textY = ((shape.y * scale_) + center_y_) - offset_y_;
 
+    size_t index = static_cast<size_t>(shape.text_size * (shape.text_fixed ? 1. : scale_));
     if (index >= font_.size()) {
-      std::cout << "Cannot read out of font_ bounds with index " << index << "  due to : " << font_.size() << '\n';
-      std::exit(1);
+      logger(WARNING) << "Cannot read out of font_ bounds with index " << index << "  due to : " << font_.size()
+                      << std::endl;
+      index = 1024 - 1;
     }
     if (font_[index] == nullptr) {
-      font_[index] = std::make_unique<memory_font>(memory_font::fonts::monaco, index, 0);
+      font_[index] = std::make_unique<text_drawer>(index);
       if (!font_[index]) {
-        fprintf(stderr, "Could not load monaco ttf font.\n");
-        return;
+        fprintf(stderr, "Could not load font.\n");
+        return bound_box;
       }
     }
-    al_draw_text(font_[index]->font(),
-                 al_map_rgb(255, 255, 255),
-                 textX,
-                 textY - (index /*font height*/ / 2),
-                 alignment,
-                 text.c_str());
-#endif
+
+    // draws internal 1 channel bitmap
+    font_[index]->draw(bmp, textY, textY, shape.text);
+
+    // calculate some stuff so we can justify the text
+    auto box = font_[index]->box();
+    int full_text_width = static_cast<int>(box.bottom_right.x - box.top_left.x);
+    int full_text_height = static_cast<int>(box.bottom_right.y - box.top_left.y);
+    int half_text_width = abs(full_text_width / 2);
+    int half_text_height = abs(full_text_height / 2);
+    auto bitmap_pixel = font_[index]->bitmap();
+
+    // copy text from bitmap to our bmp canvas
+    double absX = 0;
+    double absY = 0;
+    for (int bitmap_y = 0; bitmap_y < font_[index]->bitmap_height(); bitmap_y++) {
+      for (int bitmap_x = 0; bitmap_x < font_[index]->bitmap_width(); bitmap_x++) {
+        double c = double(*(bitmap_pixel++)) / 255.;
+        if (!c) continue;
+        if (shape.align.empty() || shape.align == "left") {
+          absX = textX + bitmap_x;
+          absY = textY + bitmap_y;
+        } else if (shape.align == "right") {
+          absX = textX + bitmap_x - full_text_width;
+          absY = textY + bitmap_y - full_text_height;
+        } else if (shape.align == "center") {
+          absX = textX + bitmap_x - half_text_width;
+          absY = textY + bitmap_y - full_text_height;  // TODO: should be half, but full looks more centered.
+        }
+        if (absX < 0 || absX >= width_) continue;
+        if (absY < 0 || absY >= height_) continue;
+        bound_box.update_x(absX);
+        bound_box.update_y(absY);
+        render_pixel(bmp, bmp_prev, shape, textX, textY, absX, absY, c, opacity, settings);
+      }
+    }
+    return bound_box;
   }
 
   void render_circle_pixel(image &bmp,
@@ -776,7 +806,7 @@ private:
   double offset_y_;
   uint32_t width_;
   uint32_t height_;
-  // std::vector<std::unique_ptr<memory_font>> font_;
+  std::vector<std::unique_ptr<text_drawer>> font_;
 };
 
 }  // namespace draw_logic

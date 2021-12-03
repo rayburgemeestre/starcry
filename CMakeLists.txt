@@ -79,6 +79,7 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/json/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/perlin_noise/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libs/stb/"
     "/usr/include/SDL2/"
 )
 

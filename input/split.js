@@ -1,5 +1,9 @@
 _ = {
   'gradients': {
+    'full_white': [
+      {'position': 0, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
+      {'position': 1, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
+    ],
     'white': [
       {'position': 0, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
       {'position': 0.5, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
@@ -29,6 +33,20 @@ _ = {
           this.subobj[1].props.x = -jump;
         }
         script.video.scale = (expf(tt, 10000) * 3.0) + 1.5;
+      },
+    },
+    'text': {
+      'type': 'text',
+      'gradient': 'full_white',
+      'x': 0,
+      'y': 0,
+      'text': 'Yeahh',
+      'text_size': 60,
+      'text_align': 'center',
+      'init': function() {},
+      'time': function(t, e, s) {
+        this.text = script.scenes[s].name;
+        this.text_size = t * 100;
       },
     },
     'bg': {
@@ -98,6 +116,7 @@ _ = {
       'objects': [
         // {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
         {'id': 'splitter', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+        {'id': 'text', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
       ]
     },
     {'name': 'scene2', 'duration': 0.05 * 5, 'objects': []},
