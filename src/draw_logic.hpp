@@ -356,7 +356,7 @@ public:
   }
 
   template <typename blending_type_>
-  void blend_pixel(
+  static void blend_pixel(
       image &bmp, image &bmp_prev, double opacity, const int &absX, const int &absY, const data::color &fg_color) {
     // original background color
     auto &bg = bmp_prev.get(absX, absY);
@@ -687,7 +687,36 @@ public:
 
     // was:
     //  bmp.set(absX, absY, bg.r, bg.g, bg.b, bg.a);
+    if (this->flag_) {
+      // blend_pixel<add>(bmp, bmp_prev, opacity, absX, absY, clr);
+      // current pixel color
+      auto &pix = bmp.get(absX, absY);
 
+      // add blended pixel to current pixel
+      pix.r += (clr.r * opacity);
+      pix.g += (clr.g * opacity);
+      pix.b += (clr.b * opacity);
+      pix.a += (clr.a * opacity);
+
+      // this makes it a bit rough
+      if (pix.r > clr.r) pix.r = clr.r;
+      if (pix.g > clr.g) pix.g = clr.g;
+      if (pix.b > clr.b) pix.b = clr.b;
+      if (pix.a > clr.a) pix.a = clr.a;
+
+      bmp.set(absX, absY, pix.r, pix.g, pix.b, pix.a);
+    } else {
+      blend_the_pixel(bmp, bmp_prev, shape, absX, absY, opacity, clr);
+    }
+  }
+
+  static void blend_the_pixel(image &bmp,
+                              image &bmp_prev,
+                              const data::shape &shape,
+                              int absX,
+                              int absY,
+                              double opacity,
+                              const data::color &clr) {
     switch (shape.blending_.type()) {
       case data::blending_type::lighten:
         blend_pixel<lighten>(bmp, bmp_prev, opacity, absX, absY, clr);
@@ -778,8 +807,11 @@ public:
         blend_pixel<normal>(bmp, bmp_prev, opacity, absX, absY, clr);
         break;
     }
-  };
+  }
 
+  void flag(double flag) {
+    flag_ = flag;
+  }
   void scale(double scale) {
     scale_ = scale;
   }
@@ -799,6 +831,7 @@ public:
   }
 
 private:
+  bool flag_ = false;
   double scale_;
   double center_x_;
   double center_y_;

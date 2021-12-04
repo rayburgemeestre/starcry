@@ -79,11 +79,13 @@ public:
                 const data::settings &settings) {
     auto &bmp = bitmap.get(width, height);
     auto &bmp_prev = bitmap_back.get(width, height);
+    auto &bmp_temp = bitmap_temp.get(width, height);
 
     // this lock is no longer needed since we got rid of all dependencies
     // std::unique_lock<std::mutex> lock(m);
     bmp.clear_to_color(bg_color);
     bmp_prev.clear_to_color(bg_color);
+    bmp_temp.clear_to_color(bg_color);
 
     // debug font
     // if (!font) {
@@ -121,7 +123,13 @@ public:
 #endif
 
         if (shape.type == data::shape_type::circle) {
+          /////////////
+          // draw_logic_.flag(true);
+          // std::swap(bmp, bmp_temp);
+          /////////////
+
           // first one
+          // double opacity = 1.0 / double(shape.indexes.size());
           double opacity = 1.0;
           if (shape.indexes.size() > 1) {
             opacity /= shape.indexes.size();
@@ -179,9 +187,23 @@ public:
           box.normalize(width, height);
           box_x.normalize(width, height);
           box_y.normalize(width, height);
+          /////////////
+          // draw_logic_.flag(false);
+          // std::swap(bmp, bmp_temp);
+          /////////////
+          //  for (size_t y = box.top_left.y; y < box.bottom_right.y; y++) {
+          //    size_t offset_y = y * width;
+          //    for (size_t x = box.top_left.x; x < box.bottom_right.x; x++) {
+          //      size_t offset = offset_y + x;
+          //      // something with alpha going wrong..
+          //      draw_logic_.blend_the_pixel(bmp_prev, bmp_prev, shape, x, y, 1., bmp_temp.pixels()[offset]);
+          //      // bmp_prev.pixels()[offset] = bmp_temp.pixels()[offset];
+          //    }
+          //  }
           bmp_prev.copy_from(bmp, &box);
           bmp_prev.copy_from(bmp, &box_x);
           bmp_prev.copy_from(bmp, &box_y);
+          // TODO: perhaps not necessary
           std::swap(bmp, bmp_prev);
         } else if (shape.type == data::shape_type::line) {
           // first one
@@ -263,4 +285,5 @@ public:
   draw_logic::draw_logic draw_logic_;
   bitmap_wrapper bitmap;
   bitmap_wrapper bitmap_back;
+  bitmap_wrapper bitmap_temp;
 };
