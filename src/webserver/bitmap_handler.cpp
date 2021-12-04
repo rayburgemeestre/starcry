@@ -33,7 +33,9 @@ void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
                   json["frame"],
                   32,
                   sc->get_viewpoint().raw,
-                  sc->get_viewpoint().preview);
+                  sc->get_viewpoint().preview,
+                  false,
+                  "");
 }
 
 void BitmapHandler::callback(seasocks::WebSocket *recipient, std::string s, uint32_t width, uint32_t height) {

@@ -39,7 +39,8 @@ std::shared_ptr<render_msg> command_get_bitmap::to_render_msg(std::shared_ptr<jo
                                    this->sc.get_viewpoint().labels,
                                    this->sc.get_viewpoint().canvas_w ? this->sc.get_viewpoint().canvas_w : job.width,
                                    this->sc.get_viewpoint().canvas_h ? this->sc.get_viewpoint().canvas_h : job.height,
-                                   transfer_pixels);
+                                   transfer_pixels,
+                                   job.output_file);
 
   if (this->sc.get_viewpoint().labels) {
     // TODO: refactor the logic out of the commands

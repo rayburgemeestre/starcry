@@ -94,7 +94,8 @@ std::shared_ptr<render_msg> command_get_video::to_render_msg(std::shared_ptr<job
                                         false,
                                         job.width,
                                         job.height,
-                                        bmp.pixels());
+                                        bmp.pixels(),
+                                        "");
   } else {
     return std::make_shared<render_msg>(job_msg->client,
                                         job_msg->type,
@@ -108,6 +109,7 @@ std::shared_ptr<render_msg> command_get_video::to_render_msg(std::shared_ptr<job
                                         false,
                                         job.width,
                                         job.height,
-                                        transfer_pixels);
+                                        transfer_pixels,
+                                        "");
   }
 }

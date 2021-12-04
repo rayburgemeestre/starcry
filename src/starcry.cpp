@@ -147,8 +147,11 @@ void starcry::add_command(seasocks::WebSocket *client,
                           int frame_num,
                           int num_chunks,
                           bool raw,
-                          bool preview) {
-  cmds->push(std::make_shared<instruction>(client, it, script, frame_num, num_chunks, raw, preview));
+                          bool preview,
+                          bool last_frame,
+                          const std::string &output_filename) {
+  cmds->push(std::make_shared<instruction>(
+      client, it, script, frame_num, num_chunks, raw, preview, last_frame, output_filename));
   pe.run([=]() {
     if (webserv) {
       webserv->send_stats(system->get_stats());
@@ -232,7 +235,8 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
                                         false,
                                         0,
                                         0,
-                                        transfer_pixels);
+                                        transfer_pixels,
+                                        job.output_file);
   }
 
   // no need to render in this case, client will do the rendering
@@ -351,9 +355,12 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       finished = process(width, height, pixels, pixels_raw, last_frame);
 
       if (job_msg->job_number == std::numeric_limits<uint32_t>::max()) {
-        save_images(pixels_raw, width, height, frame_number, true, true);
+        save_images(pixels_raw, width, height, frame_number, true, true, job_msg->output_file);
+        if (job_msg->last_frame) {
+          finished = true;
+        }
       } else {
-        save_images(pixels_raw, width, height, frame_number, true, true);
+        save_images(pixels_raw, width, height, frame_number, true, true, job_msg->output_file);
         current_frame++;
       }
     } else {
@@ -499,7 +506,8 @@ void starcry::save_images(std::vector<data::color> &pixels_raw,
                           size_t height,
                           size_t frame_number,
                           bool write_8bit_png,
-                          bool write_32bit_exr) {
+                          bool write_32bit_exr,
+                          const std::string &output_file) {
   auto filename = gen->filename();
   auto pos = filename.rfind('/');
   if (pos != std::string::npos) {
@@ -517,8 +525,12 @@ void starcry::save_images(std::vector<data::color> &pixels_raw,
     if (write_8bit_png) {
       png::image<png::rgb_pixel> image(width, height);
       copy_to_png(pixels_raw, width, height, image, gen->settings().dithering);
-      image.write(fmt::format(
-          "output_frame_{:05d}_seed_{}_{}x{}-{}.png", frame_number, gen->get_seed(), width, height, filename));
+      if (output_file.size()) {
+        image.write(fmt::format("{}.png", output_file));
+      } else {
+        image.write(fmt::format(
+            "output_frame_{:05d}_seed_{}_{}x{}-{}.png", frame_number, gen->get_seed(), width, height, filename));
+      }
     }
 
     // Save TIFF through ImageMagick
@@ -578,11 +590,15 @@ void starcry::save_images(std::vector<data::color> &pixels_raw,
       header.channels().insert("G", Channel(Imf::FLOAT));
       header.channels().insert("B", Channel(Imf::FLOAT));
       header.channels().insert("Z", Channel(Imf::FLOAT));
-      OutputFile file(
-          fmt::format(
-              "output_frame_{:05d}_seed_{}_{}x{}-{}.exr", frame_number, gen->get_seed(), width, height, filename)
-              .c_str(),
-          header);
+
+      std::string exr_filename;
+      if (output_file.size()) {
+        exr_filename = fmt::format("{}.exr", output_file);
+      } else {
+        exr_filename = fmt::format(
+            "output_frame_{:05d}_seed_{}_{}x{}-{}.exr", frame_number, gen->get_seed(), width, height, filename);
+      }
+      OutputFile file(exr_filename.c_str(), header);
       FrameBuffer frameBuffer;
       frameBuffer.insert("R",                           // name
                          Slice(Imf::FLOAT,              // type

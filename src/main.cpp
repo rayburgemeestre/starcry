@@ -129,8 +129,15 @@ public:
       bool is_raw = vm.count("raw");
       if (frame_of_interest != std::numeric_limits<size_t>::max()) {
         // render still image
-        sc.add_command(
-            nullptr, script, instruction_type::get_raw_image, frame_of_interest, num_chunks, is_raw, preview);
+        sc.add_command(nullptr,
+                       script,
+                       instruction_type::get_raw_image,
+                       frame_of_interest,
+                       num_chunks,
+                       is_raw,
+                       preview,
+                       true,
+                       output_file);
       } else {
         // render video
         sc.add_command(nullptr, script, output_file, num_chunks, is_raw, preview, frame_offset);

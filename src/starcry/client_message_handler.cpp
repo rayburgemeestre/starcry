@@ -87,7 +87,8 @@ bool client_message_handler::on_client_message(int sockfd, int type, size_t len,
                                                   false,
                                                   job.width,
                                                   job.height,
-                                                  dat.pixels);
+                                                  dat.pixels,
+                                                  "");
         sc.frames->push(frame);
       } else if (!dat.pixels_raw.empty()) {
         auto frame = std::make_shared<render_msg>(nullptr,
@@ -102,7 +103,8 @@ bool client_message_handler::on_client_message(int sockfd, int type, size_t len,
                                                   false,
                                                   job.width,
                                                   job.height,
-                                                  dat.pixels_raw);
+                                                  dat.pixels_raw,
+                                                  "");
         sc.frames->push(frame);
       }
       outstanding_jobs--;

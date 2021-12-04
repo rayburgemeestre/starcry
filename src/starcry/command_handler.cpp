@@ -34,8 +34,10 @@ void command_handler::to_job(std::shared_ptr<instruction> &cmd_def) {
   the_job->scale *= cmd_def->viewpoint.scale;
   the_job->view_x = cmd_def->viewpoint.offset_x;
   the_job->view_y = cmd_def->viewpoint.offset_y;
+  the_job->output_file = cmd_def->output_file;
 
   if (cmd_def->num_chunks == 1) {
+    the_job->last_frame = cmd_def->last;
     sc.jobs->push(std::make_shared<job_message>(cmd_def->client, cmd_def->type, the_job, cmd_def->raw));
   } else {
     sc.metrics_->resize_job(the_job->job_number, cmd_def->num_chunks);
@@ -50,7 +52,7 @@ void command_handler::to_job(std::shared_ptr<instruction> &cmd_def) {
       counter++;
 
       the_job->job_number = std::numeric_limits<uint32_t>::max();
-      the_job->last_frame = true;
+      the_job->last_frame = cmd_def->last;
       sc.jobs->push(std::make_shared<job_message>(
           cmd_def->client, cmd_def->type, std::make_shared<data::job>(*the_job), cmd_def->raw));
     }

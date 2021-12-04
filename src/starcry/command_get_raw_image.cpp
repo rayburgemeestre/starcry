@@ -29,7 +29,8 @@ std::shared_ptr<render_msg> command_get_raw_image::to_render_msg(std::shared_ptr
                                       false,
                                       job.width,
                                       job.height,
-                                      bmp.pixels());
+                                      bmp.pixels(),
+                                      job.output_file);
 }
 
 void command_get_raw_image::handle_frame(std::shared_ptr<render_msg> &job_msg) {

@@ -40,6 +40,7 @@ struct job {
   bool compress;
   bool save_image;
   bool is_raw;
+  std::string output_file;
 
   inline bool operator<(const job &other) const {
     return job_number < other.job_number;  // there can be no ties
@@ -69,7 +70,8 @@ struct job {
        bitrate,
        compress,
        save_image,
-       is_raw);
+       is_raw,
+       output_file);
   }
 
   inline void resize_for_num_steps(int steps) {

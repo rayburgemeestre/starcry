@@ -41,6 +41,7 @@ public:
   int num_chunks;
   bool raw = false;
   bool preview = false;
+  bool last = false;
   // TODO: can this be "merged" with "frame" ? so we can avoid introducing this offset_frame.
   size_t offset_frames = 0;
 
@@ -53,15 +54,18 @@ public:
               size_t frame,
               int num_chunks,
               bool raw,
-              bool preview)
+              bool preview,
+              bool last_frame,
+              const std::string &output_filename)
       : client(client),
         type(type),
         frame(frame),
         script(script),
-        output_file(""),
+        output_file(output_filename),
         num_chunks(num_chunks),
         raw(raw),
-        preview(preview) {}
+        preview(preview),
+        last(last_frame) {}
 
   // constructor for video
   instruction(seasocks::WebSocket *client,
@@ -112,6 +116,7 @@ public:
   uint32_t width;
   uint32_t height;
   std::string ID;
+  std::string output_file;
 
   render_msg(seasocks::WebSocket *client,
              instruction_type type,
@@ -153,7 +158,8 @@ public:
              bool labels,
              uint32_t width,
              uint32_t height,
-             std::vector<uint32_t> &pixels)
+             std::vector<uint32_t> &pixels,
+             const std::string &output_file)
       : job_number(job_number),
         frame_number(frame_number),
         chunk(chunk),
@@ -166,7 +172,8 @@ public:
         type(type),
         pixels(std::move(pixels)),
         width(width),
-        height(height) {}
+        height(height),
+        output_file(output_file) {}
 
   // raw pixels only
   render_msg(seasocks::WebSocket *client,
@@ -181,7 +188,8 @@ public:
              bool labels,
              uint32_t width,
              uint32_t height,
-             std::vector<data::color> pixels_raw)
+             std::vector<data::color> pixels_raw,
+             const std::string &output_file)
       : job_number(job_number),
         frame_number(frame_number),
         chunk(chunk),
@@ -194,7 +202,8 @@ public:
         type(type),
         pixels_raw(std::move(pixels_raw)),
         width(width),
-        height(height) {}
+        height(height),
+        output_file(output_file) {}
 
   void set_raw(std::vector<data::color> &pixels_raw) {
     std::swap(this->pixels_raw, pixels_raw);

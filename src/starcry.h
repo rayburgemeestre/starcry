@@ -126,7 +126,9 @@ public:
                    int frame_num,
                    int num_chunks,
                    bool raw,
-                   bool preview);
+                   bool preview,
+                   bool last_frame,
+                   const std::string &output_filename);
   void add_command(seasocks::WebSocket *client,
                    const std::string &script,
                    const std::string &output_file,
@@ -159,5 +161,6 @@ private:
                    size_t height,
                    size_t frame_number,
                    bool write_8bit_png,
-                   bool write_32bit_exr);
+                   bool write_32bit_exr,
+                   const std::string &output_file);
 };

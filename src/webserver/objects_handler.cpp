@@ -30,7 +30,9 @@ void ObjectsHandler::onData(seasocks::WebSocket *con, const char *data) {
                     std::atoi(input.substr(find + 1).c_str()),
                     1,
                     false,
-                    false);
+                    false,
+                    false,
+                    "");
   }
 }
 
