@@ -198,6 +198,7 @@ dockerize_run:  ## execute dockerize steps
 	cp -prv $$PWD/build/starcry /starcry
 	sudo -u user -g user mkdir -p out/workdir
 	sudo -u user -g user cp -prv $$PWD/webroot out/workdir/webroot
+	sudo -u user -g user cp -prv $$PWD/output/report.html out/workdir/webroot/report.html
 	sudo -u user -g user cp -prv $$PWD/input out/workdir/input
 	strip --strip-debug /starcry
 	sudo -u user -g user dockerize --verbose --debug -n -o out "/starcry"
