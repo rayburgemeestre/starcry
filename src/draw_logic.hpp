@@ -15,7 +15,9 @@
 #include "data/settings.hpp"
 #include "data/shape.hpp"
 #include "data/texture.hpp"
+#ifndef EMSCRIPTEN
 #include "util/logger.h"
+#endif
 #include "util/math.h"
 #include "util/text_drawer.hpp"
 
@@ -267,8 +269,10 @@ public:
 
     size_t index = static_cast<size_t>(shape.text_size * (shape.text_fixed ? 1. : scale_));
     if (index >= font_.size()) {
+#ifndef EMSCRIPTEN
       logger(WARNING) << "Cannot read out of font_ bounds with index " << index << "  due to : " << font_.size()
                       << std::endl;
+#endif
       index = 1024 - 1;
     }
     if (font_[index] == nullptr) {
