@@ -8,7 +8,9 @@
 // #define DEBUGMODE
 
 #include "bitmap_wrapper.hpp"
+#ifndef EMSCRIPTEN
 #include "util/image_utils.h"
+#endif
 #include "util/scope_exit.hpp"
 
 #include <cmath>
@@ -277,9 +279,11 @@ public:
   }
 
   void write_image(image &bmp, int width, int height, std::string filename) {
+#ifndef EMSCRIPTEN
     png::image<png::rgb_pixel> image(width, height);
     copy_to_png(bmp.pixels(), width, height, image, false);
     image.write(filename);
+#endif
   }
 
   draw_logic::draw_logic draw_logic_;
