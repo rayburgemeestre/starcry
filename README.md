@@ -61,3 +61,8 @@ Almost everything is statically linked, resulting in a relatively portable binar
 
 <img src="https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/tvui.png" width="100%">
 
+## Regression testing report
+
+https://sc.cppse.nl/report.html
+
+
