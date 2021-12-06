@@ -297,7 +297,11 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
         std::vector<uint32_t> pixels_new = starcry::pixels_vec_to_pixel_data(pixels_raw, gen->settings());
         std::swap(pixels, pixels_new);
       }
-      if (gui) gui->add_frame(width, height, pixels);
+      // insert checkers background
+      starcry::pixels_vec_insert_checkers_background(pixels, width, height);
+      if (gui) {
+        gui->add_frame(width, height, pixels);
+      }
       if (framer) {
         framer->add_frame(pixels);
         if (last_frame) {
@@ -501,6 +505,49 @@ std::vector<uint32_t> starcry::pixels_vec_to_pixel_data(const std::vector<data::
   return pixels_out;
 }
 
+void starcry::pixels_vec_insert_checkers_background(std::vector<uint32_t> &pixels, int width, int height) {
+  uint8_t *p = (uint8_t *)&pixels[0];
+  int x = 0, y = 0;
+  bool flag = true;
+  for (size_t i = 0; i < (width * height); i++) {
+    uint8_t &r = *(p++);
+    uint8_t &g = *(p++);
+    uint8_t &b = *(p++);
+    uint8_t &a = *(p++);
+
+    data::color checker;
+    checker.r = flag ? 0.75 : 1.;
+    checker.g = flag ? 0.75 : 1.;
+    checker.b = flag ? 0.75 : 1.;
+    checker.a = 1.;
+
+    data::color current;
+    current.r = double(r) / 255.;
+    current.g = double(g) / 255.;
+    current.b = double(b) / 255.;
+    current.a = double(a) / 255.;
+
+    data::color new_col = blend(checker, current);
+
+    r = new_col.r * 255;
+    g = new_col.g * 255;
+    b = new_col.b * 255;
+    a = new_col.a * 255;
+
+    x++;
+    if (x == width) {
+      x = 0;
+      y++;
+      if (y % 20 == 0) {
+        flag = !flag;
+      }
+    }
+    if (x % 20 == 0) {
+      flag = !flag;
+    }
+  }
+}
+
 void starcry::save_images(std::vector<data::color> &pixels_raw,
                           size_t width,
                           size_t height,
@@ -523,7 +570,7 @@ void starcry::save_images(std::vector<data::color> &pixels_raw,
     // Will need to figure out in the future how to properly use 16 bit, for now, will focus on fixing the 8 bit
     // version. png::image<png::rgb_pixel_16> image(job.width, job.height);
     if (write_8bit_png) {
-      png::image<png::rgb_pixel> image(width, height);
+      png::image<png::rgba_pixel> image(width, height);
       copy_to_png(pixels_raw, width, height, image, gen->settings().dithering);
       if (output_file.size()) {
         image.write(fmt::format("{}.png", output_file));

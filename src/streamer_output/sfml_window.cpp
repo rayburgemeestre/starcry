@@ -30,7 +30,8 @@ void sfml_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ui
   for (auto &pixel : pixels) {
     auto *ptr = (uint8_t *)&pixel;
     auto *A = ptr + 3;  // RGBA
-    *A = 255.0 - *A;
+    // TODO: we need to print frame on top of some kind of checkmark pattern
+    // *A = 255.0 - *A;
   }
 
   sf::Context context;

@@ -19,7 +19,7 @@ command_get_image::command_get_image(starcry &sc) : command_handler(sc) {}
 std::shared_ptr<render_msg> command_get_image::to_render_msg(std::shared_ptr<job_message> &job_msg, image &bmp) {
   auto &job = *job_msg->job;
   job.job_number = std::numeric_limits<uint32_t>::max();
-  png::image<png::rgb_pixel> image(job.width, job.height);
+  png::image<png::rgba_pixel> image(job.width, job.height);
   copy_to_png(bmp.pixels(), job.width, job.height, image, sc.gen->settings().dithering);
   std::ostringstream ss;
   image.write_stream(ss);

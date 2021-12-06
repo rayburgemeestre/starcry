@@ -369,25 +369,21 @@ public:
     auto new_clr =
         blender<blending_type_>(color(bg.r, bg.g, bg.b, bg.a), color(fg_color.r, fg_color.g, fg_color.b, fg_color.a));
 
-    // with correct alpha value
-    double r = (bg.r * (1.0 - new_clr.get_a())) + (new_clr.get_r() * new_clr.get_a());
-    double g = (bg.g * (1.0 - new_clr.get_a())) + (new_clr.get_g() * new_clr.get_a());
-    double b = (bg.b * (1.0 - new_clr.get_a())) + (new_clr.get_b() * new_clr.get_a());
-    double a = 0;
+    // convert this blended color to data::color
+    data::color new_colr{new_clr.get_r(), new_clr.get_g(), new_clr.get_b(), new_clr.get_a()};
 
-    // current pixel color
+    // now blend this color with the target canvas background
+    // this was not correct..., was doing it twice.
+    // data::color blended = blend(bg, new_colr);
+
+    // now blend this color with the target canvas background.
     auto &pix = bmp.get(absX, absY);
 
-    // add blended pixel to current pixel
-    r = pix.r * (1.0 - opacity) + (r * opacity);
-    g = pix.g * (1.0 - opacity) + (g * opacity);
-    b = pix.b * (1.0 - opacity) + (b * opacity);
+    data::color b = blend(pix, /* blended */ new_colr);
 
-    if (r > 1) r = 1;
-    if (g > 1) g = 1;
-    if (b > 1) b = 1;
+    b.normalize();  // fixes overflows
 
-    bmp.set(absX, absY, r, g, b, a);
+    bmp.set(absX, absY, b.r, b.g, b.b, b.a);
   }
 
   void render_line(

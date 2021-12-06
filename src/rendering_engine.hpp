@@ -280,7 +280,7 @@ public:
 
   void write_image(image &bmp, int width, int height, std::string filename) {
 #ifndef EMSCRIPTEN
-    png::image<png::rgb_pixel> image(width, height);
+    png::image<png::rgba_pixel> image(width, height);
     copy_to_png(bmp.pixels(), width, height, image, false);
     image.write(filename);
 #endif

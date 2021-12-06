@@ -156,6 +156,9 @@ private:
 
   static std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in,
                                                         const data::settings &settings);
+
+  static void pixels_vec_insert_checkers_background(std::vector<uint32_t> &pixels, int width, int height);
+
   void save_images(std::vector<data::color> &pixels_raw,
                    size_t width,
                    size_t height,

@@ -14,5 +14,5 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 void copy_to_png(const std::vector<data::color> &source,
                  uint32_t width,
                  uint32_t height,
-                 png::image<png::rgb_pixel> &dest,
+                 png::image<png::rgba_pixel> &dest,
                  bool dithering);

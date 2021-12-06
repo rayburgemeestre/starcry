@@ -12,7 +12,7 @@ extern double rand_fun_vx();
 void copy_to_png(const std::vector<data::color> &source,
                  uint32_t width,
                  uint32_t height,
-                 png::image<png::rgb_pixel> &dest,
+                 png::image<png::rgba_pixel> &dest,
                  bool dithering) {
   size_t index = 0;
   auto m = std::numeric_limits<uint8_t>::max();
@@ -26,16 +26,20 @@ void copy_to_png(const std::vector<data::color> &source,
       double r1 = source[index].r;
       double g1 = source[index].g;
       double b1 = source[index].b;
+      double a1 = source[index].a;
       uint8_t r = r1 * m;
       uint8_t g = g1 * m;
       uint8_t b = b1 * m;
+      uint8_t a = a1 * m;
       if (dithering) {
         double r_dbl = r1 * m;
         double g_dbl = g1 * m;
         double b_dbl = b1 * m;
+        double a_dbl = a1 * m;
         double r_offset = r_dbl - static_cast<double>(r);
         double g_offset = g_dbl - static_cast<double>(g);
         double b_offset = b_dbl - static_cast<double>(b);
+        double a_offset = a_dbl - static_cast<double>(a);
         if (rand_fun_vx() >= r_offset && r > 0) {
           r -= 1;
         }
@@ -45,8 +49,11 @@ void copy_to_png(const std::vector<data::color> &source,
         if (rand_fun_vx() >= b_offset && b > 0) {
           b -= 1;
         }
+        if (rand_fun_vx() >= a_offset && a > 0) {
+          a -= 1;
+        }
       }
-      dest[y][x] = png::rgb_pixel(r, g, b);
+      dest[y][x] = png::rgba_pixel(r, g, b, a);
       index++;
     }
   }

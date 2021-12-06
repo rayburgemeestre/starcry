@@ -3,7 +3,9 @@
 import os
 import subprocess
 import base64
+import shutil
 
+from datetime import datetime
 
 def main():
     path_of_the_directory= 'output/expected'
@@ -51,6 +53,9 @@ def main():
         f.write("</table>")
         f.write("</body>")
         f.write("</html>")
+
+    today = datetime.today().strftime('%d-%m-%Y')
+    shutil.copyfile('output/report.html', f'output/report-{today}.html');
 
 
 if __name__ == '__main__':

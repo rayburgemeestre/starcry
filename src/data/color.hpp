@@ -18,13 +18,36 @@ struct color {
   double a = 0;
 
   template <class Archive>
-  void serialize(Archive &ar) {
+  void serialize(Archive& ar) {
     ar(r, g, b, a);
+  }
+
+  void normalize() {
+    r = std::min(r, 1.);
+    g = std::min(g, 1.);
+    b = std::min(b, 1.);
+    a = std::min(a, 1.);
+  }
+
+  friend std::ostream& operator<<(std::ostream& stream, const color& b) {
+    stream << "#color{" << b.r << ", " << b.g << ", " << b.b << ", " << b.a << "}";
+    return stream;
   }
 };
 
-inline bool operator==(const color &lhs, const color &rhs) {
-  return 0 == std::memcmp(reinterpret_cast<const void *>(&lhs), reinterpret_cast<const void *>(&rhs), sizeof(color));
+inline bool operator==(const color& lhs, const color& rhs) {
+  return 0 == std::memcmp(reinterpret_cast<const void*>(&lhs), reinterpret_cast<const void*>(&rhs), sizeof(color));
 }
 
 }  // namespace data
+
+static inline data::color blend(const data::color& bg, const data::color& fg) {
+  const auto a = fg.a + (bg.a * (1. - fg.a) / 1.);
+  data::color clr{
+      (fg.r * fg.a + bg.r * bg.a * (1. - fg.a) / 1.) / a,
+      (fg.g * fg.a + bg.g * bg.a * (1. - fg.a) / 1.) / a,
+      (fg.b * fg.a + bg.b * bg.a * (1. - fg.a) / 1.) / a,
+      a,
+  };
+  return clr;
+}
