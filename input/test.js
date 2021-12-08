@@ -104,9 +104,15 @@ _ = {
     'scale': 1.0,
     'rand_seed': 5,
     'granularity': 1,
+    // TODO: angle movement doesn't trigger motion blur!
+    // Which is why these were added...
+    // BEGIN
     'min_intermediates': 5.,
     'max_intermediates': 50.,
-    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 0},
+    // TODO: some other issue with angles, perhaps __dist__ stuff is messing with it?
+    'minimize_steps_per_object': false,
+    // END
+    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
     'grain_for_opacity': false,
   },
   'preview': {

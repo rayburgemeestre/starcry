@@ -51,3 +51,11 @@ static inline data::color blend(const data::color& bg, const data::color& fg) {
   };
   return clr;
 }
+
+// used for progressively rendering something with motion blur
+static inline data::color blend_add(const data::color& bg, const data::color& fg) {
+  const auto& a = fg.a;
+  const auto A = 1. - fg.a;
+  data::color clr{(bg.r * A) + (fg.r * a), (bg.g * A) + (fg.g * a), (bg.b * A) + (fg.b * a), bg.a + fg.a};
+  return clr;
+}

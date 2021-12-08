@@ -19,6 +19,7 @@
 #include "util/logger.h"
 #endif
 #include "util/math.h"
+#include "util/motionblur_buffer.hpp"
 #include "util/text_drawer.hpp"
 
 static std::mt19937 mt_v3;
@@ -155,8 +156,10 @@ public:
    *   circle). For this we calculate the half of the "x chord length" for both the outer- and inner circle, and
    *   substract them.
    */
-  inline bounding_box render_circle(
-      image &bmp, image &bmp_prev, const data::shape &shape, double opacity, const data::settings &settings) {
+  inline bounding_box render_circle(image &bmp,
+                                    const data::shape &shape,
+                                    double opacity,
+                                    const data::settings &settings) {
     bounding_box box;
     double circle_x = ((shape.x * scale_) + center_x_) - offset_x_;
     double circle_y = ((shape.y * scale_) + center_y_) - offset_y_;
@@ -201,7 +204,6 @@ public:
         double diff_from_center = reuse_sqrt ? distance<double>(abs_x_left, circle_x, abs_y_top, circle_y) : -1;
 
         render_circle_pixel(bmp,
-                            bmp_prev,
                             shape,
                             radius,
                             radius_size,
@@ -216,7 +218,6 @@ public:
         // bottom left
         if (rel_y != 0)
           render_circle_pixel(bmp,
-                              bmp_prev,
                               shape,
                               radius,
                               radius_size,
@@ -231,7 +232,6 @@ public:
         // top right
         if (rel_x != 0)
           render_circle_pixel(bmp,
-                              bmp_prev,
                               shape,
                               radius,
                               radius_size,
@@ -245,7 +245,6 @@ public:
         // bottom right
         if (rel_x != 0 && rel_y != 0)
           render_circle_pixel(bmp,
-                              bmp_prev,
                               shape,
                               radius,
                               radius_size,
@@ -261,8 +260,10 @@ public:
     return box;
   }
 
-  inline bounding_box render_text(
-      image &bmp, image &bmp_prev, const data::shape &shape, double opacity, const data::settings &settings) {
+  inline bounding_box render_text(image &bmp,
+                                  const data::shape &shape,
+                                  double opacity,
+                                  const data::settings &settings) {
     bounding_box bound_box;
     double textX = ((shape.x * scale_) + center_x_) - offset_x_;
     double textY = ((shape.y * scale_) + center_y_) - offset_y_;
@@ -315,14 +316,13 @@ public:
         if (absY < 0 || absY >= height_) continue;
         bound_box.update_x(absX);
         bound_box.update_y(absY);
-        render_pixel(bmp, bmp_prev, shape, textX, textY, absX, absY, c, opacity, settings);
+        render_pixel(bmp, shape, textX, textY, absX, absY, c, opacity, settings);
       }
     }
     return bound_box;
   }
 
   void render_circle_pixel(image &bmp,
-                           image &bmp_prev,
                            const data::shape &shape,
                            double radius,
                            double radiussize,
@@ -356,38 +356,33 @@ public:
       throw std::runtime_error("gradients cannot not be empty");
     }
 
-    render_pixel(bmp, bmp_prev, shape, posX, posY, absX, absY, Opacity, opacity, settings);
+    render_pixel(bmp, shape, posX, posY, absX, absY, Opacity, opacity, settings);
   }
 
   template <typename blending_type_>
-  static void blend_pixel(
-      image &bmp, image &bmp_prev, double opacity, const int &absX, const int &absY, const data::color &fg_color) {
+  static void blend_pixel(image &bmp, double opacity, const int &absX, const int &absY, const data::color &fg_color) {
     // original background color
-    auto &bg = bmp_prev.get(absX, absY);
+    auto &bg = bmp.get(absX, absY);
 
-    // blend it with foreground color
+    // blend it with foreground color, using special blending type
     auto new_clr =
         blender<blending_type_>(color(bg.r, bg.g, bg.b, bg.a), color(fg_color.r, fg_color.g, fg_color.b, fg_color.a));
 
     // convert this blended color to data::color
     data::color new_colr{new_clr.get_r(), new_clr.get_g(), new_clr.get_b(), new_clr.get_a()};
 
-    // now blend this color with the target canvas background
-    // this was not correct..., was doing it twice.
-    // data::color blended = blend(bg, new_colr);
+    // the previous blending will not leave the alpha for 'bg' pixels intact.
+    // it overwrites it with the foreground color alpha. For this reason, we'll blend one more time
+    // on top of 'bg'.
 
-    // now blend this color with the target canvas background.
-    auto &pix = bmp.get(absX, absY);
+    data::color final_pix = blend(bg, new_colr);
+    final_pix.normalize();  // fixes overflows
 
-    data::color b = blend(pix, /* blended */ new_colr);
-
-    b.normalize();  // fixes overflows
-
-    bmp.set(absX, absY, b.r, b.g, b.b, b.a);
+    // write to canvas
+    bmp.set(absX, absY, final_pix.r, final_pix.g, final_pix.b, final_pix.a);
   }
 
-  void render_line(
-      image &bmp, image &bmp_prev, const data::shape &shape, double opacity, const data::settings &settings) {
+  void render_line(image &bmp, const data::shape &shape, double opacity, const data::settings &settings) {
     auto x1 = ((shape.x * scale_) + center_x_) - offset_x_;
     auto y1 = ((shape.y * scale_) + center_y_) - offset_y_;
     auto x2 = ((shape.x2 * scale_) + center_x_) - offset_x_;
@@ -532,7 +527,6 @@ public:
             double normalized_dist_from_center = (dist_pixel / dist_max);
             double normalized_dist_from_line = (dist_from_center_line / aline.size);
             render_line_pixel(bmp,
-                              bmp_prev,
                               shape,
                               aline.center().x,
                               aline.center().y,
@@ -553,7 +547,6 @@ public:
   }
 
   void render_line_pixel(image &bmp,
-                         image &bmp_prev,
                          const data::shape &shape,
                          double posX,
                          double posY,
@@ -604,11 +597,10 @@ public:
     // bg.g = min(1., bg.g + gradient_.get(num).g);
     // bg.b = min(1., bg.b + gradient_.get(num).b);
 
-    render_pixel(bmp, bmp_prev, shape, posX, posY, absX, absY, num, opacity, settings);
+    render_pixel(bmp, shape, posX, posY, absX, absY, num, opacity, settings);
   }
 
   void render_pixel(image &bmp,
-                    image &bmp_prev,
                     const data::shape &shape,
                     double posX,
                     double posY,
@@ -688,128 +680,110 @@ public:
     // was:
     //  bmp.set(absX, absY, bg.r, bg.g, bg.b, bg.a);
     if (this->flag_) {
-      // blend_pixel<add>(bmp, bmp_prev, opacity, absX, absY, clr);
-      // current pixel color
-      auto &pix = bmp.get(absX, absY);
-
-      // add blended pixel to current pixel
-      pix.r += (clr.r * opacity);
-      pix.g += (clr.g * opacity);
-      pix.b += (clr.b * opacity);
-      pix.a += (clr.a * opacity);
-
-      // this makes it a bit rough
-      if (pix.r > clr.r) pix.r = clr.r;
-      if (pix.g > clr.g) pix.g = clr.g;
-      if (pix.b > clr.b) pix.b = clr.b;
-      if (pix.a > clr.a) pix.a = clr.a;
-
-      bmp.set(absX, absY, pix.r, pix.g, pix.b, pix.a);
+      motionblur_buffer_.insert(absX, absY, data::color{clr.r, clr.g, clr.b, clr.a});
     } else {
-      blend_the_pixel(bmp, bmp_prev, shape, absX, absY, opacity, clr);
+      blend_the_pixel(bmp, shape, absX, absY, opacity, data::color{clr.r, clr.g, clr.b, clr.a * opacity});
     }
   }
 
-  static void blend_the_pixel(image &bmp,
-                              image &bmp_prev,
-                              const data::shape &shape,
-                              int absX,
-                              int absY,
-                              double opacity,
-                              const data::color &clr) {
+  static void blend_the_pixel(
+      image &bmp, const data::shape &shape, int absX, int absY, double opacity, const data::color &clr) {
     switch (shape.blending_.type()) {
       case data::blending_type::lighten:
-        blend_pixel<lighten>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<lighten>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::darken:
-        blend_pixel<darken>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<darken>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::multiply:
-        blend_pixel<multiply>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<multiply>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::average:
-        blend_pixel<average>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<average>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::add:
-        blend_pixel<add>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<add>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::subtract:
-        blend_pixel<subtract>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<subtract>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::difference:
-        blend_pixel<difference>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<difference>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::negation_:
-        blend_pixel<negation_>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<negation_>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::screen:
-        blend_pixel<screen>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<screen>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::exclusion:
-        blend_pixel<exclusion>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<exclusion>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::overlay:
-        blend_pixel<overlay>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<overlay>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::softlight:
-        blend_pixel<softlight>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<softlight>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::hardlight:
-        blend_pixel<hardlight>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<hardlight>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::colordodge:
-        blend_pixel<colordodge>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<colordodge>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::colorburn:
-        blend_pixel<colorburn>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<colorburn>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::lineardodge:
-        blend_pixel<lineardodge>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<lineardodge>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::linearburn:
-        blend_pixel<linearburn>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<linearburn>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::linearlight:
-        blend_pixel<linearlight>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<linearlight>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::vividlight:
-        blend_pixel<vividlight>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<vividlight>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::pinlight:
-        blend_pixel<pinlight>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<pinlight>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::hardmix:
-        blend_pixel<hardmix>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<hardmix>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::reflect:
-        blend_pixel<reflect>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<reflect>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::glow:
-        blend_pixel<glow>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<glow>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::phoenix:
-        blend_pixel<phoenix>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<phoenix>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::hue:
-        blend_pixel<hue>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<hue>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::saturation:
-        blend_pixel<saturation>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<saturation>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::color:
-        blend_pixel<color_blend>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<color_blend>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::luminosity:
-        blend_pixel<luminosity>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<luminosity>(bmp, opacity, absX, absY, clr);
         break;
       case data::blending_type::normal:
       default:
-        blend_pixel<normal>(bmp, bmp_prev, opacity, absX, absY, clr);
+        blend_pixel<normal>(bmp, opacity, absX, absY, clr);
         break;
     }
   }
 
-  void flag(double flag) {
+  void capture_pixels(double flag) {
+    if (flag) {
+      motionblur_buf().clear();
+    }
     flag_ = flag;
   }
   void scale(double scale) {
@@ -830,6 +804,10 @@ public:
     offset_y_ = y;
   }
 
+  motionblur_buffer &motionblur_buf() {
+    return motionblur_buffer_;
+  }
+
 private:
   bool flag_ = false;
   double scale_;
@@ -840,6 +818,7 @@ private:
   uint32_t width_;
   uint32_t height_;
   std::vector<std::unique_ptr<text_drawer>> font_;
+  motionblur_buffer motionblur_buffer_;
 };
 
 }  // namespace draw_logic

@@ -80,28 +80,12 @@ public:
                 bool verbose,
                 const data::settings &settings) {
     auto &bmp = bitmap.get(width, height);
-    auto &bmp_prev = bitmap_back.get(width, height);
-    auto &bmp_temp = bitmap_temp.get(width, height);
 
-    // this lock is no longer needed since we got rid of all dependencies
-    // std::unique_lock<std::mutex> lock(m);
     bmp.clear_to_color(bg_color);
-    bmp_prev.clear_to_color(bg_color);
-    bmp_temp.clear_to_color(bg_color);
-
-    // debug font
-    // if (!font) {
-    //   font = std::make_unique<memory_font>(memory_font::fonts::monaco, 14, 0);
-    //   if (!font) {
-    //     fprintf(stderr, "Could not load monaco ttf font.\n");
-    //     return;
-    //   }
-    // }
 
     double scale_ratio = (scale / 1080.) * std::min(canvas_w, canvas_h);
 
     draw_logic_.scale(scale * scale_ratio);  // TODO: deprecate
-
     draw_logic_.width(width);
     draw_logic_.height(height);
     draw_logic_.center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
@@ -124,21 +108,25 @@ public:
 #endif
 #endif
 
-        if (shape.type == data::shape_type::circle) {
-          /////////////
-          // draw_logic_.flag(true);
-          // std::swap(bmp, bmp_temp);
-          /////////////
+        if (true) {
+          draw_logic_.capture_pixels(true);
 
           // first one
-          // double opacity = 1.0 / double(shape.indexes.size());
           double opacity = 1.0;
-          if (shape.indexes.size() > 1) {
-            opacity /= shape.indexes.size();
-          }
           const auto scale = scales[scales.size() - 1] * scale_ratio;
           draw_logic_.scale(scale);
-          auto box = draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings);
+          bounding_box box;
+          switch (shape.type) {
+            case data::shape_type::circle:
+              box = draw_logic_.render_circle(bmp, shape, opacity, settings);
+              break;
+            case data::shape_type::line:
+              draw_logic_.render_line(bmp, shape, opacity, settings);
+              break;
+            case data::shape_type::text:
+              box = draw_logic_.render_text(bmp, shape, opacity, settings);
+              break;
+          }
           bounding_box box_x;
           bounding_box box_y;
           const auto warp_data = [&](const auto &box, const auto &shape) {
@@ -164,9 +152,29 @@ public:
             warp_view += double(warp_value);
             draw_logic_.center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
             if (!update) {
-              box = draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings);
+              switch (shape.type) {
+                case data::shape_type::circle:
+                  box = draw_logic_.render_circle(bmp, shape, opacity, settings);
+                  break;
+                case data::shape_type::line:
+                  draw_logic_.render_line(bmp, shape, opacity, settings);
+                  break;
+                case data::shape_type::text:
+                  box = draw_logic_.render_text(bmp, shape, opacity, settings);
+                  break;
+              }
             } else {
-              box.update(draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings));
+              switch (shape.type) {
+                case data::shape_type::circle:
+                  box.update(draw_logic_.render_circle(bmp, shape, opacity, settings));
+                  break;
+                case data::shape_type::line:
+                  draw_logic_.render_line(bmp, shape, opacity, settings);
+                  break;
+                case data::shape_type::text:
+                  box.update(draw_logic_.render_text(bmp, shape, opacity, settings));
+                  break;
+              }
             }
             warp_view -= double(warp_value);
             draw_logic_.center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
@@ -180,8 +188,17 @@ public:
             const auto &shape = shapes[step][index];
             const auto scale = scales[step] * scale_ratio;
             draw_logic_.scale(scale);
-            box.update(draw_logic_.render_circle(bmp, bmp_prev, shape, opacity, settings));
-            const auto [warp_x, warp_y, warp_view_x, warp_view_y] = warp_data(box, shape);
+            switch (shape.type) {
+              case data::shape_type::circle:
+                box.update(draw_logic_.render_circle(bmp, shape, opacity, settings));
+                break;
+              case data::shape_type::line:
+                draw_logic_.render_text(bmp, shape, opacity, settings);
+                break;
+              case data::shape_type::text:
+                box.update(draw_logic_.render_text(bmp, shape, opacity, settings));
+                break;
+            }
             if (warp_view_x && warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y, true);
             if (warp_view_y && warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y, true);
           }
@@ -189,61 +206,21 @@ public:
           box.normalize(width, height);
           box_x.normalize(width, height);
           box_y.normalize(width, height);
-          /////////////
-          // draw_logic_.flag(false);
-          // std::swap(bmp, bmp_temp);
-          /////////////
-          //  for (size_t y = box.top_left.y; y < box.bottom_right.y; y++) {
-          //    size_t offset_y = y * width;
-          //    for (size_t x = box.top_left.x; x < box.bottom_right.x; x++) {
-          //      size_t offset = offset_y + x;
-          //      // something with alpha going wrong..
-          //      draw_logic_.blend_the_pixel(bmp_prev, bmp_prev, shape, x, y, 1., bmp_temp.pixels()[offset]);
-          //      // bmp_prev.pixels()[offset] = bmp_temp.pixels()[offset];
-          //    }
-          //  }
-          bmp_prev.copy_from(bmp, &box);
-          bmp_prev.copy_from(bmp, &box_x);
-          bmp_prev.copy_from(bmp, &box_y);
-          // TODO: perhaps not necessary
-          std::swap(bmp, bmp_prev);
-        } else if (shape.type == data::shape_type::line) {
-          // first one
-          double opacity = 1.0;
-          if (shape.indexes.size() > 1) {
-            opacity /= shape.indexes.size();
-          }
-          draw_logic_.scale(scales[scales.size() - 1] * scale_ratio);  // TODO: fix this
-          draw_logic_.render_line(bmp, bmp_prev, shape, opacity, settings);
 
-          // the rest...
-          for (const auto &index_data : shape.indexes) {
-            const auto &step = index_data.first;
-            const auto &index = index_data.second;
-            const auto &shape = shapes[step][index];
-            draw_logic_.scale(scales[step] * scale_ratio);  // TODO: fix this
-            draw_logic_.render_line(bmp, bmp_prev, shape, opacity, settings);
-          }
-        } else if (shape.type == data::shape_type::text) {
-          // first one
-          double opacity = 1.0;
-          if (shape.indexes.size() > 1) {
-            opacity /= shape.indexes.size();
-          }
-          draw_logic_.scale(scales[scales.size() - 1] * scale_ratio);  // TODO: fix this
-          auto box = draw_logic_.render_text(bmp, bmp_prev, shape, opacity, settings);
+          draw_logic_.capture_pixels(false);
 
-          // the rest...
-          for (const auto &index_data : shape.indexes) {
-            const auto &step = index_data.first;
-            const auto &index = index_data.second;
-            const auto &shape = shapes[step][index];
-            draw_logic_.scale(scales[step] * scale_ratio);  // TODO: fix this
-            box.update(draw_logic_.render_text(bmp, bmp_prev, shape, opacity, settings));
+          auto &ref = draw_logic_.motionblur_buf();
+          ref.set_layers(shape.indexes.size());
+          for (const auto &p : ref.buffer()) {
+            const auto &y = p.first;
+            for (const auto &q : p.second) {
+              const auto &x = q.first;
+              const auto &color_dat = q.second;
+              const auto col = ref.get_color(color_dat);
+              // TODO: design is suffering a bit, draw_logic_ needs a refactoring
+              draw_logic_.blend_the_pixel(bmp, shape, x, y, 1., col);
+            }
           }
-          box.normalize(width, height);
-          bmp_prev.copy_from(bmp, &box);
-          std::swap(bmp, bmp_prev);
         }
 #ifndef EMSCRIPTEN
 #ifndef SC_CLIENT
@@ -254,27 +231,6 @@ public:
       }
       return bmp;
     }
-    //    // test
-    //    double x = 1.;
-    //    double y = 0.;
-    //    auto copy = bg_color;
-    //    copy.r = 1.;
-    //    // bmp.clear_to_color(copy);
-    //    for (int i=0; i<1; i++) {
-    //      for (int j=0; j<100; j++)
-    //        bmp.set(i, j, x, y, y, y);
-    //    }
-
-    // if (false) {  // TODO: debug chunks flag
-    //   for (uint32_t y = 0; y < canvas_h; y++) al_put_pixel(0, y, al_map_rgba(0, 255, 0, 255));
-    //   for (uint32_t x = 0; x < canvas_w; x++) al_put_pixel(x, 0, al_map_rgba(255, 0, 0, 255));
-    //   stringstream ss;
-    //   ss << "chunk - " << offset_x << ", " << offset_y << endl;
-    //   draw_logic_.scale(1);
-    //   draw_logic_.offset(0, 0);
-    //   draw_logic_.center(width / 2, height / 2);
-    //   draw_logic_.render_text(0, 0, 14, ss.str().c_str(), "left");
-    // }
     return bmp;
   }
 
@@ -288,6 +244,4 @@ public:
 
   draw_logic::draw_logic draw_logic_;
   bitmap_wrapper bitmap;
-  bitmap_wrapper bitmap_back;
-  bitmap_wrapper bitmap_temp;
 };

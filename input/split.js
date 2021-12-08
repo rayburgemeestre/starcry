@@ -7,7 +7,7 @@ _ = {
     'white': [
       {'position': 0, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
       {'position': 0.5, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
-      {'position': 1, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 1, 'r': 1, 'g': 1, 'b': 1, 'a': 0},
     ],
   },
   'objects': {
@@ -101,7 +101,7 @@ _ = {
     'granularity': 1,
     'min_intermediates': 5.,
     'max_intermediates': 50.,
-    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 0},
+    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
     'grain_for_opacity': true,
   },
   'preview': {

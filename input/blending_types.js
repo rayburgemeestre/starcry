@@ -85,6 +85,7 @@ _ = {
     'bg': {
       'type': 'circle',
       'gradient': 'rainbow',
+      'blending_type': blending_type.normal,
       'radius': 0,
       'radiussize': 1200.0,
     },
