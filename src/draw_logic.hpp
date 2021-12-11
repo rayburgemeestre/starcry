@@ -292,7 +292,7 @@ public:
     int full_text_width = static_cast<int>(box.bottom_right.x - box.top_left.x);
     int full_text_height = static_cast<int>(box.bottom_right.y - box.top_left.y);
     int half_text_width = abs(full_text_width / 2);
-    int half_text_height = abs(full_text_height / 2);
+    // int half_text_height = abs(full_text_height / 2);
     auto bitmap_pixel = font_[index]->bitmap();
 
     // copy text from bitmap to our bmp canvas

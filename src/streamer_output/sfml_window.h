@@ -6,6 +6,9 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
+#include <atomic>
+#include <mutex>
+#include <thread>
 #include <vector>
 
 #include "data/color.hpp"
@@ -13,16 +16,22 @@
 class sfml_window {
 public:
   sfml_window();
+  ~sfml_window();
 
   void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels);
   void finalize();
 
 private:
-  // float ball_radius = 16.f;
+  void update_window();
+
   int bpp = 32;
   bool vsync = false;
   sf::RenderWindow window;
-  // sf::Font font;
-  // sf::Text text;
-  // sf::CircleShape ball;
+  std::thread runner;
+  std::atomic<bool> runner_flag = false;
+  std::mutex mut;
+
+  uint32_t cached_canvas_w = 0;
+  uint32_t cached_canvas_h = 0;
+  std::vector<uint32_t> cached_pixels;
 };

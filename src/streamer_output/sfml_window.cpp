@@ -12,34 +12,54 @@ const int window_width = 100;
 const int window_height = 100;
 
 sfml_window::sfml_window() : window(sf::VideoMode(window_width, window_height, bpp), "Preview") {
+  cached_canvas_w = window_width;
+  cached_canvas_h = window_height;
+  for (size_t y = 0; y < window_height; y++) {
+    for (size_t x = 0; x < window_width; x++) {
+      cached_pixels.emplace_back(std::clamp((double)x, 0., 1.));
+      cached_pixels.emplace_back(std::clamp((double)y, 0., 1.));
+      cached_pixels.emplace_back(std::clamp((double)x * (double)y, 0., 1.));
+      cached_pixels.emplace_back(std::clamp((double)x / (double)y, 0., 1.));
+    }
+  }
   if (vsync) window.setVerticalSyncEnabled(true);
-
   window.setActive(false);
-
-  // font.loadFromFile("monaco.ttf");
-  // text.setFont(font);         // font is a sf::Font
-  // text.setCharacterSize(24);  // in pixels, not points!
-  // text.setFillColor(sf::Color::Red);
-  // text.setStyle(sf::Text::Bold | sf::Text::Underlined);
-
   sf::Clock clock, total_clock;
+  runner = std::thread([&]() {
+    runner_flag = true;
+    while (runner_flag) {
+      update_window();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+  });
+}
+
+sfml_window::~sfml_window() {
+  runner_flag = false;
+  runner.join();
 }
 
 void sfml_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels) {
-  // alpha is inverted for SFML it seems
-  for (auto &pixel : pixels) {
-    auto *ptr = (uint8_t *)&pixel;
-    auto *A = ptr + 3;  // RGBA
-    // TODO: we need to print frame on top of some kind of checkmark pattern
-    // *A = 255.0 - *A;
-  }
+  std::unique_lock<std::mutex> lock(mut);
+  cached_canvas_w = canvas_w;
+  cached_canvas_h = canvas_h;
+  cached_pixels = pixels;
+  lock.unlock();
+  update_window();
+}
 
+void sfml_window::finalize() {
+  runner_flag = false;
+  runner.join();
+  window.close();
+}
+
+void sfml_window::update_window() {
+  std::unique_lock lock(mut);
   sf::Context context;
-
   sf::View view = window.getDefaultView();
-  view.setCenter({static_cast<float>(canvas_w / 2.0), static_cast<float>(canvas_h / 2.0)});
-  view.setSize({static_cast<float>(canvas_w), static_cast<float>(canvas_h)});
-
+  view.setCenter({static_cast<float>(cached_canvas_w / 2.0), static_cast<float>(cached_canvas_h / 2.0)});
+  view.setSize({static_cast<float>(cached_canvas_w), static_cast<float>(cached_canvas_h)});
   if (window.isOpen()) {
     sf::Event event;
     while (window.pollEvent(event)) {
@@ -49,29 +69,20 @@ void sfml_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ui
         return;
       }
       if (event.type == sf::Event::Resized) {
+        // resize is implicitly by our thread that executes every 100 milliseconds
+        // and will update the view based on the window size.
       }
     }
     window.setView(view);
-
-    // text.setString("Hello world");
-    // window.clear(sf::Color(30, 30, 120));
-    // window.draw(text);
-
-    sf::Vector2u windowSize = window.getSize();
-    if (!(windowSize.x >= window_width && windowSize.y >= window_height)) {
+    if (sf::Vector2u windowSize = window.getSize(); !(windowSize.x >= window_width && windowSize.y >= window_height)) {
       return;
     }
-
     sf::Texture texture;
-    sf::Image screenshot;
-    screenshot.create(canvas_w, canvas_h, (const sf::Uint8 *)(&(pixels[0])));
-    texture.loadFromImage(screenshot);
+    sf::Image image;
+    image.create(cached_canvas_w, cached_canvas_h, (const sf::Uint8 *)(&(cached_pixels[0])));
+    texture.loadFromImage(image);
     sf::Sprite sprite(texture);
     window.draw(sprite);
     window.display();
   }
-}
-
-void sfml_window::finalize() {
-  window.close();
 }
