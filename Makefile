@@ -130,6 +130,11 @@ client_deps:  ## install dependencies for building webassembly client
 	./emsdk activate latest && \
 	sudo cp -prv ./emsdk_env.sh /etc/profile.d/
 
+dockerize_deps:
+	sudo apt update
+	sudo apt install python3-pip rsync git ncurses-term -y
+	cd /tmp && git clone https://github.com/larsks/dockerize && cd dockerize && sudo python3 setup.py install
+
 prepare:  ## prepare environment before building (such as switch to clang)
 	# switch to clang compiler
 	switch-to-latest-clang
@@ -187,14 +192,16 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 	mkdir -p /tmp/ccache-user
 	docker run $$FLAGS -v /tmp/ccache-user:/home/user/.ccache -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user make core_"
 	docker run $$FLAGS  -e _UID=$(UID) -e _GID=$(GID) --privileged -t -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 /bin/sh -c "make prepare && make dockerize_run"
-	cd out && docker build . -t rayburgemeestre/starcry:v3
-	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then echo "$$DOCKER_PASSWORD" | docker login -u "$$DOCKER_USERNAME" --password-stdin; docker push rayburgemeestre/starcry:v3; fi
+	cd out && docker build . -t rayburgemeestre/starcry:v`cat ../.version`
+	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then echo "$$DOCKER_PASSWORD" | docker login -u "$$DOCKER_USERNAME" --password-stdin; docker push rayburgemeestre/starcry:v`cat .version`; fi
 
 .PHONY: dockerize_run
 dockerize_run:  ## execute dockerize steps
+	# TODO: soon obsolete following three lines
 	apt update
 	apt install python3-pip rsync git ncurses-term -y
 	cd /tmp && git clone https://github.com/larsks/dockerize && cd dockerize && python3 setup.py install
+	# END.. (once docker image has been updated)
 	cp -prv $$PWD/build/starcry /starcry
 	sudo -u user -g user mkdir -p out/workdir
 	sudo -u user -g user cp -prv $$PWD/webroot out/workdir/webroot
@@ -227,5 +234,5 @@ release:
 	make build_web
 	make client
 	make dockerize
-	echo docker push rayburgemeestre/starcry:v3
+	echo docker push rayburgemeestre/starcry:v`cat .version`
 	echo kubectl apply -f kube/starcry.yaml
