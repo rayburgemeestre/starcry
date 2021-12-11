@@ -1,9 +1,10 @@
 _ = {
   'gradients': {
     'white': [
-      {'position': 0.0, 'r': 1, 'g': 0, 'b': 0, 'a': 1.0},
-      {'position': 0.9, 'r': 1, 'g': 0, 'b': 0, 'a': 1.0},
-      {'position': 1.0, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 0.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0.0},
+      {'position': 0.8, 'r': 0, 'g': 0, 'b': 0, 'a': 0.0},
+      {'position': 0.9, 'r': 0, 'g': 0, 'b': 0, 'a': 1.0},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 1},
     ],
   },
   'objects': {
@@ -38,7 +39,7 @@ _ = {
     'scale': 1,
     'rand_seed': 1,
     'granularity': 1,
-    'bg_color': {'r': 0, 'g': 0, 'b': 0, 'a': 0},
+    'bg_color': {'r': 0, 'g': 0, 'b': 0, 'a': 1},
   },
   'scenes': [{
     'name': 'scene1',

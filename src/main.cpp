@@ -32,8 +32,8 @@ private:
   double rand_seed = std::numeric_limits<double>::max();
   po::options_description desc = std::string("Allowed options");
   std::string script = "input/test.js";
-  size_t num_worker_threads = 1;
-  size_t num_chunks = 1;
+  size_t num_worker_threads = std::thread::hardware_concurrency();
+  size_t num_chunks = std::thread::hardware_concurrency() * 2;
   std::string host = "localhost";
 
 public:
@@ -53,11 +53,9 @@ public:
       ("num_chunks,c", po::value<size_t>(&num_chunks), "number of chunks to chop frame into (default 1)")
       ("server", "start server to allow dynamic renderers (default no)")
       ("client", po::value<std::string>(&host), "start client renderer, connect to host (default localhost)")
-      ("gui", "render to graphical window")
-      ("gui-only", "render to graphical window only (no video)")
+      ("no-gui", "disable render to graphical window")
+      ("no-video", "disable render to video")
       ("preview", "enable preview settings for fast preview rendering")
-      ("javascript-only", "render only the jobs, nothing graphical")
-      ("spawn-gui", "spawn GUI window (used by --gui, you probably don't need to call this)")
       ("stream", "start embedded webserver and stream HLS to webroot")
       ("no-webserver", "do not start embedded webserver")
       ("interactive,i", "start in interactive mode (user will input through webserver)")
@@ -109,15 +107,15 @@ public:
       start_webserver = true;
     }
 
-    auto p_mode = ([this]() {
-      if (vm.count("gui"))
-        return starcry::render_video_mode::video_with_gui;
-      else if (vm.count("gui-only"))
-        return starcry::render_video_mode::gui_only;
-      else if (vm.count("javascript-only"))
+    auto p_mode = ([this, is_interactive]() {
+      if (vm.count("no-gui") && vm.count("no-video"))
         return starcry::render_video_mode::javascript_only;
-      else
+      else if (vm.count("no-video"))
+        return starcry::render_video_mode::gui_only;
+      else if (vm.count("no-gui") || is_interactive)
         return starcry::render_video_mode::video_only;
+      else
+        return starcry::render_video_mode::video_with_gui;
     })();
 
     auto render_command = [this, preview, is_interactive](starcry &sc) {

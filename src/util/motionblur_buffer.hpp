@@ -5,6 +5,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 #pragma once
 
+#include <cmath>
 #include <unordered_map>
 #include <vector>
 
@@ -26,7 +27,7 @@ public:
 
   motionblur_buffer() = default;
 
-  const buffer_t& buffer() {
+  const buffer_t &buffer() {
     return buffer_;
   }
 
@@ -73,16 +74,22 @@ public:
     data::color ret;
     double divider = 1. / (std::max(layers_, 1.));
     bool first = true;
-    for (const auto &col : dat.colors) {
+    for (const auto &col_ : dat.colors) {
+      auto col = col_;
+      // TODO: got some weird artifacts when I was dealing with colors with alpha of zero..
+      // this is a workaround, probably in the wrong place
+      col.a = std::max(std::numeric_limits<double>::epsilon(), col.a);
       if (first) {
         ret = col;
+        ret.a *= ret.a;
         ret.a *= divider;
         first = false;
         continue;
       }
-      ret = blend_add(ret, data::color{col.r, col.g, col.b, col.a * divider});
-      ret.normalize();
+      ret = blend(ret, data::color{col.r, col.g, col.b, col.a * col.a * divider});
     }
+    ret.a = sqrt(ret.a);
+    ret.normalize();
     return ret;
   }
 

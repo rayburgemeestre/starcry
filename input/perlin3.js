@@ -53,9 +53,9 @@ _ = {
       'init': function() {
         var x = this.props.depth / 50.;
         var step = expf(x, 300) * 100.;
-        this.subobj.push({'id': 'ring', 'x': -300, 'y': 150, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}});
-        this.subobj.push({'id': 'ring', 'x': -300, 'y': 150, 'x2': 0, 'y2': -300, 'scale': step, 'z': 0, 'props': {}});
-        this.subobj.push({'id': 'ring', 'x': 0, 'y': -300, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}});
+        this.subobj.push({'id': 'ring', 'x': -300, 'y': 150, 'x2': 300, 'y2': 150, 'z': 0, 'props': {'scale': step}});
+        this.subobj.push({'id': 'ring', 'x': -300, 'y': 150, 'x2': 0, 'y2': -300, 'z': 0, 'props': {'scale': step}});
+        this.subobj.push({'id': 'ring', 'x': 0, 'y': -300, 'x2': 300, 'y2': 150, 'z': 0, 'props': {'scale': step}});
         if (this.props.depth > 0) {
           this.subobj.push({
             'id': 'rings',
@@ -76,7 +76,7 @@ _ = {
       'gradients': [[0.1, 'white2']],
       'radiussize': 20,
       'props': {},
-      'opacity': 0.5,
+      'opacity': 0.15,
       'init': function() {},
       'time': function(t, elapsed) {
         // this.radiussize = t * 600.;
@@ -87,6 +87,8 @@ _ = {
         this.gradients[0][0] = 1.;
         // this.scale = 1.0 + (logn(t, 100) * 1);
         script.video.scale = 1.0 + (logn(t, 100) * 1);
+        // this.scale = this.props.scale
+        this.radiussize = 20 * this.props.scale;
       },
       'blending_type': blending_type.add,
       'scale': 1.0,
@@ -95,17 +97,19 @@ _ = {
   'video': {
     'duration': 5,
     'fps': 25,
-    'width': 3840,
-    'height': 2160,
+    'width': 1920,
+    'height': 1080,
     'scale': 1.,
     'rand_seed': 1,
     'granularity': 1000,
     'update_positions': false,
-    //'grain_for_opacity': false,
+    'grain_for_opacity': true,
     // 'sample': {
     //   'include': 1.,  // include one second.
     //   'exclude': 5.,  // then skip 5 seconds, and so on.
     // },
+    // 'bg_color': {'r': 1., 'g': 0., 'b': 0., 'a': 1},
+    'max_intermediates': 10,
   },
   'scenes': [{
     'name': 'scene1',

@@ -116,6 +116,7 @@ _ = {
     'rand_seed': 1,
     'granularity': 1,
     'update_positions': false,
+    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
   },
   'scenes': [{
     'name': 'scene1',

@@ -383,10 +383,10 @@ public:
   }
 
   void render_line(image &bmp, const data::shape &shape, double opacity, const data::settings &settings) {
-    auto x1 = ((shape.x * scale_) + center_x_) - offset_x_;
-    auto y1 = ((shape.y * scale_) + center_y_) - offset_y_;
-    auto x2 = ((shape.x2 * scale_) + center_x_) - offset_x_;
-    auto y2 = ((shape.y2 * scale_) + center_y_) - offset_y_;
+    auto x1 = ((shape.x * scale_ * shape.scale) + center_x_) - offset_x_;
+    auto y1 = ((shape.y * scale_ * shape.scale) + center_y_) - offset_y_;
+    auto x2 = ((shape.x2 * scale_ * shape.scale) + center_x_) - offset_x_;
+    auto y2 = ((shape.y2 * scale_ * shape.scale) + center_y_) - offset_y_;
     auto size = shape.radius_size * scale_ * shape.scale;
 
     // test
@@ -681,6 +681,8 @@ public:
     //  bmp.set(absX, absY, bg.r, bg.g, bg.b, bg.a);
     if (this->flag_) {
       motionblur_buffer_.insert(absX, absY, data::color{clr.r, clr.g, clr.b, clr.a});
+      // cool alternative for lines, e.g., line style 2?
+      // blend_the_pixel(bmp, shape, absX, absY, opacity, data::color{clr.r, clr.g, clr.b, clr.a * opacity});
     } else {
       blend_the_pixel(bmp, shape, absX, absY, opacity, data::color{clr.r, clr.g, clr.b, clr.a * opacity});
     }

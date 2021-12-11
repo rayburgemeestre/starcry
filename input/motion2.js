@@ -2,35 +2,35 @@ _ = {
   'gradients': {
     'blue': [
       {'position': 0.0, 'r': 0, 'g': 0, 'b': 1, 'a': 1},
-      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 1, 'a': 0},
     ],
     'green': [
       {'position': 0.0, 'r': 0, 'g': 1, 'b': 0, 'a': 1},
-      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 1.0, 'r': 0, 'g': 1, 'b': 0, 'a': 0},
     ],
     'yellow': [
       {'position': 0.0, 'r': 1, 'g': 1, 'b': 0, 'a': 1},
-      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 1.0, 'r': 1, 'g': 1, 'b': 0, 'a': 0},
     ],
     'red_bg': [
       {'position': 0.0, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
-      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 1.0, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
     ],
     'red': [
       {'position': 0.0, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
       {'position': 0.9, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
-      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 1.0, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
     ],
     'white': [
       {'position': 0.0, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
       {'position': 0.9, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
-      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 1.0, 'r': 1, 'g': 1, 'b': 1, 'a': 0},
     ],
     'white_2': [
       {'position': 0.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
       {'position': 0.8, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
       {'position': 0.9, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
-      {'position': 1.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 1.0, 'r': 1, 'g': 1, 'b': 1, 'a': 0},
     ],
     'black': [
       {'position': 0.0, 'r': 0, 'g': 0, 'b': 0, 'a': 1},
@@ -242,6 +242,7 @@ _ = {
     //  (problem is that steps won't be updated.)
     // 'min_intermediates': 5,
     'minimize_steps_per_object': true,
+    'bg_color': {'r': 1., 'g': 1., 'b': 1., 'a': 1},
   },
   'preview': {
     'motion_blur': false,

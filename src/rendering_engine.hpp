@@ -193,7 +193,7 @@ public:
                 box.update(draw_logic_.render_circle(bmp, shape, opacity, settings));
                 break;
               case data::shape_type::line:
-                draw_logic_.render_text(bmp, shape, opacity, settings);
+                draw_logic_.render_line(bmp, shape, opacity, settings);
                 break;
               case data::shape_type::text:
                 box.update(draw_logic_.render_text(bmp, shape, opacity, settings));
@@ -218,7 +218,7 @@ public:
               const auto &color_dat = q.second;
               const auto col = ref.get_color(color_dat);
               // TODO: design is suffering a bit, draw_logic_ needs a refactoring
-              draw_logic_.blend_the_pixel(bmp, shape, x, y, 1., col);
+              draw_logic_.blend_the_pixel(bmp, shape, x, y, col.a, col);
             }
           }
         }
