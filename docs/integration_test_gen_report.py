@@ -43,6 +43,9 @@ def main():
                 diff2 = process(diff2, "diff2")
 
                 f.write("<tr>")
+                f.write(f'<td colspan=4>{file}</td>')
+                f.write("</tr>")
+                f.write("<tr>")
                 f.write(f'<td><img src="data:image/png;base64,{observed}"></td>')
                 f.write(f'<td><img src="data:image/png;base64,{expected}"></td>')
                 f.write(f'<td><img src="data:image/png;base64,{diff}"></td>')

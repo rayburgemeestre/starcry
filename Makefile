@@ -37,6 +37,7 @@ client_debug:  ## build webassembly javascript file using docker with debug
 	docker run -it -v /tmp/ccache-user:/home/user/.ccache -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 -g --bind -o webroot/client.js src/client.cpp -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1"
 
 debug:  ## build starcry binary using docker with debug
+	make debug-clean
 	# build starcry with tailored image so we can invoke the make command straight away
 	mkdir -p /tmp/ccache-user
 	docker run -t -v /tmp/ccache-user:/home/user/.ccache -e _UID=$(UID) -e _GID=$(GID) -v $$PWD:$$PWD --workdir $$PWD rayburgemeestre/build-starcry-ubuntu:20.04 sh -c "make prepare && sudo -u user -g user make core_debug"
@@ -63,7 +64,7 @@ format:  ## format source code (build at least once first)
 	stat -c 'chown %u:%g . -R' CMakeLists.txt | sudo sh -
 
 profile:  ## run starcry with valgrind's callgrind for profiling
-	valgrind --tool=callgrind ./build/starcry input/test.js -v
+	valgrind --tool=callgrind ./build/starcry input/contrast.js -f 1
 	ls -althrst | tail -n 1
 
 pull:  ## pull the starcry docker build image
@@ -197,15 +198,10 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 
 .PHONY: dockerize_run
 dockerize_run:  ## execute dockerize steps
-	# TODO: soon obsolete following three lines
-	apt update
-	apt install python3-pip rsync git ncurses-term -y
-	cd /tmp && git clone https://github.com/larsks/dockerize && cd dockerize && python3 setup.py install
-	# END.. (once docker image has been updated)
 	cp -prv $$PWD/build/starcry /starcry
 	sudo -u user -g user mkdir -p out/workdir
 	sudo -u user -g user cp -prv $$PWD/webroot out/workdir/webroot
-	sudo -u user -g user cp -prv $$PWD/output/report.html out/workdir/webroot/report.html
+	sudo -u user -g user cp -prv $$PWD/output/report.html out/workdir/webroot/report.html || true
 	sudo -u user -g user cp -prv $$PWD/input out/workdir/input
 	strip --strip-debug /starcry
 	sudo -u user -g user dockerize --verbose --debug -n -o out "/starcry"
@@ -228,7 +224,10 @@ clion:
 attach:
 	docker exec -it starcry /bin/bash
 
-release:
+release:  # alias for make build..
+	make build
+
+publish:
 	make clean
 	make build
 	make build_web
