@@ -108,7 +108,7 @@ public:
 #endif
 #endif
 
-        if (true) {
+        if (true && !scales.empty()) {
           draw_logic_.capture_pixels(true);
 
           // first one
@@ -212,9 +212,12 @@ public:
           auto &ref = draw_logic_.motionblur_buf();
           ref.set_layers(shape.indexes.size());
           for (const auto &p : ref.buffer()) {
-            const auto &y = p.first;
+            // These clamps should be avoided, and in draw_logic we should make sure we don't draw outside bounds!
+            const auto &y = std::clamp(p.first, 0, (int)height);  // TODO: comment
+            // const auto &y = p.first;
             for (const auto &q : p.second) {
-              const auto &x = q.first;
+              const auto &x = std::clamp(q.first, 0, (int)width);  // TODO: comment
+              // const auto &x = q.first;
               const auto &color_dat = q.second;
               const auto col = ref.get_color(color_dat);
               // TODO: design is suffering a bit, draw_logic_ needs a refactoring

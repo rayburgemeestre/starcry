@@ -139,7 +139,9 @@ public:
   int update_steps(double dist);
   double get_max_travel_of_object(v8_interact& i,
                                   v8::Local<v8::Object>& previous_instance,
-                                  v8::Local<v8::Object>& instance);
+                                  v8::Local<v8::Object>& instance
+
+  );
   void convert_objects_to_render_job(v8_interact& i,
                                      v8::Local<v8::Array> next_instances,
                                      step_calculator& sc,
@@ -175,6 +177,8 @@ public:
   }
 
   inline time_settings get_time() const;
+
+  void fix(v8_interact& i, v8::Local<v8::Array>& instances);
 
 private:
   bool _generate_frame();

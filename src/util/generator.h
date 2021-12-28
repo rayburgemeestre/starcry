@@ -29,14 +29,15 @@ void instantiate_object(v8_interact& i,
                         v8::Local<v8::Object> new_instance,
                         int64_t level);
 
-v8::Local<v8::Object> instantiate_objects(v8_interact& i,
-                                          v8::Local<v8::Array>& objects,
-                                          v8::Local<v8::Array>& scene_instances,
-                                          v8::Local<v8::Array>& scene_instances_next,
-                                          v8::Local<v8::Array>& scene_instances_intermediate,
-                                          size_t& scene_instances_idx,
-                                          v8::Local<v8::Object>& scene_object,
-                                          v8::Local<v8::Object>* parent_object = nullptr);
+std::tuple<v8::Local<v8::Object>, v8::Local<v8::Object>, v8::Local<v8::Object>> instantiate_objects(
+    v8_interact& i,
+    v8::Local<v8::Array>& objects,
+    v8::Local<v8::Array>& scene_instances,
+    v8::Local<v8::Array>& scene_instances_next,
+    v8::Local<v8::Array>& scene_instances_intermediate,
+    size_t& scene_instances_idx,
+    v8::Local<v8::Object>& scene_object,
+    v8::Local<v8::Object>* parent_object = nullptr);
 void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Array> source);
 
 void garbage_collect_erased_objects(v8_interact& i,
@@ -51,6 +52,13 @@ void find_new_objects(v8_interact& i,
                       v8::Local<v8::Array>& scene_instances_intermediate);
 
 void monitor_subobj_changes(v8_interact& i, v8::Local<v8::Object> instance, std::function<void()> exec);
+
+std::string instance_to_string(v8_interact& i, v8::Local<v8::Object>& instance);
+
+void debug_print(v8_interact& i, v8::Local<v8::Object>& instance);
+void debug_print(v8_interact& i, v8::Local<v8::Array>& instances, const std::string& desc);
+
+v8::Local<v8::Object> get_object_by_id(v8_interact& i, v8::Local<v8::Array>& instances, int id);
 
 }  // namespace generator
 }  // namespace util

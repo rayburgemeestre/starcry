@@ -9,6 +9,8 @@
 
 #include "signal.h"
 
+#include <random>
+
 namespace util {
 namespace generator {
 
@@ -83,7 +85,6 @@ void instantiate_object(v8_interact& i,
   v8::Isolate* isolate = i.get_isolate();
 
   i.recursively_copy_object(new_instance, object_prototype);
-  // i.recursively_copy_object(new_instance, scene_obj);
 
   if (scene_obj) {
     i.copy_field(new_instance, "id", *scene_obj);
@@ -145,13 +146,22 @@ void instantiate_object(v8_interact& i,
 
   i.set_field(new_instance, "subobj", v8::Array::New(isolate));
   i.set_field(new_instance, "level", v8::Number::New(isolate, level));
+  {
+    static std::mt19937 generator{std::random_device{}()};
+    static std::uniform_int_distribution<int> distribution{'a', 'z'};
+    static auto generate_len = 6;
+    static std::string rand_str(generate_len, '\0');
+    for (auto& dis : rand_str) dis = distribution(generator);
+    i.set_field(new_instance, "__random_hash__", v8_str(context, rand_str));
+  }
   i.set_field(new_instance, "__instance__", v8::Boolean::New(isolate, true));
 
   // Make sure we deep copy the gradients
   i.set_field(new_instance, "gradients", v8::Array::New(isolate));
   auto dest_gradients = i.get(new_instance, "gradients").As<v8::Array>();
-  auto gradients = i.has_field(object_prototype, "gradients") ? i.get(object_prototype, "gradients").As<v8::Array>()
-                                                              : v8::Array::New(i.get_isolate());
+  auto gradients = i.has_field(object_prototype, "gradients") && i.get(object_prototype, "gradients")->IsArray()
+                       ? i.get(object_prototype, "gradients").As<v8::Array>()
+                       : v8::Array::New(i.get_isolate());
   for (size_t k = 0; k < gradients->Length(); k++) {
     i.set_field(dest_gradients, k, v8::Array::New(isolate));
 
@@ -177,14 +187,15 @@ void instantiate_object(v8_interact& i,
   i.call_fun(new_instance, "init", 0.5);
 }
 
-v8::Local<v8::Object> instantiate_objects(v8_interact& i,
-                                          v8::Local<v8::Array>& objects,
-                                          v8::Local<v8::Array>& scene_instances,
-                                          v8::Local<v8::Array>& scene_instances_next,
-                                          v8::Local<v8::Array>& scene_instances_intermediate,
-                                          size_t& scene_instances_idx,
-                                          v8::Local<v8::Object>& scene_object,
-                                          v8::Local<v8::Object>* parent_object) {
+std::tuple<v8::Local<v8::Object>, v8::Local<v8::Object>, v8::Local<v8::Object>> instantiate_objects(
+    v8_interact& i,
+    v8::Local<v8::Array>& objects,
+    v8::Local<v8::Array>& scene_instances,
+    v8::Local<v8::Array>& scene_instances_next,
+    v8::Local<v8::Array>& scene_instances_intermediate,
+    size_t& scene_instances_idx,
+    v8::Local<v8::Object>& scene_object,
+    v8::Local<v8::Object>* parent_object) {
   v8::Isolate* isolate = i.get_isolate();
   int64_t current_level = (parent_object == nullptr) ? 0 : i.integer_number(*parent_object, "level") + 1;
   auto object_id = i.str(scene_object, "id");
@@ -209,28 +220,37 @@ v8::Local<v8::Object> instantiate_objects(v8_interact& i,
   scene_instances_idx++;
 
   // Recurse for the sub objects the init function populated.
+  // TODO: dangerous! scene_object modification, should be read-only?
   i.set_field(scene_object, "level", v8::Number::New(isolate, current_level));
   auto subobjs = i.v8_array(instance, "subobj");
   auto subobjs2 = i.v8_array(next, "subobj");
   auto subobjs3 = i.v8_array(intermediate, "subobj");
   for (size_t k = 0; k < subobjs->Length(); k++) {
     auto subobj = i.get_index(subobjs, k).As<v8::Object>();
-    auto created_instance = instantiate_objects(i,
-                                                objects,
-                                                scene_instances,
-                                                scene_instances_next,
-                                                scene_instances_intermediate,
-                                                scene_instances_idx,
-                                                subobj,
-                                                &scene_object);
-    i.set_field(subobjs, k, created_instance);
-    i.set_field(subobjs2, k, created_instance);
-    i.set_field(subobjs3, k, created_instance);
+    auto [a, b, c] = instantiate_objects(i,
+                                         objects,
+                                         scene_instances,
+                                         scene_instances_next,
+                                         scene_instances_intermediate,
+                                         scene_instances_idx,
+                                         subobj,
+                                         &scene_object);
+    i.set_field(subobjs, k, a);
+    i.set_field(subobjs2, k, b);
+    i.set_field(subobjs3, k, c);
   }
-  return next;
+  return std::make_tuple(instance, next, intermediate);
 }
 
 void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Array> source) {
+  // TODO: have this stored somewhere more persistent
+  std::unordered_map<int64_t, size_t> obj_indexes;
+  for (size_t j = 0; j < dest->Length(); j++) {
+    auto instance = i.get_index(dest, j).As<v8::Object>();
+    auto unique_id = i.integer_number(instance, "unique_id");
+    obj_indexes[unique_id] = j;
+  }
+
   for (size_t j = 0; j < source->Length(); j++) {
     auto src = i.get_index(source, j).As<v8::Object>();
     auto dst = i.get_index(dest, j).As<v8::Object>();
@@ -298,6 +318,13 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field(dst, "__time__", src);
     i.copy_field(dst, "__elapsed__", src);
 
+    if (i.has_field(src, "__dist__")) {
+      i.copy_field(dst, "__dist__", src);
+    }
+    if (i.has_field(src, "step")) {
+      i.copy_field(dst, "step", src);
+    }
+
     if (!i.has_field(dst, "props")) {
       i.set_field(dst, "props", v8::Object::New(i.get_isolate()));
     }
@@ -310,7 +337,23 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
       for (size_t k = 0; k < prop_fields->Length(); k++) {
         auto prop_key = i.get_index(prop_fields, k).As<v8::String>();
         auto prop_value = i.get(s, prop_key);
-        i.set_field(d, prop_key, prop_value);
+        if (prop_value->IsObject()) {
+          auto obj = prop_value.As<v8::Object>();
+          // for renderables look them up using their unique id
+          if (i.has_field(obj, "unique_id") &&
+              obj_indexes.find(i.integer_number(obj, "unique_id")) != obj_indexes.end()) {
+            auto idx = obj_indexes[i.integer_number(obj, "unique_id")];
+            auto object = i.get_index(dest, obj_indexes[idx]).As<v8::Object>();
+            i.set_field(d, prop_key, object);
+          } else {
+            // for other objects, make sure to deep-copy
+            auto prop_value_copy = v8::Object::New(i.get_isolate());
+            i.recursively_copy_object(prop_value_copy, prop_value.As<v8::Object>());
+            i.set_field(d, prop_key, prop_value_copy);
+          }
+        } else {
+          i.set_field(d, prop_key, prop_value);
+        }
       }
     }
 
@@ -333,7 +376,23 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
           i.call_fun(d, "push", v8::Object::New(i.get_isolate()));
         }
         const auto elem = i.get_index(s, k);
-        i.set_field(d, k, elem);
+
+        // sanitize renderables from the correct copy
+        bool flag = true;
+        if (elem->IsObject()) {
+          auto obj = elem.As<v8::Object>();
+          if (i.has_field(obj, "unique_id") &&
+              obj_indexes.find(i.integer_number(obj, "unique_id")) != obj_indexes.end()) {
+            auto idx = obj_indexes[i.integer_number(obj, "unique_id")];
+            auto object = i.get_index(dest, obj_indexes[idx]).As<v8::Object>();
+            i.set_field(d, k, object);
+            flag = false;
+          }
+        }
+        // if that didn't happen, just copy for now.
+        if (flag) {
+          i.set_field(d, k, elem);
+        }
       }
       while (d->Length() > s->Length()) {
         i.call_fun(d, "pop");
@@ -526,6 +585,75 @@ void monitor_subobj_changes(v8_interact& i, v8::Local<v8::Object> instance, std:
       "new_objects",
       v8::Boolean::New(i.get_isolate(), i.boolean(instance, "new_objects") || subobj_len_after > subobj_len_before));
 };
+
+std::string instance_to_string(v8_interact& i, v8::Local<v8::Object>& instance) {
+  std::stringstream ss;
+  const auto level = i.integer_number(instance, "level");
+
+  ss << "obj: " << i.integer_number(instance, "unique_id") << " " << i.str(instance, "id") << " "
+     << i.str(instance, "type") << " " << level << " (" << i.double_number(instance, "x") << ", "
+     << i.double_number(instance, "y") << ")";
+
+  if (i.str(instance, "type") == "line") {
+    ss << ",(" << i.double_number(instance, "x2") << ", " << i.double_number(instance, "y2") << ")";
+  }
+  ss << " " << i.str(instance, "label") << " [" << i.str(instance, "__random_hash__") << "] "
+     << i.double_number(instance, "__dist__") << "/" << i.double_number(instance, "steps");
+
+  return ss.str();
+}
+
+void debug_print(v8_interact& i, v8::Local<v8::Object>& instance) {
+  const auto indent = [](int level) {
+    std::stringstream ss;
+    for (int i = 0; i < level; i++) {
+      ss << "  ";
+    }
+    return ss.str();
+  };
+  const auto level = i.integer_number(instance, "level");
+  logger(INFO) << indent(level) << instance_to_string(i, instance) << std::endl;
+  if (i.has_field(instance, "subobj")) {
+    auto subobjs = i.get(instance, "subobj").As<v8::Array>();
+    for (size_t k = 0; k < subobjs->Length(); k++) {
+      auto object = i.get_index(subobjs, k).As<v8::Object>();
+      logger(INFO) << indent(level + 2) << "subobj: " << instance_to_string(i, object) << std::endl;
+    }
+  }
+  if (i.has_field(instance, "props")) {
+    auto props = i.v8_obj(instance, "props");
+    auto obj_fields = i.prop_names(props);
+    for (size_t k = 0; k < obj_fields->Length(); k++) {
+      auto field_name = i.get_index(obj_fields, k);
+      auto field_value = i.get(props, field_name);
+      if (!field_value->IsObject()) continue;
+      auto str = i.str(obj_fields, k);
+      if (str == "left" || str == "right") {
+        auto o = field_value.As<v8::Object>();
+        logger(INFO) << indent(level + 2) << "prop." << str << ": " << instance_to_string(i, o) << std::endl;
+      }
+    }
+  }
+}
+
+void debug_print(v8_interact& i, v8::Local<v8::Array>& instances, const std::string& desc) {
+  logger(INFO) << "printing " << desc << ":" << std::endl;
+  for (size_t j = 0; j < instances->Length(); j++) {
+    auto instance = i.get_index(instances, j).As<v8::Object>();
+    debug_print(i, instance);
+  }
+}
+
+v8::Local<v8::Object> get_object_by_id(v8_interact& i, v8::Local<v8::Array>& instances, int id) {
+  for (size_t j = 0; j < instances->Length(); j++) {
+    auto instance = i.get_index(instances, j).As<v8::Object>();
+    auto unique_id = i.integer_number(instance, "unique_id");
+    if (unique_id == id) {
+      return instance;
+    }
+  }
+  return {};
+}
 
 }  // namespace generator
 }  // namespace util

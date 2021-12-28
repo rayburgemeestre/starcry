@@ -19,6 +19,7 @@ inline void handle_error(v8::Maybe<bool> res) {
 }
 
 inline v8::Local<v8::String> v8_str(std::shared_ptr<v8_wrapper> context, const std::string& str) {
+  // TODO: try function caching here??
   return v8::String::NewFromUtf8(context->isolate, str.c_str()).ToLocalChecked();
 }
 
@@ -224,8 +225,13 @@ public:
     auto obj_fields = prop_names(source_object);
     for (size_t k = 0; k < obj_fields->Length(); k++) {
       auto field_name = get_index(obj_fields, k);
+      auto field_name_str = str(obj_fields, k);
+      if (field_name_str == "__random_hash__") continue;  // do not overwrite
       auto field_value = get(source_object, field_name);
-      if (field_value->IsObject() && !field_value->IsFunction()) {
+      if (field_value->IsArray()) {  // TODO: fix needed??
+        v8::Local<v8::Array> new_sub_array = v8::Array::New(isolate);
+        set_field(dest_object, field_name, new_sub_array);
+      } else if (field_value->IsObject() && !field_value->IsFunction()) {
         v8::Local<v8::Object> new_sub_instance = v8::Object::New(isolate);
         recursively_copy_object(new_sub_instance, field_value.As<v8::Object>());
         set_field(dest_object, field_name, new_sub_instance);

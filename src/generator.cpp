@@ -170,7 +170,21 @@ void generator::init_video_meta_info(std::optional<double> rand_seed, bool previ
     v8_interact i(isolate);
     auto video = v8_index_object(context, val, "video").As<v8::Object>();
     if (preview) {
-      auto preview_obj = v8_index_object(context, val, "preview").As<v8::Object>();
+      v8::Local<v8::Object> preview_obj;
+      if (v8_index_object(context, val, "preview")->IsObject()) {
+        preview_obj = v8_index_object(context, val, "preview").As<v8::Object>();
+      } else {
+        preview_obj = v8::Object::New(isolate);
+      }
+      if (!i.has_field(preview_obj, "width")) {
+        i.set_field(preview_obj, "width", v8::Number::New(isolate, 1920 / 2.));
+      }
+      if (!i.has_field(preview_obj, "height")) {
+        i.set_field(preview_obj, "height", v8::Number::New(isolate, 1080 / 2.));
+      }
+      if (!i.has_field(preview_obj, "max_intermediates")) {
+        i.set_field(preview_obj, "max_intermediates", v8::Number::New(isolate, 5));
+      }
       i.recursively_copy_object(video, preview_obj);
     }
 
@@ -344,9 +358,9 @@ void generator::init_object_instances() const {
     size_t scene_instances_idx = instances->Length();
     for (size_t j = 0; j < scene_objects->Length(); j++) {
       auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
-      auto created_instance = util::generator::instantiate_objects(
+      auto [instance, next, intermediate] = util::generator::instantiate_objects(
           i, objects, instances, instances_next, instances_temp, scene_instances_idx, scene_obj);
-      i.set_field(scene_objects, j, created_instance);
+      i.set_field(scene_objects, j, next);
     }
   });
 }
@@ -501,9 +515,16 @@ bool generator::_generate_frame() {
         update_steps(min_intermediates);
       }
 
-      while (max_dist_found > tolerated_granularity) {
+      while (max_dist_found > tolerated_granularity && attempt < 4) {
         ++attempt;
-        if (attempt >= 5) {
+        if (attempt == 4) {
+          max_intermediates = 10;
+          stepper.reset();
+          update_steps(max_intermediates);
+          logger(INFO) << "Stuck in a loop: Force rendering with ten intermediates..." << std::endl;
+        } else if (attempt >= 5) {
+          logger(INFO) << "breaking!" << std::endl;
+          std::exit(1);  // below thrown exception wasn't handled correctly anyway..
           throw std::runtime_error(
               fmt::format("Possible endless loop detected, max_step = {} (while {} > {}). Frame = {}",
                           stepper.max_step,
@@ -515,10 +536,6 @@ bool generator::_generate_frame() {
         max_dist_found = 0;
         if (attempt > 1) {
           if (!settings_.motion_blur) break;
-          if (stepper.max_step < max_intermediates) {
-            stepper.multiply(1.5);
-            if (stepper.max_step > max_intermediates) stepper.max_step = max_intermediates;
-          }
           revert_all_changes(i, instances, next_instances, intermediates);
         }
         step_calculator sc(stepper.max_step);
@@ -542,7 +559,7 @@ bool generator::_generate_frame() {
           util::generator::copy_instances(i, intermediates, next_instances);
           scalesettings.update();
           scenesettings.update();
-          detected_too_many_steps = job->shapes.size() != stepper.max_step;
+          if (job->shapes.size() != stepper.max_step) detected_too_many_steps = true;
         }
         if (!detected_too_many_steps) {                 // didn't bail out with break above
           if (stepper.max_step == max_intermediates) {  // config doesn't allow finer granularity any way, break.
@@ -803,12 +820,55 @@ void generator::update_object_interactions(v8_interact& i,
     } else {
       double dist = get_max_travel_of_object(i, intermediate_instance, next_instance);
       double cum_dist = get_max_travel_of_object(i, previous_instance, next_instance);
-      auto steps = update_steps(dist);
-      if (attempt > 1) {
-        steps = std::max(steps, (int)i.integer_number(next_instance, "steps"));
+      if (dist > max_dist_found) {
+        max_dist_found = dist;
       }
-      i.set_field(next_instance, "__dist__", v8::Number::New(isolate, cum_dist));
-      i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
+      auto inherit = i.get(next_instance, "inherited");
+      if (inherit->IsBoolean() && inherit.As<v8::Boolean>()->Value()) {
+        // inherited, do not set our own dist etc.
+      } else {
+        auto steps = update_steps(dist);
+        if (attempt == 1) {
+          i.set_field(next_instance, "__dist__", v8::Number::New(isolate, dist));
+          i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
+        } else if (attempt > 1) {
+          dist = std::max(dist, i.double_number(next_instance, "__dist__"));
+          i.set_field(next_instance, "__dist__", v8::Number::New(isolate, dist));
+          steps = std::max(steps, (int)i.integer_number(next_instance, "steps"));
+          i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
+        }
+        // cascade to left and right props, temp
+        if (i.has_field(next_instance, "props")) {
+          auto p = i.get(next_instance, "props");
+          if (p->IsObject()) {
+            auto props = p.As<v8::Object>();
+            if (i.has_field(props, "left")) {
+              auto l = i.get(props, "left");
+              if (l->IsObject()) {
+                auto left = l.As<v8::Object>();
+                if (attempt == 1) i.set_field(left, "__dist__", v8::Number::New(isolate, dist));
+                if (i.has_field(left, "steps")) {
+                  steps = std::max(steps, (int)i.get(left, "steps").As<v8::Number>()->Value());
+                }
+                i.set_field(left, "steps", v8::Number::New(isolate, steps));
+                i.set_field(left, "inherited", v8::Boolean::New(isolate, true));
+              }
+            }
+            if (i.has_field(props, "right")) {
+              auto r = i.get(props, "right");
+              if (r->IsObject()) {
+                auto right = r.As<v8::Object>();
+                if (attempt == 1) i.set_field(right, "__dist__", v8::Number::New(isolate, dist));
+                if (i.has_field(right, "steps")) {
+                  steps = std::max(steps, (int)i.get(right, "steps").As<v8::Number>()->Value());
+                }
+                i.set_field(right, "steps", v8::Number::New(isolate, steps));
+                i.set_field(right, "inherited", v8::Boolean::New(isolate, true));
+              }
+            }
+          }
+        }
+      }
     }
     handle_collisions(i, next_instance, index, next_instances);
   }
@@ -962,8 +1022,7 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
 }
 
 int generator::update_steps(double dist) {
-  max_dist_found = std::max(max_dist_found, fabs(dist));
-  auto steps = (int)std::max(1.0, fabs(dist) / tolerated_granularity);
+  auto steps = (int)(std::max(1.0, fabs(dist) / (tolerated_granularity)) + 0.5);
   if (steps > max_intermediates) {
     steps = max_intermediates;
   }
@@ -981,133 +1040,113 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto is_line = type == "line";
   auto label = i.str(instance, "label");
   auto shape_scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
-  //  auto rotate = [&](double src_x, double src_y, double* x, double* y, double angle) {
-  //    if (angle == 0.) {
-  //      return;
-  //    }
-  //    auto angle1 = angle + get_angle(src_x, src_y, *x, *y);
-  //    while (angle1 > 360.) angle1 -= 360.;
-  //    auto rads = angle1 * M_PI / 180.0;
-  //    auto ratio = 1.0;
-  //    auto dist = get_distance(src_x, src_y, *x, *y);
-  //    auto move = dist * ratio * -1;
-  //    *x = (cos(rads) * move);
-  //    *y = (sin(rads) * move);
-  //  };
+  auto prev_shape_scale = i.has_field(previous_instance, "scale") ? i.double_number(previous_instance, "scale") : 1.0;
 
   parents[level] = instance;
   prev_parents[level] = previous_instance;
 
-  auto offset_x = static_cast<double>(0);
-  auto offset_y = static_cast<double>(0);
-  auto offset_x2 = static_cast<double>(0);
-  auto offset_y2 = static_cast<double>(0);
-  double root_x = 0;
-  double root_y = 0;
-  std::optional<double> pivot_x;
-  std::optional<double> pivot_y;
-  double angle = i.double_number(previous_instance, "angle");
-  while (level > 0) {
-    level--;
-    offset_x += i.double_number(parents[level], "x");
-    offset_y += i.double_number(parents[level], "y");
+  const auto calculate = [](v8_interact& i,
+                            v8::Local<v8::Object>& instance,
+                            std::unordered_map<int64_t, v8::Local<v8::Object>>& parents,
+                            int64_t level,
+                            bool is_line) {
+    auto offset_x = static_cast<double>(0);
+    auto offset_y = static_cast<double>(0);
+    auto offset_x2 = static_cast<double>(0);
+    auto offset_y2 = static_cast<double>(0);
+    double root_x = 0;
+    double root_y = 0;
+    std::optional<double> pivot_x;
+    std::optional<double> pivot_y;
+    // TODO: why was this previous_instance on the next line instead of instance
+    // Changed it to instance now..
+    double angle = i.has_field(instance, "angle") ? i.double_number(instance, "angle") : 0.;
+    while (level > 0) {
+      level--;
+      offset_x += i.double_number(parents[level], "x");
+      offset_y += i.double_number(parents[level], "y");
+      if (is_line) {
+        // note, do not assume all parents are lines, use x & y relative
+        if (!std::isnan(i.double_number(parents[level], "x2"))) {
+          offset_x2 += i.double_number(parents[level], "x2");
+        } else {
+          offset_x2 += i.double_number(parents[level], "x");
+        }
+        if (!std::isnan(i.double_number(parents[level], "y2"))) {
+          offset_y2 += i.double_number(parents[level], "y2");
+        } else {
+          offset_y2 += i.double_number(parents[level], "y");
+        }
+      }
+      auto a = i.double_number(parents[level], "angle");
+      if (!std::isnan(a)) angle += a;
+      // Quick and dirty way to skip objects
+      if (i.double_number(parents[level], "opacity") > 0) {
+        root_x = i.double_number(parents[level], "x");
+        root_y = i.double_number(parents[level], "y");
+        if (i.boolean(parents[level], "pivot")) {
+          pivot_x = std::make_optional<double>(root_x);
+          pivot_y = std::make_optional<double>(root_y);
+        }
+      }
+    }
+
+    if (pivot_x && pivot_y) {
+      offset_x = *pivot_x;
+      offset_y = *pivot_y;
+    }
+
+    // calc x and y now
+    auto x = offset_x + i.double_number(instance, "x");
+    auto y = offset_y + i.double_number(instance, "y");
+    auto x2 = is_line ? offset_x2 + i.double_number(instance, "x2") : 0.0;
+    auto y2 = is_line ? offset_y2 + i.double_number(instance, "y2") : 0.0;
+
+    // handle angle
+    if (angle != 0.) {
+      auto angle1 = angle + get_angle(root_x, root_y, x, y);
+      while (angle1 > 360.) angle1 -= 360.;
+      auto rads = angle1 * M_PI / 180.0;
+      auto ratio = 1.0;
+      auto dist = get_distance(root_x, root_y, x, y);
+      auto move = dist * ratio * -1;
+      x = root_x + (cos(rads) * move);
+      y = root_y + (sin(rads) * move);
+
+      auto angle2 = angle + get_angle(root_x, root_y, x2, y2);
+      while (angle2 > 360.) angle2 -= 360.;
+      rads = angle2 * M_PI / 180.0;
+      dist = get_distance(root_x, root_y, x2, y2);
+      move = dist * ratio * -1;
+      x2 = root_x + (cos(rads) * move);
+      y2 = root_y + (sin(rads) * move);
+    }
+
+    i.set_field(instance, "transitive_x", v8::Number::New(i.get_isolate(), x));
+    i.set_field(instance, "transitive_y", v8::Number::New(i.get_isolate(), y));
     if (is_line) {
-      // note, do not assume all parents are lines, use x & y relative
-      if (!std::isnan(i.double_number(parents[level], "x2"))) {
-        offset_x2 += i.double_number(parents[level], "x2");
-      } else {
-        offset_x2 += i.double_number(parents[level], "x");
-      }
-      if (!std::isnan(i.double_number(parents[level], "y2"))) {
-        offset_y2 += i.double_number(parents[level], "y2");
-      } else {
-        offset_y2 += i.double_number(parents[level], "y");
-      }
+      i.set_field(instance, "transitive_x2", v8::Number::New(i.get_isolate(), x2));
+      i.set_field(instance, "transitive_y2", v8::Number::New(i.get_isolate(), y2));
     }
-    auto a = i.double_number(parents[level], "angle");
-    if (!std::isnan(a)) angle += a;
-    // Quick and dirty way to skip objects
-    if (i.double_number(parents[level], "opacity") > 0) {
-      root_x = i.double_number(parents[level], "x");
-      root_y = i.double_number(parents[level], "y");
-      if (i.boolean(parents[level], "pivot")) {
-        pivot_x = std::make_optional<double>(root_x);
-        pivot_y = std::make_optional<double>(root_y);
-      }
-    }
-    // auto s = i.double_number(parents[level], "scale");
-    // if (!std::isnan(s)) shape_scale *= s;
-  }
-  if (pivot_x && pivot_y) {
-    offset_x = *pivot_x;
-    offset_y = *pivot_y;
-  }
 
-  level = i.double_number(previous_instance, "level");
-  if (std::isnan(angle)) angle = 0.;
-  auto prev_offset_x = static_cast<double>(0);
-  auto prev_offset_y = static_cast<double>(0);
-  auto prev_offset_x2 = static_cast<double>(0);
-  auto prev_offset_y2 = static_cast<double>(0);
-  auto prev_shape_scale = i.has_field(previous_instance, "scale") ? i.double_number(previous_instance, "scale") : 1.0;
-  while (level > 0) {
-    level--;
-    prev_offset_x += i.double_number(prev_parents[level], "x");
-    prev_offset_y += i.double_number(prev_parents[level], "y");
-    if (is_line) {
-      prev_offset_x2 += i.double_number(prev_parents[level], "x2");
-      prev_offset_y2 += i.double_number(prev_parents[level], "y2");
-    }
-    auto a = i.double_number(prev_parents[level], "angle");
-    if (!std::isnan(a)) angle += a;
-    // auto s = i.double_number(prev_parents[level], "scale");
-    // if (!std::isnan(s)) prev_shape_scale *= s;
-  }
+    return std::make_tuple(x, y, x2, y2, offset_x, offset_y, offset_x2, offset_y2, angle);
+  };
 
-  auto x = offset_x + i.double_number(instance, "x");
-  auto y = offset_y + i.double_number(instance, "y");
-  auto x2 = is_line ? offset_x2 + i.double_number(instance, "x2") : 0.0;
-  auto y2 = is_line ? offset_y2 + i.double_number(instance, "y2") : 0.0;
-
-  if (angle != 0.) {
-    auto angle1 = angle + get_angle(root_x, root_y, x, y);
-    while (angle1 > 360.) angle1 -= 360.;
-    auto rads = angle1 * M_PI / 180.0;
-    auto ratio = 1.0;
-    auto dist = get_distance(root_x, root_y, x, y);
-    auto move = dist * ratio * -1;
-    x = root_x + (cos(rads) * move);
-    y = root_y + (sin(rads) * move);
-
-    auto angle2 = angle + get_angle(root_x, root_y, x2, y2);
-    while (angle2 > 360.) angle2 -= 360.;
-    rads = angle2 * M_PI / 180.0;
-    dist = get_distance(root_x, root_y, x2, y2);
-    move = dist * ratio * -1;
-    x2 = root_x + (cos(rads) * move);
-    y2 = root_y + (sin(rads) * move);
-  }
+  auto [x, y, x2, y2, offset_x, offset_y, offset_x2, offset_y2, angle] =
+      calculate(i, instance, parents, level, is_line);
+  auto [prev_x, prev_y, prev_x2, prev_y2, prev_offset_x, prev_offset_y, prev_offset_x2, prev_offset_y2, prev_angle] =
+      calculate(i, previous_instance, prev_parents, level, is_line);
 
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
 
-  i.set_field(instance, "transitive_x", v8::Number::New(i.get_isolate(), x));
-  i.set_field(instance, "transitive_y", v8::Number::New(i.get_isolate(), y));
-  if (is_line) {
-    i.set_field(instance, "transitive_x2", v8::Number::New(i.get_isolate(), x2));
-    i.set_field(instance, "transitive_y2", v8::Number::New(i.get_isolate(), y2));
-  }
-
-  // Calculate how many pixels are maximally covered by this instance, this is currently very simplified
-  auto prev_x = prev_offset_x + i.double_number(previous_instance, "x");
-  auto prev_y = prev_offset_y + i.double_number(previous_instance, "y");
-  auto prev_x2 = is_line ? prev_offset_x2 + i.double_number(previous_instance, "x2") : 0.0;
-  auto prev_y2 = is_line ? prev_offset_y2 + i.double_number(previous_instance, "y2") : 0.0;
   auto prev_radius = i.double_number(previous_instance, "radius");
   auto prev_radiussize = i.double_number(previous_instance, "radiussize");
-  auto prev_rad = prev_radius + prev_radiussize;
-  auto rad = radius + radiussize;
 
+  auto rad = radius + radiussize;
+  auto prev_rad = prev_radius + prev_radiussize;
+
+  // Calculate how many pixels are maximally covered by this instance, this is currently very simplified
   x *= scalesettings.video_scale_next * shape_scale;
   prev_x *= scalesettings.video_scale_intermediate * prev_shape_scale;
   y *= scalesettings.video_scale_next * shape_scale;
@@ -1128,7 +1167,6 @@ double generator::get_max_travel_of_object(v8_interact& i,
   //      return 0.;
   //    }
   //  }
-
   auto dist = sqrt(pow(x - prev_x, 2) + pow(y - prev_y, 2));
   // x2, y2
   if (is_line) {
@@ -1138,12 +1176,12 @@ double generator::get_max_travel_of_object(v8_interact& i,
     prev_y2 *= scalesettings.video_scale_intermediate * prev_shape_scale;
     dist = std::max(dist, sqrt(pow(x2 - prev_x2, 2) + pow(y2 - prev_y2, 2)));
   }
-  // radius
-  rad *= scalesettings.video_scale_next * shape_scale;
-  prev_rad *= scalesettings.video_scale_intermediate * prev_shape_scale;
-  job->scale = scalesettings.video_scale_next;
-  auto new_dist = fabs(prev_rad - rad);
-  dist = std::max(dist, new_dist);
+  //  // radius
+  //  rad *= scalesettings.video_scale_next * shape_scale;
+  //  prev_rad *= scalesettings.video_scale_intermediate * prev_shape_scale;
+  //  job->scale = scalesettings.video_scale_next;
+  //  auto new_dist = fabs(prev_rad - rad);
+  //  dist = std::max(dist, new_dist);
 
   // Make sure that we do not include any warped distance
   if (i.has_field(instance, "__warped_dist__")) {
@@ -1153,6 +1191,15 @@ double generator::get_max_travel_of_object(v8_interact& i,
     // If it moves to the left for 2 pixels, and is moved 500px to the right, the
     // distance is 502px - 500px = 2px as well.
     dist = fabs(dist);
+  }
+
+  // TODO: proper support for connected objects, so they can inherit the warped stuff!
+  if (dist > 100) {
+    dist = 0.;  // WORKAROUND
+  }
+  if (dist > 100) {
+    std::cout << "dist > 100" << std::endl;
+    std::exit(1);
   }
   return dist;
 }
@@ -1279,8 +1326,67 @@ void generator::convert_object_to_render_job(
   job->shapes[stepper.current_step].push_back(new_shape);
   job->scale = scalesettings.video_scale;
   job->scales = scalesettings.video_scales;
-};
+}
 
 std::shared_ptr<data::job> generator::get_job() const {
   return job;
+}
+
+// TODO: temporary function we can probably get rid of soon
+void generator::fix(v8_interact& i, v8::Local<v8::Array>& instances) {
+  std::unordered_map<int64_t, size_t> obj_indexes;
+  for (size_t j = 0; j < instances->Length(); j++) {
+    auto instance = i.get_index(instances, j).As<v8::Object>();
+    auto unique_id = i.integer_number(instance, "unique_id");
+    obj_indexes[unique_id] = j;
+  }
+
+  if (false)
+    for (size_t j = 0; j < instances->Length(); j++) {
+      auto instance = i.get_index(instances, j).As<v8::Object>();
+      if (i.has_field(instance, "subobj")) {
+        auto subobjs = i.get(instance, "subobj").As<v8::Array>();
+        for (size_t k = 0; k < subobjs->Length(); k++) {
+          auto object = i.get_index(subobjs, k).As<v8::Object>();
+          auto unique_id = i.integer_number(object, "unique_id");
+          /// make sure the subobj will also point to the new instance
+          if (obj_indexes.find(unique_id) == obj_indexes.end()) {
+            logger(INFO) << "ERROR: terminate #0" << std::endl;
+            std::exit(0);
+          }
+          auto object_ = i.get_index(instances, obj_indexes[unique_id]).As<v8::Object>();
+          i.set_field(subobjs, k, object_);
+        }
+      }
+    }
+
+  // props left and right
+  if (true)
+    for (size_t j = 0; j < instances->Length(); j++) {
+      auto instance = i.get_index(instances, j).As<v8::Object>();
+      auto unique_id = i.integer_number(instance, "unique_id");
+      if (!i.has_field(instance, "props")) {
+        continue;
+      }
+      auto props = i.v8_obj(instance, "props");
+      auto obj_fields = i.prop_names(props);
+      for (size_t k = 0; k < obj_fields->Length(); k++) {
+        auto field_name = i.get_index(obj_fields, k);
+        auto field_value = i.get(props, field_name);
+        auto str = i.str(obj_fields, k);
+        if (str == "left" || str == "right") {
+          if (field_value->IsObject()) {
+            auto o = field_value.As<v8::Object>();
+            auto oid = i.integer_number(o, "unique_id");
+            // get unique id of this object
+            if (obj_indexes.find(oid) == obj_indexes.end()) {
+              logger(INFO) << "ERROR: terminate #1" << std::endl;
+              std::exit(0);
+            }
+            auto object_ = i.get_index(instances, obj_indexes[oid]).As<v8::Object>();
+            i.set_field(props, field_name, object_);
+          }
+        }
+      }
+    }
 }

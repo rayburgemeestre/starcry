@@ -257,6 +257,21 @@ public:
                               settings);
       }
     }
+
+    // DEBUG: debug distance
+    // care about > 50 dist.
+    //    if (shape.dist < 50)
+    //      return box;
+    //
+    //    data::shape text_shape = shape;
+    //    text_shape.y -= 10;
+    //    text_shape.type = data::shape_type::text;
+    //    std::stringstream ss;
+    //    ss << "dist=" << shape.dist;
+    //    text_shape.text = ss.str();
+    //    text_shape.text_fixed = true;
+    //    text_shape.text_size = 30;
+    //    render_text(bmp, text_shape, 1., settings);
     return box;
   }
 
@@ -316,6 +331,7 @@ public:
         if (absY < 0 || absY >= height_) continue;
         bound_box.update_x(absX);
         bound_box.update_y(absY);
+        // TODO: potential crashes happening here..
         render_pixel(bmp, shape, textX, textY, absX, absY, c, opacity, settings);
       }
     }
@@ -541,9 +557,15 @@ public:
       }
     }
 
-    // al_draw_line(x1, y1, x2, y2, al_map_rgb_f(red, green, blue), size);
-    // if (red > 0.2 || green > 0.2 || blue > 0.2)
-    //    al_draw_line(x1, y1, x2, y2, al_map_rgb_f(red, green, blue), 2.0);
+    // DEBUG: distance debugging
+    //    data::shape text_shape = shape;
+    //    text_shape.type = data::shape_type::text;
+    //    std::stringstream ss;
+    //    ss << "dist=" << shape.dist;
+    //    text_shape.text = ss.str();
+    //    text_shape.text_fixed = true;
+    //    text_shape.text_size = 30;
+    //    render_text(bmp, text_shape, 1., settings);
   }
 
   void render_line_pixel(image &bmp,
@@ -681,7 +703,7 @@ public:
     //  bmp.set(absX, absY, bg.r, bg.g, bg.b, bg.a);
     if (this->flag_) {
       motionblur_buffer_.insert(absX, absY, data::color{clr.r, clr.g, clr.b, clr.a});
-      // cool alternative for lines, e.g., line style 2?
+      // TODO: cool alternative for lines, e.g., line style 2?
       // blend_the_pixel(bmp, shape, absX, absY, opacity, data::color{clr.r, clr.g, clr.b, clr.a * opacity});
     } else {
       blend_the_pixel(bmp, shape, absX, absY, opacity, data::color{clr.r, clr.g, clr.b, clr.a * opacity});
