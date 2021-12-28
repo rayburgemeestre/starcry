@@ -35,8 +35,9 @@ sfml_window::sfml_window() : window(sf::VideoMode(window_width, window_height, b
 }
 
 sfml_window::~sfml_window() {
-  runner_flag = false;
-  runner.join();
+  if (runner_flag) {
+    if (runner.joinable()) runner.join();
+  }
 }
 
 void sfml_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels) {
