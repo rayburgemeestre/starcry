@@ -7,7 +7,7 @@
 
 class frame_stepper {
 public:
-  int max_step = 0;
+  int max_step = 1;
   int current_step_max = std::numeric_limits<int>::max();
   int current_step = 0;
   int next_step = 0;
