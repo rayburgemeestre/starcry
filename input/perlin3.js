@@ -109,6 +109,7 @@ _ = {
     //   'exclude': 5.,  // then skip 5 seconds, and so on.
     // },
     // 'bg_color': {'r': 1., 'g': 0., 'b': 0., 'a': 1},
+    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
     'max_intermediates': 10,
   },
   'scenes': [{

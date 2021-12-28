@@ -70,6 +70,7 @@ _ = {
     'motion_blur': true,
     'min_intermediates': 10.,
     'max_intermediates': 150.,
+    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
   },
   'scenes': [{
     'name': 'scene1',

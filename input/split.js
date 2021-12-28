@@ -76,7 +76,7 @@ _ = {
       'init': function() {},
       'time': function(t, e, scene) {
         let jump = 100;
-        var total_frames = 1.0 /*scene duration*/ * 30.;
+        var total_frames = 1.0 /*scene duration*/ * 25.;
         var current_frame = total_frames * t;
         switch (scene) {
           case 0:
@@ -99,7 +99,7 @@ _ = {
     'scale': 1,
     'rand_seed': 5,
     'granularity': 1,
-    'min_intermediates': 5.,
+    'min_intermediates': 50.,
     'max_intermediates': 50.,
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
     'grain_for_opacity': true,
@@ -116,7 +116,7 @@ _ = {
       'objects': [
         // {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
         {'id': 'splitter', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
-        {'id': 'text', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+        // {'id': 'text', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
       ]
     },
     {'name': 'scene2', 'duration': 0.05 * 5, 'objects': []},

@@ -7,12 +7,12 @@ _ = {
     ],
     'green': [
       {'position': 0.0, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
-      {'position': 0.1, 'r': 0, 'g': 1, 'b': 0, 'a': 1},
+      {'position': 0.1, 'r': 0, 'g': 1, 'b': 0, 'a': 0.1},
       {'position': 1.0, 'r': 0, 'g': 1, 'b': 0, 'a': 0},
     ],
     'blue': [
       {'position': 0.0, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
-      {'position': 0.1, 'r': 0, 'g': 0, 'b': 1, 'a': 1},
+      {'position': 0.1, 'r': 0, 'g': 0, 'b': 1, 'a': 0.1},
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 1, 'a': 0},
     ],
   },
@@ -76,16 +76,18 @@ _ = {
             'y': 0,
             'scale': 1.0,
             'pivot': true,
+            //'props': {'radius_limit': 5., 'opacity': 1.0, 'parent': false, 'scale': 1.0}
             'props': {'radius_limit': 5., 'opacity': 1.0, 'parent': false, 'scale': 1.0}
           });  // was 5.
       },
     },
     'blue_circle': {
       'type': 'circle',
-      'gradients': [
-        [1.0, 'blue'],
-        [0.0, 'green'],
-      ],
+      'gradient': 'green',
+      // 'gradients': [
+      //   [1.0, 'blue'],
+      //   [0.0, 'green'],
+      // ],
       // temporary commentedfor testing purposes
       'texture': 'clouds',
       'radius': 100.,
@@ -107,8 +109,8 @@ _ = {
       'time': function(time, elapsed, scene, global_time) {
         // temporary added for testing purposes
         // if (this.level > 10) return;
-        this.gradients[0][0] = 1.0 - global_time;
-        this.gradients[1][0] = global_time;
+        // this.gradients[0][0] = 1.0 - global_time;
+        // this.gradients[1][0] = global_time;
         this.opacity = 1. * this.props.opacity;
         if (this.radius > this.props.radius_limit && this.subobj.length === 0) {
           var child_radius = this.radius * 0.67;
@@ -123,11 +125,28 @@ _ = {
             'radius': child_radius,
             'scale': script.video.mode === 1 ? this.scale : 1.0,
             'props': this.props,
-            'angle': script.video.mode === 1 ? 1 : 0,
+
+            // cool with #1,2,3
+            //'angle': script.video.mode === 1 ? 5 : 0,
+
+            // also cool with #4
+            'angle': script.video.mode === 1 ? 15 : 0,
           });
+          // this.subobj[this.subobj.length - 1].x += ((rand()*2)-1.)*5.;
+          // this.subobj[this.subobj.length - 1].y += ((rand()*2)-1.)*5.;
         }
+
+        // awesome! #1
         // if (this.level > 1) this.angle += (elapsed * 5.) * this.level;
-        if (this.level > 1) this.angle += (elapsed * 5.);
+
+        // cool.. #2
+        // if (this.level > 1) this.angle += (elapsed * 5.) * (this.level / 10.);
+
+        // awesome! #3
+        // if (this.level > 1) this.angle += (elapsed * 5.);
+
+        // ?? # 4
+        if (this.level > 1) this.angle += (elapsed * 15.);
 
         switch (scene) {
           case 0:
@@ -165,16 +184,19 @@ _ = {
     'granularity': 1,
     'grain_for_opacity': true,
     'motion_blur': true,
-    'max_intermediates': 30.,
+    'min_intermediates': 30.,
+    'max_intermediates': 100.,
+    'minimize_steps_per_object': false,
     'perlin_noise': true,
     'dithering': true,
+    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
   },
   'preview': {
     // 'width': 320,
     // 'height': 320,
-    'granularity': 1,
-    'motion_blur': false,
-    'max_intermediates': 1.,
+    'granularity': 1.0,
+    //'motion_blur': false,
+    //'max_intermediates': 1.,
     'perlin_noise': false,
     'dithering': false,
   },
@@ -191,8 +213,8 @@ _ = {
       'name': 'scene2',
       'duration': 4,
       'objects': [
-        {'id': 'camera', 'x': 0, 'y': 0},
-        {'id': 'mother', 'x': 0, 'y': 0},
+        //        {'id': 'camera', 'x': 0, 'y': 0},
+        //        {'id': 'mother', 'x': 0, 'y': 0},
       ],
     }
   ]

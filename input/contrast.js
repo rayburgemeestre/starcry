@@ -7,7 +7,7 @@ _ = {
     ],
     'msx_blue': [
       // 5900/5500/E000/ff00
-      {'position': 0.0, 'r': 0, 'g': 0, 'b': 0, 'a': 0.5},
+      {'position': 0.0, 'r': 0x59 / 255., 'g': 0x55 / 255., 'b': 0xe0 / 255., 'a': 0.0},
       {'position': 0.2, 'r': 0x59 / 255., 'g': 0x55 / 255., 'b': 0xe0 / 255., 'a': 1.0},
       {'position': 1.0, 'r': 0x59 / 255., 'g': 0x55 / 255., 'b': 0xe0 / 255., 'a': 1.0},
     ],
@@ -16,9 +16,14 @@ _ = {
       {'position': 0.2, 'r': 0, 'g': 0, 'b': 1, 'a': 1.0},
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 1, 'a': 1.0},
     ],
+    'black': [
+      {'position': 0.0, 'r': 0, 'g': 0., 'b': 0., 'a': 1.0},
+      {'position': 0.9, 'r': 0, 'g': 0., 'b': 0., 'a': 1.0},
+      {'position': 1.0, 'r': 0, 'g': 0., 'b': 0., 'a': 0.0},
+    ],
     'white': [
-      {'position': 0.0, 'r': 1, 'g': 1.0, 'b': 1., 'a': 1.0},
-      {'position': 1.0, 'r': 1, 'g': 1.0, 'b': 1., 'a': 0.0},
+      {'position': 0.0, 'r': 1, 'g': 1., 'b': 1., 'a': 1.0},
+      {'position': 1.0, 'r': 1, 'g': 1., 'b': 1., 'a': 0.0},
     ],
   },
   'textures': {
@@ -64,7 +69,7 @@ _ = {
       'gradient': 'msx_blue',
       'texture': 'clouds1',
       'radius': 0,
-      'radiussize': 1920,
+      'radiussize': 1080,
       'opacity': 1.0,
       'props': {},
       'init': function() {},
@@ -88,23 +93,23 @@ _ = {
     // },
     'line': {
       'type': 'line',
-      'gradient': 'white',
+      'gradient': 'black',
       'radiussize': 4.0,
       'opacity': 0.5,
       'props': {},
-      'blending_type': blending_type.subtract,
+      'blending_type': blending_type.normal,
       'init': function() {},
       'time': function(t, elapsed) {},
     },
     'obj': {
       'type': 'circle',
-      'gradient': 'white',
+      'gradient': 'black',
       //'radius': 200,
       'radius': 0,
       'radiussize': 5.0,
       'opacity': 1.0,
       'props': {},
-      'blending_type': blending_type.pinlight,
+      'blending_type': blending_type.normal,
       'velocity': 0.,
       'props': {'child': false, 'radius': 200.},
       'init': function() {
@@ -153,7 +158,8 @@ _ = {
 
         while (queue.length > 0) {
           var current = queue.shift();
-          var n = 6.;
+          // var n = 6.;
+          var n = 2.;
 
           // if dist is 3 circles apart don't recurse ?
           if (get_distance(0, 0, current[0], current[1]) >= this.props.radius * x) break;
@@ -223,8 +229,8 @@ _ = {
     'fps': 25,
     'width': 1920,
     'height': 1920,
-    'scale': 11.5,
-    //'scale': 1.5,
+    //'scale': 11.5,
+    'scale': 0.5,
     'rand_seed': 1,
     'granularity': 1.,
     'grain_for_opacity': false,
@@ -233,18 +239,21 @@ _ = {
     'perlin_noise': true,
     'dithering': true,
     'update_positions': false,
+    'max_intermediates': 1,
     // 'sample': {
     //   'include': 1.,  // include one second.
     //   'exclude': 5.,  // then skip 5 seconds, and so on.
     // },
+    'bg_color': {'r': 1., 'g': 1., 'b': 1., 'a': 1},
   },
   'scenes': [{
     'name': 'scene1',
     'objects': [
-      {'id': 'a', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+      // {'id': 'a', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
       {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
       {'id': 'obj', 'x': 0, 'radius': 0, 'y': 0, 'z': 0, 'props': {}},
-      {'id': 'obj', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+      // {'id': 'obj', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+      {'id': 'obj', 'x': 0, 'y': 0, 'z': 0, 'angle': 90, 'props': {}},
     ],
   }]
 };
