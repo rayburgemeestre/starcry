@@ -184,7 +184,8 @@ void instantiate_object(v8_interact& i,
       i.set_field(props, field_name, field_value);
     }
   }
-  i.call_fun(new_instance, "init", 0.5);
+  // Hm, Shouldn't init be called only on the "next" instances?
+  i.call_fun(new_instance, "init");
 }
 
 std::tuple<v8::Local<v8::Object>, v8::Local<v8::Object>, v8::Local<v8::Object>> instantiate_objects(
@@ -279,9 +280,10 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field(dst, "unique_id", src);
     i.copy_field(dst, "type", src);
     i.copy_field(dst, "collision_group", src);
-    i.copy_field(dst, "on", src);    // hmmm...
-    i.copy_field(dst, "init", src);  // hmmm...
-    i.copy_field(dst, "time", src);  // hmmm...
+    i.copy_field(dst, "on", src);     // hmmm...
+    i.copy_field(dst, "init", src);   // hmmm...
+    i.copy_field(dst, "init2", src);  // hmmm..., yeah, needed lol
+    i.copy_field(dst, "time", src);   // hmmm...
     // i.copy_field(dst, "exists", src);
 
     // TODO: move has_field check into copy_field
@@ -336,8 +338,38 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
       auto prop_fields = s->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
       for (size_t k = 0; k < prop_fields->Length(); k++) {
         auto prop_key = i.get_index(prop_fields, k).As<v8::String>();
+        auto str = v8_str(i.get_isolate(), prop_key);
         auto prop_value = i.get(s, prop_key);
-        if (prop_value->IsObject()) {
+        if (prop_value->IsArray()) {
+          // first copy whatever 'as-is'
+          i.set_field(d, prop_key, prop_value);
+
+          // get it from the destination array now.
+          prop_value = i.get(d, prop_key);
+
+          // now fix potential objects inside it.
+          auto a = prop_value.As<v8::Array>();
+          for (size_t m = 0; m < a->Length(); m++) {
+            auto o = i.get_index(a, m);
+            if (o->IsObject()) {
+              auto obj = o.As<v8::Object>();
+              // TODO: duplicate stuff below
+              if (i.has_field(obj, "unique_id") &&
+                  obj_indexes.find(i.integer_number(obj, "unique_id")) != obj_indexes.end()) {
+                auto idx = obj_indexes[i.integer_number(obj, "unique_id")];
+                auto object = i.get_index(dest, obj_indexes[idx]).As<v8::Object>();
+                i.set_field(a, m, object);
+              } else {
+                // for other objects, make sure to deep-copy
+                auto prop_value_copy = v8::Object::New(i.get_isolate());
+                i.recursively_copy_object(prop_value_copy, prop_value.As<v8::Object>());
+                i.set_field(a, m, prop_value_copy);
+              }
+            } else {
+              i.set_field(a, m, o);
+            }
+          }
+        } else if (prop_value->IsObject()) {
           auto obj = prop_value.As<v8::Object>();
           // for renderables look them up using their unique id
           if (i.has_field(obj, "unique_id") &&
@@ -420,6 +452,14 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
 
     if (i.has_field(src, "exists")) {
       i.copy_field(dst, "exists", src);
+    }
+
+    // TODO: decided to get rid of this init2 complexity
+    // temporarily going to commit this.
+    if (i.has_field(src, "__init2_called__")) {
+      if (i.get(src, "__init2_called__").As<v8::Boolean>()->Value()) {
+        i.call_fun(dst, "init2");
+      }
     }
   }
 }
@@ -588,6 +628,16 @@ void monitor_subobj_changes(v8_interact& i, v8::Local<v8::Object> instance, std:
 
 std::string instance_to_string(v8_interact& i, v8::Local<v8::Object>& instance) {
   std::stringstream ss;
+  if (!instance->IsObject() || !i.has_field(instance, "level")) {
+    ss << "** UNKNOWN OBJECT **";
+    if (instance->IsNull()) {
+      ss << " (is null)";
+    }
+    if (instance->IsUndefined()) {
+      ss << " (is undefined)";
+    }
+    return ss.str();
+  }
   const auto level = i.integer_number(instance, "level");
 
   ss << "obj: " << i.integer_number(instance, "unique_id") << " " << i.str(instance, "id") << " "
@@ -599,6 +649,10 @@ std::string instance_to_string(v8_interact& i, v8::Local<v8::Object>& instance) 
   }
   ss << " " << i.str(instance, "label") << " [" << i.str(instance, "__random_hash__") << "] "
      << i.double_number(instance, "__dist__") << "/" << i.double_number(instance, "steps");
+
+  if (i.has_field(instance, "velocity")) {
+    ss << " (vel:" << i.double_number(instance, "velocity") << ")";
+  }
 
   return ss.str();
 }
@@ -629,8 +683,16 @@ void debug_print(v8_interact& i, v8::Local<v8::Object>& instance) {
       if (!field_value->IsObject()) continue;
       auto str = i.str(obj_fields, k);
       if (str == "left" || str == "right") {
-        auto o = field_value.As<v8::Object>();
-        logger(INFO) << indent(level + 2) << "prop." << str << ": " << instance_to_string(i, o) << std::endl;
+        if (field_value->IsArray()) {
+          auto a = field_value.As<v8::Array>();
+          for (size_t l = 0; l < a->Length(); l++) {
+            auto o = i.get_index(a, k).As<v8::Object>();
+            logger(INFO) << indent(level + 2) << "prop." << str << ": " << instance_to_string(i, o) << std::endl;
+          }
+        } else if (field_value->IsObject()) {
+          auto o = field_value.As<v8::Object>();
+          logger(INFO) << indent(level + 2) << "prop!." << str << ": " << instance_to_string(i, o) << std::endl;
+        }
       }
     }
   }

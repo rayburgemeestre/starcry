@@ -53,7 +53,7 @@ void generator::reset_context() {
   context->add_fun("random_velocity", &random_velocity);
   context->add_fun("expf", &expf_fun);
   context->add_fun("logn", &logn_fun);
-  context->add_fun("clamp", &clamp<double>);
+  context->add_fun("clamp", &math::clamp<double>);
   context->add_fun("squared", &squared);
   context->add_fun("squared_dist", &squared_dist);
   context->add_fun("get_distance", &get_distance);
@@ -361,6 +361,23 @@ void generator::init_object_instances() const {
       auto [instance, next, intermediate] = util::generator::instantiate_objects(
           i, objects, instances, instances_next, instances_temp, scene_instances_idx, scene_obj);
       i.set_field(scene_objects, j, next);
+    }
+
+    // init2, let's exec on all three, similarly to init.
+    for (size_t j = 0; j < instances_next->Length(); j++) {
+      auto instance = i.get_index(instances_next, j).As<v8::Object>();
+      i.call_fun(instance, "init2");
+      i.set_field(instance, "__init2_called__", v8::Boolean::New(i.get_isolate(), true));
+    }
+    for (size_t j = 0; j < instances->Length(); j++) {
+      auto instance = i.get_index(instances, j).As<v8::Object>();
+      i.call_fun(instance, "init2");
+      i.set_field(instance, "__init2_called__", v8::Boolean::New(i.get_isolate(), true));
+    }
+    for (size_t j = 0; j < instances_temp->Length(); j++) {
+      auto instance = i.get_index(instances_temp, j).As<v8::Object>();
+      i.call_fun(instance, "init2");
+      i.set_field(instance, "__init2_called__", v8::Boolean::New(i.get_isolate(), true));
     }
   });
 }
@@ -842,30 +859,32 @@ void generator::update_object_interactions(v8_interact& i,
           auto p = i.get(next_instance, "props");
           if (p->IsObject()) {
             auto props = p.As<v8::Object>();
-            if (i.has_field(props, "left")) {
-              auto l = i.get(props, "left");
-              if (l->IsObject()) {
-                auto left = l.As<v8::Object>();
-                if (attempt == 1) i.set_field(left, "__dist__", v8::Number::New(isolate, dist));
-                if (i.has_field(left, "steps")) {
-                  steps = std::max(steps, (int)i.get(left, "steps").As<v8::Number>()->Value());
+            for (const auto& left_or_right : {"left", "right"})
+              if (i.has_field(props, left_or_right)) {
+                auto l = i.get(props, left_or_right);
+                if (l->IsArray()) {
+                  auto a = l.As<v8::Array>();
+                  for (size_t m = 0; m < a->Length(); m++) {
+                    auto left = i.get_index(a, m).As<v8::Object>();
+                    // TODO: lambdafy: below is copied from block above.
+                    if (attempt == 1) i.set_field(left, "__dist__", v8::Number::New(isolate, dist));
+                    if (i.has_field(left, "steps")) {
+                      steps = std::max(steps, (int)i.get(left, "steps").As<v8::Number>()->Value());
+                    }
+                    // Note to self: re-enable debug print, something is fishy
+                    i.set_field(left, "steps", v8::Number::New(isolate, steps));
+                    i.set_field(left, "inherited", v8::Boolean::New(isolate, true));
+                  }
+                } else if (l->IsObject()) {
+                  auto left = l.As<v8::Object>();
+                  if (attempt == 1) i.set_field(left, "__dist__", v8::Number::New(isolate, dist));
+                  if (i.has_field(left, "steps")) {
+                    steps = std::max(steps, (int)i.get(left, "steps").As<v8::Number>()->Value());
+                  }
+                  i.set_field(left, "steps", v8::Number::New(isolate, steps));
+                  i.set_field(left, "inherited", v8::Boolean::New(isolate, true));
                 }
-                i.set_field(left, "steps", v8::Number::New(isolate, steps));
-                i.set_field(left, "inherited", v8::Boolean::New(isolate, true));
               }
-            }
-            if (i.has_field(props, "right")) {
-              auto r = i.get(props, "right");
-              if (r->IsObject()) {
-                auto right = r.As<v8::Object>();
-                if (attempt == 1) i.set_field(right, "__dist__", v8::Number::New(isolate, dist));
-                if (i.has_field(right, "steps")) {
-                  steps = std::max(steps, (int)i.get(right, "steps").As<v8::Number>()->Value());
-                }
-                i.set_field(right, "steps", v8::Number::New(isolate, steps));
-                i.set_field(right, "inherited", v8::Boolean::New(isolate, true));
-              }
-            }
           }
         }
       }
@@ -1375,7 +1394,22 @@ void generator::fix(v8_interact& i, v8::Local<v8::Array>& instances) {
         auto field_value = i.get(props, field_name);
         auto str = i.str(obj_fields, k);
         if (str == "left" || str == "right") {
-          if (field_value->IsObject()) {
+          if (field_value->IsArray()) {
+            auto a = field_value.As<v8::Array>();
+            for (size_t m = 0; m < a->Length(); m++) {
+              auto o = i.get_index(a, m).As<v8::Object>();
+              // TODO: lambdafy: below is copied from block above.
+              auto oid = i.integer_number(o, "unique_id");
+              // get unique id of this object
+              if (obj_indexes.find(oid) == obj_indexes.end()) {
+                logger(INFO) << "ERROR: terminate #1B" << std::endl;
+                std::exit(0);
+              }
+              auto object_ = i.get_index(instances, obj_indexes[oid]).As<v8::Object>();
+              // TODO: do not include this line in labmda.
+              i.set_field(a, m, object_);
+            }
+          } else if (field_value->IsObject()) {
             auto o = field_value.As<v8::Object>();
             auto oid = i.integer_number(o, "unique_id");
             // get unique id of this object

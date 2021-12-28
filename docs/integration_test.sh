@@ -1,7 +1,7 @@
 #!/bin/bash
 
 typeset output=output/observed
-typeset cmd="./build/starcry -t 16 -c 16"
+typeset cmd="./build/starcry -t 16 -c 16 --no-gui"
 
 rm -rf $output
 mkdir -p $output

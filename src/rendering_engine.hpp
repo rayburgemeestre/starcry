@@ -213,10 +213,10 @@ public:
           ref.set_layers(shape.indexes.size());
           for (const auto &p : ref.buffer()) {
             // These clamps should be avoided, and in draw_logic we should make sure we don't draw outside bounds!
-            const auto &y = std::clamp(p.first, 0, (int)height);  // TODO: comment
+            const auto &y = math::clamp(p.first, 0, (int)height);  // TODO: comment
             // const auto &y = p.first;
             for (const auto &q : p.second) {
-              const auto &x = std::clamp(q.first, 0, (int)width);  // TODO: comment
+              const auto &x = math::clamp(q.first, 0, (int)width);  // TODO: comment
               // const auto &x = q.first;
               const auto &color_dat = q.second;
               const auto col = ref.get_color(color_dat);

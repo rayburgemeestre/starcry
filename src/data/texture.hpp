@@ -56,7 +56,7 @@ struct texture {
                                        x / context_scale,
                                        y / context_scale,
                                        (z * speed) + seed);
-    perlin = ::clamp(perlin, 0., 1.0);
+    perlin = math::clamp(perlin, 0., 1.0);
     if (strength == 0) {
       return opacity(ratio);
     } else if (strength < 0 && strength > -1.0) {

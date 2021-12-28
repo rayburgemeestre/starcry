@@ -8,11 +8,13 @@
 #include <cmath>
 
 // needed since we don't have std::clamp in <algorithm> with em++ currently
+namespace math {
 template <class T>
 inline constexpr const T& clamp(const T& v, const T& lo, const T& hi) {
   //  assert(!(hi < lo));
   return (v < lo) ? lo : (hi < v) ? hi : v;
 }
+}  // namespace math
 
 static constexpr const auto pi = 3.14159265358979323846;
 

@@ -57,6 +57,7 @@ debug-last:
 
 debug-clean:
 	rm -rf /var/crash/_home_trigen_projects_starcry_build_starcry.1144.crash
+	rm -rf gdb.txt
 
 format:  ## format source code (build at least once first)
 	# build starcry with tailored image so we can invoke the make command straight away

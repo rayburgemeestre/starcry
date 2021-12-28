@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#include <algorithm>  // for std::clamp
+#include <algorithm>  // for stdmath::clamp
 #include <random>
 
 #include "color_blender.hpp"
@@ -665,11 +665,11 @@ public:
       if (!shape.textures.empty()) {
         noise = 0;
         for (const auto &texture : shape.textures) {
-          noise +=
-              ::clamp(texture.second.get(
-                          num, absX - posX, absY - posY, shape.time, scale_, std::isnan(shape.seed) ? 1. : shape.seed),
-                      0.0,
-                      1.0);
+          noise += math::clamp(
+              texture.second.get(
+                  num, absX - posX, absY - posY, shape.time, scale_, std::isnan(shape.seed) ? 1. : shape.seed),
+              0.0,
+              1.0);
         }
         noise /= static_cast<double>(shape.textures.size());
       }
@@ -692,10 +692,10 @@ public:
     // use noise to dial down opacity
     if (settings.grain_for_opacity) {
       clr.a = (linear * noise) * (1.0 - amount_of_blur * rand1);
-      clr.a = ::clamp(clr.a, 0.0, 1.0);
+      clr.a = math::clamp(clr.a, 0.0, 1.0);
     } else {
       clr.a = linear * noise;
-      clr.a = ::clamp(clr.a, 0.0, 1.0);
+      clr.a = math::clamp(clr.a, 0.0, 1.0);
     }
     // ------------motion blur------------
 
