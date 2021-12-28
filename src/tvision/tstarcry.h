@@ -29,6 +29,7 @@ public:
   virtual void handleEvent(TEvent &Event);
   virtual void getEvent(TEvent &event);
   virtual void idle();
+  virtual TPalette &getPalette() const;
   void setScript(const std::string &script);
   void setProgress(int current_frame, int last_frame);
   void exit();

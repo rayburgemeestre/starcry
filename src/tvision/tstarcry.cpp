@@ -68,6 +68,11 @@ TStarcry::TStarcry(metrics *metrics)
   message(this, evCommand, cmTile, p1);
 }
 
+TPalette &TStarcry::getPalette() const {
+  static TPalette palette(cpAppBlackWhite, sizeof(cpAppBlackWhite) - 1);
+  return palette;
+}
+
 void TStarcry::exit() {
   exited = true;
 }
