@@ -555,16 +555,7 @@ void starcry::save_images(std::vector<data::color> &pixels_raw,
                           bool write_8bit_png,
                           bool write_32bit_exr,
                           const std::string &output_file) {
-  auto filename = gen->filename();
-  auto pos = filename.rfind('/');
-  if (pos != std::string::npos) {
-    filename = filename.substr(pos + 1);
-  }
-  pos = filename.find(".js");
-  if (pos != std::string::npos) {
-    filename = filename.substr(0, pos);
-  }
-
+  auto filename = fs::path(gen->filename()).stem().string();
   if (!pixels_raw.empty()) {
     // There is 16 BIT, also + Alpha, however, seems to internally still use an 8 bit palette somehow.
     // Will need to figure out in the future how to properly use 16 bit, for now, will focus on fixing the 8 bit
