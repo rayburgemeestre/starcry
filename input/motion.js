@@ -22,7 +22,7 @@ _ = {
       'init': function() {
         let n = 10;
         for (let i = 0; i < n; i++)
-          this.subobj.push({
+          this.subobj.push(this.spawn({
             'id': 'ball',
             //'x': ((rand() * 2.) - 1.) * 1920/2,
             //'y': ((rand() * 2.) - 1.) * 1920/2,
@@ -32,13 +32,13 @@ _ = {
             'velocity': rand() * 100.,
             'vel_x': ((rand() * 2.) - 1.),
             'vel_y': ((rand() * 2.) - 1.),
-          });
+          }));
         for (let i = 0; i < n; i++) {
           for (let j = 0; j < n; j++) {
             if (i <= j) {
               let obj1 = this.subobj[i];
               let obj2 = this.subobj[j];
-              this.subobj.push({
+              this.subobj.push(this.spawn({
                 'id': 'line',
                 'opacity': rand(),
                 'x': obj1.x,
@@ -46,7 +46,7 @@ _ = {
                 'x2': obj2.x,
                 'y2': obj2.y,
                 'z': 0,
-              });
+              }));
               // obj1.props.left = this.subobj[this.subobj.length - 1];
               // obj2.props.right = this.subobj[this.subobj.length - 1];
             }

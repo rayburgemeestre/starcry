@@ -52,7 +52,7 @@ _ = {
       'init': function() {
         // temporary changed for testing purposes
         if (false)
-          this.subobj.push({
+          this.subobj.push(this.spawn({
             'id': 'blue_circle',
             //'x': -450,
             'x': -400,
@@ -60,17 +60,17 @@ _ = {
             //'scale': 0.5,
             'scale': 1.0,
             'props': {'radius_limit': 60., 'opacity': 1.0}
-          });  // 50.
+          }));  // 50.
         if (false)
-          this.subobj.push({
+          this.subobj.push(this.spawn({
             'id': 'blue_circle',
             'x': 400,
             'y': 0,
             'scale': 1.0,
             'props': {'radius_limit': 60., 'opacity': 1.0, 'scale': 1.0}
-          });  // 20.
+          }));  // 20.
         if (true)
-          this.subobj.push({
+          this.subobj.push(this.spawn({
             'id': 'blue_circle',
             'x': 0,
             'y': 0,
@@ -78,7 +78,7 @@ _ = {
             'pivot': true,
             //'props': {'radius_limit': 5., 'opacity': 1.0, 'parent': false, 'scale': 1.0}
             'props': {'radius_limit': 5., 'opacity': 1.0, 'parent': false, 'scale': 1.0}
-          });  // was 5.
+          }));  // was 5.
       },
     },
     'blue_circle': {
@@ -114,7 +114,7 @@ _ = {
         this.opacity = 1. * this.props.opacity;
         if (this.radius > this.props.radius_limit && this.subobj.length === 0) {
           var child_radius = this.radius * 0.67;
-          this.subobj.push({
+          this.subobj.push(this.spawn({
             'id': 'blue_circle',
             // keep somehow the parent radius...
             // // anyway going to render a nice vid anyway
@@ -131,7 +131,7 @@ _ = {
 
             // also cool with #4
             'angle': script.video.mode === 1 ? 15 : 0,
-          });
+          }));
           // this.subobj[this.subobj.length - 1].x += ((rand()*2)-1.)*5.;
           // this.subobj[this.subobj.length - 1].y += ((rand()*2)-1.)*5.;
         }

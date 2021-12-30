@@ -13,17 +13,22 @@ _ = {
       'angle': 0,
       'opacity': 0,  // TEMP HACK
       'init': function() {
-        this.subobj.push({
+        this.subobj.push(this.spawn({
           'id': 'test_circle',
           'x': -500 + 50.,
           'y': 0,
           'scale': 0.5,
           'props': {'radius_limit': 5., 'x': -500 + 50.}
-        });
-        this.subobj.push(
-            {'id': 'test_circle', 'x': 0 + 50., 'y': 0, 'scale': 1.0, 'props': {'radius_limit': 5., 'x': 50.}});
-        this.subobj.push(
-            {'id': 'test_circle', 'x': 500 + 50., 'y': 0, 'scale': 1.0, 'props': {'radius_limit': 5., 'x': 500 + 50.}});
+        }));
+        this.subobj.push(this.spawn(
+            {'id': 'test_circle', 'x': 0 + 50., 'y': 0, 'scale': 1.0, 'props': {'radius_limit': 5., 'x': 50.}}));
+        this.subobj.push(this.spawn({
+          'id': 'test_circle',
+          'x': 500 + 50.,
+          'y': 0,
+          'scale': 1.0,
+          'props': {'radius_limit': 5., 'x': 500 + 50.}
+        }));
       },
     },
     'test_circle': {
@@ -54,7 +59,7 @@ _ = {
         if (this.props.depth < 10. && this.subobj.length == 0) {
           var child_radius = this.radius * 0.67;
           var child_x = this.radius - child_radius + 50.;
-          this.subobj.push({
+          this.subobj.push(this.spawn({
             'id': 'test_circle',
             'x': child_x,
             'y': 0,
@@ -62,7 +67,7 @@ _ = {
             'scale': this.scale,
             'props': {'depth': this.props.depth + 1, 'x': child_x},
             'angle': 1,
-          });
+          }));
         }
         if (this.level > 1) this.angle += elapsed * 5.;
       },

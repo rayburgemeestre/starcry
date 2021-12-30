@@ -69,7 +69,7 @@ _ = {
           var y = (rand() * height) - height / 2;
           [vel_x, vel_y] = random_velocity();
           if (i > 0) {
-            this.subobj.push({
+            this.subobj.push(this.spawn({
               'id': 'line',
               'x': x,
               'y': y,
@@ -83,7 +83,7 @@ _ = {
               'z': 0,
               'radiussize': 5.0,
               'props': {}
-            });
+            }));
           }
           prev_x = x;
           prev_y = y;

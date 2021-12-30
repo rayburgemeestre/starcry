@@ -39,10 +39,14 @@ _ = {
       'y': 0,
       'subobj': [],
       'init': function() {
-        this.subobj.push({'id': 'line', 'x': -(1920 / 4), 'y': -(1080 / 4), 'x2': (1920 / 4), 'y2': -(1080 / 4)});
-        this.subobj.push({'id': 'line', 'x': -(1920 / 4), 'y': -(1080 / 4), 'x2': -(1920 / 4), 'y2': (1080 / 4)});
-        this.subobj.push({'id': 'line', 'x': -(1920 / 4), 'y': (1080 / 4), 'x2': (1920 / 4), 'y2': (1080 / 4)});
-        this.subobj.push({'id': 'line', 'x': (1920 / 4), 'y': (1080 / 4), 'x2': (1920 / 4), 'y2': -(1080 / 4)});
+        this.subobj.push(
+            this.spawn({'id': 'line', 'x': -(1920 / 4), 'y': -(1080 / 4), 'x2': (1920 / 4), 'y2': -(1080 / 4)}));
+        this.subobj.push(
+            this.spawn({'id': 'line', 'x': -(1920 / 4), 'y': -(1080 / 4), 'x2': -(1920 / 4), 'y2': (1080 / 4)}));
+        this.subobj.push(
+            this.spawn({'id': 'line', 'x': -(1920 / 4), 'y': (1080 / 4), 'x2': (1920 / 4), 'y2': (1080 / 4)}));
+        this.subobj.push(
+            this.spawn({'id': 'line', 'x': (1920 / 4), 'y': (1080 / 4), 'x2': (1920 / 4), 'y2': -(1080 / 4)}));
       },
       'time': function() {},
     },

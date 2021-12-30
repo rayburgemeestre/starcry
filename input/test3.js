@@ -19,10 +19,10 @@ _ = {
       'subobj': [],
       'init': function() {
         // place four circle animations on the canvas
-        this.subobj.push({'id': 'simple-animation-object', 'x': -300, 'y': 0, 'z': 0, 'props': {}});
-        this.subobj.push({'id': 'simple-animation-object', 'x': 300, 'y': 0, 'z': 0, 'props': {}});
-        this.subobj.push({'id': 'simple-animation-object', 'x': 0, 'y': -300, 'z': 0, 'props': {}});
-        this.subobj.push({'id': 'simple-animation-object', 'x': 0, 'y': +300, 'z': 0, 'props': {}});
+        this.subobj.push(this.spawn({'id': 'simple-animation-object', 'x': -300, 'y': 0, 'z': 0, 'props': {}}));
+        this.subobj.push(this.spawn({'id': 'simple-animation-object', 'x': 300, 'y': 0, 'z': 0, 'props': {}}));
+        this.subobj.push(this.spawn({'id': 'simple-animation-object', 'x': 0, 'y': -300, 'z': 0, 'props': {}}));
+        this.subobj.push(this.spawn({'id': 'simple-animation-object', 'x': 0, 'y': +300, 'z': 0, 'props': {}}));
       },
       'time': function(t) {},
     },
@@ -35,9 +35,9 @@ _ = {
       'subobj': [],
       'init': function() {
         // place three animated circles with different properties
-        this.subobj.push({'id': 'animated-circle', 'x': -100, 'y': 0, 'z': 0, 'props': {'maxradius': 100}});
-        this.subobj.push({'id': 'animated-circle', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 200}});
-        this.subobj.push({'id': 'animated-circle', 'x': 100, 'y': 0, 'z': 0, 'props': {'maxradius': 300}});
+        this.subobj.push(this.spawn({'id': 'animated-circle', 'x': -100, 'y': 0, 'z': 0, 'props': {'maxradius': 100}}));
+        this.subobj.push(this.spawn({'id': 'animated-circle', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 200}}));
+        this.subobj.push(this.spawn({'id': 'animated-circle', 'x': 100, 'y': 0, 'z': 0, 'props': {'maxradius': 300}}));
       },
       'time': function(t) {
         // tween the colors of all animated circles

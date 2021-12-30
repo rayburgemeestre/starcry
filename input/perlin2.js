@@ -77,12 +77,15 @@ _ = {
       'init': function() {
         var x = this.props.depth / 50.;
         var step = expf(x, 10) * 100.;
-        this.subobj.push({'id': 'ring', 'x': -300, 'y': 150, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}});
-        this.subobj.push({'id': 'ring', 'x': -300, 'y': 150, 'x2': 0, 'y2': -300, 'scale': step, 'z': 0, 'props': {}});
-        this.subobj.push({'id': 'ring', 'x': 0, 'y': -300, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}});
+        this.subobj.push(
+            this.spawn({'id': 'ring', 'x': -300, 'y': 150, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}}));
+        this.subobj.push(
+            this.spawn({'id': 'ring', 'x': -300, 'y': 150, 'x2': 0, 'y2': -300, 'scale': step, 'z': 0, 'props': {}}));
+        this.subobj.push(
+            this.spawn({'id': 'ring', 'x': 0, 'y': -300, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}}));
         if (this.props.depth > 0) {
-          this.subobj.push(
-              {'id': 'rings', 'x': 11., 'y': 0, 'x2': 0, 'y2': 0, 'z': 0, 'props': {'depth': this.props.depth - 1}});
+          this.subobj.push(this.spawn(
+              {'id': 'rings', 'x': 11., 'y': 0, 'x2': 0, 'y2': 0, 'z': 0, 'props': {'depth': this.props.depth - 1}}));
         }
       },
       'time': function(t, elapsed) {},

@@ -38,7 +38,7 @@ _ = {
             var new_radius = 0.6180339887498547 * this.props.radius;
             // continue recursion if radius exceeds 5 only
             if (new_radius >= 5.) {
-              this.subobj.push({
+              this.subobj.push(this.spawn({
                 'id': 'obj',
                 'label': 'sub1',
                 'x': new_x,
@@ -46,7 +46,7 @@ _ = {
                 'z': 0,
                 'opacity': (0.6180339887498547 * this.props.opacity),
                 'props': {'radius': new_radius}
-              });
+              }));
             }
           }
         }

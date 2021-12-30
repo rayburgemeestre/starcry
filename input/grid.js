@@ -62,50 +62,50 @@ _ = {
 
           // create four lines and add them to queue
           if (!line_exists(key([current[0] + 100, current[1] + 0, current[0], current[1]]))) {
-            this.subobj.push({
+            this.subobj.push(this.spawn({
               'id': 'test_line',
               'x': current[0] + 100.,
               'y': current[1] + 0,
               'x2': current[0],
               'y2': current[1],
               'props': {}
-            });
+            }));
             queue.push([current[0] + 100, current[1] + 0]);
             existing_line.add(key([current[0] + 100, current[1] + 0, current[0], current[1]]));
           }
           if (!line_exists(key([current[0] + -100, current[1] + 0, current[0], current[1]]))) {
-            this.subobj.push({
+            this.subobj.push(this.spawn({
               'id': 'test_line2',
               'x': current[0] + -100.,
               'y': current[1] + 0,
               'x2': current[0],
               'y2': current[1],
               'props': {}
-            });
+            }));
             queue.push([current[0] + -100, current[1] + 0]);
             existing_line.add(key([current[0] + -100, current[1] + 0, current[0], current[1]]));
           }
           if (!line_exists(key([current[0] + 0, current[1] + 100, current[0], current[1]]))) {
-            this.subobj.push({
+            this.subobj.push(this.spawn({
               'id': 'test_line3',
               'x': current[0] + 0.,
               'y': current[1] + 100,
               'x2': current[0],
               'y2': current[1],
               'props': {}
-            });
+            }));
             queue.push([current[0] + 0, current[1] + 100]);
             existing_line.add(key([current[0] + 0, current[1] + 100, current[0], current[1]]));
           }
           if (!line_exists(key([current[0] + 0, current[1] + -100, current[0], current[1]]))) {
-            this.subobj.push({
+            this.subobj.push(this.spawn({
               'id': 'test_line4',
               'x': current[0] + 0.,
               'y': current[1] + -100,
               'x2': current[0],
               'y2': current[1],
               'props': {}
-            });
+            }));
             queue.push([current[0] + 0, current[1] + -100]);
             existing_line.add(key([current[0] + 0, current[1] + -100, current[0], current[1]]));
           }
@@ -137,7 +137,7 @@ _ = {
       'init': function() {
         let s = 0;
 
-        this.subobj.push({
+        this.subobj.push(this.spawn({
           'id': 'test_line2',
           'x': -s,
           'y': 0,
@@ -145,37 +145,37 @@ _ = {
           'y2': 0,
           'angle': 0,
           'props': {'grad': 'red', 'wave_strength': rand() * 2.}
-        });
+        }));
 
-        this.subobj.push({
+        this.subobj.push(this.spawn({
           'id': 'test_line2',
           'x': 0,
           'y': 0,
           'x2': 0,
           'y2': 0,
           'props': {'grad': 'green', 'wave_strength': rand() * 20.}
-        });
+        }));
 
-        this.subobj.push({
+        this.subobj.push(this.spawn({
           'id': 'test_line2',
           'x': +s,
           'y': 0,
           'x2': +s,
           'y2': 0,
           'props': {'grad': 'blue', 'wave_strength': rand() * 20.}
-        });
+        }));
 
-        this.subobj.push(
-            {'id': 'test_line2', 'x': this.x, 'y': this.y, 'x2': this.x2, 'y2': this.y2, 'props': {'grad': 'green'}});
+        this.subobj.push(this.spawn(
+            {'id': 'test_line2', 'x': this.x, 'y': this.y, 'x2': this.x2, 'y2': this.y2, 'props': {'grad': 'green'}}));
 
-        this.subobj.push({
+        this.subobj.push(this.spawn({
           'id': 'test_line2',
           'x': this.x + 10,
           'y': this.y,
           'x2': this.x2 + 10,
           'y2': this.y2,
           'props': {'grad': 'blue'}
-        });
+        }));
       },
       'time': function(time, elapsed) {
         // if (this.level == 0)

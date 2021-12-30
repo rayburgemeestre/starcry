@@ -10,7 +10,7 @@ _ = {
       'radius': 0,
       'radiussize': 10.0,
       'init': function() {
-        this.subobj.push({
+        this.subobj.push(this.spawn({
           'id': 'ball',
           'label': 'ball_1',
           'x': -100,
@@ -19,8 +19,8 @@ _ = {
           'velocity': 10,
           'vel_x': 1,
           'vel_y': 0,
-        });
-        this.subobj.push({
+        }));
+        this.subobj.push(this.spawn({
           'id': 'ball',
           'label': 'ball_2',
           'x': 100,
@@ -29,7 +29,7 @@ _ = {
           'velocity': -10,
           'vel_x': 1,
           'vel_y': 0,
-        });
+        }));
       },
       'time': function(t, e) {},
     },
@@ -45,7 +45,8 @@ _ = {
       'subobj': [],
       'on': {
         'collide': function(other) {
-          this.subobj.push({'id': 'tempring', 'label': 'ring_' + this.label, 'x': 0, 'y': 0, 'z': 0, 'props': {}});
+          this.subobj.push(
+              this.spawn({'id': 'tempring', 'label': 'ring_' + this.label, 'x': 0, 'y': 0, 'z': 0, 'props': {}}));
         }
       }
     },

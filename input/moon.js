@@ -55,7 +55,7 @@ _ = {
 
             let r = rand();
             let grad = r < 1 / 3. ? 'red' : r < 2 / 3. ? 'green' : 'blue';
-            this.subobj.push({
+            this.subobj.push(this.spawn({
               'id': 'test_line',
               'x': x,
               'y': y,
@@ -64,7 +64,7 @@ _ = {
               'radiussize': 1. + rand() * 1,
               'gradient': grad,
               'props': {}
-            });
+            }));
           }
         }
       },

@@ -13,8 +13,8 @@ _ = {
   'objects': {
     'splitter': {
       'init': function() {
-        this.subobj.push({'id': 'circle', 'x': 0, 'y': 0, 'z': 0, 'props': {'x': 0, 'y': 0}});
-        this.subobj.push({'id': 'circle', 'x': 0, 'y': 0, 'z': 0, 'props': {'x': 0, 'y': 0}});
+        this.subobj.push(this.spawn({'id': 'circle', 'x': 0, 'y': 0, 'z': 0, 'props': {'x': 0, 'y': 0}}));
+        this.subobj.push(this.spawn({'id': 'circle', 'x': 0, 'y': 0, 'z': 0, 'props': {'x': 0, 'y': 0}}));
       },
       'time': function(t, e, scene, tt) {
         let jump = 100;

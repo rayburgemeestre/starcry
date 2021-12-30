@@ -21,6 +21,7 @@
 #include "data/toroidal.hpp"
 
 #include "util/frame_stepper.hpp"
+#include "util/generator_context.h"
 #include "util/v8_interact.hpp"
 #include "util/v8_wrapper.hpp"
 
@@ -86,6 +87,8 @@ private:
 
   std::string filename_;
 
+  generator_context genctx;
+
 public:
   struct time_settings {
     double time;
@@ -105,7 +108,7 @@ public:
   void init_gradients();
   void init_textures();
   void init_toroidals();
-  void init_object_instances() const;
+  void init_object_instances();
 
   void set_scene(size_t scene);
   void fast_forward(int frame_of_interest);
@@ -179,6 +182,8 @@ public:
   inline time_settings get_time() const;
 
   void fix(v8_interact& i, v8::Local<v8::Array>& instances);
+
+  v8::Local<v8::Object> spawn_object(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj);
 
 private:
   bool _generate_frame();

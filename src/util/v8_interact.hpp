@@ -146,6 +146,21 @@ public:
         dest->Set(ctx, v8_str(context, dest_field), source->Get(ctx, v8_str(context, dest_field)).ToLocalChecked()));
   }
 
+  void copy_field_if_exists(v8::Local<v8::Object> dest,
+                            const std::string& dest_field,
+                            v8::Local<v8::Object> source,
+                            const std::optional<std::string>& source_field = {}) {
+    if (source_field) {
+      if (!has_field(source, *source_field)) return;
+      handle_error(dest->Set(
+          ctx, v8_str(context, dest_field), source->Get(ctx, v8_str(context, *source_field)).ToLocalChecked()));
+    }
+    // assume field is same as dest field if left unspecified
+    if (!has_field(source, dest_field)) return;
+    handle_error(
+        dest->Set(ctx, v8_str(context, dest_field), source->Get(ctx, v8_str(context, dest_field)).ToLocalChecked()));
+  }
+
   void set_field(v8::Local<v8::Object> object, v8::Local<v8::Value> field, v8::Local<v8::Value> value) {
     handle_error(object->Set(ctx, field, value));
   }
@@ -157,6 +172,10 @@ public:
   }
   void remove_field(v8::Local<v8::Object> object, const std::string& field) {
     handle_error(object->Delete(ctx, v8_str(context, field)));
+  }
+
+  void set_fun(v8::Local<v8::Object> object, const std::string& field, v8::Local<v8::Function> fun) {
+    handle_error(object->Set(ctx, v8_str(context, field), fun));
   }
 
   template <class... Args>
@@ -196,6 +215,23 @@ public:
     fun->Call(isolate->GetCurrentContext(), self, sizeof...(Args), argz).ToLocalChecked();
   }
 
+  v8::Local<v8::Function> get_fun(const std::string& field, std::optional<v8::Local<v8::Value>> obj = {}) {
+    auto v8_field = v8_str(context, field);
+    auto global = isolate->GetCurrentContext()->Global();
+    auto funref = global->Get(isolate->GetCurrentContext(), v8_field);
+    if (funref.IsEmpty()) {
+      // std::cout << "exit 1" << std::endl;
+      // std::exit(1);
+    }
+    auto fundef = funref.ToLocalChecked();
+    if (!fundef->IsFunction()) {
+      // std::cout << "exit 2" << std::endl;
+      // std::exit(1);
+    }
+    auto fun = fundef.As<v8::Function>();
+    return fun;
+  }
+
   v8::Local<v8::Value> get_index(v8::Local<v8::Array> array, size_t index) {
     return array->Get(ctx, index).ToLocalChecked();
   }
@@ -220,7 +256,7 @@ public:
   }
 
   // utils
-  void recursively_copy_object(v8::Local<v8::Object> dest_object, v8::Local<v8::Object> source_object) {
+  void recursively_copy_object(v8::Local<v8::Object>& dest_object, v8::Local<v8::Object>& source_object) {
     auto isolate = get_isolate();
     auto obj_fields = prop_names(source_object);
     for (size_t k = 0; k < obj_fields->Length(); k++) {
@@ -228,18 +264,32 @@ public:
       auto field_name_str = str(obj_fields, k);
       if (field_name_str == "__random_hash__") continue;  // do not overwrite
       auto field_value = get(source_object, field_name);
-      if (field_value->IsArray()) {  // TODO: fix needed??
+      if (field_value->IsArray()) {
         v8::Local<v8::Array> new_sub_array = v8::Array::New(isolate);
+        auto arr = field_value.As<v8::Array>();
+        for (size_t l = 0; l < arr->Length(); l++) {
+          auto a_src = get_index(arr, l);
+          if (a_src->IsObject()) {
+            auto a_dst = v8::Object::New(isolate);
+            auto a_src_obj = a_src.As<v8::Object>();
+            recursively_copy_object(a_dst, a_src_obj);
+            call_fun(new_sub_array, "push", a_dst);
+          } else {
+            call_fun(new_sub_array, "push", a_src);
+          }
+        }
         set_field(dest_object, field_name, new_sub_array);
       } else if (field_value->IsObject() && !field_value->IsFunction()) {
         v8::Local<v8::Object> new_sub_instance = v8::Object::New(isolate);
-        recursively_copy_object(new_sub_instance, field_value.As<v8::Object>());
+        auto tmp = field_value.As<v8::Object>();
+        recursively_copy_object(new_sub_instance, tmp);
         set_field(dest_object, field_name, new_sub_instance);
       } else {
         set_field(dest_object, field_name, field_value);
       }
     }
   }
+
   void empty_and_resize(v8::Local<v8::Array>& obj, size_t len) {
     while (obj->Length() > 0) {
       call_fun(obj, "pop");

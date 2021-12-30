@@ -50,7 +50,7 @@ _ = {
           }
           this.props.step++;
 
-          this.subobj.push({
+          this.subobj.push(this.spawn({
             'id': 'ball',
             'x': x,
             'y': y,
@@ -58,7 +58,7 @@ _ = {
             'vel_x': 0,
             'vel_y': 0,
             'props': {'grad': i === 0 || i === 3 ? 'red' : 'white'}
-          });
+          }));
         }
 
         class vector2d {
@@ -131,7 +131,7 @@ _ = {
       'props': {'grad': 'white'},
       'init': function() {
         // this.gradient = this.props.grad;
-        this.subobj.push({'id': 'explosion', 'x': 0, 'y': 0, 'z': 0, 'vel_x': 0, 'vel_y': 0, 'props': {}});
+        this.subobj.push(this.spawn({'id': 'explosion', 'x': 0, 'y': 0, 'z': 0, 'vel_x': 0, 'vel_y': 0, 'props': {}}));
       },
       'time': function(t, elapsed) {
         const steps = elapsed / 5;  // tie this to elapsed time

@@ -34,6 +34,17 @@ generator::generator(std::shared_ptr<metrics>& metrics) : metrics_(metrics) {
   });
 }
 
+generator* global_generator = nullptr;
+
+v8::Local<v8::Object> spawn_object(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::HandleScope scope(isolate);
+  v8::Local<v8::Object> obj = args[0]->ToObject(context->context->impl()).ToLocalChecked();
+  v8_interact i(obj->GetIsolate());
+  auto spawner = args.Holder();
+  return global_generator->spawn_object(spawner, obj);
+}
+
 void generator::reset_context() {
   // clear c++ caches
   cache.job_cache.clear();
@@ -60,6 +71,9 @@ void generator::reset_context() {
   context->add_fun("get_angle", &get_angle);
   context->add_fun("triangular_wave", &triangular_wave);
   context->add_fun("blending_type_str", &data::blending_type::to_str);
+
+  global_generator = this;
+  context->add_fun("__spawn__", &::spawn_object);
   context->add_include_fun();
 
   // add blending constants
@@ -107,7 +121,12 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
   init_textures();
   init_toroidals();
   scenesettings.scene_initialized = std::numeric_limits<size_t>::max();
-  set_scene(0);
+
+  // set_scene requires generator_context to be set
+  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+    genctx = generator_context(isolate, val, 0);
+    set_scene(0);
+  });
 }
 
 void generator::init_context() {
@@ -166,6 +185,7 @@ void generator::init_job() {
 }
 
 void generator::init_video_meta_info(std::optional<double> rand_seed, bool preview) {
+  // "run_array" is a bit of a misnomer, this only invokes the callback once
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto video = v8_index_object(context, val, "video").As<v8::Object>();
@@ -332,53 +352,35 @@ void generator::init_toroidals() {
   });
 }
 
-void generator::init_object_instances() const {
+void generator::init_object_instances() {
+  // This function is called whenever a scene is set. (once per scene)
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i(isolate);
-    auto obj = val.As<v8::Object>();
-    auto scenes = i.v8_array(obj, "scenes");
-    auto objects = i.v8_array(obj, "objects");
-    auto current_scene = i.get_index(scenes, scenesettings.current_scene_next);
-    auto sceneobj = current_scene.As<v8::Object>();
-    auto scene_objects = i.v8_array(sceneobj, "objects");
-    auto instances = i.v8_array(sceneobj, "instances", v8::Array::New(isolate));
-    auto instances_next = i.v8_array(sceneobj, "instances_next", v8::Array::New(isolate));
-    auto instances_temp = i.v8_array(sceneobj, "instances_intermediate", v8::Array::New(isolate));
+    auto& i = genctx.i();
+
+    // whenever we switch to a new scene, we'll copy all the object state from the previous scene
     if (scenesettings.current_scene_next > 0) {
-      auto prev_current_scene = i.get_index(scenes, scenesettings.current_scene_next - 1);
+      logger(INFO) << "Switching to new scene, copying all state from previous." << std::endl;
+      auto prev_current_scene = i.get_index(genctx.scenes, scenesettings.current_scene_next - 1);
       auto prev_sceneobj = prev_current_scene.As<v8::Object>();
       // continue from previous
-      instances = i.v8_array(prev_sceneobj, "instances", v8::Array::New(isolate));
-      instances_next = i.v8_array(prev_sceneobj, "instances_next", v8::Array::New(isolate));
-      instances_temp = i.v8_array(prev_sceneobj, "instances_intermediate", v8::Array::New(isolate));
-      i.set_field(sceneobj, "instances", instances);
-      i.set_field(sceneobj, "instances_next", instances_next);
-      i.set_field(sceneobj, "instances_intermediate", instances_temp);
-    }
-    size_t scene_instances_idx = instances->Length();
-    for (size_t j = 0; j < scene_objects->Length(); j++) {
-      auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
-      auto [instance, next, intermediate] = util::generator::instantiate_objects(
-          i, objects, instances, instances_next, instances_temp, scene_instances_idx, scene_obj);
-      i.set_field(scene_objects, j, next);
+      genctx.instances = i.v8_array(prev_sceneobj, "instances", v8::Array::New(isolate));
+      genctx.instances_next = i.v8_array(prev_sceneobj, "instances_next", v8::Array::New(isolate));
+      genctx.instances_intermediate = i.v8_array(prev_sceneobj, "instances_intermediate", v8::Array::New(isolate));
+      i.set_field(genctx.current_scene_obj, "instances", genctx.instances);
+      i.set_field(genctx.current_scene_obj, "instances_next", genctx.instances_next);
+      i.set_field(genctx.current_scene_obj, "instances_intermediate", genctx.instances_intermediate);
     }
 
-    // init2, let's exec on all three, similarly to init.
-    for (size_t j = 0; j < instances_next->Length(); j++) {
-      auto instance = i.get_index(instances_next, j).As<v8::Object>();
-      i.call_fun(instance, "init2");
-      i.set_field(instance, "__init2_called__", v8::Boolean::New(i.get_isolate(), true));
+    // instantiate all the additional objects from the new scene
+    for (size_t j = 0; j < genctx.scene_objects->Length(); j++) {
+      auto scene_obj = i.get_index(genctx.scene_objects, j).As<v8::Object>();
+      // below can recursively add new objects as init() invocations spawn new objects, and so on
+      util::generator::instantiate_object_from_scene(i, genctx.objects, genctx.instances_next, scene_obj);
     }
-    for (size_t j = 0; j < instances->Length(); j++) {
-      auto instance = i.get_index(instances, j).As<v8::Object>();
-      i.call_fun(instance, "init2");
-      i.set_field(instance, "__init2_called__", v8::Boolean::New(i.get_isolate(), true));
-    }
-    for (size_t j = 0; j < instances_temp->Length(); j++) {
-      auto instance = i.get_index(instances_temp, j).As<v8::Object>();
-      i.call_fun(instance, "init2");
-      i.set_field(instance, "__init2_called__", v8::Boolean::New(i.get_isolate(), true));
-    }
+
+    // since this is invoked directly after a scene change, and in the very beginning, make sure this state is part of
+    // the instances "current" frame, or reverting (e.g., due to motion blur requirements) will discard all of this.
+    util::generator::copy_instances(i, genctx.instances, genctx.instances_next);
   });
 }
 
@@ -423,7 +425,6 @@ void generator::fast_forward(int frame_of_interest) {
 bool generator::_forward_latest_cached_frame(int frame_of_interest) {
   if (!cache.enabled) return false;
   cache.use = false;
-  int offset = 0;
   // minus one, because frame of interest doesn't start counting at zero
   if (cache.job_cache.find(frame_of_interest - 1) != cache.job_cache.end()) {
     job->job_number = frame_of_interest - 1;
@@ -489,7 +490,8 @@ bool generator::_generate_frame() {
     }
 
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-      v8_interact i(isolate);
+      genctx = generator_context(isolate, val, scenesettings.current_scene_next);
+      auto& i = genctx.i();
 
       v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
       auto cache_ = global->Get(isolate->GetCurrentContext(), v8_str(context, "cache")).ToLocalChecked();
@@ -526,29 +528,26 @@ bool generator::_generate_frame() {
       max_dist_found = std::numeric_limits<double>::max();
       scalesettings.reset();
 
-      util::generator::garbage_collect_erased_objects(i, instances, next_instances, intermediates);
+      util::generator::garbage_collect_erased_objects(i, next_instances);
 
       if (min_intermediates > 0.) {
         update_steps(min_intermediates);
       }
 
-      while (max_dist_found > tolerated_granularity && attempt < 4) {
+      while (max_dist_found > tolerated_granularity) {
+        // logger(INFO) << "max_dist_found > tolerated_granularity -> " << max_dist_found << " > " <<
+        // tolerated_granularity
+        //             << std::endl;
         ++attempt;
-        if (attempt == 4) {
-          max_intermediates = 10;
-          stepper.reset();
-          update_steps(max_intermediates);
-          logger(INFO) << "Stuck in a loop: Force rendering with ten intermediates..." << std::endl;
-        } else if (attempt >= 5) {
-          logger(INFO) << "breaking!" << std::endl;
-          std::exit(1);  // below thrown exception wasn't handled correctly anyway..
+        if (attempt >= 5) {
+          break;
+          /* std::exit(1);  // below thrown exception wasn't handled correctly anyway..
           throw std::runtime_error(
               fmt::format("Possible endless loop detected, max_step = {} (while {} > {}). Frame = {}",
                           stepper.max_step,
                           max_dist_found,
                           tolerated_granularity,
-                          job->frame_number));
-          break;
+                          job->frame_number)); */
         }
         max_dist_found = 0;
         if (attempt > 1) {
@@ -571,7 +570,6 @@ bool generator::_generate_frame() {
           create_next_instance_mapping(i, next_instances);
           update_object_positions(i, next_instances, stepper.max_step, video);
           update_object_interactions(i, next_instances, intermediates, instances, video);
-          util::generator::find_new_objects(i, objects, instances, next_instances, intermediates);
           convert_objects_to_render_job(i, next_instances, sc, video);
           util::generator::copy_instances(i, intermediates, next_instances);
           scalesettings.update();
@@ -582,6 +580,9 @@ bool generator::_generate_frame() {
           if (stepper.max_step == max_intermediates) {  // config doesn't allow finer granularity any way, break.
             break;
           } else if (stepper.max_step > max_intermediates) {
+            logger(INFO) << "stepper.max_step > max_intermediates -> " << stepper.max_step << " > " << max_intermediates
+                         << std::endl;
+            std::exit(0);
             throw std::logic_error(
                 fmt::format("stepper.max_step > max_intermediates ({} > {})", stepper.max_step, max_intermediates));
           }
@@ -593,6 +594,11 @@ bool generator::_generate_frame() {
       }
 
       util::generator::copy_instances(i, instances, next_instances);
+
+      // util::generator::debug_print(i, instances, "instances");
+      // util::generator::debug_print(i, next_instances, "next_instances");
+      // util::generator::debug_print(i, intermediates, "intermediates");
+
       scalesettings.commit();
       scenesettings.commit();
     });
@@ -702,9 +708,7 @@ void generator::call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next
   for (size_t j = 0; j < next_instances->Length(); j++) {
     auto next = i.get_index(next_instances, j).As<v8::Object>();
     auto on = i.get(next, "on").As<v8::Object>();
-    util::generator::monitor_subobj_changes(i, next, [&]() {
-      i.call_fun(on, next, "next_frame");
-    });
+    i.call_fun(on, next, "next_frame");
   }
 }
 
@@ -830,29 +834,40 @@ void generator::update_object_interactions(v8_interact& i,
     auto next_instance = i.get_index(next_instances, index).As<v8::Object>();
     auto intermediate_instance = i.get_index(intermediates, index).As<v8::Object>();
     auto previous_instance = i.get_index(previous_instances, index).As<v8::Object>();
+
     if (!next_instance->IsObject() || !intermediate_instance->IsObject()) continue;
     auto motion_blur = !i.has_field(next_instance, "motion_blur") || i.boolean(next_instance, "motion_blur");
     if (!motion_blur) {
       i.set_field(next_instance, "steps", v8::Number::New(isolate, 1));
     } else {
+      auto a = i.integer_number(next_instance, "unique_id");
+      auto b = i.integer_number(intermediate_instance, "unique_id");
+      if (a != b) {
+        logger(WARNING) << "Inconsistency, create a lookup table!" << std::endl;
+        std::exit(1);
+      }
       double dist = get_max_travel_of_object(i, intermediate_instance, next_instance);
-      double cum_dist = get_max_travel_of_object(i, previous_instance, next_instance);
       if (dist > max_dist_found) {
         max_dist_found = dist;
       }
+      auto steps = update_steps(dist);
+
+      // experimentally put this here for now
+      static std::unordered_map<int64_t, int> recorded_steps;
+
+      // below code is ugly and should be refactored soon anyway
       auto inherit = i.get(next_instance, "inherited");
       if (inherit->IsBoolean() && inherit.As<v8::Boolean>()->Value()) {
         // inherited, do not set our own dist etc.
+        // EDIT: we need to read from cache as well, in case stuff got reverted..
+        i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
       } else {
-        auto steps = update_steps(dist);
         if (attempt == 1) {
           i.set_field(next_instance, "__dist__", v8::Number::New(isolate, dist));
           i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
+          recorded_steps[a] = steps;
         } else if (attempt > 1) {
-          dist = std::max(dist, i.double_number(next_instance, "__dist__"));
-          i.set_field(next_instance, "__dist__", v8::Number::New(isolate, dist));
-          steps = std::max(steps, (int)i.integer_number(next_instance, "steps"));
-          i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
+          i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
         }
         // cascade to left and right props, temp
         if (i.has_field(next_instance, "props")) {
@@ -865,24 +880,47 @@ void generator::update_object_interactions(v8_interact& i,
                 if (l->IsArray()) {
                   auto a = l.As<v8::Array>();
                   for (size_t m = 0; m < a->Length(); m++) {
-                    auto left = i.get_index(a, m).As<v8::Object>();
+                    auto left_or_right = i.get_index(a, m).As<v8::Object>();
                     // TODO: lambdafy: below is copied from block above.
-                    if (attempt == 1) i.set_field(left, "__dist__", v8::Number::New(isolate, dist));
-                    if (i.has_field(left, "steps")) {
-                      steps = std::max(steps, (int)i.get(left, "steps").As<v8::Number>()->Value());
+                    if (attempt == 1) {
+                      auto use_dist = dist;
+                      auto use_steps = steps;
+                      if (i.has_field(left_or_right, "__dist__")) {
+                        use_dist = std::max(use_dist, i.double_number(left_or_right, "__dist__"));
+                      }
+                      if (i.has_field(left_or_right, "steps")) {
+                        use_steps = std::max(use_steps, (int)i.integer_number(left_or_right, "steps"));
+                      }
+                      auto a = i.integer_number(left_or_right, "unique_id");
+                      recorded_steps[a] = use_steps;
+                      i.set_field(left_or_right, "__dist__", v8::Number::New(isolate, dist));
+                      i.set_field(left_or_right, "steps", v8::Number::New(isolate, use_steps));
+                    } else if (attempt > 1) {
+                      auto a = i.integer_number(left_or_right, "unique_id");
+                      i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
                     }
-                    // Note to self: re-enable debug print, something is fishy
-                    i.set_field(left, "steps", v8::Number::New(isolate, steps));
-                    i.set_field(left, "inherited", v8::Boolean::New(isolate, true));
+                    i.set_field(left_or_right, "inherited", v8::Boolean::New(isolate, true));
                   }
                 } else if (l->IsObject()) {
-                  auto left = l.As<v8::Object>();
-                  if (attempt == 1) i.set_field(left, "__dist__", v8::Number::New(isolate, dist));
-                  if (i.has_field(left, "steps")) {
-                    steps = std::max(steps, (int)i.get(left, "steps").As<v8::Number>()->Value());
+                  auto left_or_right = l.As<v8::Object>();
+                  if (attempt == 1) {
+                    auto use_dist = dist;
+                    auto use_steps = steps;
+                    if (i.has_field(left_or_right, "__dist__")) {
+                      use_dist = std::max(use_dist, i.double_number(left_or_right, "__dist__"));
+                    }
+                    if (i.has_field(left_or_right, "steps")) {
+                      use_steps = std::max(use_steps, (int)i.integer_number(left_or_right, "steps"));
+                    }
+                    auto a = i.integer_number(left_or_right, "unique_id");
+                    recorded_steps[a] = use_steps;
+                    i.set_field(left_or_right, "__dist__", v8::Number::New(isolate, use_dist));
+                    i.set_field(left_or_right, "steps", v8::Number::New(isolate, use_steps));
+                  } else if (attempt > 1) {
+                    auto a = i.integer_number(left_or_right, "unique_id");
+                    i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
                   }
-                  i.set_field(left, "steps", v8::Number::New(isolate, steps));
-                  i.set_field(left, "inherited", v8::Boolean::New(isolate, true));
+                  i.set_field(left_or_right, "inherited", v8::Boolean::New(isolate, true));
                 }
               }
           }
@@ -976,14 +1014,10 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
   i.set_field(instance2, "last_collide", v8::Number::New(isolate, unique_id));
 
   // call 'on collision' event
-  util::generator::monitor_subobj_changes(i, instance, [&]() {
-    auto on = i.get(instance, "on").As<v8::Object>();
-    i.call_fun(on, instance, "collide", instance2);
-  });
-  util::generator::monitor_subobj_changes(i, instance2, [&]() {
-    auto on = i.get(instance2, "on").As<v8::Object>();
-    i.call_fun(on, instance2, "collide", instance);
-  });
+  auto on = i.get(instance, "on").As<v8::Object>();
+  i.call_fun(on, instance, "collide", instance2);
+  auto on2 = i.get(instance2, "on").As<v8::Object>();
+  i.call_fun(on2, instance2, "collide", instance);
 }
 
 inline generator::time_settings generator::get_time() const {
@@ -1020,10 +1054,8 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
   const auto time_settings = get_time();
 
   const auto execute = [&](double scene_time) {
-    util::generator::monitor_subobj_changes(i, instance, [&]() {
-      i.call_fun(
-          instance, "time", scene_time, time_settings.elapsed, scenesettings.current_scene_next, time_settings.time);
-    });
+    i.call_fun(
+        instance, "time", scene_time, time_settings.elapsed, scenesettings.current_scene_next, time_settings.time);
     i.set_field(instance, "__time__", v8::Number::New(i.get_isolate(), scene_time));
     i.set_field(instance, "__global_time__", v8::Number::New(i.get_isolate(), time_settings.time));
     i.set_field(instance, "__elapsed__", v8::Number::New(i.get_isolate(), time_settings.elapsed));
@@ -1041,7 +1073,7 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
 }
 
 int generator::update_steps(double dist) {
-  auto steps = (int)(std::max(1.0, fabs(dist) / (tolerated_granularity)) + 0.5);
+  auto steps = round(std::max(1.0, (fabs(dist) + 0.5) / (tolerated_granularity)));
   if (steps > max_intermediates) {
     steps = max_intermediates;
   }
@@ -1163,7 +1195,7 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto prev_radiussize = i.double_number(previous_instance, "radiussize");
 
   auto rad = radius + radiussize;
-  auto prev_rad = prev_radius + prev_radiussize;
+  // auto prev_rad = prev_radius + prev_radiussize;
 
   // Calculate how many pixels are maximally covered by this instance, this is currently very simplified
   x *= scalesettings.video_scale_next * shape_scale;
@@ -1383,7 +1415,6 @@ void generator::fix(v8_interact& i, v8::Local<v8::Array>& instances) {
   if (true)
     for (size_t j = 0; j < instances->Length(); j++) {
       auto instance = i.get_index(instances, j).As<v8::Object>();
-      auto unique_id = i.integer_number(instance, "unique_id");
       if (!i.has_field(instance, "props")) {
         continue;
       }
@@ -1423,4 +1454,9 @@ void generator::fix(v8_interact& i, v8::Local<v8::Array>& instances) {
         }
       }
     }
+}
+
+v8::Local<v8::Object> generator::spawn_object(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj) {
+  auto& i = genctx.i();
+  return util::generator::instantiate_object_from_scene(i, genctx.objects, genctx.instances_next, obj, &spawner);
 }

@@ -23,10 +23,10 @@ _ = {
       'radiussize': 5.0,
       'angle': 0.,
       'init': function() {
-        this.subobj.push({'id': 'obj1', 'x': -300, 'y': 0, 'z': 0, 'props': {}});
-        this.subobj.push({'id': 'obj1', 'x': 300, 'y': 0, 'z': 0, 'props': {}});
-        this.subobj.push({'id': 'obj1', 'x': 0, 'y': -300, 'z': 0, 'props': {}});
-        this.subobj.push({'id': 'obj1', 'x': 0, 'y': +300, 'z': 0, 'props': {}});
+        this.subobj.push(this.spawn({'id': 'obj1', 'x': -300, 'y': 0, 'z': 0, 'props': {}}));
+        this.subobj.push(this.spawn({'id': 'obj1', 'x': 300, 'y': 0, 'z': 0, 'props': {}}));
+        this.subobj.push(this.spawn({'id': 'obj1', 'x': 0, 'y': -300, 'z': 0, 'props': {}}));
+        this.subobj.push(this.spawn({'id': 'obj1', 'x': 0, 'y': +300, 'z': 0, 'props': {}}));
       },
       'time': function(t, e, scene) {
         switch (scene) {
@@ -53,9 +53,9 @@ _ = {
       'radius': 0,
       'radiussize': 5.0,
       'init': function() {
-        this.subobj.push({'id': 'obj2', 'x': -100, 'y': 0, 'z': 0, 'props': {'maxradius': 100}});
-        this.subobj.push({'id': 'obj2', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 200}});
-        this.subobj.push({'id': 'obj2', 'x': 100, 'y': 0, 'z': 0, 'props': {'maxradius': 300}});
+        this.subobj.push(this.spawn({'id': 'obj2', 'x': -100, 'y': 0, 'z': 0, 'props': {'maxradius': 100}}));
+        this.subobj.push(this.spawn({'id': 'obj2', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 200}}));
+        this.subobj.push(this.spawn({'id': 'obj2', 'x': 100, 'y': 0, 'z': 0, 'props': {'maxradius': 300}}));
       },
       'time': function(t, e, s) {
         switch (s) {

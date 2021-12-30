@@ -19,7 +19,7 @@ _ = {
       'subobj': [],
       'init': function() {
         for (let i = 0; i < 500; i++) {
-          this.subobj.push({'id': 'vlokje', 'props': {}})
+          this.subobj.push(this.spawn({'id': 'vlokje', 'props': {}}));
         }
       },
       'time': function(t, e, scene) {},

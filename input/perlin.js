@@ -66,11 +66,12 @@ _ = {
         for (var i = 0; i < 30; i++) {
           var x = i / 50.;
           var step = expf(x, 10) * 100.;
+          this.subobj.push(this.spawn(
+              {'id': 'ring', 'x': -300, 'y': 150, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}}));
           this.subobj.push(
-              {'id': 'ring', 'x': -300, 'y': 150, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}});
+              this.spawn({'id': 'ring', 'x': -300, 'y': 150, 'x2': 0, 'y2': -300, 'scale': step, 'z': 0, 'props': {}}));
           this.subobj.push(
-              {'id': 'ring', 'x': -300, 'y': 150, 'x2': 0, 'y2': -300, 'scale': step, 'z': 0, 'props': {}});
-          this.subobj.push({'id': 'ring', 'x': 0, 'y': -300, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}});
+              this.spawn({'id': 'ring', 'x': 0, 'y': -300, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}}));
         }
       },
       'time': function(t, elapsed) {},

@@ -84,7 +84,7 @@ _ = {
           }
           this.props.step++;
 
-          this.subobj.push({
+          this.subobj.push(this.spawn({
             'id': i < 25 ? 'red_ball' : 'ball',
             'x': x,
             'y': y,
@@ -92,7 +92,7 @@ _ = {
             'vel_x': 0,
             'vel_y': 0,
             'props': {'grad': i === 0 || i === 3 ? 'red' : 'black'}
-          });
+          }));
         }
       },
       'time': function(t, e) {

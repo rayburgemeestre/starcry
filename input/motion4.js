@@ -79,7 +79,7 @@ _ = {
           }
           this.props.step++;
 
-          this.subobj.push({
+          this.subobj.push(this.spawn({
             'id': 'ball',
             'label': 'ball#' + i,
             'x': x,
@@ -88,7 +88,7 @@ _ = {
             'vel_x': 0,
             'vel_y': 0,
             'props': {'grad': i === 0 || i === 3 ? 'red' : 'white'}
-          });
+          }));
         }
         for (let obj of this.subobj) {
           let [x, y] = random_velocity();
@@ -119,7 +119,8 @@ _ = {
       'subobj': [],
       'on': {
         'collide': function(other) {
-          this.subobj.push({'id': 'tempring', 'label': 'ring_' + this.label, 'x': 0, 'y': 0, 'z': 0, 'props': {}});
+          this.subobj.push(
+              this.spawn({'id': 'tempring', 'label': 'ring_' + this.label, 'x': 0, 'y': 0, 'z': 0, 'props': {}}));
         }
       }
     },

@@ -22,9 +22,9 @@ _ = {
         if (this.props.mode === 'linear') {
           this.x = 1400 * linear;
         } else if (this.props.mode === 'expf') {
-          this.x = 1400 * expf(linear, 50);
+          this.x = 1400 * expf(linear, 50000);
         } else if (this.props.mode === 'logn') {
-          this.x = 1400 * logn(linear, 50);
+          this.x = 1400 * logn(linear, 50000);
         }
         this.x -= 700;
       },
@@ -39,13 +39,14 @@ _ = {
     'rand_seed': 1,
     'granularity': 1,
     'bg_color': {'r': 0, 'g': 0, 'b': 0, 'a': 1},
+    'minimize_steps_per_object': true,  // this guy is interesting to debug!!
   },
   'scenes': [{
     'name': 'scene1',
     'objects': [
-      {'id': 'ball', 'x': -700, 'y': -300, 'z': 0, 'props': {'mode': 'linear'}},
+      //      {'id': 'ball', 'x': -700, 'y': -300, 'z': 0, 'props': {'mode': 'linear'}},
       {'id': 'ball', 'x': -700, 'y': 0, 'z': 0, 'props': {'mode': 'expf'}},
-      {'id': 'ball', 'x': -700, 'y': 300, 'z': 0, 'props': {'mode': 'logn'}},
+      //      {'id': 'ball', 'x': -700, 'y': 300, 'z': 0, 'props': {'mode': 'logn'}},
     ],
   }]
 };

@@ -21,7 +21,7 @@ _ = {
       'init': function() {
         this.props.wave_strength = 0.;
         this.props.x = this.x;
-        this.subobj.push({'id': 'test_ball', 'x': 0, 'y': 0});
+        this.subobj.push(this.spawn({'id': 'test_ball', 'x': 0, 'y': 0}));
       },
       'time': function(time, elapsed) {
         // TODO: hide this complexity (of - 1 and calculating total/current frames) in a more "native" vibe/wave

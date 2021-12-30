@@ -20,7 +20,7 @@ _ = {
       'radius': 0,
       'radiussize': 10.0,
       'init': function() {
-        this.subobj.push({
+        let obj1 = this.spawn({
           'id': 'ball',
           'x': -50,
           'y': 0,
@@ -29,7 +29,7 @@ _ = {
           'vel_x': ((rand() * 2.) - 1.),
           'vel_y': ((rand() * 2.) - 1.)
         });
-        this.subobj.push({
+        let obj2 = this.spawn({
           'id': 'ball',
           'x': 50,
           'y': 0,
@@ -38,21 +38,13 @@ _ = {
           'vel_x': ((rand() * 2.) - 1.),
           'vel_y': ((rand() * 2.) - 1.)
         });
-        this.subobj.push({'id': 'line', 'x': -50, 'y': 0, 'x2': 50, 'y2': 0, 'z': 0});
-      },
-      'init2': function() {
-        if (this.subobj[0].props.left.length == 0) {
-          output(
-              'init2 connecting to first index (' + this.subobj[0].unique_id + ') left (' + this.subobj[2].unique_id +
-              ')');
-          this.subobj[0].props.left.push(this.subobj[2]);
-        }
-        if (this.subobj[1].props.right.length == 0) {
-          output(
-              'init2 connecting to second index (' + this.subobj[1].unique_id + ') right (' + this.subobj[2].unique_id +
-              ')');
-          this.subobj[1].props.right.push(this.subobj[2]);
-        }
+
+        let line = this.spawn({'id': 'line', 'x': -50, 'y': 0, 'x2': 50, 'y2': 0, 'z': 0});
+        obj1.props.left.push(line);
+        obj2.props.right.push(line);
+        this.subobj.push(obj1);
+        this.subobj.push(obj2);
+        this.subobj.push(line);
       },
       'time': function(t) {}
     },
@@ -75,14 +67,6 @@ _ = {
           i.x2 = this.x;
           i.y2 = this.y;
         }
-        // if (this.props.left !== false) {
-        //   this.props.left.x = this.x;
-        //   this.props.left.y = this.y;
-        // }
-        // if (this.props.right !== false) {
-        //   this.props.right.x2 = this.x;
-        //   this.props.right.y2 = this.y;
-        // }
       },
     },
     'line': {
@@ -92,7 +76,9 @@ _ = {
       'radius': 0,
       'radiussize': 2,
       'init': function() {},
-      'time': function(t) {},
+      'time': function(t, e, s, tt) {
+        this.scale = 1. * tt;
+      },
     },
   },
   'video': {
@@ -105,7 +91,6 @@ _ = {
     'granularity': 1,
     'grain_for_opacity': true,
     'dithering': true,
-    'min_intermediates': 2,
     'minimize_steps_per_object': true,  // this guy is interesting to debug!!
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
   },

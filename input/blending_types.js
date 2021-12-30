@@ -67,7 +67,7 @@ _ = {
               }
             }
           }
-          this.subobj.push({
+          this.subobj.push(this.spawn({
             'id': 'rainbow',
             'blending_type': type,
             'x': x,
@@ -77,7 +77,7 @@ _ = {
             'velocity': (rand() * 10.) + 10.,
             'z': 0,
             'props': {}
-          });
+          }));
         }
       },
       'time': function(t, e, scene) {},
@@ -101,11 +101,11 @@ _ = {
       'angle': 0.,
       'subobj': [],
       'init': function() {
-        this.subobj.push({'id': 'text', 'text': blending_type_str(this.blending_type), 'x': 0, 'y': 0});
+        this.subobj.push(this.spawn({'id': 'text', 'text': blending_type_str(this.blending_type), 'x': 0, 'y': 0}));
       },
       'time': function(t, e, scene) {
         if (this.subobj.length === 0) {
-          this.subobj.push({'id': 'text', 'text': blending_type_str(this.blending_type), 'x': 0, 'y': 0});
+          this.subobj.push(this.spawn({'id': 'text', 'text': blending_type_str(this.blending_type), 'x': 0, 'y': 0}));
         }
       },
     },

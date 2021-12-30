@@ -22,7 +22,7 @@ _ = {
       'init': function() {
         let n = 3;
         for (let i = 0; i < n; i++)
-          this.subobj.push({
+          this.subobj.push(this.spawn({
             'id': 'ball',
             'x': 0,
             'y': 0,
@@ -30,44 +30,27 @@ _ = {
             'velocity': rand() * 100.,
             'vel_x': ((rand() * 2.) - 1.),
             'vel_y': ((rand() * 2.) - 1.),
-          });
+          }));
+
         for (let i = 0; i < n; i++) {
           for (let j = 0; j < n; j++) {
-            if (i < j) {
-              let obj1 = this.subobj[i];
-              let obj2 = this.subobj[j];
-              this.subobj.push({
-                'id': 'line',
-                'label': this.__random_hash__,
-                'x': obj1.x,
-                'y': obj1.y,
-                'x2': obj2.x,
-                'y2': obj2.y,
-                'z': 0,
-              });
-            }
+            let o1 = this.subobj[i];
+            let o2 = this.subobj[j];
+            let line = this.spawn({
+              'id': 'line',
+              'x': o1.x,
+              'y': o1.y,
+              'x2': o2.x,
+              'y2': o2.y,
+              'z': 0,
+            });
+            o1.props.left.push(line);
+            o2.props.right.push(line);
+            this.subobj.push(line);
           }
         }
       },
       'time': function(t) {
-        let n = 3;
-        let index = 0;
-        for (let i = 0; i < n; i++) {
-          for (let j = 0; j < n; j++) {
-            if (i < j) {
-              let obj1 = this.subobj[i];
-              let obj2 = this.subobj[j];
-              while (this.subobj[index].id != 'line') index++;
-              this.subobj[index].x = obj1.x;
-              this.subobj[index].y = obj1.y;
-              this.subobj[index].x2 = obj2.x;
-              this.subobj[index].y2 = obj2.y;
-              obj1.props.left = this.subobj[index];
-              obj2.props.right = this.subobj[index];
-              index++;
-            }
-          }
-        }
         this.angle = 360. * t;
       },
     },
@@ -75,26 +58,24 @@ _ = {
       'type': 'circle',
       'opacity': 0,
       'toroidal': 't1',
-      'blending_type': blending_type.add,
+      'blending_type': blending_type.normal,
       'gradient': 'white',
       'radius': 10,
       'radiussize': 10.0,
-      'props': {'left': false, 'right': false},
+      'props': {'left': [], 'right': []},
       'init': function() {
         this.props.seed = rand();
         this.props.vel = this.velocity;
       },
       'time': function(t) {
-        this.label = 'my x was: ' + this.x;
-        if (this.props.left !== false) {
-          this.props.left.x = this.x;
-          this.props.left.y = this.y;
+        for (var i of this.props.left) {
+          i.x = this.x;
+          i.y = this.y;
         }
-        if (this.props.right !== false) {
-          this.props.right.x2 = this.x;
-          this.props.right.y2 = this.y;
+        for (var i of this.props.right) {
+          i.x2 = this.x;
+          i.y2 = this.y;
         }
-        this.velocity = this.props.vel;  // * Math.sin(t * 100 * this.props.seed);
       },
     },
     'line': {
@@ -117,7 +98,6 @@ _ = {
     'granularity': 1,
     'grain_for_opacity': true,
     'dithering': true,
-    //'max_intermediates': 2,
     'minimize_steps_per_object': true,  // this guy is interesting to debug!!
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
   },
@@ -131,11 +111,7 @@ _ = {
   'scenes': [{
     'name': 'scene1',
     'objects': [
-      {'id': 'triangles', 'x': 0, 'y': 0, 'z': 0, 'opacity': 1. / 3., 'scale': 1., 'props': {}},
-      {'id': 'triangles', 'x': 0, 'y': 0, 'z': 0, 'opacity': 1. / 3., 'scale': 1., 'props': {}},
-      {'id': 'triangles', 'x': 0, 'y': 0, 'z': 0, 'opacity': 1. / 3., 'scale': 1., 'props': {}},
-      {'id': 'triangles', 'x': 0, 'y': 0, 'z': 0, 'opacity': 1. / 3., 'scale': 1., 'props': {}},
-      {'id': 'triangles', 'x': 0, 'y': 0, 'z': 0, 'opacity': 1. / 3., 'scale': 1., 'props': {}},
+      {'id': 'triangles', 'x': 0, 'y': 0, 'z': 0, 'opacity': 1., 'scale': 1., 'props': {}},
     ],
   }]
 };
