@@ -226,7 +226,7 @@ _ = {
         }
       },
       'time': function(t, elapsed, scene, global_time) {
-        this.scale = 2.0 + (Math.sin(t * 10) * 2.);
+        this.scale = 1.5 + (Math.sin(t * 10) * 1.5);
         this.angle += elapsed * 100;
         // if (t >= 0 && t <= 1.0) {
         //   script.video.scale = 1.5 + (1.0 - logn(t, 10)) * 10.;

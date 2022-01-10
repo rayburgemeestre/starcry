@@ -79,6 +79,22 @@ public:
     std::vector<metrics::object> objects;
   };
 
+  struct generate_step_stats {
+    enum class status_type {
+      started = 0,
+      ended = 1,
+    } status;
+    int max_steps = 1;
+    int current_step = 0;
+    std::chrono::time_point<std::chrono::high_resolution_clock> attempt_start;
+    std::chrono::time_point<std::chrono::high_resolution_clock> attempt_last;
+    std::chrono::time_point<std::chrono::high_resolution_clock> attempt_end;
+  };
+
+  struct generate_steps_stats {
+    std::unordered_map<int, generate_step_stats> stats_per_attempt;
+  };
+
   struct job {
     int number;
     int frame;
@@ -89,6 +105,7 @@ public:
     bool skipped;
     int thread;
     std::vector<metrics::chunk> chunks;
+    generate_steps_stats generate_steps;
   };
   enum class modes {
     global_mode,
@@ -121,9 +138,11 @@ public:
   void register_thread(int number, std::string desc);
   void register_job(int number, int frame, int chunk, int num_chunks);
   void render_job(int thread_number, int job_number, int chunk);
-  void resize_job(int jbo_number, int num_chunks);
+  void resize_job(int job_number, int num_chunks);
   void resize_job_objects(int number, int job_number, int chunk, int num_objects);
   void set_render_job_object_state(int thread_num, int job_num, int chunk_num, int index, metrics::job_state state);
+  void set_steps(int job_number, int attempt, int max_steps);
+  void update_steps(int job_number, int attempt, int max_steps);
   void complete_render_job(int thread_number, int job_number, int chunk);
   void complete_job(int number);
   void skip_job(int number);

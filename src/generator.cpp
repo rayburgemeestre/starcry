@@ -556,10 +556,19 @@ bool generator::_generate_frame() {
         }
         step_calculator sc(stepper.max_step);
         job->resize_for_num_steps(stepper.max_step);
+        metrics_->set_steps(job->job_number + 1, attempt, stepper.max_step);
 
         stepper.rewind();
         bool detected_too_many_steps = false;
         while (stepper.has_next_step() && !detected_too_many_steps) {
+          // i.get_isolate()->AdjustAmountOfExternalAllocatedMemory(0);
+          v8::HeapStatistics v8_heap_stats;
+          isolate->GetHeapStatistics(&v8_heap_stats);
+          logger(DEBUG) << "heap used: " << v8_heap_stats.used_heap_size()
+                        << ", external: " << v8_heap_stats.external_memory()
+                        << ", adjusted: " << v8::Isolate::GetCurrent()->AdjustAmountOfExternalAllocatedMemory(0)
+                        << std::endl;
+
           qts.clear();
           if (scenesettings.update(get_time().time)) {
             set_scene(scenesettings.current_scene_next + 1);
@@ -575,6 +584,7 @@ bool generator::_generate_frame() {
           scalesettings.update();
           scenesettings.update();
           if (job->shapes.size() != stepper.max_step) detected_too_many_steps = true;
+          metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
         }
         if (!detected_too_many_steps) {                 // didn't bail out with break above
           if (stepper.max_step == max_intermediates) {  // config doesn't allow finer granularity any way, break.
@@ -601,6 +611,8 @@ bool generator::_generate_frame() {
 
       scalesettings.commit();
       scenesettings.commit();
+
+      metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
     });
     if (cache.enabled) {
       cache.job_cache[job->frame_number] = true;

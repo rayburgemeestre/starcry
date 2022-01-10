@@ -287,7 +287,6 @@ void metrics::set_render_job_object_state(
   // TODO: Possibly do not need thread number ????
   if (jobs_.find(job_number) != jobs_.end()) {
     if (chunk > 0) chunk--;
-    if (jobs_.find(job_number) == jobs_.end()) return;
     if (jobs_[job_number].chunks.size() <= chunk) return;
     if (jobs_[job_number].chunks[chunk].objects.size() <= index) return;
     jobs_[job_number].chunks[chunk].objects[index].state = state;
@@ -296,6 +295,34 @@ void metrics::set_render_job_object_state(
     } else {
       jobs_[job_number].chunks[chunk].objects[index].render_end = std::chrono::high_resolution_clock::now();
     }
+  }
+}
+
+void metrics::set_steps(int job_number, int attempt, int max_steps) {
+  std::unique_lock<std::mutex> lock(mut);
+  if (jobs_.find(job_number) != jobs_.end()) {
+    generate_step_stats stats;
+    stats.status = generate_step_stats::status_type::started;
+    stats.attempt_start = std::chrono::high_resolution_clock::now();
+    stats.attempt_last = std::chrono::high_resolution_clock::now();
+    stats.max_steps = max_steps;
+    jobs_[job_number].generate_steps.stats_per_attempt[attempt] = stats;
+  }
+}
+
+void metrics::update_steps(int job_number, int attempt, int next_step) {
+  std::unique_lock<std::mutex> lock(mut);
+  if (jobs_.find(job_number) != jobs_.end()) {
+    auto found_attempt = jobs_[job_number].generate_steps.stats_per_attempt.find(attempt);
+    if (found_attempt == jobs_[job_number].generate_steps.stats_per_attempt.end()) {
+      return;  // prevent crash
+    }
+    auto &stats = found_attempt->second;
+    stats.status = generate_step_stats::status_type::ended;
+
+    stats.attempt_last = stats.attempt_end;
+    stats.attempt_end = std::chrono::high_resolution_clock::now();
+    stats.current_step = next_step;
   }
 }
 
@@ -322,6 +349,15 @@ void metrics::complete_render_job(int thread_number, int job_number, int chunk) 
 void metrics::display(std::function<void(const std::string &)> f1,
                       std::function<void(const std::string &)> f2,
                       std::function<void(int, const std::string &)> f3) {
+  const auto flush = [&](auto &fun, std::stringstream &ss) {
+    std::string item;
+    while (std::getline(ss, item, '\n')) {
+      fun(item);
+    }
+    ss.clear();
+    ss.str("");
+  };
+
   std::unique_lock<std::mutex> lock(mut);
 
   // TODO: make this stuff use the JSON data perhaps?
@@ -379,7 +415,18 @@ void metrics::display(std::function<void(const std::string &)> f1,
     }
     std::stringstream ss;
     switch (s) {
-      case job_state::queued:
+      case job_state::queued: {
+        const auto &attempts = job.generate_steps.stats_per_attempt;
+        ss << "Job: " << job.number << " " << str(s) << " "
+           << "Generating attempt #" << attempts.size() << "\n";
+        for (size_t attempt_num = 1; attempt_num <= attempts.size(); attempt_num++) {
+          const auto &stats = attempts.at(attempt_num);
+          ss << "#" << attempt_num << " Step: " << stats.current_step << "/" << stats.max_steps
+             << " Busy.Time: " << time_diff(stats.attempt_start, stats.attempt_end) << " / "
+             << time_diff(stats.attempt_last, stats.attempt_end) << std::endl;
+        }
+        break;
+      }
       case job_state::skipped:
         ss << "Job: " << job.number << " " << str(s) << " "
            << "Gen.Time: " << time_diff(job.generate_begin, job.generate_end) << " ";
@@ -402,13 +449,9 @@ void metrics::display(std::function<void(const std::string &)> f1,
         for (const auto &chunk : job.chunks) {
           ss << "" << chunk.state;
         }
-        f2(ss.str());
-        ss.clear();
-        ss.str("");
+        flush(f2, ss);
       } else if (mode == modes::frame_mode) {
-        f2(ss.str());
-        ss.clear();
-        ss.str("");
+        flush(f2, ss);
         for (const auto &chunk : job.chunks) {
           ss << " Chunk: " << chunk.chunk << " of " << chunk.num_chunks << " " << str(chunk.state) << " ";
           switch (chunk.state) {
@@ -425,32 +468,26 @@ void metrics::display(std::function<void(const std::string &)> f1,
           for (const auto &obj : chunk.objects) {
             ss << obj.state;
           }
-          f2(ss.str());
-          ss.clear();
-          ss.str("");
+          flush(f2, ss);
         }
-        f2(ss.str());
-        ss.clear();
-        ss.str("");
+        flush(f2, ss);
       }
     } else {
-      f2(ss.str());
-      ss.clear();
-      ss.str("");
+      flush(f2, ss);
     }
   }
   if (program) {
     program->setProgress(completed_frames, max_frames);
   }
 
-  for (auto [level, str] : _output) {
+  for (const auto &[level, str] : _output) {
     f3(level, str);
   }
   _output.clear();
 }
 
 void metrics::clear() {
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock lock{mut};
   jobs_.clear();
 }
 

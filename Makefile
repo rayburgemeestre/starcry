@@ -236,3 +236,11 @@ publish:
 	make dockerize
 	echo docker push rayburgemeestre/starcry:v`cat .version`
 	echo kubectl apply -f kube/starcry.yaml
+
+a:
+	make debug
+	./build/starcry input/linetest2.js # -f 1
+
+b:
+	make build
+	./build/starcry input/greenlines.js --raw
