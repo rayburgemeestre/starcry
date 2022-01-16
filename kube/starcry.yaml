@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
       - name: starcrycontainer
-        image: rayburgemeestre/starcry:v4
+        image: rayburgemeestre/starcry:v5
         command: ["/starcry"]
         #args: ["-i", "--notty"]
         args: ["-i", "-t", "8", "-c", "8", "--caching", "input/perlin3.js"]
