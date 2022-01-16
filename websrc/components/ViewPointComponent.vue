@@ -52,7 +52,8 @@ export default {
     },
     preview_settings: {
       type: Object,
-      required: true
+      required: true,
+      default: {},
     },
   },
   data() {
@@ -72,6 +73,7 @@ export default {
       save: false,
       canvas_w: 0.,
       canvas_h: 0.,
+      page_first_load: true,
     }
   },
   methods: {
@@ -176,9 +178,17 @@ export default {
           this.$data.caching = buffer["caching"];
         },
         _ => {
-          this.viewpoint_endpoint.send(JSON.stringify({
-            'operation': 'read',
-          }));
+          if (this.$data.page_first_load)
+            this.viewpoint_endpoint.send(JSON.stringify({
+              'operation': 'read',
+            }));
+          else
+            this.scheduled_update();
+          this.$data.page_first_load = false;
+          this.$parent.connected_viewpoint = true;
+        },
+        _ => {
+          this.$parent.connected_viewpoint = false;
         });
   }
 }

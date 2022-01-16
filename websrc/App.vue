@@ -135,6 +135,7 @@ export default {
       connected_shapes: false,
       connected_script: false,
       connected_objects: false,
+      connected_viewpoint: false,
       menu: '',
       filename: '',
       current_frame : 0,
@@ -160,7 +161,7 @@ export default {
   },
   computed: {
     connected: function () {
-      let b = this.connected_bitmap && this.connected_objects && this.connected_shapes && this.connected_script;
+      let b = this.connected_bitmap && this.connected_objects && this.connected_shapes && this.connected_script && this.connected_viewpoint;
       if (b) this.toggle_menus();
       return b;
     },
@@ -170,7 +171,8 @@ export default {
       if (this.connected_objects) counter++;
       if (this.connected_shapes) counter++;
       if (this.connected_script) counter++;
-      return (counter / 4) * 100;
+      if (this.connected_viewpoint) counter++;
+      return (counter / 5) * 100;
     }
   },
   components: {
@@ -396,8 +398,8 @@ export default {
             this.log('DEBUG', 'script', 'received buffer', 'buffer size: ' + buffer.length);
             let p = new JsonWithObjectsParser(buffer.substr(buffer.indexOf('{')));
             this.$data.input_source = buffer;
-            this.$data.video = p.parsed()['video'];
-            this.$data.preview = p.parsed()['preview'];
+            this.$data.video = p.parsed()['video'] || {};
+            this.$data.preview = p.parsed()['preview'] || {};
             this.$data.viewpoint_settings.scale = this.$data.video['scale'];
             let total_duration = 0;
             for (let scene of p.parsed()['scenes']) {

@@ -63,11 +63,12 @@ export default {
       if (job.chunks.frame) {
         let total = job.chunks.frame.length;
         let rendered = 0;
-        for (let frame of job.chunks.frame) {
-          if (frame.state === 'RENDERED') {
-            rendered++;
+        if ('frame' in job.chunks)
+          for (let frame of job.chunks.frame) {
+            if (frame.state === 'RENDERED') {
+              rendered++;
+            }
           }
-        }
         return 100 * (rendered / total);
       }
       return 0;

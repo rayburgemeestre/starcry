@@ -37,7 +37,7 @@ generator::generator(std::shared_ptr<metrics>& metrics) : metrics_(metrics) {
 generator* global_generator = nullptr;
 
 v8::Local<v8::Object> spawn_object(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  v8::Isolate* isolate = v8::Isolate::GetCurrent();
+  v8::Isolate* isolate = context->isolate;
   v8::HandleScope scope(isolate);
   v8::Local<v8::Object> obj = args[0]->ToObject(context->context->impl()).ToLocalChecked();
   v8_interact i(obj->GetIsolate());
