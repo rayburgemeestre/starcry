@@ -141,6 +141,7 @@ public:
   void update_time(v8_interact& i, v8::Local<v8::Object>& instance);
   int update_steps(double dist);
   double get_max_travel_of_object(v8_interact& i,
+                                  v8::Local<v8::Array>& next_instances,
                                   v8::Local<v8::Object>& previous_instance,
                                   v8::Local<v8::Object>& instance
 

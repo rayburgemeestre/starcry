@@ -404,7 +404,7 @@ void generator::fast_forward(int frame_of_interest) {
     int backup_min_intermediates = min_intermediates;
     int backup_max_intermediates = max_intermediates;
     min_intermediates = 1;
-    min_intermediates = 1;
+    max_intermediates = 1;
     for (int i = 2; i < frame_of_interest; i++) {
       generate_frame();
       metrics_->skip_job(job->job_number);
@@ -858,7 +858,7 @@ void generator::update_object_interactions(v8_interact& i,
         logger(WARNING) << "Inconsistency, create a lookup table!" << std::endl;
         std::exit(1);
       }
-      double dist = get_max_travel_of_object(i, intermediate_instance, next_instance);
+      double dist = get_max_travel_of_object(i, next_instances, intermediate_instance, next_instance);
       if (dist > max_dist_found) {
         max_dist_found = dist;
       }
@@ -1093,7 +1093,10 @@ int generator::update_steps(double dist) {
   return steps;
 }
 
+// TODO: there is too much logic in this function that is now clearly in the wrong place.
+// This will be refactored soon.
 double generator::get_max_travel_of_object(v8_interact& i,
+                                           v8::Local<v8::Array>& next_instances,
                                            v8::Local<v8::Object>& previous_instance,
                                            v8::Local<v8::Object>& instance) {
   // Update level for all objects
@@ -1108,83 +1111,52 @@ double generator::get_max_travel_of_object(v8_interact& i,
   parents[level] = instance;
   prev_parents[level] = previous_instance;
 
-  const auto calculate = [](v8_interact& i,
-                            v8::Local<v8::Object>& instance,
-                            std::unordered_map<int64_t, v8::Local<v8::Object>>& parents,
-                            int64_t level,
-                            bool is_line) {
-    auto offset_x = static_cast<double>(0);
-    auto offset_y = static_cast<double>(0);
-    auto offset_x2 = static_cast<double>(0);
-    auto offset_y2 = static_cast<double>(0);
+  const auto calculate = [this](v8_interact& i,
+                                v8::Local<v8::Array>& next_instances,
+                                v8::Local<v8::Object>& instance,
+                                std::unordered_map<int64_t, v8::Local<v8::Object>>& parents,
+                                int64_t level,
+                                bool is_line) {
+    auto x = static_cast<double>(0);
+    auto y = static_cast<double>(0);
+    auto x2 = static_cast<double>(0);
+    auto y2 = static_cast<double>(0);
+    double angle = 0;
     double root_x = 0;
     double root_y = 0;
-    std::optional<double> pivot_x;
-    std::optional<double> pivot_y;
-    // TODO: why was this previous_instance on the next line instead of instance
+    double parent_x = 0;
+    double parent_y = 0;
+    // TODO: re-introduce support for pivot?
     // Changed it to instance now..
-    double angle = i.has_field(instance, "angle") ? i.double_number(instance, "angle") : 0.;
-    while (level > 0) {
-      level--;
-      offset_x += i.double_number(parents[level], "x");
-      offset_y += i.double_number(parents[level], "y");
-      if (is_line) {
-        // note, do not assume all parents are lines, use x & y relative
-        if (!std::isnan(i.double_number(parents[level], "x2"))) {
-          offset_x2 += i.double_number(parents[level], "x2");
-        } else {
-          offset_x2 += i.double_number(parents[level], "x");
-        }
-        if (!std::isnan(i.double_number(parents[level], "y2"))) {
-          offset_y2 += i.double_number(parents[level], "y2");
-        } else {
-          offset_y2 += i.double_number(parents[level], "y");
-        }
+
+    for (int current_lvl = 0; current_lvl <= level; current_lvl++) {
+      double current_x = i.double_number(parents[current_lvl], "x");
+      double current_y = i.double_number(parents[current_lvl], "y");
+      double current_angle =
+          i.has_field(parents[current_lvl], "angle") ? i.double_number(parents[current_lvl], "angle") : 0.;
+
+      // absolute totals for x,y
+      x += current_x;
+      y += current_y;
+      angle += current_angle;
+
+      if (angle != 0.) {
+        // current angle + angle with parent
+        auto angle1 = angle + get_angle(parent_x, parent_y, x, y);
+        while (angle1 > 360.) angle1 -= 360.;
+        auto rads = angle1 * M_PI / 180.0;
+        auto ratio = 1.0;
+        auto dist = get_distance(0, 0, current_x, current_y);
+        auto move = dist * ratio * -1;
+        x = parent_x + (cos(rads) * move);
+        y = parent_y + (sin(rads) * move);
+        // TODO: re-introduce support for lines x2, y2.
       }
-      auto a = i.double_number(parents[level], "angle");
-      if (!std::isnan(a)) angle += a;
-      // Quick and dirty way to skip objects
-      if (i.double_number(parents[level], "opacity") > 0) {
-        root_x = i.double_number(parents[level], "x");
-        root_y = i.double_number(parents[level], "y");
-        if (i.boolean(parents[level], "pivot")) {
-          pivot_x = std::make_optional<double>(root_x);
-          pivot_y = std::make_optional<double>(root_y);
-        }
-      }
+      parent_x = x;
+      parent_y = y;
     }
 
-    if (pivot_x && pivot_y) {
-      offset_x = *pivot_x;
-      offset_y = *pivot_y;
-    }
-
-    // calc x and y now
-    auto x = offset_x + i.double_number(instance, "x");
-    auto y = offset_y + i.double_number(instance, "y");
-    auto x2 = is_line ? offset_x2 + i.double_number(instance, "x2") : 0.0;
-    auto y2 = is_line ? offset_y2 + i.double_number(instance, "y2") : 0.0;
-
-    // handle angle
-    if (angle != 0.) {
-      auto angle1 = angle + get_angle(root_x, root_y, x, y);
-      while (angle1 > 360.) angle1 -= 360.;
-      auto rads = angle1 * M_PI / 180.0;
-      auto ratio = 1.0;
-      auto dist = get_distance(root_x, root_y, x, y);
-      auto move = dist * ratio * -1;
-      x = root_x + (cos(rads) * move);
-      y = root_y + (sin(rads) * move);
-
-      auto angle2 = angle + get_angle(root_x, root_y, x2, y2);
-      while (angle2 > 360.) angle2 -= 360.;
-      rads = angle2 * M_PI / 180.0;
-      dist = get_distance(root_x, root_y, x2, y2);
-      move = dist * ratio * -1;
-      x2 = root_x + (cos(rads) * move);
-      y2 = root_y + (sin(rads) * move);
-    }
-
+    // store transitive x & y etc.
     i.set_field(instance, "transitive_x", v8::Number::New(i.get_isolate(), x));
     i.set_field(instance, "transitive_y", v8::Number::New(i.get_isolate(), y));
     if (is_line) {
@@ -1192,13 +1164,58 @@ double generator::get_max_travel_of_object(v8_interact& i,
       i.set_field(instance, "transitive_y2", v8::Number::New(i.get_isolate(), y2));
     }
 
-    return std::make_tuple(x, y, x2, y2, offset_x, offset_y, offset_x2, offset_y2, angle);
+    // pass along x, y, x2, y2.
+    if (i.has_field(instance, "props")) {
+      const auto process_obj = [&i, &next_instances, &x, &y, this](v8::Local<v8::Object>& o,
+                                                                   const std::string& inherit_x,
+                                                                   const std::string& inherit_y) {
+        const auto unique_id = i.integer_number(o, "unique_id");
+        const auto find = next_instance_mapping.find(unique_id);
+        if (find != next_instance_mapping.end()) {
+          const auto instance_index = find->second;
+          auto other_val = i.get_index(next_instances, instance_index);
+          if (other_val->IsObject()) {
+            auto other = other_val.As<v8::Object>();
+            i.set_field(other, inherit_x, v8::Number::New(i.get_isolate(), x));
+            i.set_field(other, inherit_y, v8::Number::New(i.get_isolate(), y));
+          }
+        }
+      };
+      const auto process = [&i, &process_obj](const v8::Local<v8::Value>& field_value,
+                                              const std::string& inherit_x,
+                                              const std::string& inherit_y) {
+        if (field_value->IsArray()) {
+          auto a = field_value.As<v8::Array>();
+          for (size_t l = 0; l < a->Length(); l++) {
+            auto o = i.get_index(a, l).As<v8::Object>();
+            process_obj(o, inherit_x, inherit_y);
+          }
+        } else if (field_value->IsObject()) {
+          auto o = field_value.As<v8::Object>();
+          process_obj(o, inherit_x, inherit_y);
+        }
+      };
+      auto props = i.v8_obj(instance, "props");
+      auto obj_fields = i.prop_names(props);
+      for (size_t k = 0; k < obj_fields->Length(); k++) {
+        auto field_name = i.get_index(obj_fields, k);
+        auto field_value = i.get(props, field_name);
+        if (!field_value->IsObject()) continue;
+        auto str = i.str(obj_fields, k);
+        if (str == "left") {
+          process(field_value, "inherited_x", "inherited_y");
+        } else if (str == "right") {
+          process(field_value, "inherited_x2", "inherited_y2");
+        }
+      }
+    }
+
+    return std::make_tuple(x, y, x2, y2);
   };
 
-  auto [x, y, x2, y2, offset_x, offset_y, offset_x2, offset_y2, angle] =
-      calculate(i, instance, parents, level, is_line);
-  auto [prev_x, prev_y, prev_x2, prev_y2, prev_offset_x, prev_offset_y, prev_offset_x2, prev_offset_y2, prev_angle] =
-      calculate(i, previous_instance, prev_parents, level, is_line);
+  auto [x, y, x2, y2] = calculate(i, next_instances, instance, parents, level, is_line);
+  auto [prev_x, prev_y, prev_x2, prev_y2] =
+      calculate(i, next_instances, previous_instance, prev_parents, level, is_line);
 
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
@@ -1302,6 +1319,17 @@ void generator::convert_object_to_render_job(
   auto transitive_y = i.double_number(instance, "transitive_y");
   auto transitive_x2 = is_line ? i.double_number(instance, "transitive_x2") : 0.0;
   auto transitive_y2 = is_line ? i.double_number(instance, "transitive_y2") : 0.0;
+
+  auto inherited_x = i.has_field(instance, "inherited_x") ? i.double_number(instance, "inherited_x") : 0.;
+  auto inherited_y = i.has_field(instance, "inherited_y") ? i.double_number(instance, "inherited_y") : 0.;
+  auto inherited_x2 = i.has_field(instance, "inherited_x2") ? i.double_number(instance, "inherited_x2") : 0.;
+  auto inherited_y2 = i.has_field(instance, "inherited_y2") ? i.double_number(instance, "inherited_y2") : 0.;
+
+  if (inherited_x) transitive_x = inherited_x;
+  if (inherited_y) transitive_y = inherited_y;
+  if (inherited_x2) transitive_x2 = inherited_x2;
+  if (inherited_y2) transitive_y2 = inherited_y2;
+
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
   auto seed = i.double_number(instance, "seed");

@@ -5,18 +5,10 @@ _ = {
       {'position': 0.9, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
       {'position': 1.0, 'r': 1, 'g': 1, 'b': 1, 'a': 0},
     ],
-    'green': [
-      {'position': 0.0, 'r': 0, 'g': 255, 'b': 0, 'a': 1},
-      {'position': 1.0, 'r': 0, 'g': 255, 'b': 0, 'a': 0},
-      // {'position': 0.0, 'r': 82, 'g': 255, 'b': 101, 'a': 1},
-      // {'position': 1.0, 'r': 82, 'g': 255, 'b': 101, 'a': 0},
+    'blue': [
+      {'position': 0.0, 'r': 0, 'g': 0, 'b': 1, 'a': 1},
+      {'position': 1.0, 'r': 0, 'g': 0, 'b': 1, 'a': 0},
     ],
-  },
-  'toroidal': {
-    't1': {
-      'width': 1920,
-      'height': 1080,
-    }
   },
   'objects': {
     'mother': {
@@ -35,26 +27,24 @@ _ = {
           'z': 0,
         }));
       },
-      'time': function(t, e, s, tt) {
-        var total_frames = script.video.duration * 25.;
-        var current_frame = total_frames * t;
-        // this.scale = 2 + triangular_wave(current_frame, 1., 0.5) * 0.10;
-      },
+      'time': function(t, e, s, tt) {},
     },
     'ball': {
       'type': 'circle',
-      'opacity': 0,
-      'blending_type': blending_type.normal,
-      'gradient': 'white',
+      'opacity': 1,
+      'blending_type': blending_type.add,
+      'gradient': 'blue',
       'radius': 10.,
       'pivot': true,
-      'radiussize': 10.0,
+      'radiussize': 2.0,
       'props': {'level': 0, 'left': [], 'right': []},
       'init': function() {
-        if (this.props.level > 3) {
+        if (this.props.level > 2) {
           return;
         }
-        let n = 12;  // Math.round(rand() * 10);
+        let n = 5;
+        let first = false;
+        let prev = false;
         for (var a = 0; a < n; a++) {
           var angle = a * 360 / n;
           if (this.angle) angle += this.angle;
@@ -68,34 +58,52 @@ _ = {
           let opac = 0.25 * (this.level - 1);
           if (opac > 1.) opac = 1.;
           if (opac < 0.) opac = 0.;
+          // opac = 1.;// hack
           let sub = this.spawn({
             'id': 'ball',
             'props': {'level': this.props.level + 1},
             //'opacity': opac,
             // 'angle': angle,
             // 'scale': 1.0 / this.props.level,
+            // 'radius': this.props.level,
             'x': new_x,
             'y': new_y,
             'z': 0,
           });
 
+          if (prev) {
+            let line = this.spawn({
+              'id': 'line',
+              // 'scale': 1.0 / this.props.level,
+              // 'opacity': opac * 0.5,
+              'x': prev.x,
+              'y': prev.y,
+              'x2': new_x,
+              'y2': new_y,
+              'z': 0,
+            });
+            sub.props.left.push(line);
+            prev.props.right.push(line);
+            this.subobj.push(line);
+          }
+
+          this.subobj.push(sub);
+          if (!first) first = sub;
+          prev = sub;
+        }
+        if (first && prev) {
           let line = this.spawn({
             'id': 'line',
             // 'scale': 1.0 / this.props.level,
             // 'opacity': opac * 0.5,
-            'x': 0,
-            'y': 0,
-            'x2': new_x,
-            'y2': new_y,
+            'x': first.x,
+            'y': first.y,
+            'x2': prev.x,
+            'y2': prev.y,
             'z': 0,
           });
-
-          if (true) {
-            sub.props.right.push(line);
-            this.props.left.push(line);
-          }
-
-          this.subobj.push(sub);
+          first.props.left.push(line);
+          prev.props.right.push(line);
           this.subobj.push(line);
         }
       },
@@ -108,16 +116,20 @@ _ = {
         // this.angle = 360. * (t * this.props.level);
         // third try
         // this.angle = 360 * ((t * this.props.level) / 5.);
-        this.angle = (360 * t * this.props.level) / 5.;
+        // this.angle = 360 - ((360 * t * this.props.level) / 5.);
 
-        // for (var i of this.props.left) {
-        //   i.x = this.x;
-        //   i.y = this.y;
-        // }
-        // for (var i of this.props.right) {
-        //   i.x2 = this.x;
-        //   i.y2 = this.y;
-        // }
+        var total_frames = script.video.duration * 25.;
+        var current_frame = total_frames * t;
+        this.radius = triangular_wave(current_frame, 1., 100) * 50. * this.props.level;
+        if (this.radius < 10) this.radius = 10.;
+        if (this.radius > 10) {
+          let f = this.radius - 10;  // f = number between zero and 40
+          f /= 40;                   // f = number between zero and one
+          f = 1.0 - f;               // inverted, 1.0 for radius 10,
+          this.opacity = expf(f, 100);
+        } else {
+          this.opacity = 1;
+        }
       },
     },
     'line': {
@@ -127,7 +139,7 @@ _ = {
       'radius': 0,
       //'opacity': 0.5,  // / 3.,
       'opacity': 0.5,  // / 3.,
-      'radiussize': 2,
+      'radiussize': 3,
       'init': function() {},
       'time': function(t) {},
     },
@@ -140,12 +152,14 @@ _ = {
     'scale': 0.8,
     'rand_seed': 23,
     'granularity': 1,
-    'grain_for_opacity': false,
+    'grain_for_opacity': true,
     'dithering': true,
-    'min_intermediates': 2,
+    'min_intermediates': 50,
+    //'min_intermediates': 2,
     //'max_intermediates': 2,
     'minimize_steps_per_object': false,  // this guy is interesting to debug!!
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
+    'fast_ff': true,
   },
   'preview': {
     'motion_blur': false,
