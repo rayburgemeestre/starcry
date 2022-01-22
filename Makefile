@@ -160,8 +160,9 @@ core_gcc_:
 
 core_debug:  ## execute build steps for building starcry binary with debug
 	pushd build && \
-	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DDEBUG=on .. && \
+	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on .. && \
 	time make VERBOSE=1 -j $$(nproc) starcry
+	ln -fs $$PWD/build/compile_commands.json $$PWD/compile_commands.json
 
 core_debug_sanit:  ## execute build steps for building starcry binary with address sanitizer and debug
 	pushd build && \

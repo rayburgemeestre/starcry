@@ -26,5 +26,7 @@ public:
   generator_context();
   generator_context(v8::Isolate* isolate, v8::Local<v8::Value> script_value, size_t current_scene_idx);
 
+  void set_scene(size_t current_scene_idx);
+
   v8_interact& i() const;
 };

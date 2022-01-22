@@ -43,13 +43,13 @@ public:
 public:
   line(double x, double y, double x2, double y2, double size = 1) : x(x), y(y), x2(x2), y2(y2), size(size) {}
 
-  line(coord a, coord b, double size = 1) : x(a.x), y(a.y), x2(b.x), y2(b.y), size(size) {}
+  line(data::coord a, data::coord b, double size = 1) : x(a.x), y(a.y), x2(b.x), y2(b.y), size(size) {}
 
-  coord from() {
-    return coord(x, y);
+  data::coord from() {
+    return data::coord(x, y);
   }
-  coord to() {
-    return coord(x2, y2);
+  data::coord to() {
+    return data::coord(x2, y2);
   }
   bool vertical() const {
     return x == x2;
@@ -57,8 +57,8 @@ public:
   bool horizontal() const {
     return y == y2;
   }
-  coord center() const {
-    return coord(((x - x2) / 2) + x2, ((y - y2) / 2) + y2);
+  data::coord center() const {
+    return data::coord(((x - x2) / 2) + x2, ((y - y2) / 2) + y2);
   }
 
   double slope() const {
@@ -104,19 +104,19 @@ inline auto constexpr squared_dist(T &&num, T2 &&num2) {
 }
 
 // new replacements
-inline coord move_plus(coord c, double angle, double rotate, double move) {
+inline data::coord move_plus(data::coord c, double angle, double rotate, double move) {
   double tmpAngle = angle + rotate;  // go left...
   if (tmpAngle > 360.0) tmpAngle -= 360.0;
   double rads = tmpAngle * pi / 180;
-  return coord(c.x + move * cos(rads), c.y + move * sin(rads));
+  return data::coord(c.x + move * cos(rads), c.y + move * sin(rads));
 }
-inline coord move_minus(coord c, double angle, double rotate, double move) {
+inline data::coord move_minus(data::coord c, double angle, double rotate, double move) {
   double tmpAngle = angle + rotate;  // go left...
   if (tmpAngle < 0.0) tmpAngle += 360.0;
   double rads = tmpAngle * pi / 180;
-  return coord(c.x + move * cos(rads), c.y + move * sin(rads));
+  return data::coord(c.x + move * cos(rads), c.y + move * sin(rads));
 }
-inline coord move(coord c, double angle, double rotate, double move) {
+inline data::coord move(data::coord c, double angle, double rotate, double move) {
   if (rotate >= 0) {
     return move_plus(c, angle, rotate, move);
   } else {
@@ -147,7 +147,7 @@ public:
    *   - Calculating which pixels to do the calculation for requires computing and to avoid some calculations we
    *     process only a quarter of the circle and derive the other three quarters from it.
    *
-   *   - As Circles can be positioned on non-integer coordinates we cannot always re-use the distance calculation
+   *   - As Circles can be positioned on non-integer data::coordinates we cannot always re-use the distance calculation
    *     for the three other quarters, as there can be subtle differences.
    *     In case the floating point values contain integers the optimization will be used (reuse_sqrt=true).
    *
@@ -430,14 +430,10 @@ public:
      */
     // three extra surrounding pixels so we make up for rounding errors and in a diagonal direction
     double radiussizeplusextra = aline.size + 3;
-    coord a = move(aline.from(), aline.angle(), 90, radiussizeplusextra);
-    coord d = move(aline.from(), aline.angle(), -90, radiussizeplusextra);
-    coord b = move(aline.to(), aline.angle(), 90, radiussizeplusextra);
-    coord c = move(aline.to(), aline.angle(), -90, radiussizeplusextra);
-    a = move(a, line(a, aline.from(), 1).angle(), -90, radiussizeplusextra);
-    d = move(d, line(d, aline.from(), 1).angle(), 90, radiussizeplusextra);
-    b = move(b, line(b, aline.to(), 1).angle(), 90, radiussizeplusextra);
-    c = move(c, line(c, aline.to(), 1).angle(), 90, radiussizeplusextra);
+    data::coord a = move(aline.from(), aline.angle(), 90, radiussizeplusextra);
+    data::coord d = move(aline.from(), aline.angle(), 270, radiussizeplusextra);
+    data::coord b = move(aline.to(), aline.angle(), 90, radiussizeplusextra);
+    data::coord c = move(aline.to(), aline.angle(), 270, radiussizeplusextra);
     line A(a, b), B(b, c), C(c, d), D(d, a);
 
     double top_y = std::min({a.y, b.y, c.y, d.y});
@@ -448,7 +444,7 @@ public:
     if (bottom_y > height_) bottom_y = height_;
 
     for (int current_y = top_y; current_y <= bottom_y; current_y += 1) {
-      // http://www.mathopenref.com/coordintersection.html "When one line is vertical"
+      // http://www.mathopenref.com/data::coordintersection.html "When one line is vertical"
       double current_x = 0;
       double intersection_x1 = 0;
       double intersection_x2 = 0;
@@ -506,15 +502,15 @@ public:
             intersect_x = aline.center().x;
             intersect_y = current_y;
           } else {
-            coord tmp1 = move(coord(x, current_y), aline.angle(), 90, aline.size);
-            coord tmp2 = move(coord(x, current_y), aline.angle(), 90 + 180, aline.size);
+            data::coord tmp1 = move(data::coord(x, current_y), aline.angle(), 90, aline.size);
+            data::coord tmp2 = move(data::coord(x, current_y), aline.angle(), 90 + 180, aline.size);
 
             // It doesn't matter this if this line doesn't cross the center line from all places,
             //  because we handle it like an infinite line (no begin or ending). we just use slope + intersect.
             // Edit: nonetheless the line is now extended in such a way it always does..
             line tmp(tmp1, tmp2);
 
-            // I solved the equation by example from http://www.mathopenref.com/coordintersection.html
+            // I solved the equation by example from http://www.mathopenref.com/data::coordintersection.html
 
             // Cannot calculate intersection if x == x2. No need for it either.
             // The angle probably was 0.0000001 or something, hence the if-statement
@@ -605,12 +601,17 @@ public:
     //      auto logn = (maxpow - (pow(2.0, (1.0 - linear) * maxexp))) / max;
     //      return logn;
     //    };
-    double num = 1.0 - (1.0 - expf(normalized_dist_from_center, 1000)) * (1.0 - normalized_dist_from_line);
+
+    // line mode 1
+    // double num = 1.0 - (1.0 - expf(normalized_dist_from_center, 1000)) * (1.0 - normalized_dist_from_line);
+    // double num = 1.0 - (1.0 - expf(normalized_dist_from_center, 1)) * (1.0 - normalized_dist_from_line);
+    double num = 1.0 - (1.0 - normalized_dist_from_center) * (1.0 - normalized_dist_from_line);
+
     // line mode 2
     // double num = 1.0 - (1.0 - normalized_dist_from_line);
     // num = 1.0 - num; // just to get it to look like it supposed to a bit right now
-    // LColor color = ptrGradient->getColor( num );
 
+    // LColor color = ptrGradient->getColor( num );
     // al_put_pixel(absX, absY, al_map_rgba_f(0, 0, (1.0 /*- test*/) * num, 0));
     // auto bg = al_get_pixel(al_get_target_bitmap(), absX, absY);
     // auto &bg = bmp.get(absX, absY);

@@ -5,6 +5,8 @@
  */
 #pragma once
 
+namespace data {
+
 class coord {
 public:
   double x = 0;
@@ -14,3 +16,5 @@ public:
 
   coord(double x, double y) : x(x), y(y) {}
 };
+
+}  // namespace data

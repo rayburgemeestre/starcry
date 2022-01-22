@@ -59,14 +59,14 @@ _ = {
       'props': {'left': [], 'right': []},
       'init': function() {},
       'time': function(t) {
-        for (var i of this.props.left) {
-          i.x = this.x;
-          i.y = this.y;
-        }
-        for (var i of this.props.right) {
-          i.x2 = this.x;
-          i.y2 = this.y;
-        }
+        // for (var i of this.props.left) {
+        //   i.x = this.x;
+        //   i.y = this.y;
+        // }
+        // for (var i of this.props.right) {
+        //   i.x2 = this.x;
+        //   i.y2 = this.y;
+        // }
       },
     },
     'line': {
@@ -77,7 +77,7 @@ _ = {
       'radiussize': 2,
       'init': function() {},
       'time': function(t, e, s, tt) {
-        this.scale = 1. * tt;
+        // this.scale = 1. * tt;
       },
     },
   },

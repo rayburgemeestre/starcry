@@ -20,6 +20,7 @@
 #include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
 
+#include "data/coord.hpp"
 #include "data/texture.hpp"
 #include "shapes/circle.h"
 #include "shapes/position.h"
@@ -355,6 +356,7 @@ void generator::init_toroidals() {
 void generator::init_object_instances() {
   // This function is called whenever a scene is set. (once per scene)
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+    genctx.set_scene(scenesettings.current_scene_next);
     auto& i = genctx.i();
 
     // whenever we switch to a new scene, we'll copy all the object state from the previous scene
@@ -1129,28 +1131,71 @@ double generator::get_max_travel_of_object(v8_interact& i,
     // TODO: re-introduce support for pivot?
     // Changed it to instance now..
 
+    //    data::coord pos;     // X, Y
+    //    data::coord pos2;    // for lines there is an X2, Y2.
+    //    data::coord parent;  // X, Y of parent
+    //    data::coord parent2; // X2, Y2 of parent
+    //    data::coord parent3; // centered X,Y of parent (i.o.w., middle of the line for lines)
+
+    // for each level 0, 1, 2, 3, etc.
+    //
     for (int current_lvl = 0; current_lvl <= level; current_lvl++) {
       double current_x = i.double_number(parents[current_lvl], "x");
       double current_y = i.double_number(parents[current_lvl], "y");
+      double current_x2 = 0;
+      double current_y2 = 0;
       double current_angle =
           i.has_field(parents[current_lvl], "angle") ? i.double_number(parents[current_lvl], "angle") : 0.;
 
+      auto _type = i.str(parents[current_lvl], "type");
+      auto _is_line = _type == "line";
+      // experimental
+      double center_x = 0;
+      double center_y = 0;
+      if (_is_line) {
+        current_x2 = i.double_number(parents[current_lvl], "x2");
+        current_y2 = i.double_number(parents[current_lvl], "y2");
+        center_x = ((current_x - current_x2) / 2) + current_x2;
+        center_y = ((current_y - current_y2) / 2) + current_y2;
+        x += center_x;
+        y += center_y;
+        // TODO x2, y2, etc., probleem ivm is_line vs _is_line..
+        // nieuw concept introduceren.. parent_x / y ofzo.
+      } else {
+        // absolute totals for x,y
+        x += current_x;
+        y += current_y;
+      }
+
       // absolute totals for x,y
-      x += current_x;
-      y += current_y;
       angle += current_angle;
 
       if (angle != 0.) {
-        // current angle + angle with parent
-        auto angle1 = angle + get_angle(parent_x, parent_y, x, y);
-        while (angle1 > 360.) angle1 -= 360.;
-        auto rads = angle1 * M_PI / 180.0;
-        auto ratio = 1.0;
-        auto dist = get_distance(0, 0, current_x, current_y);
-        auto move = dist * ratio * -1;
-        x = parent_x + (cos(rads) * move);
-        y = parent_y + (sin(rads) * move);
-        // TODO: re-introduce support for lines x2, y2.
+        if (_is_line) {
+          // current angle + angle with parent
+          auto angle1 = angle + get_angle(parent_x, parent_y, x, y);
+          while (angle1 > 360.) angle1 -= 360.;
+          auto rads = angle1 * M_PI / 180.0;
+          auto ratio = 1.0;
+          auto dist = get_distance(center_x, center_y, current_x, current_y);
+          auto move = dist * ratio * -1;
+          x = parent_x + (cos(rads) * move) + center_x;
+          y = parent_y + (sin(rads) * move) + center_y;
+          x2 = parent_x - (cos(rads) * move) + center_x;
+          y2 = parent_y - (sin(rads) * move) + center_y;
+          // TODO: re-introduce support for lines x2, y2.
+        } else {
+          // current angle + angle with parent
+          auto angle1 = angle + get_angle(parent_x, parent_y, x, y);
+          while (angle1 > 360.) angle1 -= 360.;
+          auto rads = angle1 * M_PI / 180.0;
+          auto ratio = 1.0;
+          auto dist = get_distance(0, 0, current_x, current_y);
+          auto move = dist * ratio * -1;
+          x = parent_x + (cos(rads) * move);
+          y = parent_y + (sin(rads) * move);
+          // TODO: re-introduce support for lines x2, y2.
+        }
       }
       parent_x = x;
       parent_y = y;

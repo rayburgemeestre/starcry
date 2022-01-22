@@ -9,8 +9,8 @@
 
 class bounding_box {
 public:
-  coord top_left;
-  coord bottom_right;
+  data::coord top_left;
+  data::coord bottom_right;
   bool initialized;
 
   bounding_box()
