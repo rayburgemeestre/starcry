@@ -15,6 +15,11 @@ public:
   coord() = default;
 
   coord(double x, double y) : x(x), y(y) {}
+
+  void add(const coord& other) {
+    x += other.x;
+    y += other.y;
+  }
 };
 
 }  // namespace data

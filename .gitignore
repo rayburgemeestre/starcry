@@ -24,3 +24,4 @@ webroot/main.js*
 webroot/main.css
 webroot/stream/*
 .emscripten_cache
+.ccache

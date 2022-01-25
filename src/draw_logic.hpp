@@ -609,7 +609,7 @@ public:
 
     // line mode 2
     // double num = 1.0 - (1.0 - normalized_dist_from_line);
-    // num = 1.0 - num; // just to get it to look like it supposed to a bit right now
+    // num = 1.0 - num;  // just to get it to look like it supposed to a bit right now
 
     // LColor color = ptrGradient->getColor( num );
     // al_put_pixel(absX, absY, al_map_rgba_f(0, 0, (1.0 /*- test*/) * num, 0));
