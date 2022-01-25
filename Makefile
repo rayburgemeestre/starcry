@@ -7,11 +7,11 @@ ccache_enabled = [[ -f '/usr/bin/ccache' ]]
 ccache_env = CXX='ccache g++' CC='ccache gcc' CCACHE_SLOPPINESS=file_macro,locale,time_macros
 
 docker_run = docker run -it --init --rm \
-						-e _UID=$(uid) -e _GID=$(gid) \
-                        -v $$PWD:$$PWD \
-			            -v $$PWD/.ccache:/tmp/.ccache \
-						-v $$PWD/.emscripten_cache:/tmp/.emscripten_cache \
-                        -w $$PWD rayburgemeestre/build-starcry-ubuntu:20.04
+	    	    	    -e _UID=$(uid) -e _GID=$(gid) \
+	                    -v $$PWD:$$PWD \
+	    	            -v $$PWD/.ccache:/tmp/.ccache \
+	    	    	    -v $$PWD/.emscripten_cache:/tmp/.emscripten_cache \
+	                    -w $$PWD rayburgemeestre/build-starcry-ubuntu:20.04
 
 inside_docker_container = [[ -f /.dockerenv ]]
 
@@ -45,35 +45,35 @@ build-gcc:  ## build starcry binary using docker (with gcc)
 
 client:  ## build webassembly javascript file using docker
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind \
-		                -o webroot/client.js src/client.cpp src/stb.cpp \
-						-I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
-						-s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0)
+	                    -o webroot/client.js src/client.cpp src/stb.cpp \
+	    	    	    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
+	    	    	    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0)
 
 client_desktop:  ## build webassembly client for desktop for testing purposes
 	# TODO: seems broken
 	@$(call make-clang, c++ -DSC_CLIENT -O3 -o client_desktop src/client.cpp \
-		                -I src -I./libs/cereal/include -I./libs/perlin_noise/ -I/usr/include/SDL2 -lSDL2)
+	                    -I src -I./libs/cereal/include -I./libs/perlin_noise/ -I/usr/include/SDL2 -lSDL2)
 
 client_debug:  ## build webassembly javascript file using docker with debug
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 -g --bind \
-		                -o webroot/client.js src/client.cpp src/stb.cpp \
-						-I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
-						-s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1)
+	                    -o webroot/client.js src/client.cpp src/stb.cpp \
+	    	    	    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
+	    	    	    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1)
 
 debug:  ## build starcry binary using docker with debug
 	make debug-clean
 	@$(call make-clang, pushd build && CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) \
-		                cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on ..)
+	                    cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on ..)
 	@$(call make-clang, pushd build && make VERBOSE=1 -j $$(nproc) starcry)
 	@$(call make-clang, pushd build && ln -fs $$PWD/build/compile_commands.json $$PWD/compile_commands.json)
 
 debug-sanitizer:  ## build starcry binary using docker with debug + address sanitizer
 	make debug-clean
 	@$(call make-clang, pushd build && ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
-		                               CXX=$$(which c++) cmake -DSANITIZER=1 -DDEBUG=on .. \
-		                cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on ..)
+	                                   CXX=$$(which c++) cmake -DSANITIZER=1 -DDEBUG=on .. \
+	                    cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on ..)
 	@$(call make-clang, pushd build && ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
-		                make VERBOSE=1 -j $$(nproc) starcry)
+	                    make VERBOSE=1 -j $$(nproc) starcry)
 	@$(call make-clang, pushd build && ln -fs $$PWD/build/compile_commands.json $$PWD/compile_commands.json)
 
 debug-clean:
@@ -136,12 +136,12 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 
 	cd out && docker build . -t rayburgemeestre/starcry:v`cat ../.version`
 	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then \
-		echo "$$DOCKER_PASSWORD" | docker login -u "$$DOCKER_USERNAME" --password-stdin; \
-		docker push rayburgemeestre/starcry:v`cat .version`; \
+	    echo "$$DOCKER_PASSWORD" | docker login -u "$$DOCKER_USERNAME" --password-stdin; \
+	    docker push rayburgemeestre/starcry:v`cat .version`; \
 	else \
 	    echo not executing docker push rayburgemeestre/starcry:v`cat .version`; \
 	fi
-    # quick test
+	# quick test
 	docker run -it rayburgemeestre/starcry:v`cat .version` /starcry --help || true
 
 build_web:  ## build web static files
