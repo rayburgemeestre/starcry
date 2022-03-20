@@ -96,14 +96,14 @@ _ = {
       'blending_type': blending_type.pinlight,
       'angle': script.video.mode === 1 ? 1 : 0,
       'props': {
-        'parent': false,
+        'parent_radius': false,  // create pivot , set to true, and then all will have this.pivot()
         'extra_radius': 0,
         'scale': 1.0,
       },
       'scale': 1.0,
       'init': function() {
-        if (this.props.parent === false) {
-          this.props.parent = this;
+        if (this.props.parent_radius === false) {
+          this.props.parent_radius = this.radius;
         }
       },
       'time': function(time, elapsed, scene, global_time) {
@@ -119,12 +119,12 @@ _ = {
             // keep somehow the parent radius...
             // // anyway going to render a nice vid anyway
             'x': script.video.mode === 1 ?
-                (this.props.scale * this.props.parent.radius) - (this.props.scale * child_radius) :
+                (this.props.scale * this.props.parent_radius) - (this.props.scale * child_radius) :
                 0,
             'y': 0,
             'radius': child_radius,
             'scale': script.video.mode === 1 ? this.scale : 1.0,
-            'props': this.props,
+            'props': {'parent_radius': this.props.parent_radius},
 
             // cool with #1,2,3
             //'angle': script.video.mode === 1 ? 5 : 0,
@@ -154,7 +154,7 @@ _ = {
           case 1:
             this.radius += elapsed * 100;
             if (this.level > 1 && script.video.mode === 1)
-              this.x = (this.props.scale * this.props.parent.radius) - (this.props.scale * this.radius);
+              this.x = (this.props.scale * this.props.parent_radius) - (this.props.scale * this.radius);
         }
 
         this.opacity = 1.0 * logn(1. - global_time * 1.0, 10000);
@@ -211,11 +211,8 @@ _ = {
     },
     {
       'name': 'scene2',
-      'duration': 4,
-      'objects': [
-        //        {'id': 'camera', 'x': 0, 'y': 0},
-        //        {'id': 'mother', 'x': 0, 'y': 0},
-      ],
+      'duration': 1,
+      'objects': [],
     }
   ]
 };

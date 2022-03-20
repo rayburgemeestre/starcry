@@ -1119,101 +1119,115 @@ double generator::get_max_travel_of_object(v8_interact& i,
                                 std::unordered_map<int64_t, v8::Local<v8::Object>>& parents,
                                 int64_t level,
                                 bool is_line) {
-    auto x = static_cast<double>(0);
-    auto y = static_cast<double>(0);
-    auto x2 = static_cast<double>(0);
-    auto y2 = static_cast<double>(0);
     double angle = 0;
-    double root_x = 0;
-    double root_y = 0;
-    double parent_x = 0;
-    double parent_y = 0;
-    // TODO: re-introduce support for pivot?
-    // Changed it to instance now..
 
-    //    data::coord pos;     // X, Y
-    //    data::coord pos2;    // for lines there is an X2, Y2.
-    //    data::coord parent;  // X, Y of parent
-    //    data::coord parent2; // X2, Y2 of parent
-    //    data::coord parent3; // centered X,Y of parent (i.o.w., middle of the line for lines)
+    data::coord pos;     // X, Y
+    data::coord pos2;    // for lines there is an X2, Y2.
+    data::coord parent;  // X, Y of parent
+                         //    data::coord parent2; // X2, Y2 of parent
+                         //    data::coord parent3; // centered X,Y of parent (i.o.w., middle of the line for lines)
+    data::coord pos_for_parent;
 
-    // for each level 0, 1, 2, 3, etc.
-    //
     for (int current_lvl = 0; current_lvl <= level; current_lvl++) {
-      double current_x = i.double_number(parents[current_lvl], "x");
-      double current_y = i.double_number(parents[current_lvl], "y");
-      double current_x2 = 0;
-      double current_y2 = 0;
-      double current_angle =
-          i.has_field(parents[current_lvl], "angle") ? i.double_number(parents[current_lvl], "angle") : 0.;
+      auto& current_obj = parents[current_lvl];
+      const bool current_is_line = i.str(parents[current_lvl], "type") == "line";
+      const bool current_is_pivot =
+          i.has_field(parents[current_lvl], "pivot") ? i.boolean(current_obj, "pivot") : false;
 
-      auto _type = i.str(parents[current_lvl], "type");
-      auto _is_line = _type == "line";
-      // experimental
-      double center_x = 0;
-      double center_y = 0;
-      if (_is_line) {
-        current_x2 = i.double_number(parents[current_lvl], "x2");
-        current_y2 = i.double_number(parents[current_lvl], "y2");
-        center_x = ((current_x - current_x2) / 2) + current_x2;
-        center_y = ((current_y - current_y2) / 2) + current_y2;
-        x += center_x;
-        y += center_y;
-        // TODO x2, y2, etc., probleem ivm is_line vs _is_line..
-        // nieuw concept introduceren.. parent_x / y ofzo.
-      } else {
-        // absolute totals for x,y
-        x += current_x;
-        y += current_y;
+      // X,Y
+      data::coord current{i.double_number(current_obj, "x"), i.double_number(current_obj, "y")};
+      const double current_angle =
+          i.has_field(parents[current_lvl], "angle") ? i.double_number(current_obj, "angle") : 0.;
+
+      // X2, Y2, and centerX, centerY, for lines
+      data::coord current2, current_center;
+      if (current_is_line) {
+        current2 = data::coord{i.double_number(current_obj, "x2"), i.double_number(current_obj, "y2")};
+        current_center.x = ((current.x - current2.x) / 2) + current2.x;
+        current_center.y = ((current.y - current2.y) / 2) + current2.y;
       }
 
-      // absolute totals for x,y
-      angle += current_angle;
+      // OPTION 1: simply center from X,Y always (option for points and lines)
+      // pos.add(current);
+
+      // OPTION 2: center from X2, Y2 (only option for lines)
+      // pos.add(current2);
+
+      // OPTION 3: center from centerX, centerY (only option for lines)
+      // pos.add(current_center);
+
+      // for now, let's go for the most intuitive choice
+      pos_for_parent.add(current_is_line ? current_center : current);
+      pos.add(current);
+      pos2.add(current_is_line ? current2 : current);
+
+      // angle = current_is_pivot ? current_angle : (angle + current_angle);
+
+      // total angle, cumulative no matter what
+      if (!std::isnan(current_angle)) angle += current_angle;
 
       if (angle != 0.) {
-        if (_is_line) {
+        if (current_is_line) {
           // current angle + angle with parent
-          auto angle1 = angle + get_angle(parent_x, parent_y, x, y);
+          auto angle1 = angle + get_angle(parent.x, parent.y, pos2.x, pos2.y);
           while (angle1 > 360.) angle1 -= 360.;
           auto rads = angle1 * M_PI / 180.0;
           auto ratio = 1.0;
-          auto dist = get_distance(center_x, center_y, current_x, current_y);
+          // rotates around its center
+          auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
           auto move = dist * ratio * -1;
-          x = parent_x + (cos(rads) * move) + center_x;
-          y = parent_y + (sin(rads) * move) + center_y;
-          x2 = parent_x - (cos(rads) * move) + center_x;
-          y2 = parent_y - (sin(rads) * move) + center_y;
-          // TODO: re-introduce support for lines x2, y2.
+          if (false) {
+            // auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
+            // auto move = dist * ratio * -1;
+            pos.x = parent.x + (cos(rads) * move) + current_center.x;
+            pos.y = parent.y + (sin(rads) * move) + current_center.y;
+            pos2.x = parent.x - (cos(rads) * move) + current_center.x;
+            pos2.y = parent.y - (sin(rads) * move) + current_center.y;
+          }
+          // rotates in length
+          if (true) {
+            dist = get_distance(current.x, current.y, current2.x, current2.y);
+            move = dist * ratio * -1;
+            // pos.x = parent.x + (cos(rads) * move);
+            // pos.y = parent.y + (sin(rads) * move);
+            pos2.x = parent.x + (cos(rads) * move);
+            pos2.y = parent.y + (sin(rads) * move);
+          }
+          // unsure
+          pos_for_parent.x = parent.x + (cos(rads) * move);  // + current_center.x;
+          pos_for_parent.y = parent.y + (sin(rads) * move);  // + current_center.y;
         } else {
           // current angle + angle with parent
-          auto angle1 = angle + get_angle(parent_x, parent_y, x, y);
+          auto angle1 = angle + get_angle(parent.x, parent.y, pos.x, pos.y);
           while (angle1 > 360.) angle1 -= 360.;
           auto rads = angle1 * M_PI / 180.0;
           auto ratio = 1.0;
-          auto dist = get_distance(0, 0, current_x, current_y);
+          auto dist = get_distance(0, 0, current.x, current.y);
           auto move = dist * ratio * -1;
-          x = parent_x + (cos(rads) * move);
-          y = parent_y + (sin(rads) * move);
-          // TODO: re-introduce support for lines x2, y2.
+          pos.x = parent.x + (cos(rads) * move);
+          pos.y = parent.y + (sin(rads) * move);
+          pos_for_parent.x = parent.x + (cos(rads) * move);
+          pos_for_parent.y = parent.y + (sin(rads) * move);
         }
       }
-      parent_x = x;
-      parent_y = y;
+
+      // now we can update the parent for the next level we're about to handle
+      parent = pos_for_parent;
     }
 
     // store transitive x & y etc.
-    i.set_field(instance, "transitive_x", v8::Number::New(i.get_isolate(), x));
-    i.set_field(instance, "transitive_y", v8::Number::New(i.get_isolate(), y));
+    i.set_field(instance, "transitive_x", v8::Number::New(i.get_isolate(), pos.x));
+    i.set_field(instance, "transitive_y", v8::Number::New(i.get_isolate(), pos.y));
     if (is_line) {
-      i.set_field(instance, "transitive_x2", v8::Number::New(i.get_isolate(), x2));
-      i.set_field(instance, "transitive_y2", v8::Number::New(i.get_isolate(), y2));
+      i.set_field(instance, "transitive_x2", v8::Number::New(i.get_isolate(), pos2.x));
+      i.set_field(instance, "transitive_y2", v8::Number::New(i.get_isolate(), pos2.y));
     }
 
     // pass along x, y, x2, y2.
     if (i.has_field(instance, "props")) {
-      const auto process_obj = [&i, &next_instances, &x, &y, this](v8::Local<v8::Object>& o,
-                                                                   const std::string& inherit_x,
-                                                                   const std::string& inherit_y) {
+      const auto process_obj = [&i, &next_instances, &pos, &pos2, this](v8::Local<v8::Object>& o,
+                                                                        const std::string& inherit_x,
+                                                                        const std::string& inherit_y) {
         const auto unique_id = i.integer_number(o, "unique_id");
         const auto find = next_instance_mapping.find(unique_id);
         if (find != next_instance_mapping.end()) {
@@ -1221,8 +1235,8 @@ double generator::get_max_travel_of_object(v8_interact& i,
           auto other_val = i.get_index(next_instances, instance_index);
           if (other_val->IsObject()) {
             auto other = other_val.As<v8::Object>();
-            i.set_field(other, inherit_x, v8::Number::New(i.get_isolate(), x));
-            i.set_field(other, inherit_y, v8::Number::New(i.get_isolate(), y));
+            i.set_field(other, inherit_x, v8::Number::New(i.get_isolate(), pos.x));
+            i.set_field(other, inherit_y, v8::Number::New(i.get_isolate(), pos.y));
           }
         }
       };
@@ -1255,7 +1269,7 @@ double generator::get_max_travel_of_object(v8_interact& i,
       }
     }
 
-    return std::make_tuple(x, y, x2, y2);
+    return std::make_tuple(pos.x, pos.y, pos2.x, pos2.y);
   };
 
   auto [x, y, x2, y2] = calculate(i, next_instances, instance, parents, level, is_line);

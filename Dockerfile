@@ -2,6 +2,11 @@ FROM rayburgemeestre/build-ubuntu:20.04
 
 MAINTAINER Ray Burgemeestre
 
+RUN mkdir docs
+
+COPY docs/install_deps.sh docs/
+COPY docs/install_client_deps.sh docs/
+COPY docs/install_dockerize_deps.sh docs/
 COPY Makefile /
 
 RUN make deps
