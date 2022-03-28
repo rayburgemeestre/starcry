@@ -9,7 +9,7 @@ ccache_enabled = [[ -f '/usr/bin/ccache' ]]
 ccache_env = CXX='ccache g++' CC='ccache gcc' CCACHE_SLOPPINESS=file_macro,locale,time_macros
 
 docker_tty = $$(/bin/sh -c 'if [ "$(interactive)" = "1" ]]; then echo "-t"; else echo ""; fi')
-docker_run = echo docker run -i $(docker_tty) --init --rm \
+docker_run = docker run -i $(docker_tty) --init --rm \
 	    	    	    -e _UID=$(uid) -e _GID=$(gid) \
 	                    -v $$PWD:$$PWD \
 	    	            -v $$PWD/.ccache:/tmp/.ccache \
@@ -45,6 +45,12 @@ build-gcc:  ## build starcry binary using docker (with gcc)
 	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which g++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build)
 	@$(call make, cmake --build build --target starcry)
 	@$(call make, strip --strip-debug build/starcry)
+
+.PHONY: test
+test:  ## execute starcry unit tests using docker (with clang)
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build)
+	@$(call make-clang, cmake --build build --target tests)
+	@$(call make-clang, ./build/tests)
 
 client:  ## build webassembly javascript file using docker
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind \
