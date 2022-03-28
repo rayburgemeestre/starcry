@@ -53,7 +53,7 @@ The pipeline has a few different types of entry points, instructions send to the
 
 Clarifications:
 * For each instruction type there is a dedicated command object.
-* `main.cpp` or the web ui will call  `starcry::add_command`, which in turn instantiates the correct command and saves it in the `cmds` storage.
+* `main.cpp` or the web ui will call  `starcry::add_image_command`, which in turn instantiates the correct command and saves it in the `cmds` storage.
 TODO: The plan is to refactor this part, as it's a little bit unclear how each instruction maps to which overload.
 * TODO: `get_objects` meta-data should include something like max. distance travelled in frame.
 

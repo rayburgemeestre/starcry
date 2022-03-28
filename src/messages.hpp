@@ -173,7 +173,8 @@ public:
         pixels(std::move(pixels)),
         width(width),
         height(height),
-        output_file(output_file) {}
+        output_file(output_file) {
+  }
 
   // raw pixels only
   render_msg(seasocks::WebSocket *client,

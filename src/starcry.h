@@ -50,6 +50,35 @@ namespace inotify {
 class NotifierBuilder;
 }
 
+enum class log_level { silent, info, debug };
+
+struct starcry_options {
+  std::string script_file = "input/test.js";
+  std::string output_file;
+  size_t frame_of_interest = std::numeric_limits<size_t>::max();
+  size_t frame_offset = 0;
+
+  bool webserver = false;
+  bool interactive = false;
+  bool preview = false;
+  // new
+  bool gui = false;
+  bool render = true;
+  bool output = false;
+  bool notty = false;
+
+  size_t num_worker_threads = std::thread::hardware_concurrency();
+  size_t num_chunks = std::thread::hardware_concurrency() * 2;
+
+  std::string host = "localhost";
+  bool enable_remote_workers = false;
+  bool compression = false;
+
+  std::optional<double> rand_seed;
+
+  log_level level = log_level::info;
+};
+
 class starcry {
   friend class command_handler;
   friend class command_get_video;
@@ -61,15 +90,8 @@ class starcry {
   friend class server_message_handler;
   friend class client_message_handler;
 
-public:
-  enum class render_video_mode { generate_only, render_only, video_only, video_with_gui, gui_only, javascript_only };
-  enum class log_level { silent, info, debug };
-
 private:
-  size_t num_local_engines;
-  bool enable_remote_workers;
-  bool start_webserver;
-  bool enable_compression;
+  starcry_options options_;
   feature_settings features_;
 
   std::map<int, std::shared_ptr<bitmap_wrapper>> bitmaps;
@@ -83,18 +105,14 @@ private:
   std::shared_ptr<sfml_window> gui = nullptr;
   std::shared_ptr<frame_streamer> framer = nullptr;
   std::shared_ptr<webserver> webserv = nullptr;
-  render_video_mode mode;
   int64_t num_queue_per_worker = 1;
-  std::function<void(starcry &sc)> on_pipeline_initialized;
 
   std::map<size_t, std::vector<std::shared_ptr<render_msg>>> buffered_frames;
   size_t current_frame = 1;
   periodic_executor pe;
-  std::optional<double> seed;
   std::map<instruction_type, std::shared_ptr<command_handler>> command_handlers;
   std::shared_ptr<server_message_handler> server_message_handler_;
   std::shared_ptr<client_message_handler> client_message_handler_;
-  log_level log_level_;
   std::shared_ptr<metrics> metrics_;
 
   data::viewpoint viewpoint;
@@ -104,38 +122,32 @@ private:
   std::thread notifier_thread;
 
 public:
-  starcry(
-      size_t num_local_engines,
-      bool enable_remote_workers,
-      log_level level,
-      bool notty,
-      bool start_webserver,
-      bool enable_compression,
-      render_video_mode mode,
-      std::function<void(starcry &sc)> on_pipeline_initialized = [](auto &) {},
-      std::optional<double> rand_seed = std::nullopt);
+  starcry(starcry_options &options);
   ~starcry();
 
+  starcry_options &options();
   feature_settings &features();
 
   void set_script(const std::string &script);
 
-  void add_command(seasocks::WebSocket *client,
-                   const std::string &script,
-                   instruction_type it,
-                   int frame_num,
-                   int num_chunks,
-                   bool raw,
-                   bool preview,
-                   bool last_frame,
-                   const std::string &output_filename);
-  void add_command(seasocks::WebSocket *client,
-                   const std::string &script,
-                   const std::string &output_file,
-                   int num_chunks,
-                   bool raw,
-                   bool preview,
-                   size_t offset_frames);
+  void add_image_command(seasocks::WebSocket *client,
+                         const std::string &script,
+                         instruction_type it,
+                         int frame_num,
+                         int num_chunks,
+                         bool raw,
+                         bool preview,
+                         bool last_frame,
+                         const std::string &output_filename);
+  void add_video_command(seasocks::WebSocket *client,
+                         const std::string &script,
+                         const std::string &output_file,
+                         int num_chunks,
+                         bool raw,
+                         bool preview,
+                         size_t offset_frames);
+
+  void setup_server();
 
   void run_server();
   void run_client(const std::string &host);
@@ -144,6 +156,8 @@ public:
   void set_viewpoint(data::viewpoint &vp);
 
 private:
+  void configure_inotify();
+
   void render_job(size_t thread_num,
                   rendering_engine_wrapper &engine,
                   const data::job &job,

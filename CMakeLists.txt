@@ -9,6 +9,11 @@ set(CMAKE_CXX_STANDARD 20)
 
 project(starcry VERSION 0.2 LANGUAGES CXX)
 
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+    set(DEBUG on)  # this is the define that we set for debug
+endif()
+
+
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 set(CLANGFORMAT_EXECUTABLE clang-format-12)
@@ -19,25 +24,13 @@ include(ClangFormat)
 
 find_package(V8 REQUIRED)
 find_package(Boost 1.52 COMPONENTS program_options system date_time thread chrono REQUIRED )
-#find_package(SFML 2.4 COMPONENTS graphics window system)
-#find_package(OpenMP)
 find_package(Threads)
 
-# catch2
 add_subdirectory(libs/Catch2)
 add_executable(tests test/test.cpp)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 
-#if (OPENMP_FOUND)
-    #set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-#endif()
-
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    # don't use libc++ v8's third party libc++ with unstable abi doesn't bode well with caf
-    #set (CLANG_FLAGS "-stdlib=libc++")
-    # IIUC rosesegment is not enabled by default with ld.gold anyway, it complains about this flag.
-    # set(CMAKE_EXE_LINKER_FLAGS "-Wl,--no-rosegment ")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold")
 else()
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,notext -Wno-unknown-pragmas")
@@ -46,9 +39,13 @@ endif()
 if (SANITIZER)
     add_definitions("-fsanitize=address")
 endif()
+
 if (DEBUG)
-    # --no-rosegment is important for being able to let valgrind/callgrind read symbols
-    add_definitions("-std=c++20 -O0 -g -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3")
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        add_definitions("-std=c++20 -O0 -g -stdlib=libstdc++ -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3")
+    else()
+        add_definitions("-std=c++2a -O0 -g                   -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3")
+    endif()
 else()
     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         add_definitions("-std=c++20 -O2 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
@@ -73,7 +70,6 @@ include_directories(
     "/opt/cppse/build/openexr/include/OpenEXR/"
     "/opt/cppse/build/tvision/include/"
     "/opt/cppse/build/inotify-cpp/include/"
-    # "/opt/cppse/build/imagemagick/include/ImageMagick-7/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/cereal/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/json/include/"
@@ -89,13 +85,9 @@ list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/deprecated/gen
 list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/deprecated/scripting.cpp")
 
 file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp" "src/perlin.cpp" "src/texture.cpp")
-# (below) useful for testing v8 hello world in main.cpp
-#file(GLOB_RECURSE starcry_SOURCES "src/main.cpp" "/opt/cppse/build/v8pp/include/v8pp/context.cpp")
 
 add_executable(starcry ${starcry_SOURCES})
 add_executable(sc_client ${sc_client_SOURCES})
-
-#target_compile_definitions(sc_client, "-DSC_CLIENT=1")
 
 target_link_libraries(starcry -static-libgcc -static-libstdc++)
 
@@ -107,12 +99,6 @@ endif()
 
 # boost
 target_link_libraries(starcry ${Boost_LIBRARIES})
-
-# pthreads
-#target_link_libraries(starcry ${CMAKE_THREAD_LIBS_INIT})
-
-# piper
-#target_link_libraries(starcry ${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/build/libpiper.a)
 
 # SDL
 target_link_libraries(sc_client -lSDL2)
@@ -179,15 +165,6 @@ target_link_libraries(starcry /opt/cppse/build/openexr/lib/libHalf-2_5.a)
 target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIex-2_5.a)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libz.a)
 
-# imagemagick
-#target_link_libraries(starcry -lzstd)
-#target_link_libraries(starcry -lwebp)
-#target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libjbig.a)
-#target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libtiff.a)
-#target_link_libraries(starcry /opt/cppse/build/imagemagick/lib/libMagickCore-7.Q16HDRI.a)
-#target_link_libraries(starcry /opt/cppse/build/imagemagick/lib/libMagick++-7.Q16HDRI.a)
-#target_link_libraries(starcry /opt/cppse/build/imagemagick/lib/libMagickWand-7.Q16HDRI.a)
-
 # curses
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libcurses.a)
 target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libtinfo.a)
@@ -206,7 +183,5 @@ target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libtermcap.a)
 target_link_libraries(starcry /opt/cppse/build/inotify-cpp/lib/libinotify-cpp.a)
 
 install (TARGETS starcry DESTINATION bin)
-
-#install (TARGETS sc_client DESTINATION bin)
 
 clangformat_setup(${starcry_SOURCES} ${sc_client_SOURCES})

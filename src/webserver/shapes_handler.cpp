@@ -27,15 +27,15 @@ void ShapesHandler::onData(seasocks::WebSocket *con, const char *data) {
     // logger(INFO) << "ShapesHandler::onData received script: " << input.substr(0, find) << " get shapes for: " <<
     // std::atoi(input.substr(find + 1).c_str()) << std::endl; logger(INFO) << "ShapesHandler::onData recv: " << input
     // << std::endl;
-    sc->add_command(con,
-                    input.substr(0, find),
-                    instruction_type::get_shapes,
-                    std::atoi(input.substr(find + 1).c_str()),
-                    1,
-                    false,
-                    false,
-                    false,
-                    "");
+    sc->add_image_command(con,
+                          input.substr(0, find),
+                          instruction_type::get_shapes,
+                          std::atoi(input.substr(find + 1).c_str()),
+                          1,
+                          false,
+                          false,
+                          false,
+                          "");
   }
 }
 

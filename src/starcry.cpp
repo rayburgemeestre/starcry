@@ -56,19 +56,8 @@ double rand_fun_vx() {
   return (mt_vx() / (double)mt_vx.max());
 }
 
-starcry::starcry(size_t num_local_engines,
-                 bool enable_remote_workers,
-                 log_level level,
-                 bool notty,
-                 bool start_webserver,
-                 bool enable_compression,
-                 starcry::render_video_mode mode,
-                 std::function<void(starcry &sc)> on_pipeline_initialized,
-                 std::optional<double> rand_seed)
-    : num_local_engines(num_local_engines),
-      enable_remote_workers(enable_remote_workers),
-      start_webserver(start_webserver),
-      enable_compression(enable_compression),
+starcry::starcry(starcry_options &options)
+    : options_(options),
       bitmaps({}),
       gen(nullptr),
       engines({}),
@@ -76,10 +65,7 @@ starcry::starcry(size_t num_local_engines,
       cmds(system->create_queue("commands", 10)),
       jobs(system->create_queue("jobs", 10)),
       frames(system->create_queue("frames", 10)),
-      mode(mode),
-      on_pipeline_initialized(std::move(on_pipeline_initialized)),
       pe(std::chrono::milliseconds(1000)),
-      seed(rand_seed),
       command_handlers({
           {instruction_type::get_bitmap, std::make_shared<command_get_bitmap>(*this)},
           {instruction_type::get_image, std::make_shared<command_get_image>(*this)},
@@ -90,15 +76,17 @@ starcry::starcry(size_t num_local_engines,
       }),
       server_message_handler_(std::make_shared<server_message_handler>(*this)),
       client_message_handler_(std::make_shared<client_message_handler>(*this)),
-      log_level_(level),
-      metrics_(std::make_shared<metrics>(notty)),
-      script_("input/test.js"),
+      metrics_(std::make_shared<metrics>(options.notty)),
+      script_(options.script_file),
       notifier(nullptr) {
   metrics_->set_script(script_);
   metrics_->init();
   set_metrics(&*metrics_);
-  logger(DEBUG) << "Metrics wired to ncurses UI" << std::endl;
 
+  configure_inotify();
+}
+
+void starcry::configure_inotify() {
   inotifypp::filesystem::path path("input");
   auto handleNotification = [&](inotify::Notification notification) {
     logger(DEBUG) << "File modified on disk: " << notification.path.string() << std::endl;
@@ -135,21 +123,25 @@ feature_settings &starcry::features() {
   return features_;
 }
 
+starcry_options &starcry::options() {
+  return options_;
+}
+
 void starcry::set_script(const std::string &script) {
   script_ = script;
   if (metrics_) metrics_->set_script(script_);
   if (webserv) webserv->set_script(script_);
 }
 
-void starcry::add_command(seasocks::WebSocket *client,
-                          const std::string &script,
-                          instruction_type it,
-                          int frame_num,
-                          int num_chunks,
-                          bool raw,
-                          bool preview,
-                          bool last_frame,
-                          const std::string &output_filename) {
+void starcry::add_image_command(seasocks::WebSocket *client,
+                                const std::string &script,
+                                instruction_type it,
+                                int frame_num,
+                                int num_chunks,
+                                bool raw,
+                                bool preview,
+                                bool last_frame,
+                                const std::string &output_filename) {
   cmds->push(std::make_shared<instruction>(
       client, it, script, frame_num, num_chunks, raw, preview, last_frame, output_filename));
   pe.run([=]() {
@@ -160,13 +152,13 @@ void starcry::add_command(seasocks::WebSocket *client,
   });
 }
 
-void starcry::add_command(seasocks::WebSocket *client,
-                          const std::string &script,
-                          const std::string &output_file,
-                          int num_chunks,
-                          bool raw,
-                          bool preview,
-                          size_t offset_frames) {
+void starcry::add_video_command(seasocks::WebSocket *client,
+                                const std::string &script,
+                                const std::string &output_file,
+                                int num_chunks,
+                                bool raw,
+                                bool preview,
+                                size_t offset_frames) {
   cmds->push(std::make_shared<instruction>(
       client, instruction_type::get_video, script, output_file, num_chunks, raw, preview, offset_frames));
 }
@@ -194,13 +186,13 @@ void starcry::render_job(size_t thread_num,
                       job.height,
                       job.scale,
                       job.scales,
-                      log_level_ == starcry::log_level::debug,
+                      options_.level == log_level::debug,
                       settings);
 }
 
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   if (!gen) gen = std::make_shared<generator>(metrics_);
-  gen->init(cmd_def->script, seed, cmd_def->preview, features_.caching);
+  gen->init(cmd_def->script, options_.rand_seed, cmd_def->preview, features_.caching);
 
   if (cmd_def->type == instruction_type::get_video) {
     // Update current_frame if we fast-forward to a different offset frame.
@@ -221,7 +213,10 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
 std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_message> job_msg) {
   auto &job = *job_msg->job;
 
-  if (mode == starcry::render_video_mode::javascript_only) {
+  if (!options_.render) {
+    // Be careful, below is a stub message, note the zero width and height below, since we don't
+    // intend to actually do rendering when we set the render flag to false. This is for testing
+    // for example Javascript exclusively performance
     std::vector<uint32_t> transfer_pixels;
     return std::make_shared<render_msg>(job_msg->client,
                                         job_msg->type,
@@ -271,17 +266,17 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   bool finished = false;
-  if (log_level_ != starcry::log_level::silent) {
+  if (options_.level != log_level::silent) {
     const auto frame = job_msg->job_number == std::numeric_limits<size_t>::max() ? 0 : job_msg->job_number;
     static auto prev_frame = 0;
-    if (log_level_ != starcry::log_level::info) {
+    if (options_.level != log_level::info) {
       if (frame != prev_frame) {
       }
     }
     prev_frame = frame;
   }
 
-  if (mode == starcry::render_video_mode::javascript_only) {
+  if (!options_.render) {
     return;
   }
   // COZ_PROGRESS;
@@ -377,14 +372,13 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   }
 }
 
-void starcry::run_server() {
-  if (mode == starcry::render_video_mode::video_with_gui || mode == starcry::render_video_mode::gui_only)
-    gui = std::make_unique<sfml_window>();
+void starcry::setup_server() {
+  if (options_.gui) gui = std::make_unique<sfml_window>();
 
   system->spawn_consumer<instruction>(
       "generator", std::bind(&starcry::command_to_jobs, this, std::placeholders::_1), cmds);
 
-  if (enable_remote_workers) {
+  if (options_.enable_remote_workers) {
     renderserver = std::make_shared<render_server>(jobs, frames);
     renderserver->run(std::bind(&client_message_handler::on_client_message,
                                 *client_message_handler_,
@@ -394,7 +388,7 @@ void starcry::run_server() {
                                 std::placeholders::_4));
   }
 
-  for (size_t i = 0; i < num_local_engines; i++) {
+  for (size_t i = 0; i < options_.num_worker_threads; i++) {
     metrics_->register_thread(i, fmt::format("L{}", i));
     engines[i] = std::make_shared<rendering_engine_wrapper>();
     engines[i]->initialize();
@@ -410,8 +404,10 @@ void starcry::run_server() {
       "streamer", std::bind(&starcry::handle_frame, this, std::placeholders::_1), frames);
 
   system->start(false);
-  on_pipeline_initialized(*this);
-  if (start_webserver) {
+}
+
+void starcry::run_server() {
+  if (options_.webserver) {
     webserv = std::make_shared<webserver>(this);
     webserv->set_script(script_);
     webserv->run();  // blocks
@@ -570,31 +566,6 @@ void starcry::save_images(std::vector<data::color> &pixels_raw,
             "output_frame_{:05d}_seed_{}_{}x{}-{}.png", frame_number, gen->get_seed(), width, height, filename));
       }
     }
-
-    // Save TIFF through ImageMagick
-    // using namespace Magick;
-    // try {
-    //   std::vector<double> rgb;
-    //   rgb.resize(width * height * 4);
-    //   size_t index = 0;
-    //   auto &source = pixels_raw;
-    //   for (uint32_t y = 0; y < height; y++) {
-    //     for (uint32_t x = 0; x < width; x++) {
-    //       rgb.push_back(source[index].r);
-    //       rgb.push_back(source[index].g);
-    //       rgb.push_back(source[index].b);
-    //       rgb.push_back(source[index].a);
-    //       index++;
-    //     }
-    //   }
-    //   Image image(fmt::format("{}x{}", width, height).c_str(), "white");
-    //   image.read(width, height, "RGBA", StorageType::DoublePixel, (void *)&rgb[0]);
-    //   image.write(
-    //       fmt::format("output_frame_{}_seed_{}_{}x{}-{}.tiff", frame_number, gen->get_seed(), width, height,
-    //       filename));
-    // } catch (std::exception &error_) {
-    //   std::cout << "Caught exception: " << error_.what() << std::endl;
-    // }
 
     if (write_32bit_exr) {
       // Save EXR through OpenEXR directly

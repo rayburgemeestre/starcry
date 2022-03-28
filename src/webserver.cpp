@@ -71,7 +71,7 @@ webserver::webserver(starcry *sc)
   server->addWebSocketHandler("/stats", stats_handler);
   server->addWebSocketHandler("/objects", objects_handler);
   server->addWebSocketHandler("/viewpoint", viewpoint_handler);
-};
+}
 
 void webserver::set_script(const std::string &script) {
   script_handler->set_script(script);

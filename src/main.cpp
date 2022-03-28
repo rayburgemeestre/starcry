@@ -26,15 +26,9 @@ namespace po = ::boost::program_options;
 class main_program {
 private:
   po::variables_map vm;
-  std::string output_file;
-  size_t frame_of_interest = std::numeric_limits<size_t>::max();
-  size_t frame_offset = 0;
-  double rand_seed = std::numeric_limits<double>::max();
   po::options_description desc = std::string("Allowed options");
-  std::string script = "input/test.js";
-  size_t num_worker_threads = std::thread::hardware_concurrency();
-  size_t num_chunks = std::thread::hardware_concurrency() * 2;
-  std::string host = "localhost";
+  starcry_options options;
+  double rand_seed = std::numeric_limits<double>::max();
 
 public:
   main_program(int argc, char *argv[]) {
@@ -44,17 +38,17 @@ public:
     // clang-format off
     desc.add_options()
       ("help", "produce help message")
-      ("script,s", po::value<std::string>(&script), "javascript file to use for processing")
-      ("output,o", po::value<std::string>(&output_file), "filename for video output (default output_{seed}_{width}x{height}.h264)")
-      ("frame,f", po::value<size_t>(&frame_of_interest), "specific frame to render and save as 8-bit PNG and 32-bit EXR file")
-      ("frame-offset", po::value<size_t>(&frame_offset), "frame offset (used to skip rendering frames)")
+      ("script,s", po::value<std::string>(&options.script_file), "javascript file to use for processing")
+      ("output,o", po::value<std::string>(&options.output_file), "filename for video output (default output_{seed}_{width}x{height}.h264)")
+      ("frame,f", po::value<size_t>(&options.frame_of_interest), "specific frame to render and save as 8-bit PNG and 32-bit EXR file")
+      ("frame-offset", po::value<size_t>(&options.frame_offset), "frame offset (used to skip rendering frames)")
       ("seed", po::value<double>(&rand_seed), "override the random seed used")
-      ("num_threads,t", po::value<size_t>(&num_worker_threads), "number of local render threads (default 1)")
-      ("num_chunks,c", po::value<size_t>(&num_chunks), "number of chunks to chop frame into (default 1)")
+      ("num_threads,t", po::value<size_t>(&options.num_worker_threads), "number of local render threads (default 1)")
+      ("num_chunks,c", po::value<size_t>(&options.num_chunks), "number of chunks to chop frame into (default 1)")
       ("server", "start server to allow dynamic renderers (default no)")
-      ("client", po::value<std::string>(&host), "start client renderer, connect to host (default localhost)")
+      ("client", po::value<std::string>(&options.host), "start client renderer, connect to host (default localhost)")
       ("no-gui", "disable render to graphical window")
-      ("no-video", "disable render to video")
+      ("no-output", "disable producing any output (video or stream)")
       ("preview", "enable preview settings for fast preview rendering")
       ("stream", "start embedded webserver and stream HLS to webroot")
       ("no-webserver", "do not start embedded webserver")
@@ -82,90 +76,82 @@ public:
       std::exit(1);
     }
 
-    bool start_webserver = !vm.count("no-webserver");
-    bool is_interactive = vm.count("interactive");
-    bool preview = vm.count("preview");
+    options.webserver = !vm.count("no-webserver");
+    options.interactive = vm.count("interactive");
+    options.preview = vm.count("preview");
+    options.enable_remote_workers = vm.count("server");
+    options.gui = !vm.count("no-gui");
+    options.output = !vm.count("no-output");
+    options.notty = vm.count("notty");
+    options.compression = vm.count("compression");
+    options.rand_seed =
+        (rand_seed != std::numeric_limits<double>::max()) ? std::optional<double>(rand_seed) : std::nullopt;
 
-    // configure streaming
-    if (vm.count("stream")) {
-      if (output_file.empty()) {  // default
-        output_file = "webroot/stream/stream.m3u8";
-        // clean up left-over streaming artifacts
-        namespace fs = std::experimental::filesystem;
-        const fs::path stream_path{"webroot/stream"};
-        for (const auto &entry : fs::directory_iterator(stream_path)) {
-          const auto filename = entry.path().filename().string();
-          // Note to self in the future: non-experimental filesystem can do:
-          //  if (entry.is_regular_file())...
-          if (filename.rfind("stream.m3u8", 0) == 0) {
-            std::cerr << "cleaning up old file: " << filename << std::endl;
-            fs::remove(entry.path());
-          }
-        }
-      }
-      std::cerr << "View stream here: http://localhost:18080/stream.html" << std::endl;
-      start_webserver = true;
-    }
-
-    auto p_mode = ([this, is_interactive]() {
-      if (vm.count("no-gui") && vm.count("no-video"))
-        return starcry::render_video_mode::javascript_only;
-      else if (vm.count("no-video"))
-        return starcry::render_video_mode::gui_only;
-      else if (vm.count("no-gui") || is_interactive)
-        return starcry::render_video_mode::video_only;
-      else
-        return starcry::render_video_mode::video_with_gui;
-    })();
-
-    auto render_command = [this, preview, is_interactive](starcry &sc) {
-      sc.set_script(script);
-      if (is_interactive) {
-        // in interactive mode commands come from the web interface
-        return;
-      }
-      bool is_raw = vm.count("raw");
-      if (frame_of_interest != std::numeric_limits<size_t>::max()) {
-        // render still image
-        sc.add_command(nullptr,
-                       script,
-                       instruction_type::get_raw_image,
-                       frame_of_interest,
-                       num_chunks,
-                       is_raw,
-                       preview,
-                       true,
-                       output_file);
-      } else {
-        // render video
-        sc.add_command(nullptr, script, output_file, num_chunks, is_raw, preview, frame_offset);
-      }
-    };
-
-    starcry::log_level level = starcry::log_level::info;
     if (vm.count("quiet")) {
-      level = starcry::log_level::silent;
+      options.level = log_level::silent;
     } else if (vm.count("verbose")) {
-      level = starcry::log_level::debug;
+      options.level = log_level::debug;
     }
 
-    starcry sc(num_worker_threads,
-               vm.count("server"),
-               level,
-               vm.count("notty"),
-               start_webserver,
-               vm.count("compression"),
-               p_mode,
-               render_command,
-               rand_seed != std::numeric_limits<double>::max() ? std::make_optional<double>(rand_seed) : std::nullopt);
+    if (vm.count("stream")) configure_streaming();
+
+    starcry sc(options);
     if (vm.count("caching")) {
       sc.features().caching = true;
     }
 
     if (vm.count("client")) {
-      sc.run_client(host);
+      sc.run_client(options.host);
     } else {
+      sc.setup_server();
+
+      if (!options.interactive) {
+        bool is_raw = vm.count("raw");
+        if (options.frame_of_interest != std::numeric_limits<size_t>::max()) {
+          sc.add_image_command(nullptr,
+                               options.script_file,
+                               instruction_type::get_raw_image,
+                               options.frame_of_interest,
+                               options.num_chunks,
+                               is_raw,
+                               options.preview,
+                               true,
+                               options.output_file);
+        } else {
+          sc.add_video_command(nullptr,
+                               options.script_file,
+                               options.output_file,
+                               options.num_chunks,
+                               is_raw,
+                               options.preview,
+                               options.frame_offset);
+        }
+      }
+
       sc.run_server();
+    }
+  }
+
+  void configure_streaming() {
+    if (options.output_file.empty()) {  // default
+      options.output_file = "webroot/stream/stream.m3u8";
+      cleanup_left_over_streaming_files();
+    }
+    std::cerr << "View stream here: http://localhost:18080/stream.html" << std::endl;
+    options.webserver = true;
+  }
+
+  static void cleanup_left_over_streaming_files() {
+    namespace fs = std::experimental::filesystem;
+    const fs::path stream_path{"webroot/stream"};
+    for (const auto &entry : fs::directory_iterator(stream_path)) {
+      const auto filename = entry.path().filename().string();
+      // Note to self in the future: non-experimental filesystem can do:
+      //  if (entry.is_regular_file())...
+      if (filename.rfind("stream.m3u8", 0) == 0) {
+        std::cerr << "cleaning up old file: " << filename << std::endl;
+        fs::remove(entry.path());
+      }
     }
   }
 };

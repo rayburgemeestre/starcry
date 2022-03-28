@@ -24,15 +24,15 @@ void ObjectsHandler::onData(seasocks::WebSocket *con, const char *data) {
   auto find = input.find(" ");
   if (find != std::string::npos) {
     logger(DEBUG) << "ObjectsHandler::onData - " << input << std::endl;
-    sc->add_command(con,
-                    input.substr(0, find),
-                    instruction_type::get_objects,
-                    std::atoi(input.substr(find + 1).c_str()),
-                    1,
-                    false,
-                    false,
-                    false,
-                    "");
+    sc->add_image_command(con,
+                          input.substr(0, find),
+                          instruction_type::get_objects,
+                          std::atoi(input.substr(find + 1).c_str()),
+                          1,
+                          false,
+                          false,
+                          false,
+                          "");
   }
 }
 

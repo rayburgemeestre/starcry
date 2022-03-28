@@ -33,13 +33,13 @@ help: # with thanks to Ben Rady
 
 .PHONY: build
 build:  ## build starcry binary using docker (with clang)
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -GNinja -B build)
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build)
 	@$(call make-clang, cmake --build build --target starcry)
 	@$(call make-clang, strip --strip-debug build/starcry)
 
 .PHONY: build-gcc
 build-gcc:  ## build starcry binary using docker (with gcc)
-	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which g++) cmake -GNinja -B build)
+	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which g++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build)
 	@$(call make, cmake --build build --target starcry)
 	@$(call make, strip --strip-debug build/starcry)
 
