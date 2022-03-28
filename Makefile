@@ -8,7 +8,7 @@ interactive:=$(shell [ -t 0 ] && echo 1)
 ccache_enabled = [[ -f '/usr/bin/ccache' ]]
 ccache_env = CXX='ccache g++' CC='ccache gcc' CCACHE_SLOPPINESS=file_macro,locale,time_macros
 
-docker_tty = $$(/bin/sh -c 'if [ $(interactive) -eq 1 ]]; then echo "-t"; else echo ""; fi')
+docker_tty = $$(/bin/sh -c 'if [ "$(interactive)" = "1" ]]; then echo "-t"; else echo ""; fi')
 docker_run = echo docker run -i $(docker_tty) --init --rm \
 	    	    	    -e _UID=$(uid) -e _GID=$(gid) \
 	                    -v $$PWD:$$PWD \
