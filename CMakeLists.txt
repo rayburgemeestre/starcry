@@ -13,7 +13,6 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
     set(DEBUG on)  # this is the define that we set for debug
 endif()
 
-
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 set(CLANGFORMAT_EXECUTABLE clang-format-12)
@@ -21,12 +20,15 @@ set(Boost_USE_STATIC_LIBS ON)
 set(BOOST_ROOT "/opt/cppse/build/boost/")
 
 include(ClangFormat)
+include(StarcryLinking)
 
 find_package(V8 REQUIRED)
 find_package(Boost 1.52 COMPONENTS program_options system date_time thread chrono REQUIRED )
 find_package(Threads)
 
 add_subdirectory(libs/Catch2)
+
+# unittests
 add_executable(tests test/test.cpp)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 
@@ -89,7 +91,16 @@ file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp" "src/perlin.cpp" "src/textu
 add_executable(starcry ${starcry_SOURCES})
 add_executable(sc_client ${sc_client_SOURCES})
 
-target_link_libraries(starcry -static-libgcc -static-libstdc++)
+
+# integration tests
+list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
+list(APPEND starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test/test_starcry.cpp")
+add_executable(integration_tests ${starcry_SOURCES})
+target_link_libraries(integration_tests PRIVATE Catch2::Catch2WithMain)
+configure_links(integration_tests)
+
+target_link_libraries(integration_tests PRIVATE -static-libgcc -static-libstdc++)
+target_link_libraries(starcry PRIVATE -static-libgcc -static-libstdc++)
 
 if (SANITIZER)
     # ASAN
@@ -97,90 +108,10 @@ if (SANITIZER)
     # target_link_libraries(starcry -lclang_rt.asan-x86_64)
 endif()
 
-# boost
-target_link_libraries(starcry ${Boost_LIBRARIES})
-
 # SDL
 target_link_libraries(sc_client -lSDL2)
 
-# SFML (seems broken for some reason now)
-#target_link_libraries(starcry ${SFML_LIBRARIES})
-target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-graphics-s.a)
-target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-window-s.a)
-target_link_libraries(starcry /opt/cppse/build/sfml/lib/libsfml-system-s.a)
-# below can be made obsolete if we can get rid of some Joystick related stuff in libsfml-window-s.a
-target_link_libraries(starcry /lib/x86_64-linux-gnu/libudev.so)
-
-
-# ffmpeg
-target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libswscale.a)
-target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libavdevice.a)
-target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libavformat.a)
-target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libavcodec.a)
-target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libavutil.a)
-target_link_libraries(starcry /opt/cppse/build/ffmpeg/lib/libavfilter.a)
-
-# X11 (statically linking causes SFML to segfault)
-# We could retry with SDL at some point, but for now let's use dynamic linking
-target_link_libraries(starcry -lXrandr)
-target_link_libraries(starcry -lXext)
-target_link_libraries(starcry -lXrender)
-target_link_libraries(starcry -lX11)
-target_link_libraries(starcry -lxcb)
-target_link_libraries(starcry -lXau)
-target_link_libraries(starcry -lXdmcp)
-target_link_libraries(starcry -lGL)
-
-# x264
-target_link_libraries(starcry /opt/cppse/build/x264/lib/libx264.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libbz2.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/liblzma.a)
-
-target_link_libraries(starcry -ldl)
-
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libpng16.a)
-
-# fastpfor
-target_link_libraries(starcry /opt/cppse/build/fastpfor/lib/libFastPFOR.a)
-
-# v8
-target_link_libraries(starcry /opt/cppse/build/v8pp/lib/libv8_monolith.a)
-#target_link_libraries(starcry /usr/lib/gcc/x86_64-linux-gnu/7/libstdc++fs.a) # ubuntu 18.04
-target_link_libraries(starcry /usr/lib/gcc/x86_64-linux-gnu/9/libstdc++fs.a)  # ubuntu 20.04
-
-# generic
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libssl.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libcrypto.a)
-
-# seasocks
-target_link_libraries(starcry /opt/cppse/build/seasocks/lib/libseasocks.a)
-
-# openexr
-target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIexMath-2_5.a)
-target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIlmImf-2_5.a)
-target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIlmImfUtil-2_5.a)
-target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIlmThread-2_5.a)
-target_link_libraries(starcry /opt/cppse/build/openexr/lib/libImath-2_5.a)
-target_link_libraries(starcry /opt/cppse/build/openexr/lib/libHalf-2_5.a)
-target_link_libraries(starcry /opt/cppse/build/openexr/lib/libIex-2_5.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libz.a)
-
-# curses
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libcurses.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libtinfo.a)
-
-# fmt
-target_link_libraries(starcry /opt/cppse/build/fmt/lib/libfmt.a)
-
-# tvision
-target_link_libraries(starcry /opt/cppse/build/tvision/lib/libtvision.a)
-
-# ncursesw
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libncurses.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libncursesw.a)
-target_link_libraries(starcry /usr/lib/x86_64-linux-gnu/libtermcap.a)
-
-target_link_libraries(starcry /opt/cppse/build/inotify-cpp/lib/libinotify-cpp.a)
+configure_links(starcry)
 
 install (TARGETS starcry DESTINATION bin)
 
