@@ -185,7 +185,7 @@ publish:
 
 clion:
 	xhost +
-	docker run --rm --name starcry -p 18081:18080 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:/home/trigen -w /projects/starcry -e DISPLAY=$$DISPLAY -v /etc/passwd:/etc/passwd -v /etc/shadow:/etc/shadow -v /etc/sudoers:/etc/sudoers -v /tmp/.X11-unix:/tmp/.X11-unix -u 1144 rayburgemeestre/build-starcry-ubuntu:20.04 -c "sudo switch-to-latest-clang; /home/trigen/system/superprofile/dot-files/.bin/clion"
+	docker run --rm --name starcry -p 18081:18080 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -w /projects/starcry -e DISPLAY=$$DISPLAY -v /etc/passwd:/etc/passwd -v /etc/shadow:/etc/shadow -v /etc/sudoers:/etc/sudoers -v /tmp/.X11-unix:/tmp/.X11-unix -u $(uid) rayburgemeestre/build-starcry-ubuntu:20.04 -c "sudo switch-to-latest-clang; $$HOME/system/superprofile/dot-files/.bin/clion"
 
 profile:  ## run starcry with valgrind's callgrind for profiling
 	valgrind --tool=callgrind ./build/starcry input/contrast.js -f 1

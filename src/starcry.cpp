@@ -104,6 +104,10 @@ void starcry::configure_inotify() {
   auto handleUnexpectedNotification = [](inotify::Notification notification) {};
   auto events = {inotify::Event::close_write};
   notifier = std::make_unique<inotify::NotifierBuilder>();
+  if (!std::filesystem::exists(path)) {
+    std::cout << "path (" << path << ") does not exist" << std::endl;
+    return;
+  }
   notifier->watchPathRecursively(path)
       .onEvents(events, handleNotification)
       .onUnexpectedEvent(handleUnexpectedNotification);

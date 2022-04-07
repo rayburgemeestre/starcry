@@ -77,7 +77,7 @@ void mainloop(void *arg) {
 
   double ratio_w = double(job.canvas_w) / double(texture_w);
   // double ratio_h = double(job.canvas_h) / double(texture_h);
-  double ratio = ratio_w; // std::min(ratio_w, ratio_h);
+  double ratio = ratio_w;  // std::min(ratio_w, ratio_h);
 
   texture_rect.w = texture_w * ratio;
   texture_rect.h = texture_h * ratio;
@@ -89,8 +89,8 @@ void mainloop(void *arg) {
   SDL_RenderCopy(renderer, texture, &texture_source_rect, &texture_rect);
 
   if (pointer_state) {
-      SDL_RenderFillRect(renderer, &r);
-      SDL_RenderFillRect(renderer, &r2);
+    SDL_RenderFillRect(renderer, &r);
+    SDL_RenderFillRect(renderer, &r2);
   }
 
   SDL_RenderPresent(renderer);
@@ -112,23 +112,23 @@ void render_shapes_to_texture() {
   data::settings settings_;
   std::shared_ptr<metrics> tmp = nullptr;
   auto &bmp = engine.render(0,
-                job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
-                job.chunk,
-                tmp,
-                job.background_color,
-                job.shapes,
-                0,
-                0,
-                job.offset_x,
-                job.offset_y,
-                job.canvas_w,
-                job.canvas_h,
-                job.width,
-                job.height,
-                job.scale,
-                job.scales,
-                false,
-                settings_);
+                            job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
+                            job.chunk,
+                            tmp,
+                            job.background_color,
+                            job.shapes,
+                            0,
+                            0,
+                            job.offset_x,
+                            job.offset_y,
+                            job.canvas_w,
+                            job.canvas_h,
+                            job.width,
+                            job.height,
+                            job.scale,
+                            job.scales,
+                            false,
+                            settings_);
   if (texture == nullptr && renderer == nullptr) {
     return;
   }
@@ -195,7 +195,7 @@ void initialize(uint32_t width, uint32_t height, uint32_t canvas_w, uint32_t can
   circle.radius_size = 600;
   circle.blending_ = data::blending_type::normal;
   circle.opacity = 1.;
-  circle.scale= 1.;
+  circle.scale = 1.;
   circle.type = data::shape_type::circle;
   if (job.shapes.empty()) {
     job.shapes.emplace_back();

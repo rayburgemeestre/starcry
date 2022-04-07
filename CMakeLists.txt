@@ -91,11 +91,12 @@ file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp" "src/perlin.cpp" "src/textu
 add_executable(starcry ${starcry_SOURCES})
 add_executable(sc_client ${sc_client_SOURCES})
 
-
 # integration tests
-list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
-list(APPEND starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test/test_starcry.cpp")
-add_executable(integration_tests ${starcry_SOURCES})
+file(GLOB_RECURSE integration_tests_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test/test_integration_tests.cpp")
+list(APPEND integration_tests_SOURCES ${starcry_SOURCES})
+list(APPEND integration_tests_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test/test_integration_tests.cpp")
+list(REMOVE_ITEM integration_tests_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
+add_executable(integration_tests ${integration_tests_SOURCES})
 target_link_libraries(integration_tests PRIVATE Catch2::Catch2WithMain)
 configure_links(integration_tests)
 
@@ -115,4 +116,9 @@ configure_links(starcry)
 
 install (TARGETS starcry DESTINATION bin)
 
-clangformat_setup(${starcry_SOURCES} ${sc_client_SOURCES})
+set(all_sources ${starcry_SOURCES})
+list(APPEND all_sources ${sc_client_SOURCES})
+list(APPEND all_sources ${integration_tests_SOURCES})
+list(REMOVE_ITEM all_sources /opt/cppse/build/v8pp/include/v8pp/context.cpp)  # causes crash since owned by root
+list(REMOVE_DUPLICATES all_sources)
+clangformat_setup(${all_sources})

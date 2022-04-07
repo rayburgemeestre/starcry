@@ -26,12 +26,9 @@ void metrics::set_script(const std::string &script) {
 }
 
 void metrics::init() {
-  std::cout << "Welcome to Starcry." << std::endl;
-
   auto *ptr = this;
   curses = std::thread([=]() {
     if (notty) {
-      std::cout << "noTTY" << std::endl;
       std::unique_lock<std::mutex> lock(cv_mut);
       cv.wait(lock, [&] {
         return ready;
