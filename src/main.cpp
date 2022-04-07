@@ -49,6 +49,7 @@ public:
       ("client", po::value<std::string>(&options.host), "start client renderer, connect to host (default localhost)")
       ("no-gui", "disable render to graphical window")
       ("no-output", "disable producing any output (video or stream)")
+      ("no-render", "disable all rendering (e.g. for performance testing js)")
       ("preview", "enable preview settings for fast preview rendering")
       ("stream", "start embedded webserver and stream HLS to webroot")
       ("no-webserver", "do not start embedded webserver")
@@ -82,6 +83,7 @@ public:
     options.enable_remote_workers = vm.count("server");
     options.gui = !vm.count("no-gui");
     options.output = !vm.count("no-output");
+    options.render = !vm.count("no-render");
     options.notty = vm.count("notty");
     options.compression = vm.count("compression");
     options.rand_seed =

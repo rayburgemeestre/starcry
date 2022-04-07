@@ -281,7 +281,9 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   }
 
   if (!options_.render) {
-    return;
+    if (job_msg->last_frame)
+      if (webserv) webserv->stop();
+    return;  // early exit
   }
   // COZ_PROGRESS;
   auto process = [&](size_t width,
@@ -289,7 +291,6 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
                      std::vector<uint32_t> &pixels,
                      std::vector<data::color> &pixels_raw,
                      bool last_frame) {
-    bool finished = false;
     if (job_msg->client == nullptr) {
       // get pixels from raw pixels for the ffmpeg video
       if (pixels.empty() && !pixels_raw.empty()) {
@@ -307,10 +308,9 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
           for (int i = 0; i < 50; i++) {
             framer->add_frame(pixels);
           }
-          finished = true;
         }
       }
-      return finished;
+      return last_frame;
     }
     std::swap(job_msg->pixels, pixels);
     std::swap(job_msg->pixels_raw, pixels_raw);
