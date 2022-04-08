@@ -10,7 +10,6 @@
 #include "generator.h"
 #include "starcry.h"
 #include "starcry/command_get_video.h"
-#include "starcry/metrics.h"
 #include "util/image_splitter.hpp"
 #include "util/logger.h"
 

@@ -43,7 +43,6 @@
 // TODO: re-organize this somehow
 #include <sys/prctl.h>
 #include <random>
-#include <utility>
 
 #include <inotify-cpp/FileSystemAdapter.h>
 #include <inotify-cpp/NotifierBuilder.h>
@@ -149,7 +148,7 @@ void starcry::add_image_command(seasocks::WebSocket *client,
                                 const std::string &output_filename) {
   cmds->push(std::make_shared<instruction>(
       client, it, script, frame_num, num_chunks, raw, preview, last_frame, output_filename));
-  pe.run([=]() {
+  pe.run([=, this]() {
     if (webserv) {
       webserv->send_stats(system->get_stats());
       webserv->send_metrics(metrics_->to_json());
@@ -276,7 +275,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   bool finished = false;
   if (options_.level != log_level::silent) {
     const auto frame = job_msg->job_number == std::numeric_limits<size_t>::max() ? 0 : job_msg->job_number;
-    static auto prev_frame = 0;
+    static size_t prev_frame = 0;
     if (options_.level != log_level::info) {
       if (frame != prev_frame) {
       }
@@ -513,7 +512,7 @@ void starcry::pixels_vec_insert_checkers_background(std::vector<uint32_t> &pixel
   uint8_t *p = (uint8_t *)&pixels[0];
   int x = 0, y = 0;
   bool flag = true;
-  for (size_t i = 0; i < (width * height); i++) {
+  for (size_t i = 0; i < size_t(width * height); i++) {
     uint8_t &r = *(p++);
     uint8_t &g = *(p++);
     uint8_t &b = *(p++);

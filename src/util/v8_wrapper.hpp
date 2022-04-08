@@ -317,40 +317,42 @@ inline void v8_wrapper::add_class(T func) {
 
 inline void v8_wrapper::add_include_fun() {
   v8::HandleScope scope(context->isolate());
-  context->set(
-      "include",
-      v8pp::wrap_function(
-          context->isolate(), "include", [=](const v8::FunctionCallbackInfo<v8::Value>& args) -> v8::Handle<v8::Value> {
-            for (int i = 0; i < args.Length(); i++) {
-              std::string const str = v8pp::from_v8<std::string>(
-                  context->isolate(), args[0]->ToString(context->isolate()->GetCurrentContext()).ToLocalChecked());
+  context->set("include",
+               v8pp::wrap_function(
+                   context->isolate(),
+                   "include",
+                   [=, this](const v8::FunctionCallbackInfo<v8::Value>& args) -> v8::Handle<v8::Value> {
+                     for (int i = 0; i < args.Length(); i++) {
+                       std::string const str = v8pp::from_v8<std::string>(
+                           context->isolate(),
+                           args[0]->ToString(context->isolate()->GetCurrentContext()).ToLocalChecked());
 
-              // load_file loads the file with this name into a string,
-              // I imagine you can write a function to do this :)
-              std::string file(str.c_str());
-              fs::path p = filename_;
-              p.remove_filename();
-              p.append(file);
+                       // load_file loads the file with this name into a string,
+                       // I imagine you can write a function to do this :)
+                       std::string file(str.c_str());
+                       fs::path p = filename_;
+                       p.remove_filename();
+                       p.append(file);
 
-              std::ifstream stream(p);
-              if (!stream) {
-                throw std::runtime_error("could not locate file " + std::string(p.c_str()));
-              }
-              std::istreambuf_iterator<char> begin(stream), end;
-              std::string js_file(begin, end);
+                       std::ifstream stream(p);
+                       if (!stream) {
+                         throw std::runtime_error("could not locate file " + std::string(p.c_str()));
+                       }
+                       std::istreambuf_iterator<char> begin(stream), end;
+                       std::string js_file(begin, end);
 
-              if (js_file.length() > 0) {
-                v8::Handle<v8::String> source =
-                    v8::String::NewFromUtf8(context->isolate(), js_file.c_str()).ToLocalChecked();
-                auto script_origin = v8::String::NewFromUtf8(context->isolate(), p.c_str()).ToLocalChecked();
-                v8::ScriptOrigin so(script_origin);
-                v8::Handle<v8::Script> script =
-                    v8::Script::Compile(context->isolate()->GetCurrentContext(), source, &so).ToLocalChecked();
-                return script->Run(context->isolate()->GetCurrentContext()).ToLocalChecked();
-              }
-            }
-            return v8::Undefined(context->isolate());
-          }));
+                       if (js_file.length() > 0) {
+                         v8::Handle<v8::String> source =
+                             v8::String::NewFromUtf8(context->isolate(), js_file.c_str()).ToLocalChecked();
+                         auto script_origin = v8::String::NewFromUtf8(context->isolate(), p.c_str()).ToLocalChecked();
+                         v8::ScriptOrigin so(script_origin);
+                         v8::Handle<v8::Script> script =
+                             v8::Script::Compile(context->isolate()->GetCurrentContext(), source, &so).ToLocalChecked();
+                         return script->Run(context->isolate()->GetCurrentContext()).ToLocalChecked();
+                       }
+                     }
+                     return v8::Undefined(context->isolate());
+                   }));
 }
 
 inline const char* ToCString(const v8::String::Utf8Value& value) {
@@ -366,7 +368,7 @@ inline void v8_wrapper::rethrow_as_runtime_error(v8::Isolate* isolate, v8::TryCa
   v8::Handle<v8::Message> const& message(try_catch.Message());
   if (!message.IsEmpty()) {
     int linenum = message->GetLineNumber(context).FromJust();
-    auto script_resource = [=]() -> std::string {
+    auto script_resource = [=, this]() -> std::string {
       const auto val = message->GetScriptResourceName()->ToString(isolate->GetCurrentContext());
       v8::String::Utf8Value resource(isolate, message->GetScriptResourceName());
       return !val.IsEmpty() ? std::string(ToCString(resource)) : filename_;

@@ -502,7 +502,7 @@ bool generator::_generate_frame() {
         throw std::runtime_error("Could not access cache object.");
       }
       auto video = i.v8_obj(obj, "video");
-      auto objects = i.v8_array(obj, "objects");
+      // auto objects = i.v8_array(obj, "objects");
       auto current_scene = i.get_index(scenes, scenesettings.current_scene_next);
       if (!current_scene->IsObject()) return;
       auto sceneobj = current_scene.As<v8::Object>();
@@ -582,7 +582,7 @@ bool generator::_generate_frame() {
           util::generator::copy_instances(i, intermediates, next_instances);
           scalesettings.update();
           scenesettings.update();
-          if (job->shapes.size() != stepper.max_step) detected_too_many_steps = true;
+          if (job->shapes.size() != size_t(stepper.max_step)) detected_too_many_steps = true;
           metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
         }
         if (!detected_too_many_steps) {                 // didn't bail out with break above
@@ -844,7 +844,7 @@ void generator::update_object_interactions(v8_interact& i,
   for (size_t index = 0; index < next_instances->Length(); index++) {
     auto next_instance = i.get_index(next_instances, index).As<v8::Object>();
     auto intermediate_instance = i.get_index(intermediates, index).As<v8::Object>();
-    auto previous_instance = i.get_index(previous_instances, index).As<v8::Object>();
+    // auto previous_instance = i.get_index(previous_instances, index).As<v8::Object>();
 
     if (!next_instance->IsObject() || !intermediate_instance->IsObject()) continue;
     auto motion_blur = !i.has_field(next_instance, "motion_blur") || i.boolean(next_instance, "motion_blur");
@@ -1132,8 +1132,8 @@ double generator::get_max_travel_of_object(v8_interact& i,
     for (int current_lvl = 0; current_lvl <= level; current_lvl++) {
       auto& current_obj = parents[current_lvl];
       const bool current_is_line = i.str(parents[current_lvl], "type") == "line";
-      const bool current_is_pivot =
-          i.has_field(parents[current_lvl], "pivot") ? i.boolean(current_obj, "pivot") : false;
+      // const bool current_is_pivot =
+      //    i.has_field(parents[current_lvl], "pivot") ? i.boolean(current_obj, "pivot") : false;
 
       // X,Y
       data::coord current{i.double_number(current_obj, "x"), i.double_number(current_obj, "y")};
@@ -1226,9 +1226,9 @@ double generator::get_max_travel_of_object(v8_interact& i,
 
     // pass along x, y, x2, y2.
     if (i.has_field(instance, "props")) {
-      const auto process_obj = [&i, &next_instances, &pos, &pos2, this](v8::Local<v8::Object>& o,
-                                                                        const std::string& inherit_x,
-                                                                        const std::string& inherit_y) {
+      const auto process_obj = [&i, &next_instances, &pos, /* &pos2,*/ this](v8::Local<v8::Object>& o,
+                                                                             const std::string& inherit_x,
+                                                                             const std::string& inherit_y) {
         const auto unique_id = i.integer_number(o, "unique_id");
         const auto find = next_instance_mapping.find(unique_id);
         if (find != next_instance_mapping.end()) {
@@ -1277,13 +1277,13 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto [prev_x, prev_y, prev_x2, prev_y2] =
       calculate(i, next_instances, previous_instance, prev_parents, level, is_line);
 
-  auto radius = i.double_number(instance, "radius");
-  auto radiussize = i.double_number(instance, "radiussize");
+  // auto radius = i.double_number(instance, "radius");
+  // auto radiussize = i.double_number(instance, "radiussize");
 
-  auto prev_radius = i.double_number(previous_instance, "radius");
-  auto prev_radiussize = i.double_number(previous_instance, "radiussize");
+  // auto prev_radius = i.double_number(previous_instance, "radius");
+  // auto prev_radiussize = i.double_number(previous_instance, "radiussize");
 
-  auto rad = radius + radiussize;
+  // auto rad = radius + radiussize;
   // auto prev_rad = prev_radius + prev_radiussize;
 
   // Calculate how many pixels are maximally covered by this instance, this is currently very simplified

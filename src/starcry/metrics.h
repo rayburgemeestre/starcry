@@ -61,6 +61,7 @@ public:
       case job_state::skipped:
         return "SKIPPED";
     }
+    return "";
   }
 
   struct object {

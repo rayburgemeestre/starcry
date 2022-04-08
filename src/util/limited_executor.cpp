@@ -35,10 +35,10 @@ public:
     }
     reset();
     if (!t.joinable()) {
-      t = std::thread([=]() {
+      t = std::thread([=, this]() {
         std::unique_lock<std::mutex> lock(mut);
         while (true) {
-          cv.wait_until(lock, time, [=]() {
+          cv.wait_until(lock, time, [=, this]() {
             return stop;
           });
           if (stop) return;

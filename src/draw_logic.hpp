@@ -586,13 +586,13 @@ public:
     // TODO: make the line modes configurable
     // line mode 1
     // double num = 1.0 - (1.0 - normalized_dist_from_center) * (1.0 - normalized_dist_from_line);
-    auto expf = [](double v, double factor) {
-      auto max = factor;
-      auto maxexp = log(max + 1.0) / log(2.0);
-      auto linear = v;
-      auto expf = ((pow(2.0, (linear)*maxexp)) - 1.0) / max;
-      return expf;
-    };
+    //    auto expf = [](double v, double factor) {
+    //      auto max = factor;
+    //      auto maxexp = log(max + 1.0) / log(2.0);
+    //      auto linear = v;
+    //      auto expf = ((pow(2.0, (linear)*maxexp)) - 1.0) / max;
+    //      return expf;
+    //    };
     //    auto logn = [](double v, double factor) {
     //      auto max = factor;
     //      auto maxexp = log(max + 1.0) / log(2.0);

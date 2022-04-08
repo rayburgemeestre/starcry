@@ -126,6 +126,8 @@ public:
             case data::shape_type::text:
               box = draw_logic_.render_text(bmp, shape, opacity, settings);
               break;
+            case data::shape_type::none:
+              break;
           }
           bounding_box box_x;
           bounding_box box_y;
@@ -162,6 +164,8 @@ public:
                 case data::shape_type::text:
                   box = draw_logic_.render_text(bmp, shape, opacity, settings);
                   break;
+                case data::shape_type::none:
+                  break;
               }
             } else {
               switch (shape.type) {
@@ -173,6 +177,8 @@ public:
                   break;
                 case data::shape_type::text:
                   box.update(draw_logic_.render_text(bmp, shape, opacity, settings));
+                  break;
+                case data::shape_type::none:
                   break;
               }
             }
@@ -197,6 +203,8 @@ public:
                 break;
               case data::shape_type::text:
                 box.update(draw_logic_.render_text(bmp, shape, opacity, settings));
+                break;
+              case data::shape_type::none:
                 break;
             }
             if (warp_view_x && warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y, true);

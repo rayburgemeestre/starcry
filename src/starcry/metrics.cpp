@@ -5,7 +5,20 @@
  */
 
 #include "starcry/metrics.h"
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
+#else
+#pragma GCC diagnostic push
+// doesn't work, see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#endif
 #include "tvision/tstarcry.h"
+#ifdef __clang__
+#pragma clang diagnostic pop
+#else
+#pragma GCC diagnostic pop
+#endif
 
 #include <stdlib.h>
 #include <iostream>
@@ -27,7 +40,7 @@ void metrics::set_script(const std::string &script) {
 
 void metrics::init() {
   auto *ptr = this;
-  curses = std::thread([=]() {
+  curses = std::thread([=, this]() {
     if (notty) {
       std::unique_lock<std::mutex> lock(cv_mut);
       cv.wait(lock, [&] {
@@ -81,10 +94,10 @@ std::string metrics::to_json() {
   json json_jobs = {};
   // DUPLICATE CODE AHEAD
   if (!jobs_.empty()) {
-    auto first_key = jobs_.begin()->first;
-    auto last_key = jobs_.rbegin()->first;
+    size_t first_key = jobs_.begin()->first;
+    size_t last_key = jobs_.rbegin()->first;
 
-    if (jobs_.size() > max_keep_jobs) {
+    if (jobs_.size() > static_cast<size_t>(max_keep_jobs)) {
       auto delete_until_key = last_key - max_keep_jobs;
       if (first_key < delete_until_key) {
         for (auto i = first_key; i < delete_until_key; i++) {
@@ -97,9 +110,9 @@ std::string metrics::to_json() {
 
     for (size_t i = first_key; i <= last_key; i++) {
       const auto &job = jobs_[i];
-      int queued = 0;
-      int rendering = 0;
-      int rendered = 0;
+      size_t queued = 0;
+      size_t rendering = 0;
+      size_t rendered = 0;
       std::chrono::time_point<std::chrono::high_resolution_clock> render_begin = job.chunks[0].render_begin;
       std::chrono::time_point<std::chrono::high_resolution_clock> render_end = job.chunks[0].render_begin;
       for (const auto &chunk : job.chunks) {
@@ -239,7 +252,7 @@ void metrics::render_job(int thread_number, int job_number, int chunk) {
     if (chunk > 0) {
       chunk--;
     }
-    if (chunk >= jobs_[job_number].chunks.size()) return;
+    if (size_t(chunk) >= jobs_[job_number].chunks.size()) return;
     jobs_[job_number].chunks[chunk].render_begin = std::chrono::high_resolution_clock::now();
     jobs_[job_number].chunks[chunk].state = metrics::job_state::rendering;
   }
@@ -269,7 +282,7 @@ void metrics::resize_job_objects(int number, int job_number, int chunk, int num_
   if (jobs_.find(job_number) != jobs_.end()) {
     if (chunk > 0) chunk--;
     for (int i = 0; i < num_objects; i++) {
-      if (jobs_[job_number].chunks.size() <= chunk) continue;
+      if (jobs_[job_number].chunks.size() <= (size_t)chunk) continue;
       jobs_[job_number].chunks[chunk].objects.push_back(metrics::object{i,
                                                                         std::chrono::high_resolution_clock::now(),
                                                                         std::chrono::high_resolution_clock::now(),
@@ -285,8 +298,8 @@ void metrics::set_render_job_object_state(
   // TODO: Possibly do not need thread number ????
   if (jobs_.find(job_number) != jobs_.end()) {
     if (chunk > 0) chunk--;
-    if (jobs_[job_number].chunks.size() <= chunk) return;
-    if (jobs_[job_number].chunks[chunk].objects.size() <= index) return;
+    if (jobs_[job_number].chunks.size() <= size_t(chunk)) return;
+    if (jobs_[job_number].chunks[chunk].objects.size() <= size_t(index)) return;
     jobs_[job_number].chunks[chunk].objects[index].state = state;
     if (state == metrics::job_state::rendering) {
       jobs_[job_number].chunks[chunk].objects[index].render_begin = std::chrono::high_resolution_clock::now();
@@ -334,7 +347,7 @@ void metrics::complete_render_job(int thread_number, int job_number, int chunk) 
     if (chunk > 0) {
       chunk--;
     }
-    if (chunk >= jobs_[job_number].chunks.size()) return;
+    if (size_t(chunk) >= jobs_[job_number].chunks.size()) return;
     jobs_[job_number].chunks[chunk].render_end = std::chrono::high_resolution_clock::now();
     jobs_[job_number].chunks[chunk].state = metrics::job_state::rendered;
     for (const auto &chunk : jobs_[job_number].chunks) {
@@ -373,10 +386,10 @@ void metrics::display(std::function<void(const std::string &)> f1,
 
   // TODO: this code will temporarily be duplicated in the JSON version
   if (jobs_.empty()) return;
-  auto first_key = jobs_.begin()->first;
-  auto last_key = jobs_.rbegin()->first;
+  size_t first_key = jobs_.begin()->first;
+  size_t last_key = jobs_.rbegin()->first;
 
-  if (jobs_.size() > max_keep_jobs) {
+  if (jobs_.size() > size_t(max_keep_jobs)) {
     auto delete_until_key = last_key - max_keep_jobs;
     if (first_key < delete_until_key) {
       for (auto i = first_key; i < delete_until_key; i++) {
@@ -389,9 +402,9 @@ void metrics::display(std::function<void(const std::string &)> f1,
 
   for (size_t i = first_key; i <= last_key; i++) {
     const auto &job = jobs_[i];
-    int queued = 0;
-    int rendering = 0;
-    int rendered = 0;
+    size_t queued = 0;
+    size_t rendering = 0;
+    size_t rendered = 0;
     std::chrono::time_point<std::chrono::high_resolution_clock> render_begin = job.chunks[0].render_begin;
     std::chrono::time_point<std::chrono::high_resolution_clock> render_end = job.chunks[0].render_begin;
     for (const auto &chunk : job.chunks) {

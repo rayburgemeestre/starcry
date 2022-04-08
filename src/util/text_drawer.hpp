@@ -69,7 +69,7 @@ public:
     ascent = static_cast<int>(roundf(ascent * scale));
     descent = roundf(descent * scale);
 
-    for (int i = 0; i < strlen(word); ++i) {
+    for (size_t i = 0; i < strlen(word); ++i) {
       // how wide is this character
       int ax = 0;
       int lsb = 0;

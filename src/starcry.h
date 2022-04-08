@@ -92,10 +92,11 @@ class starcry {
   friend class client_message_handler;
 
 private:
+  std::shared_ptr<v8_wrapper> context;
+
   starcry_options options_;
   feature_settings features_;
 
-  std::shared_ptr<v8_wrapper> context;
   std::map<int, std::shared_ptr<bitmap_wrapper>> bitmaps;
   std::shared_ptr<generator> gen;
   std::map<int, std::shared_ptr<rendering_engine_wrapper>> engines;

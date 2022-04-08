@@ -1,10 +1,16 @@
 #pragma once
 
 #define Uses_TApplication
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
+#else
+#endif
 #include <tvision/tv.h>
+#ifdef __clang__
 #pragma clang diagnostic pop
+#else
+#endif
 
 #include <atomic>
 #include <memory>
