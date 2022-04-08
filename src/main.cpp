@@ -27,6 +27,13 @@ class main_program {
 private:
   po::variables_map vm;
   po::options_description desc = std::string("Allowed options");
+  /**
+   * Please note that V8 can only be full initialized per process.
+   * You can confirm this by modifying the hello-world example.
+   * For this reason we have to pass this context into our objects
+   * everywhere, and make sure we only have a single instance.
+   */
+  std::shared_ptr<v8_wrapper> context;
   starcry_options options;
   double rand_seed = std::numeric_limits<double>::max();
 
@@ -97,7 +104,8 @@ public:
 
     if (vm.count("stream")) configure_streaming();
 
-    starcry sc(options);
+    context = std::make_shared<v8_wrapper>(options.script_file);
+    starcry sc(options, context);
     if (vm.count("caching")) {
       sc.features().caching = true;
     }

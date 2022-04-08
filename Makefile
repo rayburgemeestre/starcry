@@ -58,6 +58,12 @@ integration-test:  ## execute starcry unit tests using docker (with clang)
 	@$(call make-clang, cmake --build build --target integration_tests)
 	@$(call make-clang, ./build/integration_tests)
 
+.PHONY: integration-test-sanitizer
+integration-test-sanitizer:
+	@$(call make-clang, ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on -GNinja -B build)
+	@$(call make-clang, ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 cmake --build build --target integration_tests)
+	@$(call make-clang, ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 ./build/integration_tests)
+
 client:  ## build webassembly javascript file using docker
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind \
 	                    -o webroot/client.js src/client.cpp src/stb.cpp \

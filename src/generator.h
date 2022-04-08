@@ -27,6 +27,7 @@
 
 #include "util/quadtree.h"
 
+class v8_wrapper;
 class step_calculator;
 class metrics;
 
@@ -38,6 +39,7 @@ extern int64_t counter;
 
 class generator {
 private:
+  std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
   std::shared_ptr<data::job> job;
   uint32_t frame_number = 0;
@@ -96,7 +98,7 @@ public:
     double scene_time;
   };
 
-  explicit generator(std::shared_ptr<metrics>& metrics);
+  explicit generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context);
   ~generator() = default;
 
   void reset_context();
@@ -181,6 +183,8 @@ public:
   }
 
   inline time_settings get_time() const;
+
+  std::shared_ptr<v8_wrapper> get_context() const;
 
   void fix(v8_interact& i, v8::Local<v8::Array>& instances);
 

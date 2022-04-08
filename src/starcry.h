@@ -19,6 +19,7 @@
 
 #include "util/periodic_executor.hpp"
 
+class v8_wrapper;
 class sfml_window;
 class bitmap_wrapper;
 class generator;
@@ -94,6 +95,7 @@ private:
   starcry_options options_;
   feature_settings features_;
 
+  std::shared_ptr<v8_wrapper> context;
   std::map<int, std::shared_ptr<bitmap_wrapper>> bitmaps;
   std::shared_ptr<generator> gen;
   std::map<int, std::shared_ptr<rendering_engine_wrapper>> engines;
@@ -122,7 +124,7 @@ private:
   std::thread notifier_thread;
 
 public:
-  starcry(starcry_options &options);
+  starcry(starcry_options &options, std::shared_ptr<v8_wrapper> &context);
   ~starcry();
 
   starcry_options &options();

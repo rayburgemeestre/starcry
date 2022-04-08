@@ -43,6 +43,7 @@ if (SANITIZER)
 endif()
 
 if (DEBUG)
+    message("This is a DEBUG build.")
     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         add_definitions("-std=c++20 -O0 -g -stdlib=libstdc++ -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3")
     else()

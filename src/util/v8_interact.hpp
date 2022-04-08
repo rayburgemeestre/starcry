@@ -10,7 +10,7 @@
 #include <iostream>
 #include <utility>
 
-extern std::shared_ptr<v8_wrapper> context;
+extern v8::Local<v8::Context> context;
 
 inline void handle_error(v8::Maybe<bool> res) {
   if (res.ToChecked() == false) {
@@ -18,9 +18,9 @@ inline void handle_error(v8::Maybe<bool> res) {
   }
 }
 
-inline v8::Local<v8::String> v8_str(std::shared_ptr<v8_wrapper> context, const std::string& str) {
+inline v8::Local<v8::String> v8_str(v8::Local<v8::Context> context, const std::string& str) {
   // TODO: try function caching here??
-  return v8::String::NewFromUtf8(context->isolate, str.c_str()).ToLocalChecked();
+  return v8::String::NewFromUtf8(context->GetIsolate(), str.c_str()).ToLocalChecked();
 }
 
 inline std::string v8_str(v8::Isolate* isolate, const v8::Local<v8::String>& str) {
@@ -28,16 +28,14 @@ inline std::string v8_str(v8::Isolate* isolate, const v8::Local<v8::String>& str
   return std::string(*out);
 }
 
-inline v8::Local<v8::Value> v8_index_object(std::shared_ptr<v8_wrapper> context,
+inline v8::Local<v8::Value> v8_index_object(v8::Local<v8::Context> context,
                                             v8::Local<v8::Value> val,
                                             const std::string& str) {
-  return val.As<v8::Object>()->Get(context->isolate->GetCurrentContext(), v8_str(context, str)).ToLocalChecked();
+  return val.As<v8::Object>()->Get(context, v8_str(context, str)).ToLocalChecked();
 }
 
-inline v8::Local<v8::Value> v8_index_object(std::shared_ptr<v8_wrapper> context,
-                                            v8::Local<v8::Value> val,
-                                            size_t index) {
-  return val.As<v8::Object>()->Get(context->isolate->GetCurrentContext(), index).ToLocalChecked();
+inline v8::Local<v8::Value> v8_index_object(v8::Local<v8::Context> context, v8::Local<v8::Value> val, size_t index) {
+  return val.As<v8::Object>()->Get(context, index).ToLocalChecked();
 }
 
 /*
@@ -65,38 +63,38 @@ public:
   }
 
   v8::Local<v8::Object> v8_obj(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(context, obj, field).As<v8::Object>();
+    return v8_index_object(ctx, obj, field).As<v8::Object>();
   }
 
   v8::Local<v8::Array> v8_array(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(context, obj, field).As<v8::Array>();
+    return v8_index_object(ctx, obj, field).As<v8::Array>();
   }
 
   v8::Local<v8::Array> v8_array(v8::Local<v8::Object>& obj,
                                 const std::string& field,
                                 v8::Local<v8::Array> default_val) {
-    auto tmp = v8_index_object(context, obj, field).As<v8::Array>();
+    auto tmp = v8_index_object(ctx, obj, field).As<v8::Array>();
     if (!tmp->IsArray()) {
       set_field(obj, field, default_val);
-      tmp = v8_index_object(context, obj, field).As<v8::Array>();
+      tmp = v8_index_object(ctx, obj, field).As<v8::Array>();
     }
     return tmp;
   }
 
   v8::Local<v8::Number> v8_number(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(context, obj, field).As<v8::Number>();
+    return v8_index_object(ctx, obj, field).As<v8::Number>();
   }
 
   v8::Local<v8::Number> v8_number(v8::Local<v8::Array>& obj, size_t index) {
-    return v8_index_object(context, obj, index).As<v8::Number>();
+    return v8_index_object(ctx, obj, index).As<v8::Number>();
   }
 
   v8::Local<v8::String> v8_string(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(context, obj, field).As<v8::String>();
+    return v8_index_object(ctx, obj, field).As<v8::String>();
   }
 
   v8::Local<v8::String> v8_string(v8::Local<v8::Array>& obj, size_t index) {
-    return v8_index_object(context, obj, index).As<v8::String>();
+    return v8_index_object(ctx, obj, index).As<v8::String>();
   }
 
   double double_number(v8::Local<v8::Object>& obj, const std::string& field) {
@@ -108,7 +106,7 @@ public:
   }
 
   double boolean(v8::Local<v8::Object>& obj, const std::string& field) {
-    auto tmp = obj->Get(get_context(), v8_str(context, field)).ToLocalChecked();
+    auto tmp = obj->Get(get_context(), v8_str(ctx, field)).ToLocalChecked();
     if (!tmp->IsBoolean()) return false;
     return tmp->BooleanValue(isolate);
   }
@@ -130,7 +128,7 @@ public:
   }
 
   bool has_field(v8::Local<v8::Object> source, const std::string& source_field) {
-    return source->Has(ctx, v8_str(context, source_field)).ToChecked();
+    return source->Has(ctx, v8_str(ctx, source_field)).ToChecked();
   }
 
   void copy_field(v8::Local<v8::Object> dest,
@@ -138,12 +136,11 @@ public:
                   v8::Local<v8::Object> source,
                   const std::optional<std::string>& source_field = {}) {
     if (source_field) {
-      handle_error(dest->Set(
-          ctx, v8_str(context, dest_field), source->Get(ctx, v8_str(context, *source_field)).ToLocalChecked()));
+      handle_error(
+          dest->Set(ctx, v8_str(ctx, dest_field), source->Get(ctx, v8_str(ctx, *source_field)).ToLocalChecked()));
     }
     // assume field is same as dest field if left unspecified
-    handle_error(
-        dest->Set(ctx, v8_str(context, dest_field), source->Get(ctx, v8_str(context, dest_field)).ToLocalChecked()));
+    handle_error(dest->Set(ctx, v8_str(ctx, dest_field), source->Get(ctx, v8_str(ctx, dest_field)).ToLocalChecked()));
   }
 
   void copy_field_if_exists(v8::Local<v8::Object> dest,
@@ -152,30 +149,29 @@ public:
                             const std::optional<std::string>& source_field = {}) {
     if (source_field) {
       if (!has_field(source, *source_field)) return;
-      handle_error(dest->Set(
-          ctx, v8_str(context, dest_field), source->Get(ctx, v8_str(context, *source_field)).ToLocalChecked()));
+      handle_error(
+          dest->Set(ctx, v8_str(ctx, dest_field), source->Get(ctx, v8_str(ctx, *source_field)).ToLocalChecked()));
     }
     // assume field is same as dest field if left unspecified
     if (!has_field(source, dest_field)) return;
-    handle_error(
-        dest->Set(ctx, v8_str(context, dest_field), source->Get(ctx, v8_str(context, dest_field)).ToLocalChecked()));
+    handle_error(dest->Set(ctx, v8_str(ctx, dest_field), source->Get(ctx, v8_str(ctx, dest_field)).ToLocalChecked()));
   }
 
   void set_field(v8::Local<v8::Object> object, v8::Local<v8::Value> field, v8::Local<v8::Value> value) {
     handle_error(object->Set(ctx, field, value));
   }
   void set_field(v8::Local<v8::Object> object, const std::string& field, v8::Local<v8::Value> value) {
-    handle_error(object->Set(ctx, v8_str(context, field), value));
+    handle_error(object->Set(ctx, v8_str(ctx, field), value));
   }
   void set_field(v8::Local<v8::Object> object, size_t field_index, v8::Local<v8::Value> value) {
     handle_error(object->Set(ctx, field_index, value));
   }
   void remove_field(v8::Local<v8::Object> object, const std::string& field) {
-    handle_error(object->Delete(ctx, v8_str(context, field)));
+    handle_error(object->Delete(ctx, v8_str(ctx, field)));
   }
 
   void set_fun(v8::Local<v8::Object> object, const std::string& field, v8::Local<v8::Function> fun) {
-    handle_error(object->Set(ctx, v8_str(context, field), fun));
+    handle_error(object->Set(ctx, v8_str(ctx, field), fun));
   }
 
   template <class... Args>
@@ -185,7 +181,7 @@ public:
 
   template <class... Args>
   void call_fun(v8::Local<v8::Object> object, v8::Local<v8::Object> self, const std::string& field, Args... args) {
-    auto v8_field = v8_str(context, field);
+    auto v8_field = v8_str(ctx, field);
     auto a = isolate->GetCurrentContext();
     auto b = object.As<v8::Object>();
     if (!b->IsObject()) {
@@ -216,7 +212,7 @@ public:
   }
 
   v8::Local<v8::Function> get_fun(const std::string& field, std::optional<v8::Local<v8::Value>> obj = {}) {
-    auto v8_field = v8_str(context, field);
+    auto v8_field = v8_str(ctx, field);
     auto global = isolate->GetCurrentContext()->Global();
     auto funref = global->Get(isolate->GetCurrentContext(), v8_field);
     if (funref.IsEmpty()) {
@@ -242,7 +238,7 @@ public:
     return array->Get(ctx, index).ToLocalChecked();
   }
   v8::Local<v8::Value> get(v8::Local<v8::Object> array, const std::string& index) {
-    return array->Get(ctx, v8_str(context, index)).ToLocalChecked();
+    return array->Get(ctx, v8_str(ctx, index)).ToLocalChecked();
   }
   v8::Local<v8::Array> prop_names(v8::Local<v8::Object> obj) {
     v8::Local<v8::Array> out;

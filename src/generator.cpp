@@ -26,21 +26,16 @@
 #include "shapes/position.h"
 #include "shapes/rectangle.h"
 
-std::shared_ptr<v8_wrapper> context;
-
-generator::generator(std::shared_ptr<metrics>& metrics) : metrics_(metrics) {
-  static std::once_flag once;
-  std::call_once(once, []() {
-    context = nullptr;
-  });
-}
+generator::generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context)
+    : context(context), metrics_(metrics) {}
 
 generator* global_generator = nullptr;
 
 v8::Local<v8::Object> spawn_object(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  v8::Isolate* isolate = context->isolate;
+  auto ctx = global_generator->get_context();
+  v8::Isolate* isolate = ctx->isolate;
   v8::HandleScope scope(isolate);
-  v8::Local<v8::Object> obj = args[0]->ToObject(context->context->impl()).ToLocalChecked();
+  v8::Local<v8::Object> obj = args[0]->ToObject(ctx->context->impl()).ToLocalChecked();
   v8_interact i(obj->GetIsolate());
   auto spawner = args.Holder();
   return global_generator->spawn_object(spawner, obj);
@@ -131,10 +126,7 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
 }
 
 void generator::init_context() {
-  if (context != nullptr) {
-    return;
-  }
-  context = std::make_shared<v8_wrapper>(filename());
+  context->set_filename(filename());
   reset_context();
 }
 
@@ -185,15 +177,19 @@ void generator::init_job() {
   job->save_image = false;
 }
 
+v8::Local<v8::Context> current_context(std::shared_ptr<v8_wrapper>& wrapper_context) {
+  return wrapper_context->context->isolate()->GetCurrentContext();
+}
+
 void generator::init_video_meta_info(std::optional<double> rand_seed, bool preview) {
   // "run_array" is a bit of a misnomer, this only invokes the callback once
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
-    auto video = v8_index_object(context, val, "video").As<v8::Object>();
+    auto video = v8_index_object(current_context(context), val, "video").As<v8::Object>();
     if (preview) {
       v8::Local<v8::Object> preview_obj;
-      if (v8_index_object(context, val, "preview")->IsObject()) {
-        preview_obj = v8_index_object(context, val, "preview").As<v8::Object>();
+      if (v8_index_object(current_context(context), val, "preview")->IsObject()) {
+        preview_obj = v8_index_object(current_context(context), val, "preview").As<v8::Object>();
       } else {
         preview_obj = v8::Object::New(isolate);
       }
@@ -496,7 +492,8 @@ bool generator::_generate_frame() {
       auto& i = genctx.i();
 
       v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
-      auto cache_ = global->Get(isolate->GetCurrentContext(), v8_str(context, "cache")).ToLocalChecked();
+      auto cache_ =
+          global->Get(isolate->GetCurrentContext(), v8_str(current_context(context), "cache")).ToLocalChecked();
       auto cache = cache_.As<v8::Object>();
 
       auto obj = val.As<v8::Object>();
@@ -1062,6 +1059,10 @@ inline generator::time_settings generator::get_time() const {
       (t - scenesettings.offset_next) / scenesettings.scene_durations[scenesettings.current_scene_next], 0., 1.);
 
   return time_settings{t, e, scene_time};
+}
+
+std::shared_ptr<v8_wrapper> generator::get_context() const {
+  return context;
 }
 
 void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {

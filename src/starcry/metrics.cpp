@@ -38,7 +38,8 @@ void metrics::init() {
       program->run();
       program->shutDown();
     }
-    std::exit(0);
+    // TODO: make a proper way to shutdown
+    // std::exit(0);
   });
 }
 

@@ -124,7 +124,7 @@ void instantiate_object(v8_interact& i,
     static auto generate_len = 6;
     static std::string rand_str(generate_len, '\0');
     for (auto& dis : rand_str) dis = distribution(generator);
-    i.set_field(new_instance, "__random_hash__", v8_str(context, rand_str));
+    i.set_field(new_instance, "__random_hash__", v8_str(i.get_context(), rand_str));
   }
   i.set_field(new_instance, "__instance__", v8::Boolean::New(isolate, true));
 
@@ -180,7 +180,7 @@ v8::Local<v8::Object> instantiate_object_from_scene(
 
   // lookup the object prototype to be instantiated
   auto object_id = i.str(scene_object, "id");
-  auto object_prototype = v8_index_object(context, objects, object_id).template As<v8::Object>();
+  auto object_prototype = v8_index_object(i.get_context(), objects, object_id).template As<v8::Object>();
 
   // create a new javascript object
   v8::Local<v8::Object> instance = v8::Object::New(isolate);

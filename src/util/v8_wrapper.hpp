@@ -6,6 +6,7 @@
 #pragma once
 
 #include <experimental/filesystem>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <sstream>
@@ -26,6 +27,8 @@ public:
   v8_wrapper(std::string filename);
 
   ~v8_wrapper();
+
+  void recreate_isolate_in_this_thread();
 
   void reset();
 
@@ -57,8 +60,11 @@ public:
 
   void rethrow_as_runtime_error(v8::Isolate* isolate, v8::TryCatch& try_catch);
 
+  inline void set_filename(const std::string& filename);
+
   v8::Isolate* isolate = nullptr;
   v8pp::context* context;
+  v8::Isolate::CreateParams create_params;
   std::unique_ptr<v8::Platform> platform;
   std::string filename_;  // for error messages
   std::mutex mut;
@@ -74,12 +80,34 @@ inline v8_wrapper::v8_wrapper(std::string filename) : context(nullptr), platform
   v8::V8::InitializePlatform(platform.get());
   v8::V8::Initialize();
 
-  v8::Isolate::CreateParams create_params;
-  create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+  recreate_isolate_in_this_thread();
+}
+
+inline void v8_wrapper::recreate_isolate_in_this_thread() {
+  if (!create_params.array_buffer_allocator) {
+    create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+  }
+
+  delete (context);
+
+  if (isolate != nullptr) {
+    isolate->Exit();
+    isolate->Dispose();
+    isolate = nullptr;
+  }
+
   isolate = v8::Isolate::New(create_params);
   isolate->Enter();
 
-  context = new v8pp::context(isolate);  // Making it unique_ptr breaks it!
+  context = new v8pp::context(isolate);
+}
+
+inline v8_wrapper::~v8_wrapper() {
+  isolate->Exit();
+  isolate->Dispose();
+  v8::V8::Dispose();
+  v8::V8::ShutdownPlatform();
+  delete create_params.array_buffer_allocator;
 }
 
 inline void v8_wrapper::reset() {
@@ -325,22 +353,15 @@ inline void v8_wrapper::add_include_fun() {
           }));
 }
 
-inline v8_wrapper::~v8_wrapper() {
-  // context' ownership is probably taken over by someone else.
-  // delete(context);
-  v8::V8::Dispose();
-  v8::V8::ShutdownPlatform();
-}
-
 inline const char* ToCString(const v8::String::Utf8Value& value) {
   return *value ? *value : "<string conversion failed>";
 }
+
 inline void v8_wrapper::rethrow_as_runtime_error(v8::Isolate* isolate, v8::TryCatch& try_catch) {
   auto ex = try_catch.Exception();
   v8::Local<v8::Context> context(isolate->GetCurrentContext());
 
-  std::string const msg =
-      v8pp::from_v8<std::string>(isolate, ex->ToString(isolate->GetCurrentContext()).ToLocalChecked());
+  std::string const msg = v8pp::from_v8<std::string>(isolate, ex->ToString(context).ToLocalChecked());
   std::stringstream ss;
   v8::Handle<v8::Message> const& message(try_catch.Message());
   if (!message.IsEmpty()) {
@@ -367,4 +388,8 @@ inline void v8_wrapper::rethrow_as_runtime_error(v8::Isolate* isolate, v8::TryCa
     ss << '\n';
   }
   throw std::runtime_error(ss.str());
+}
+
+inline void v8_wrapper::set_filename(const std::string& filename) {
+  filename_ = filename;
 }

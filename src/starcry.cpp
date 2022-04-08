@@ -56,8 +56,9 @@ double rand_fun_vx() {
   return (mt_vx() / (double)mt_vx.max());
 }
 
-starcry::starcry(starcry_options &options)
-    : options_(options),
+starcry::starcry(starcry_options &options, std::shared_ptr<v8_wrapper> &context)
+    : context(context),
+      options_(options),
       bitmaps({}),
       gen(nullptr),
       engines({}),
@@ -120,7 +121,7 @@ starcry::~starcry() {
   notifier->stop();
   metrics_->notify();
   pe.cancel();
-  notifier_thread.join();
+  if (notifier_thread.joinable()) notifier_thread.join();
 }
 
 feature_settings &starcry::features() {
@@ -195,7 +196,10 @@ void starcry::render_job(size_t thread_num,
 }
 
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
-  if (!gen) gen = std::make_shared<generator>(metrics_);
+  if (!gen) {
+    context->recreate_isolate_in_this_thread();
+    gen = std::make_shared<generator>(metrics_, context);
+  }
   gen->init(cmd_def->script, options_.rand_seed, cmd_def->preview, features_.caching);
 
   if (cmd_def->type == instruction_type::get_video) {
