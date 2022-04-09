@@ -20,7 +20,7 @@ RUN /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -s USE_SDL_TTF=2 -O3 
 RUN apt install -y clangd-10
 
 # Integration tests dependencies
-RUN apt install -y imagemagick-6.q16
+RUN apt install -y imagemagick-6.q16 ffmpeg
 
 COPY docs/entrypoint.sh /entrypoint.sh
 

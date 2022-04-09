@@ -29,7 +29,7 @@ find_package(Threads)
 add_subdirectory(libs/Catch2)
 
 # unittests
-add_executable(tests test/test.cpp)
+add_executable(tests test/test_unit.cpp)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -93,9 +93,9 @@ add_executable(starcry ${starcry_SOURCES})
 add_executable(sc_client ${sc_client_SOURCES})
 
 # integration tests
-file(GLOB_RECURSE integration_tests_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test/test_integration_tests.cpp")
+file(GLOB_RECURSE integration_tests_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test/test_integration.cpp")
 list(APPEND integration_tests_SOURCES ${starcry_SOURCES})
-list(APPEND integration_tests_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test/test_integration_tests.cpp")
+list(APPEND integration_tests_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test/test_integration.cpp")
 list(REMOVE_ITEM integration_tests_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 add_executable(integration_tests ${integration_tests_SOURCES})
 target_link_libraries(integration_tests PRIVATE Catch2::Catch2WithMain)

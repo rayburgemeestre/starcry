@@ -563,10 +563,10 @@ bool generator::_generate_frame() {
           // i.get_isolate()->AdjustAmountOfExternalAllocatedMemory(0);
           v8::HeapStatistics v8_heap_stats;
           isolate->GetHeapStatistics(&v8_heap_stats);
-          logger(DEBUG) << "heap used: " << v8_heap_stats.used_heap_size()
-                        << ", external: " << v8_heap_stats.external_memory()
-                        << ", adjusted: " << v8::Isolate::GetCurrent()->AdjustAmountOfExternalAllocatedMemory(0)
-                        << std::endl;
+          // logger(DEBUG) << "heap used: " << v8_heap_stats.used_heap_size()
+          //               << ", external: " << v8_heap_stats.external_memory()
+          //               << ", adjusted: " << v8::Isolate::GetCurrent()->AdjustAmountOfExternalAllocatedMemory(0)
+          //               << std::endl;
 
           qts.clear();
           if (scenesettings.update(get_time().time)) {
