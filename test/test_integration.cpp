@@ -36,7 +36,9 @@ sut::sut() {
 }
 
 double sut::test_create_image(const std::string& image_name) {
-  options.output_file = image_name;
+  std::filesystem::create_directories("test/integration/last-run");
+  std::filesystem::create_directories("test/integration/reference");
+  options.output_file = fmt::format("test/integration/last-run/{}", image_name);
   context->set_filename(options.script_file);
   std::remove(image_name.c_str());
   starcry sc(options, context);
@@ -55,8 +57,8 @@ double sut::test_create_image(const std::string& image_name) {
                        true,
                        options.output_file);
   sc.run_server();
-  const auto output_file = fmt::format("{}.png", image_name);
-  const auto reference_file = fmt::format("reference/{}.png", image_name);
+  const auto output_file = fmt::format("test/integration/last-run/{}.png", image_name);
+  const auto reference_file = fmt::format("test/integration/reference/{}.png", image_name);
   if (!std::filesystem::exists(reference_file)) {
     std::cout << "copying " << output_file << " to reference file: " << reference_file << std::endl;
     try {
@@ -66,12 +68,14 @@ double sut::test_create_image(const std::string& image_name) {
     }
   }
   double rmse = compare(output_file, reference_file);
-  std::remove(image_name.c_str());
+  // std::remove(image_name.c_str());
   return rmse;
 }
 
 double sut::test_create_video(const std::string& video_name, int frames, int fps) {
-  options.output_file = video_name;
+  std::filesystem::create_directories("test/integration/last-run");
+  std::filesystem::create_directories("test/integration/reference");
+  options.output_file = fmt::format("test/integration/last-run/{}", video_name);
   context->set_filename(options.script_file);
   std::remove(video_name.c_str());
   starcry sc(options, context);
@@ -91,45 +95,55 @@ double sut::test_create_video(const std::string& video_name, int frames, int fps
 
   // convert video to seekable video
   const auto video_stem = fs::path(video_name).stem().string();
-  const auto seekable_video = fmt::format("{}.mp4", video_stem);
-  const auto grid_image = fmt::format("{}.png", video_stem);
+  const auto seekable_video = fmt::format("test/integration/last-run/{}.mp4", video_stem);
+  const auto grid_image = fmt::format("test/integration/last-run/{}.png", video_stem);
+  const auto grid_image_ref = fmt::format("test/integration/reference/{}.png", video_stem);
+  const auto stdout_1 = fmt::format("test/integration/reference/{}.stdout", video_stem);
+  const auto stderr_1 = fmt::format("test/integration/reference/{}.stderr", video_stem);
+  const auto stdout_2 = fmt::format("test/integration/reference/{}.stdout2", video_stem);
+  const auto stderr_2 = fmt::format("test/integration/reference/{}.stderr2", video_stem);
   std::remove(seekable_video.c_str());
   std::remove(grid_image.c_str());
   std::system(
-      fmt::format("/usr/bin/ffmpeg -y -i \"{}\" -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p \"{}\"",
-                  video_name,
-                  seekable_video)
+      fmt::format(
+          "/usr/bin/ffmpeg -y -i \"{}\" -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p \"{}\" 1>{} 2>{}",
+          options.output_file,
+          seekable_video,
+          stdout_1,
+          stderr_1)
           .c_str());
   const auto mod = frames / fps;  // 5x5 grid = 25 frames
-  std::system(fmt::format("/usr/bin/ffmpeg -i {} -vf 'select=not(mod(n\\,{})),scale=320:240,tile=5x5' {}",
+  std::system(fmt::format("/usr/bin/ffmpeg -i {} -vf 'select=not(mod(n\\,{})),scale=320:240,tile=5x5' {} 1>{} 2>{}",
                           seekable_video,
                           mod,
-                          grid_image)
+                          grid_image,
+                          stdout_2,
+                          stderr_2)
                   .c_str());
 
-  const auto reference_file = fmt::format("reference/{}", grid_image);
-  if (!std::filesystem::exists(reference_file)) {
-    std::cout << "copying " << grid_image << " to reference file: " << reference_file << std::endl;
+  if (!std::filesystem::exists(grid_image_ref)) {
+    std::cout << "copying " << grid_image << " to reference file: " << grid_image_ref << std::endl;
     try {
-      std::filesystem::copy_file(grid_image, reference_file);
+      std::filesystem::copy_file(grid_image, grid_image_ref);
     } catch (std::filesystem::filesystem_error& e) {
       std::cout << "could not copy: " << e.what() << std::endl;
     }
   }
-  double rmse = compare(grid_image, reference_file);
-  std::remove(video_name.c_str());
-  std::remove(seekable_video.c_str());
-  std::remove(grid_image.c_str());
+  double rmse = compare(grid_image, grid_image_ref);
+  // std::remove(video_name.c_str());
+  // std::remove(seekable_video.c_str());
+  // std::remove(grid_image.c_str());
   return rmse;
 }
 
 double sut::compare(const std::string& file1, const std::string& file2) {
-  std::system(fmt::format("/usr/bin/compare -metric RMSE {} {} diff.png 1> diff.txt 2>&1", file1, file2).c_str());
-  std::ifstream in("diff.txt");
+  std::system(
+      fmt::format("/usr/bin/compare -metric RMSE {} {} /tmp/diff.png 1> /tmp/diff.txt 2>&1", file1, file2).c_str());
+  std::ifstream in("/tmp/diff.txt");
   std::string s((std::istreambuf_iterator<char>(in)), (std::istreambuf_iterator<char>()));
   std::smatch match;
-  std::remove("diff.png");
-  std::remove("diff.txt");
+  std::remove("/tmp/diff.png");
+  std::remove("/tmp/diff.txt");
   double rmse = 1.;
   if (std::regex_search(s, match, std::regex(R"(\d+ \(([\d.]+)\))"))) {
     rmse = std::stod(match[1]);
