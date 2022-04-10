@@ -110,12 +110,14 @@ inline data::coord move_plus(data::coord c, double angle, double rotate, double 
   double rads = tmpAngle * pi / 180;
   return data::coord(c.x + move * cos(rads), c.y + move * sin(rads));
 }
+
 inline data::coord move_minus(data::coord c, double angle, double rotate, double move) {
   double tmpAngle = angle + rotate;  // go left...
   if (tmpAngle < 0.0) tmpAngle += 360.0;
   double rads = tmpAngle * pi / 180;
   return data::coord(c.x + move * cos(rads), c.y + move * sin(rads));
 }
+
 inline data::coord move(data::coord c, double angle, double rotate, double move) {
   if (rotate >= 0) {
     return move_plus(c, angle, rotate, move);

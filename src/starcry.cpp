@@ -86,6 +86,13 @@ starcry::starcry(starcry_options &options, std::shared_ptr<v8_wrapper> &context)
   configure_inotify();
 }
 
+starcry::~starcry() {
+  notifier->stop();
+  metrics_->notify();
+  pe.cancel();
+  if (notifier_thread.joinable()) notifier_thread.join();
+}
+
 void starcry::configure_inotify() {
   inotifypp::filesystem::path path("input");
   auto handleNotification = [&](inotify::Notification notification) {
@@ -114,13 +121,6 @@ void starcry::configure_inotify() {
   notifier_thread = std::thread([&]() {
     notifier->run();
   });
-}
-
-starcry::~starcry() {
-  notifier->stop();
-  metrics_->notify();
-  pe.cancel();
-  if (notifier_thread.joinable()) notifier_thread.join();
 }
 
 feature_settings &starcry::features() {
@@ -194,6 +194,7 @@ void starcry::render_job(size_t thread_num,
                       settings);
 }
 
+// MARK1 transform instruction into job (using generator)
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   if (!gen) {
     context->recreate_isolate_in_this_thread();
@@ -217,6 +218,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   }
 }
 
+// MARK1 render job using renderer and transform into render_msg
 std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_message> job_msg) {
   auto &job = *job_msg->job;
 
@@ -271,6 +273,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   return command_handlers[job_msg->type]->to_render_msg(job_msg, bmp);
 }
 
+// MARK1 handle the render msg, create into video or whatever
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   bool finished = false;
   if (options_.level != log_level::silent) {

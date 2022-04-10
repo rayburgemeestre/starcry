@@ -20,7 +20,10 @@
 #pragma GCC diagnostic pop
 #endif
 
-#include <stdlib.h>
+#include "starcry.h"
+
+#include <csignal>
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
 
@@ -33,14 +36,14 @@ metrics::metrics(bool notty) : notty(notty) {
 
 void metrics::set_script(const std::string &script) {
   script_ = script;
-  if (program) {
+  if (program && !program->exited) {
     program->setScript(script_);
   }
 }
 
 void metrics::init() {
   auto *ptr = this;
-  curses = std::thread([=, this]() {
+  curses = std::thread([&, this]() {
     if (notty) {
       std::unique_lock<std::mutex> lock(cv_mut);
       cv.wait(lock, [&] {
@@ -50,9 +53,25 @@ void metrics::init() {
       program = std::make_shared<TStarcry>(ptr);
       program->run();
       program->shutDown();
+      program->suspend();
+      if (program->user_exited) {
+        // Setup handler
+        auto signal_handler = [](int signal) {
+          if (signal == SIGABRT) {
+            std::cerr << "User exited the UI.\n";
+            std::_Exit(EXIT_SUCCESS);
+          } else {
+            std::cerr << "Unexpected signal " << signal << " received\n";
+          }
+          std::_Exit(EXIT_FAILURE);
+        };
+        auto previous_handler = std::signal(SIGABRT, signal_handler);
+        if (previous_handler == SIG_ERR) {
+          std::_Exit(EXIT_FAILURE);
+        }
+        std::abort();
+      }
     }
-    // TODO: make a proper way to shutdown
-    // std::exit(0);
   });
 }
 
@@ -487,7 +506,7 @@ void metrics::display(std::function<void(const std::string &)> f1,
       flush(f2, ss);
     }
   }
-  if (program) {
+  if (program && !program->exited) {
     program->setProgress(completed_frames, max_frames);
   }
 

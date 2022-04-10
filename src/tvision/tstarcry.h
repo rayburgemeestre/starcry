@@ -54,7 +54,10 @@ private:
 
   void openFile(const char *fileSpec);
   metrics *metrics_;
-  std::atomic<bool> exited = false;
 
   TView *script_filename_view = nullptr;
+
+public:
+  std::atomic<bool> exited = false;
+  std::atomic<bool> user_exited = false;
 };

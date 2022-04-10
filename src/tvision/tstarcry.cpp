@@ -127,6 +127,8 @@ void TStarcry::handleEvent(TEvent &event) {
     void *p1 = 0;
     message(this, evCommand, cmTile, p1);
     clearEvent(event);
+  } else if (event.what == evNothing && event.message.command == cmQuit) {
+    user_exited = true;
   }
 }
 
