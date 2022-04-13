@@ -1,0 +1,25 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: git submodule update --init --recursive
+      run: git submodule update --init --recursive
+    - name: make
+      run: make
+    - name: make build
+      run: make build
+    - name: make test
+      run: make test
+    - name: make integration-test
+      run: make integration-test
