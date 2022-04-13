@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -ex
+set -e
+set -o pipefail
 
 if [[ "$_UID" != "" ]]; then
   groupadd -g $_GID user || true
