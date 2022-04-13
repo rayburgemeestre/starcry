@@ -112,7 +112,7 @@ pull:  ## pull the starcry docker build image
 	docker pull rayburgemeestre/build-starcry-ubuntu:20.04
 
 docker:  ## build the starcry docker build image
-	docker pull rayburgemeestre/build-ubuntu:20.04 && \
+	docker pull -q rayburgemeestre/build-ubuntu:20.04 && \
 	docker build -t rayburgemeestre/build-starcry-ubuntu:20.04 -f Dockerfile .
 
 runtime_deps:  ## install run-time dependencies
