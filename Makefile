@@ -10,10 +10,10 @@ ccache_env = CXX='ccache g++' CC='ccache gcc' CCACHE_SLOPPINESS=file_macro,local
 
 docker_tty = $$(/bin/sh -c 'if [ "$(interactive)" = "1" ]]; then echo "-t"; else echo ""; fi')
 docker_run = docker run -i $(docker_tty) --init --rm \
-	    	    	    -e _UID=$(uid) -e _GID=$(gid) \
+	                    -e _UID=$(uid) -e _GID=$(gid) \
 	                    -v $$PWD:$$PWD \
-	    	            -v $$PWD/.ccache:/tmp/.ccache \
-	    	    	    -v $$PWD/.emscripten_cache:/tmp/.emscripten_cache \
+	                    -v $$PWD/.ccache:/tmp/.ccache \
+	                    -v $$PWD/.emscripten_cache:/tmp/.emscripten_cache \
 	                    -w $$PWD rayburgemeestre/build-starcry-ubuntu:20.04
 
 inside_docker_container = [[ -f /.dockerenv ]]
@@ -36,39 +36,43 @@ help: # with thanks to Ben Rady
 
 .PHONY: build
 build:  ## build starcry binary using docker (with clang)
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build)
-	@$(call make-clang, cmake --build build --target starcry)
-	@$(call make-clang, strip --strip-debug build/starcry)
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
+	                    cmake --build build --target starcry && \
+	                    strip --strip-debug build/starcry)
 
 .PHONY: build-gcc
 build-gcc:  ## build starcry binary using docker (with gcc)
-	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which g++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build)
-	@$(call make, cmake --build build --target starcry)
-	@$(call make, strip --strip-debug build/starcry)
+	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which g++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
+	              cmake --build build --target starcry && \
+	              strip --strip-debug build/starcry)
 
 .PHONY: test
 test:  ## execute starcry unit tests using docker (with clang)
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build)
-	@$(call make-clang, cmake --build build --target tests)
-	@$(call make-clang, ./build/tests)
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
+	                    cmake --build build --target tests && \
+	                    ./build/tests)
 
 .PHONY: integration-test
 integration-test:  ## execute starcry unit tests using docker (with clang)
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build)
-	@$(call make-clang, cmake --build build --target integration_tests)
-	@$(call make-clang, ./build/integration_tests -s)
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
+	                    cmake --build build --target integration_tests && \
+	                    ./build/integration_tests -s
 
 .PHONY: integration-test-sanitizer
 integration-test-sanitizer:
-	@$(call make-clang, ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on -GNinja -B build)
-	@$(call make-clang, ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 cmake --build build --target integration_tests)
-	@$(call make-clang, ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 ./build/integration_tests)
+	@$(call make-clang, ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
+	                    CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) \
+	                        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on -GNinja -B build && \
+	                    ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
+	                        cmake --build build --target integration_tests && \
+	                    ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
+	                        ./build/integration_tests)
 
 client:  ## build webassembly javascript file using docker
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind \
 	                    -o webroot/client.js src/client.cpp src/stb.cpp \
-	    	    	    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
-	    	    	    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0)
+	                    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
+	                    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0)
 
 client_desktop:  ## build webassembly client for desktop for testing purposes
 	# TODO: seems broken
@@ -78,35 +82,35 @@ client_desktop:  ## build webassembly client for desktop for testing purposes
 client_debug:  ## build webassembly javascript file using docker with debug
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 -g --bind \
 	                    -o webroot/client.js src/client.cpp src/stb.cpp \
-	    	    	    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
-	    	    	    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1)
+	                    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
+	                    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1)
 
 debug:  ## build starcry binary using docker with debug
 	make debug-clean
-	@$(call make-clang, pushd build && CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) \
-	                    cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on ..)
-	@$(call make-clang, pushd build && make VERBOSE=1 -j $$(nproc) starcry)
-	@$(call make-clang, pushd build && ln -fs $$PWD/build/compile_commands.json $$PWD/compile_commands.json)
+	@$(call make-clang, mkdir -p build && pushd build && CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) \
+	                    cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on .. && \
+	                    make VERBOSE=1 -j $$(nproc) starcry && \
+	                    ln -fs $$PWD/build/compile_commands.json $$PWD/compile_commands.json)
 
 debug-sanitizer:  ## build starcry binary using docker with debug + address sanitizer
 	make debug-clean
 	@$(call make-clang, pushd build && ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
 	                                   CXX=$$(which c++) cmake -DSANITIZER=1 -DDEBUG=on .. \
-	                    cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on ..)
-	@$(call make-clang, pushd build && ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
-	                    make VERBOSE=1 -j $$(nproc) starcry)
-	@$(call make-clang, pushd build && ln -fs $$PWD/build/compile_commands.json $$PWD/compile_commands.json)
+	                                                     cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on .. && \
+	                                   ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
+	                                   make VERBOSE=1 -j $$(nproc) starcry) && \
+	                                   ln -fs $$PWD/build/compile_commands.json $$PWD/compile_commands.json)
 
 debug-clean:
 	rm -rf /var/crash/_home_trigen_projects_starcry_build_starcry.1144.crash
 	rm -rf gdb.txt
 
 format:  ## format source code (build at least once first)
-	@$(call make-clang, stat -c 'chown %u:%g . -R' CMakeLists.txt | sudo sh -)
-	@$(call make-clang, mv -v webpack*.js input/)
-	@$(call make-clang, find ./input -name '*.js' -type f -exec clang-format-12 -i {} \;)
-	@$(call make-clang, mv -v input/webpack*.js ./)
-	@$(call make-clang, cmake --build build --target clangformat)
+	@$(call make-clang, stat -c 'chown %u:%g . -R' CMakeLists.txt | sudo sh - && \
+	                    mv -v webpack*.js input/ && \
+	                    find ./input -name '*.js' -type f -exec clang-format-12 -i {} \; && \
+	                    mv -v input/webpack*.js ./ && \
+	                    cmake --build build --target clangformat)
 
 pull:  ## pull the starcry docker build image
 	docker pull rayburgemeestre/build-starcry-ubuntu:20.04
@@ -145,15 +149,15 @@ clean:  ## clean build artifacts
 dockerize:  ## dockerize starcry executable in stripped down docker image
 	make build
 
-	@$(call make-clang, mkdir -p out/workdir)
-	@$(call make-clang, cp -prv $$PWD/webroot out/workdir/webroot)
-	@$(call make-clang, cp -prv $$PWD/output/report.html out/workdir/webroot/report.html || true)
-	@$(call make-clang, cp -prv $$PWD/input out/workdir/input)
-	@$(call make-clang, strip --strip-debug $$PWD/build/starcry)
-	@$(call make-clang, dockerize --verbose --debug -n -o out --add-file $$PWD/build/starcry /starcry)
-	@$(call make-clang, mkdir -p out/usr/share/terminfo/x)
-	@$(call make-clang, cp -prv /usr/share/terminfo/x/xterm-16color out/usr/share/terminfo/x/)
-	@$(call make-clang, sed -i.bak '2 a ENV TERM=xterm-16color' out/Dockerfile)
+	@$(call make-clang, mkdir -p out/workdir && \
+	                    cp -prv $$PWD/webroot out/workdir/webroot && \
+	                    (cp -prv $$PWD/output/report.html out/workdir/webroot/report.html || true) && \
+	                    cp -prv $$PWD/input out/workdir/input && \
+	                    strip --strip-debug $$PWD/build/starcry && \
+	                    dockerize --verbose --debug -n -o out --add-file $$PWD/build/starcry /starcry && \
+	                    mkdir -p out/usr/share/terminfo/x && \
+	                    cp -prv /usr/share/terminfo/x/xterm-16color out/usr/share/terminfo/x/ && \
+	                    sed -i.bak '2 a ENV TERM=xterm-16color' out/Dockerfile)
 
 	cd out && docker build . -t rayburgemeestre/starcry:v`cat ../.version`
 	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then \
