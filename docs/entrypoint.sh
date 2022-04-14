@@ -6,7 +6,7 @@ set -o pipefail
 if [[ "$_UID" != "" ]]; then
   groupadd -g $_GID user || true
   useradd -r -u $_UID -g $_GID user || true
-  usermod -a -G wheel user 1>/dev/null 2>& || true
+  usermod -a -G wheel user 1>/dev/null 2>&
   mkdir -p /home/user
   chown $_UID:$_GID /home/user
   echo 'user ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
