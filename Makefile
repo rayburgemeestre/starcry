@@ -56,7 +56,7 @@ test:  ## execute starcry unit tests using docker (with clang)
 integration-test:  ## execute starcry unit tests using docker (with clang)
 	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
 	                    cmake --build build --target integration_tests && \
-	                    ./build/integration_tests -s
+	                    ./build/integration_tests -s)
 
 .PHONY: integration-test-sanitizer
 integration-test-sanitizer:
