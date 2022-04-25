@@ -171,4 +171,5 @@ private:
   std::mutex cv_mut;
   std::condition_variable cv;
   bool ready = false;
+  bool initialized = false;
 };
