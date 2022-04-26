@@ -24,6 +24,6 @@ jobs:
     - name: make integration-test
       run: make integration-test
     - name: install npm
-      run: apt install -y npm
+      run: sudo apt install -y npm
     - name: make build_web
       run: make build_web
