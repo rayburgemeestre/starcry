@@ -68,7 +68,7 @@ void command_get_bitmap::handle_frame(std::shared_ptr<render_msg> &job_msg) {
   if (sc.webserv) sc.webserv->execute_bitmap(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
 
   if (job_msg->labels) {
-    job_msg->ID = sc.webserv->get_client_id(job_msg->client);
+    // job_msg->ID = sc.webserv->get_client_id(job_msg->client);
     command_get_objects(sc).handle_frame(job_msg);
   }
 }

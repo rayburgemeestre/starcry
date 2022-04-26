@@ -87,6 +87,7 @@ std::shared_ptr<render_msg> command_get_objects::to_render_msg(std::shared_ptr<j
 }
 
 void command_get_objects::handle_frame(std::shared_ptr<render_msg> &job_msg) {
+  job_msg->ID = sc.webserv->get_client_id(job_msg->client);
   auto fun = [&](std::shared_ptr<ObjectsHandler> objects_handler, std::shared_ptr<render_msg> job_msg) {
     if (objects_handler->_links.find(job_msg->ID) != objects_handler->_links.end()) {
       auto con = objects_handler->_links[job_msg->ID];  // find con that matches ID this msg is from

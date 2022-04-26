@@ -39,6 +39,7 @@
             <b-menu-item icon="information-outline" label="Files" :active="menu === 'files'" v-on:click="menu = menu === 'files' ? '' : 'files'"></b-menu-item>
             <b-menu-item icon="cash-multiple" label="Script" :active="menu === 'script'" v-on:click="menu = menu === 'script' ? '' : 'script'"></b-menu-item>
             <b-menu-item icon="table" label="Objects" :active="menu === 'objects'" v-on:click="menu = menu === 'objects' ? '' : 'objects'"></b-menu-item>
+            <b-menu-item icon="table" label="Help" :active="menu === 'help'" v-on:click="menu = menu === 'help' ? '' : 'help'"></b-menu-item>
             <b-menu-item icon="table" label="Debug" :active="menu === 'debug'" v-on:click="menu = menu === 'debug' ? '' : 'debug'"></b-menu-item>
           </b-menu-list>
           <!--
@@ -66,6 +67,9 @@
       </div>
       <div v-if="menu === 'objects'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
         <objects-component v-model="objects" width="100%" height="100vh - 60px"/>
+      </div>
+      <div v-if="menu === 'help'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
+        <help-component width="100%" height="100vh - 60px"/>
       </div>
       <div v-if="menu === 'debug'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
         <debug-component v-model="debug" width="100%" height="100vh - 60px"/>
@@ -96,6 +100,7 @@
           <button v-shortkey="['ctrl', 'f']" @shortkey="menu = menu === 'files' ? '' : 'files'">_</button>
           <button v-shortkey="['ctrl', 'o']" @shortkey="menu = menu === 'objects' ? '' : 'objects'">_</button>
           <button v-shortkey="['ctrl', 'u']" @shortkey="menu = menu === 'debug' ? '' : 'debug'">_</button>
+          <button v-shortkey="['ctrl', 'h']" @shortkey="menu = menu === 'help' ? '' : 'help'">_</button>
           <button v-shortkey="[',']" @shortkey="prev_frame()">_</button>
           <button v-shortkey="['.']" @shortkey="next_frame()">_</button>
           <button v-shortkey="['shift', 'o']" @shortkey="get_objects()">_</button>
@@ -116,6 +121,7 @@
 import EditorComponent from './components/EditorComponent.vue'
 import ScriptsComponent from './components/ScriptsComponent.vue'
 import ObjectsComponent from './components/ObjectsComponent.vue'
+import HelpComponent from './components/HelpComponent.vue'
 import PlaybackComponent from './components/PlaybackComponent.vue'
 import StatsComponent from './components/StatsComponent.vue'
 import ViewPointComponent from './components/ViewPointComponent.vue'
@@ -179,6 +185,7 @@ export default {
     EditorComponent,
     ScriptsComponent,
     ObjectsComponent,
+    HelpComponent,
     PlaybackComponent,
     StatsComponent,
     ViewPointComponent,

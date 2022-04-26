@@ -82,6 +82,12 @@ public:
           return link.first;
         }
       }
+      // dealing with slightly broken abstractions here.., lookup in this handler as well.
+      for (const auto &link : objects_handler->_links) {
+        if (link.second == con) {
+          return link.first;
+        }
+      }
     }
     return "";
   }
