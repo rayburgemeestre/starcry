@@ -27,15 +27,17 @@ void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
   if (link(input, con)) return;
   logger(DEBUG) << "BitmapHandler::onData - " << input << std::endl;
   auto json = nlohmann::json::parse(input);
-  sc->add_image_command(con,
-                        json["filename"],
-                        instruction_type::get_bitmap,
-                        json["frame"],
-                        32,
-                        sc->get_viewpoint().raw,
-                        sc->get_viewpoint().preview,
-                        false,
-                        "");
+  if (json["filename"].is_string() && json["frame"].is_number_integer()) {
+    sc->add_image_command(con,
+                          json["filename"],
+                          instruction_type::get_bitmap,
+                          json["frame"],
+                          32,
+                          sc->get_viewpoint().raw,
+                          sc->get_viewpoint().preview,
+                          false,
+                          "");
+  }
 }
 
 void BitmapHandler::callback(seasocks::WebSocket *recipient, std::string s, uint32_t width, uint32_t height) {
