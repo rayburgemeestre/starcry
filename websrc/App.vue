@@ -472,8 +472,27 @@ export default {
           // var scale = Module.get_scale();
           var scale = this.viewpoint_settings.scale;
           for (let obj of buffer) {
-            var x = (obj.x - this.viewpoint_settings.offset_x) * scale + canvas_w/2.;
-            var y = (obj.y - this.viewpoint_settings.offset_y) * scale + canvas_h/2.;
+            var ratio_width = this.video.width / this.viewpoint_settings.canvas_w;
+            var ratio_height = this.video.height / this.viewpoint_settings.canvas_h;
+            var ratio = Math.min(ratio_width, ratio_height);
+            ratio = 1 / ratio;
+            /**
+             C++ code:
+             --
+             circle_x = ((shape.x * scale) + center_x) - offset_x
+             circle_y = ((shape.y * scale) + center_y) - offset_y
+             radius = shape.radius * scale * shape.scale
+             */
+            var center_x = canvas_w / 2.;
+            var center_y = canvas_h / 2.;
+            var x = ((obj.x * scale)) - (this.viewpoint_settings.offset_x * scale);
+            var y = ((obj.y * scale)) - (this.viewpoint_settings.offset_y * scale);
+            x *= ratio;
+            y *= ratio;
+            x += center_x;
+            y += center_y;
+            //ctx.fillStyle = "cyan";
+            //ctx.fillRect(x, y, 20, 20);
             ctx.fillText(obj.label, x, y);
           }
         },
@@ -549,11 +568,14 @@ canvas:active {
 .column.canvas {
   background-color: black;
   max-height: calc(100vh - 120px);
+  /* uncomment next line for static canvas (for debugging) */
+  /* width: 1920px; height: 1080px; */
 }
 .column.canvas canvas {
   position: absolute;
-  width: 100%;
-  max-height: calc(100vh - 120px);
+  width: 100%; max-height: calc(100vh - 120px);
+  /* uncomment next line for static canvas (for debugging) */
+  /* width: 1920px; height: 1080px; */
   left: 0;
   top: 0;
 }
