@@ -78,7 +78,7 @@ void webserver::set_script(const std::string &script) {
 }
 
 void webserver::run() {
-  server->serve("webroot", 18080);
+  server->serve("web/webroot", 18080);
 }
 
 void webserver::stop() {

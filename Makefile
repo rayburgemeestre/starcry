@@ -70,7 +70,7 @@ integration-test-sanitizer:
 
 client:  ## build webassembly javascript file using docker
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind \
-	                    -o webroot/client.js src/client.cpp src/stb.cpp \
+	                    -o web/webroot/client.js src/client.cpp src/stb.cpp \
 	                    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
 	                    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0)
 
@@ -81,7 +81,7 @@ client_desktop:  ## build webassembly client for desktop for testing purposes
 
 client_debug:  ## build webassembly javascript file using docker with debug
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 -g --bind \
-	                    -o webroot/client.js src/client.cpp src/stb.cpp \
+	                    -o web/webroot/client.js src/client.cpp src/stb.cpp \
 	                    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
 	                    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1)
 
@@ -107,9 +107,9 @@ debug-clean:
 
 format:  ## format source code (build at least once first)
 	@$(call make-clang, stat -c 'chown %u:%g . -R' CMakeLists.txt | sudo sh - && \
-	                    mv -v webpack*.js input/ && \
+	                    mv -v web/webpack*.js input/ && \
 	                    find ./input -name '*.js' -type f -exec clang-format-12 -i {} \; && \
-	                    mv -v input/webpack*.js ./ && \
+	                    mv -v input/webpack*.js ./web/ && \
 	                    cmake --build build --target clangformat)
 
 pull:  ## pull the starcry docker build image
@@ -143,14 +143,14 @@ clean:  ## clean build artifacts
 	rm -rf out
 	rm -f callgrind.out.*
 	rm -f actor_log*.log
-	rm -f webroot/stream/stream.m3u8*
+	rm -f web/webroot/stream/stream.m3u8*
 
 .PHONY: dockerize
 dockerize:  ## dockerize starcry executable in stripped down docker image
 	make build
 
 	@$(call make-clang, mkdir -p out/workdir && \
-	                    cp -prv $$PWD/webroot out/workdir/webroot && \
+	                    cp -prv $$PWD/web/webroot out/workdir/webroot && \
 	                    (cp -prv $$PWD/output/report.html out/workdir/webroot/report.html || true) && \
 	                    cp -prv $$PWD/input out/workdir/input && \
 	                    strip --strip-debug $$PWD/build/starcry && \
@@ -170,11 +170,11 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 	docker run -it rayburgemeestre/starcry:v`cat .version` /starcry --help || true
 
 build_web:  ## build web static files
-	npm ci
-	npm run build
+	pushd web && npm ci
+	pushd web && npm run build
 
 run_web:  ## run web in development hot-swappable mode
-	npm run dev
+	pushd web && npm run dev
 
 attach:
 	docker exec -it starcry /bin/bash
@@ -182,7 +182,7 @@ attach:
 release:  # alias for make build..
 	make build
 
-publish:
+publish:  ## build from scratch starcry, web, client, docker image. (does not push to dockerhub)
 	make clean
 	make build
 	make build_web

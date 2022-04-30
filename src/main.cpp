@@ -144,7 +144,7 @@ public:
 
   void configure_streaming() {
     if (options.output_file.empty()) {  // default
-      options.output_file = "webroot/stream/stream.m3u8";
+      options.output_file = "web/webroot/stream/stream.m3u8";
       cleanup_left_over_streaming_files();
     }
     std::cerr << "View stream here: http://localhost:18080/stream.html" << std::endl;
@@ -153,7 +153,7 @@ public:
 
   static void cleanup_left_over_streaming_files() {
     namespace fs = std::experimental::filesystem;
-    const fs::path stream_path{"webroot/stream"};
+    const fs::path stream_path{"web/webroot/stream"};
     for (const auto &entry : fs::directory_iterator(stream_path)) {
       const auto filename = entry.path().filename().string();
       // Note to self in the future: non-experimental filesystem can do:

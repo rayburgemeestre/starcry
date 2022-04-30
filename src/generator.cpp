@@ -132,7 +132,7 @@ void generator::init_context() {
 
 void generator::init_user_script() {
   // {
-  //   std::ifstream stream("webroot/lodash.js");
+  //   std::ifstream stream("web/webroot/lodash.js");
   //   std::istreambuf_iterator<char> begin(stream), end;
   //   const auto source = std::string(begin, end);
   //   context->run(source);
