@@ -3,18 +3,16 @@ import 'buefy/dist/buefy.css'
 
 import './mystyles.scss'
 
-import Vue from 'vue'
-import App from './App.vue'
+import { createApp } from 'vue'
 
-Vue.use(Buefy);
-Vue.use(require('vue-shortkey'));
+import App from './App.vue'
 
 if (!window.included) {
     window.included = true;
-    new Vue({
-        el: '#app',
-        render: h => h(App)
-    });
+    createApp(App)
+        .use(Buefy)
+        .use(require('vue-shortkey'))
+        .mount("#app");
 }
 
 function uuidv4() {

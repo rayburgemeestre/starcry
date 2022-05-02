@@ -6,7 +6,7 @@ const {VueLoaderPlugin} = require('vue-loader');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
-  mode: 'development',  // change to production when ready
+  mode: 'development',
 
   devServer: {
     static: './webroot',
@@ -14,42 +14,37 @@ module.exports = {
   },
 
   entry: './websrc/index.js',
-  output: {filename: 'main.js', path: path.resolve(__dirname, 'dist')},
+  output: {filename: 'main.js', path: path.resolve(__dirname, 'webroot')},
+  resolve: {
+    alias: {
+      vue: '@vue/compat'
+    }
+  },
   module: {
     rules: [
       {
-        test: /\.s[ac]ss$/i,
+        test: /\.(sa|sc|c)ss$/,
         use: [
-          'style-loader',
-          {
-            loader: MiniCssExtractPlugin.loader,
-            options: {
-              esModule: false,
-            },
-          },
+          MiniCssExtractPlugin.loader,
           'css-loader',
           'sass-loader',
         ],
       },
       {
-        test: /\.css$/,
-        use: [
-          'style-loader',
-
-          {
-            loader: MiniCssExtractPlugin.loader,
-            options: {
-              esModule: false,
+        test: /\.vue$/,
+        loader: 'vue-loader',
+        options: {
+          compilerOptions: {
+            compatConfig: {
+              MODE: 2,
             },
           },
-          'css-loader'
-        ]
+        },
       },
-      {test: /\.vue$/, use: 'vue-loader'},
       {
         test: /\.ttf$/,
         use: ['file-loader'],
-      },
+      }
     ]
   },
   plugins: [

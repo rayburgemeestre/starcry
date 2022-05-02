@@ -9,6 +9,11 @@ module.exports = {
   mode: 'production',
   entry: './websrc/index.js',
   output: {filename: 'main.js', path: path.resolve(__dirname, 'webroot')},
+  resolve: {
+    alias: {
+      vue: '@vue/compat'
+    }
+  },
   module: {
     rules: [
       {
@@ -19,7 +24,17 @@ module.exports = {
           'sass-loader',
         ],
       },
-      {test: /\.vue$/, use: 'vue-loader'},
+      {
+        test: /\.vue$/,
+        loader: 'vue-loader',
+        options: {
+          compilerOptions: {
+            compatConfig: {
+              MODE: 2,
+            },
+          },
+        },
+      },
       {
         test: /\.ttf$/,
         use: ['file-loader'],
