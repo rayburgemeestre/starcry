@@ -57,6 +57,12 @@ Ubuntu 20.04.
 
 Almost everything is statically linked, resulting in a relatively portable binary.
 
+The Web UI is based on Vue2. Currently the UI is using Buefy, which is not going to support Vue3.
+We have to rebase on a new UI framework.
+
+The Web UI also heavily relies on Webpack, it would be nice to move away from it to Vite.
+
+
 ## Rendering UI
 
 <img src="https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/tvui.png" width="100%">
