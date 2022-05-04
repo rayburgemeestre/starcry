@@ -25,7 +25,7 @@ export default class StarcryAPI {
         this.on_status_change('connecting');
         let protocol = document.location.protocol.replace('http', 'ws');
         if (document.location.href.indexOf('localhost')) {
-            this.ws = new WebSocket(protocol + '//' + document.location.host.replace(':8080', ':18080') + '/' + this.endpoint, [this.client_data['ID']]);
+            this.ws = new WebSocket(protocol + '//' + document.location.host.replace(':8080', ':18081') + '/' + this.endpoint, [this.client_data['ID']]);
         } else {
             this.ws = new WebSocket(protocol + '//' + document.location.host + '/' + this.endpoint, [this.client_data['ID']]);
         }

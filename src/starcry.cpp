@@ -191,7 +191,8 @@ void starcry::render_job(size_t thread_num,
                       job.scale,
                       job.scales,
                       options_.level == log_level::debug,
-                      settings);
+                      settings,
+                      get_viewpoint().debug);
 }
 
 // MARK1 transform instruction into job (using generator)

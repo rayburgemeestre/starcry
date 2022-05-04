@@ -163,8 +163,9 @@ public:
                                     double opacity,
                                     const data::settings &settings) {
     bounding_box box;
-    double circle_x = ((shape.x * scale_) + center_x_) - offset_x_;
-    double circle_y = ((shape.y * scale_) + center_y_) - offset_y_;
+    double circle_x = to_abs_x(shape.x);
+    double circle_y = to_abs_y(shape.y);
+
     auto radius = shape.radius * scale_ * shape.scale;
     auto radius_size = shape.radius_size * scale_ * shape.scale;
 
@@ -280,10 +281,11 @@ public:
   inline bounding_box render_text(image &bmp,
                                   const data::shape &shape,
                                   double opacity,
-                                  const data::settings &settings) {
+                                  const data::settings &settings,
+                                  bool absolute_positioning = false) {
     bounding_box bound_box;
-    double textX = ((shape.x * scale_) + center_x_) - offset_x_;
-    double textY = ((shape.y * scale_) + center_y_) - offset_y_;
+    double textX = absolute_positioning ? shape.x : to_abs_x(shape.x);
+    double textY = absolute_positioning ? shape.y : to_abs_y(shape.y);
 
     size_t index = static_cast<size_t>(shape.text_size * (shape.text_fixed ? 1. : scale_));
     if (index >= font_.size()) {
@@ -401,10 +403,10 @@ public:
   }
 
   void render_line(image &bmp, const data::shape &shape, double opacity, const data::settings &settings) {
-    auto x1 = ((shape.x * scale_ * shape.scale) + center_x_) - offset_x_;
-    auto y1 = ((shape.y * scale_ * shape.scale) + center_y_) - offset_y_;
-    auto x2 = ((shape.x2 * scale_ * shape.scale) + center_x_) - offset_x_;
-    auto y2 = ((shape.y2 * scale_ * shape.scale) + center_y_) - offset_y_;
+    double x1 = to_abs_x(shape.x);
+    double y1 = to_abs_y(shape.y);
+    double x2 = to_abs_x(shape.x2);
+    double y2 = to_abs_y(shape.y2);
     auto size = shape.radius_size * scale_ * shape.scale;
 
     // test
@@ -816,6 +818,12 @@ public:
   void scale(double scale) {
     scale_ = scale;
   }
+  void canvas_width(uint32_t width) {
+    canvas_w_ = width;
+  }
+  void canvas_height(uint32_t height) {
+    canvas_h_ = height;
+  }
   void width(uint32_t width) {
     width_ = width;
   }
@@ -836,12 +844,21 @@ public:
   }
 
 private:
+  inline double to_abs_x(double x) {
+    return ((x - center_x_) * scale_) - offset_x_ + canvas_w_ / 2;
+  }
+  inline double to_abs_y(double y) {
+    return ((y - center_y_) * scale_) - offset_y_ + canvas_h_ / 2;
+  }
+
   bool flag_ = false;
   double scale_;
   double center_x_;
   double center_y_;
   double offset_x_;
   double offset_y_;
+  uint32_t canvas_w_;
+  uint32_t canvas_h_;
   uint32_t width_;
   uint32_t height_;
   std::vector<std::unique_ptr<text_drawer>> font_;

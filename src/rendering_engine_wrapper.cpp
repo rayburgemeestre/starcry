@@ -36,7 +36,8 @@ image &rendering_engine_wrapper::render(size_t thread_num,
                                         double scale,
                                         std::vector<double> scales,
                                         bool verbose,
-                                        const data::settings &settings) {
+                                        const data::settings &settings,
+                                        double debug) {
   return data->engine.render(thread_num,
                              job_num,
                              chunk_num,
@@ -54,7 +55,8 @@ image &rendering_engine_wrapper::render(size_t thread_num,
                              scale,
                              scales,
                              verbose,
-                             settings);
+                             settings,
+                             debug);
 }
 
 void rendering_engine_wrapper::write_image(image &bmp, int width, int height, const std::string &filename) {

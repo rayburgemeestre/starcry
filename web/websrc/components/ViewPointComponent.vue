@@ -9,6 +9,7 @@
     <label class="checkbox"><input type="checkbox" v-model="labels"> <span>labels</span></label> <br/>
     <label class="checkbox"><input type="checkbox" v-model="save"> <span>save</span></label> <br/>
     <label class="checkbox"><input type="checkbox" v-model="caching"> <span>caching</span></label> <br/>
+    <label class="checkbox"><input type="checkbox" v-model="debug"> <span>debug</span></label> <br/>
     <br/>
 
     <strong>Viewpoint</strong> <br/>
@@ -70,6 +71,7 @@ export default {
       preview: false,
       labels: false,
       caching: false,
+      debug: false,
       save: false,
       canvas_w: 0.,
       canvas_h: 0.,
@@ -101,6 +103,7 @@ export default {
         'preview': this.$data.preview,
         'labels': this.$data.labels,
         'caching': this.$data.caching,
+        'debug': !!this.$data.debug,
         'save': this.$data.save,
         'canvas_w': this.$data.canvas_w,
         'canvas_h': this.$data.canvas_h,
@@ -122,7 +125,8 @@ export default {
       this.$data.raw = false;
       this.$data.preview = false;
       this.$data.labels = false;
-      this.$data.caching = true;
+      this.$data.caching = false;
+      this.$data.debug = false;
       this.$data.save = false;
       this.update();
     }
@@ -176,6 +180,7 @@ export default {
           this.$data.save = buffer["save"];
           this.$data.labels = buffer["labels"];
           this.$data.caching = buffer["caching"];
+          this.$data.debug = !!buffer["debug"];
         },
         _ => {
           if (this.$data.page_first_load)

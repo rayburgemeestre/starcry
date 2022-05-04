@@ -4,11 +4,9 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <fmt/core.h>
-
+#include "starcry/command_get_bitmap.h"
 #include "generator.h"
 #include "starcry.h"
-#include "starcry/command_get_bitmap.h"
 #include "starcry/command_get_objects.h"
 
 #include "image.hpp"

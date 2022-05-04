@@ -27,12 +27,16 @@ void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
   if (link(input, con)) return;
   logger(DEBUG) << "BitmapHandler::onData - " << input << std::endl;
   auto json = nlohmann::json::parse(input);
+  auto num_chunks = 32;
+  if (json["num_chunks"].is_number_integer()) {
+    num_chunks = json["num_chunks"];
+  }
   if (json["filename"].is_string() && json["frame"].is_number_integer()) {
     sc->add_image_command(con,
                           json["filename"],
                           instruction_type::get_bitmap,
                           json["frame"],
-                          32,
+                          num_chunks,
                           sc->get_viewpoint().raw,
                           sc->get_viewpoint().preview,
                           false,

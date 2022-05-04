@@ -12,8 +12,6 @@ using json = nlohmann::json;
 #include "data/viewpoint.hpp"
 #include "util/logger.h"
 
-#include <sstream>
-
 ViewPointHandler::ViewPointHandler(starcry *sc) : sc(sc) {}
 
 void ViewPointHandler::onConnect(seasocks::WebSocket *con) {
@@ -41,6 +39,7 @@ void ViewPointHandler::onData(seasocks::WebSocket *con, const char *data) {
     response["save"] = vp.save;
     response["labels"] = vp.labels;
     response["caching"] = vp.caching;
+    response["debug"] = vp.debug;
     con->send(response.dump());
   } else if (json["operation"] == "set") {
     data::viewpoint vp{json["scale"],
@@ -51,6 +50,7 @@ void ViewPointHandler::onData(seasocks::WebSocket *con, const char *data) {
                        json["save"],
                        json["labels"],
                        json["caching"],
+                       json["debug"],
                        json["canvas_w"],
                        json["canvas_h"]};
     sc->set_viewpoint(vp);

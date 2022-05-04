@@ -5,7 +5,7 @@
  */
 #pragma once
 
-// #define DEBUGMODE
+#include <fmt/core.h>
 
 #include "bitmap_wrapper.hpp"
 #ifndef EMSCRIPTEN
@@ -75,20 +75,24 @@ public:
                 uint32_t canvas_h,
                 uint32_t width,
                 uint32_t height,
-                double scale,
+                double top_scale,
                 std::vector<double> scales,
                 bool verbose,
-                const data::settings &settings) {
+                const data::settings &settings,
+                double debug) {
     auto &bmp = bitmap.get(width, height);
 
     bmp.clear_to_color(bg_color);
 
-    double scale_ratio = (scale / 1080.) * std::min(canvas_w, canvas_h);
+    double scale_ratio = (top_scale / 1080.) * canvas_h;  // std::min(canvas_w, canvas_h);
 
-    draw_logic_.scale(scale * scale_ratio);  // TODO: deprecate
+    draw_logic_.scale(top_scale /* * scale_ratio */);
+    draw_logic_.canvas_width(canvas_w);
+    draw_logic_.canvas_height(canvas_h);
+    draw_logic_.height(height);
     draw_logic_.width(width);
     draw_logic_.height(height);
-    draw_logic_.center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
+    draw_logic_.center(view_x, view_y);
     draw_logic_.offset(offset_x, offset_y);
 
     if (shapes.empty()) return bmp;
@@ -98,6 +102,44 @@ public:
     metrics->resize_job_objects(thread_num, job_num, chunk_num, shapes[shapes.size() - 1].size());
 #endif
 #endif
+
+    if (debug) {
+      double r = double(offset_y) / double(canvas_h), g = 0, b = 0, a = 1;
+      for (auto i = 0; i < width; i++) {
+        bmp.set(i, 0, r, g, b, a);
+      }
+      for (auto i = 0; i < height; i++) {
+        bmp.set(width / 2, i, r, g, b, a);
+      }
+      scope_exit([&]() {
+        const auto ct = [&](double offset_y, const std::string &text) {
+          data::shape shape;  // = shape;
+          shape.x = 0;
+          shape.y = offset_y;
+          shape.r = 1;
+          shape.g = 1;
+          shape.b = 1;
+          shape.opacity = 1;
+          shape.type = data::shape_type::text;
+          shape.text = text;
+          shape.text_fixed = true;
+          shape.text_size = 15;
+          shape.align = "left";
+          shape.gradient_id_str = "";
+          shape.gradients_.emplace_back(1.0, data::gradient{});
+          shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
+          shape.gradients_[0].second.colors.emplace_back(std::make_tuple(1.0, data::color{1.0, 1, 1, 1}));
+          shape.blending_ = data::blending_type::normal;
+          return shape;
+        };
+        draw_logic_.render_text(bmp, ct(0, fmt::format("canvas: ({}, {})", canvas_w, canvas_h)), 1., settings, true);
+        draw_logic_.render_text(bmp, ct(20, fmt::format("size: ({}, {})", width, height)), 1., settings, true);
+        draw_logic_.render_text(bmp, ct(60, fmt::format("offset: ({}, {})", offset_x, offset_y)), 1., settings, true);
+        draw_logic_.render_text(bmp, ct(80, fmt::format("view: ({}, {})", view_x, view_y)), 1., settings, true);
+        draw_logic_.render_text(bmp, ct(100, fmt::format("scale: {}", top_scale)), 1., settings, true);
+        draw_logic_.render_text(bmp, ct(120, fmt::format("scale ratio: {}", scale_ratio)), 1., settings, true);
+      });
+    }
 
     if (!shapes.empty()) {
       double index = 0;
@@ -113,8 +155,8 @@ public:
 
           // first one
           double opacity = 1.0;
-          const auto scale = scales[scales.size() - 1] * scale_ratio;
-          draw_logic_.scale(scale);
+          const auto scale = scales[scales.size() - 1] /* * scale_ratio */;
+          draw_logic_.scale(top_scale * scale);
           bounding_box box;
           switch (shape.type) {
             case data::shape_type::circle:
@@ -129,6 +171,7 @@ public:
             case data::shape_type::none:
               break;
           }
+
           bounding_box box_x;
           bounding_box box_y;
           const auto warp_data = [&](const auto &box, const auto &shape) {
@@ -192,8 +235,8 @@ public:
             const auto &step = index_data.first;
             const auto &index = index_data.second;
             const auto &shape = shapes[step][index];
-            const auto scale = scales[step] * scale_ratio;
-            draw_logic_.scale(scale);
+            const auto scale = scales[step] /* * scale_ratio */;
+            draw_logic_.scale(top_scale * scale);
             switch (shape.type) {
               case data::shape_type::circle:
                 box.update(draw_logic_.render_circle(bmp, shape, opacity, settings));

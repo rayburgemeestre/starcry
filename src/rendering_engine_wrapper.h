@@ -50,7 +50,8 @@ public:
                 double scale,
                 std::vector<double> scales,
                 bool verbose,
-                const data::settings &settings);
+                const data::settings &settings,
+                double debug);
 
   void write_image(image &bmp, int width, int height, const std::string &filename);
 

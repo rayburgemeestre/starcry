@@ -57,6 +57,8 @@
         FRAME: {{ current_frame }}<br/>
         <b-input type="number" v-model="current_frame"></b-input>
         LAST FRAME: {{ max_frames }}<br/>
+        NUM CHUNKS: {{ num_chunks }}<br/>
+        <b-input type="number" v-model="num_chunks"></b-input>
 
       </div>
       <div v-if="menu === 'files'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
@@ -145,6 +147,7 @@ export default {
       menu: '',
       filename: '',
       current_frame : 0,
+      num_chunks : 16,
       max_frames : 250,
       rendering: 0,
       max_queued: 10,
@@ -203,6 +206,7 @@ export default {
       this.bitmap_endpoint.send(JSON.stringify({
         'filename': filename,
         'frame': 0,
+        'num_chunks': this.$data.num_chunks,
       }));
     },
     toggle_pointer: function() {
@@ -267,6 +271,7 @@ export default {
         this.bitmap_endpoint.send(JSON.stringify({
           'filename': this.$data.filename,
           'frame': this.$data.current_frame,
+          'num_chunks': this.$data.num_chunks,
         }));
       }
       else if (this.render_mode === 'client') {
@@ -340,6 +345,9 @@ export default {
   watch: {
     current_frame(new_value) {
       this.$data.current_frame = parseInt(new_value);
+    },
+    num_chunks(new_value) {
+      this.$data.num_chunks = parseInt(new_value);
     },
     menu(new_value) {
       setTimeout(this.update_size, 100);
@@ -491,8 +499,8 @@ export default {
             y *= ratio;
             x += center_x;
             y += center_y;
-            //ctx.fillStyle = "cyan";
-            //ctx.fillRect(x, y, 20, 20);
+            ctx.fillStyle = "cyan";
+            ctx.fillRect(x, y, 20, 20);
             ctx.fillText(obj.label, x, y);
           }
         },
