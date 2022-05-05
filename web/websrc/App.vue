@@ -480,27 +480,14 @@ export default {
           // var scale = Module.get_scale();
           var scale = this.viewpoint_settings.scale;
           for (let obj of buffer) {
-            var ratio_width = this.video.width / this.viewpoint_settings.canvas_w;
-            var ratio_height = this.video.height / this.viewpoint_settings.canvas_h;
-            var ratio = Math.min(ratio_width, ratio_height);
-            ratio = 1 / ratio;
-            /**
-             C++ code:
-             --
-             circle_x = ((shape.x * scale) + center_x) - offset_x
-             circle_y = ((shape.y * scale) + center_y) - offset_y
-             radius = shape.radius * scale * shape.scale
-             */
-            var center_x = canvas_w / 2.;
-            var center_y = canvas_h / 2.;
-            var x = ((obj.x * scale)) - (this.viewpoint_settings.offset_x * scale);
-            var y = ((obj.y * scale)) - (this.viewpoint_settings.offset_y * scale);
-            x *= ratio;
-            y *= ratio;
-            x += center_x;
-            y += center_y;
+            var center_x = this.viewpoint_settings.offset_x;
+            var center_y = this.viewpoint_settings.offset_y;
+            var offset_x = 0;
+            var offset_y = 0;
+            var x = ((obj.x - center_x) * scale) - offset_x + canvas_w / 2;
+            var y = ((obj.y - center_y) * scale) - offset_y + canvas_h / 2;
             ctx.fillStyle = "cyan";
-            ctx.fillRect(x, y, 20, 20);
+            ctx.fillRect(x - 5, y - 5, 10, 10);
             ctx.fillText(obj.label, x, y);
           }
         },
