@@ -46,7 +46,7 @@ Ubuntu 20.04.
 - `libffmpeg` + `h264` - dependencies used by framer.
 - `V8` + `v8pp` - used for scripting, starcry is tightly coupled with it.
 - `VueJS` - used for the Web UI
-- `Vuekit` - used for the Web UI
+- `Buefy` - used for the Web UI (vue + bulma)
 - `Seasocks` - used for the Web UI
 - `png++` - used for writing PNG files
 - `fmt` - used for string formatting
