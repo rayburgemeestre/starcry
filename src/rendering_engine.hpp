@@ -5,10 +5,9 @@
  */
 #pragma once
 
-#include <fmt/core.h>
-
 #include "bitmap_wrapper.hpp"
 #ifndef EMSCRIPTEN
+#include <fmt/core.h>
 #include "util/image_utils.h"
 #endif
 #include "util/scope_exit.hpp"
@@ -132,12 +131,15 @@ public:
           shape.blending_ = data::blending_type::normal;
           return shape;
         };
+
+#ifndef EMSCRIPTEN  // TODO: fix fmt for emscripten at some point
         draw_logic_.render_text(bmp, ct(0, fmt::format("canvas: ({}, {})", canvas_w, canvas_h)), 1., settings, true);
         draw_logic_.render_text(bmp, ct(20, fmt::format("size: ({}, {})", width, height)), 1., settings, true);
         draw_logic_.render_text(bmp, ct(60, fmt::format("offset: ({}, {})", offset_x, offset_y)), 1., settings, true);
         draw_logic_.render_text(bmp, ct(80, fmt::format("view: ({}, {})", view_x, view_y)), 1., settings, true);
         draw_logic_.render_text(bmp, ct(100, fmt::format("scale: {}", top_scale)), 1., settings, true);
         draw_logic_.render_text(bmp, ct(120, fmt::format("scale ratio: {}", scale_ratio)), 1., settings, true);
+#endif
       });
     }
 
