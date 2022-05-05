@@ -79,6 +79,9 @@ export default {
     }
   },
   methods: {
+    'enable_labels': function () {
+      this.$data.labels = true;
+    },
     'select': function() {
       this.$data.offsetX += this.$data.view_x / this.$data.scale;
       this.$data.offsetY += this.$data.view_y / this.$data.scale;

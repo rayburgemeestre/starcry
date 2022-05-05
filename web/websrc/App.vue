@@ -286,6 +286,8 @@ export default {
     on_mouse_down: function(e) {
       if (e.ctrlKey) {
         this.$refs.vpc.select();
+      } else {
+        this.render_objects();
       }
     },
     on_wheel: function(event) {
@@ -303,6 +305,7 @@ export default {
     },
     get_objects: function () {
       this.log('DEBUG', 'objects', 'send', this.$data.filename + " " + this.$data.current_frame);
+      this.$refs.vpc.enable_labels();
       this.objects_endpoint.send(this.$data.filename + " " + this.$data.current_frame);
     },
     log: function(level, api, message, data) {
@@ -339,6 +342,46 @@ export default {
       }
       if (Module.last_buffer) {
         setTimeout(function() { Module.set_texture(Module.last_buffer); }, 10);
+      }
+    },
+    render_objects: function () {
+      let canvas1 = document.getElementById("canvas");
+      let canvas = document.getElementById("canvas2");
+      [canvas.width, canvas.height] = [canvas1.width, canvas1.height];
+      let ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.font = "20px Monaco";
+      ctx.fillStyle = "cyan";
+      ctx.strokeStyle = 'cyan';
+      let canvas_w = Module.get_canvas_w();
+      let canvas_h = Module.get_canvas_h();
+      let scale = this.viewpoint_settings.scale;
+
+      function squared(num) {
+        return num * num;
+      }
+      function squared_dist(num, num2) {
+        return (num - num2) * (num - num2);
+      }
+      function get_distance(x, y, x2, y2) {
+        return Math.sqrt(squared_dist(x, x2) + squared_dist(y, y2));
+      }
+      for (let obj of this.$data.objects) {
+        let center_x = this.viewpoint_settings.offset_x;
+        let center_y = this.viewpoint_settings.offset_y;
+        let offset_x = 0;
+        let offset_y = 0;
+        let x = ((obj.x - center_x) * scale) - offset_x + canvas_w / 2;
+        let y = ((obj.y - center_y) * scale) - offset_y + canvas_h / 2;
+        let view_x = (((this.viewpoint_settings.view_x - canvas_w / 2) )/ scale)+ center_x ;
+        let view_y = (((this.viewpoint_settings.view_y - canvas_h / 2) )/ scale)+ center_y ;
+        if (get_distance(obj.x, obj.y, view_x, view_y) < 10 / scale) {
+          ctx.fillStyle = "red";
+        } else {
+          ctx.fillStyle = "cyan";
+        }
+        ctx.fillRect(x - 5, y - 5, 10, 10);
+        ctx.fillText(obj.label, x, y);
       }
     }
   },
@@ -466,30 +509,7 @@ export default {
         buffer => {
           this.log('DEBUG', 'objects', 'received objects', 'objects size: ' + buffer.length);
           this.$data.objects = buffer;
-          var canvas1 = document.getElementById("canvas");
-          var canvas = document.getElementById("canvas2");
-          canvas.width = canvas1.width;
-          canvas.height = canvas1.height;
-          var ctx = canvas.getContext("2d");
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.font = "12px Monaco";
-          ctx.fillStyle = "yellow";
-          ctx.strokeStyle = 'yellow';
-          var canvas_w = Module.get_canvas_w();
-          var canvas_h = Module.get_canvas_h();
-          // var scale = Module.get_scale();
-          var scale = this.viewpoint_settings.scale;
-          for (let obj of buffer) {
-            var center_x = this.viewpoint_settings.offset_x;
-            var center_y = this.viewpoint_settings.offset_y;
-            var offset_x = 0;
-            var offset_y = 0;
-            var x = ((obj.x - center_x) * scale) - offset_x + canvas_w / 2;
-            var y = ((obj.y - center_y) * scale) - offset_y + canvas_h / 2;
-            ctx.fillStyle = "cyan";
-            ctx.fillRect(x - 5, y - 5, 10, 10);
-            ctx.fillText(obj.label, x, y);
-          }
+          this.render_objects();
         },
         _ => {
           this.log('DEBUG', 'objects', 'websocket connected', '');
