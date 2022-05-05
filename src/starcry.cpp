@@ -23,9 +23,8 @@
 #include "generator.h"
 #include "network/render_client.h"
 #include "network/render_server.h"
-#include "rendering_engine_wrapper.h"
+#include "rendering_engine.h"
 #include "streamer_output/sfml_window.h"
-#include "util/compress_vector.h"
 #include "util/image_utils.h"
 #include "util/logger.h"
 #include "webserver.h"
@@ -167,11 +166,8 @@ void starcry::add_video_command(seasocks::WebSocket *client,
       client, instruction_type::get_video, script, output_file, num_chunks, raw, preview, offset_frames));
 }
 
-void starcry::render_job(size_t thread_num,
-                         rendering_engine_wrapper &engine,
-                         const data::job &job,
-                         image &bmp,
-                         const data::settings &settings) {
+void starcry::render_job(
+    size_t thread_num, rendering_engine &engine, const data::job &job, image &bmp, const data::settings &settings) {
   prctl(PR_SET_NAME, fmt::format("sc {} {}/{}", job.frame_number, job.chunk, job.num_chunks).c_str(), NULL, NULL, NULL);
 
   bmp = engine.render(thread_num,
@@ -401,8 +397,7 @@ void starcry::setup_server() {
 
   for (size_t i = 0; i < options_.num_worker_threads; i++) {
     metrics_->register_thread(i, fmt::format("L{}", i));
-    engines[i] = std::make_shared<rendering_engine_wrapper>();
-    engines[i]->initialize();
+    engines[i] = std::make_shared<rendering_engine>();
     bitmaps[i] = std::make_shared<bitmap_wrapper>();
     system->spawn_transformer<job_message>("renderer-" + std::to_string(i),
                                            std::bind(&starcry::job_to_frame, this, i, std::placeholders::_1),
@@ -431,9 +426,8 @@ void starcry::run_server() {
 
 void starcry::run_client(const std::string &host) {
   render_client client(host);
-  rendering_engine_wrapper engine;
+  rendering_engine engine;
   bitmap_wrapper bitmap;
-  engine.initialize();
 
   client.set_message_fun([&](int fd, int type, size_t len, const std::string &msg) {
     server_message_handler_->on_server_message(client, engine, bitmap, fd, type, len, msg);

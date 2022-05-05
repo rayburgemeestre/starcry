@@ -4,7 +4,7 @@
 #include "bitmap_wrapper.hpp"
 #include "network/messages.h"
 #include "network/render_client.h"
-#include "rendering_engine_wrapper.h"
+#include "rendering_engine.h"
 
 #include "cereal/archives/binary.hpp"
 #include "fmt/core.h"
@@ -18,7 +18,7 @@
 server_message_handler::server_message_handler(starcry &sc) : sc(sc) {}
 
 bool server_message_handler::on_server_message(render_client &client,
-                                               rendering_engine_wrapper &engine,
+                                               rendering_engine &engine,
                                                bitmap_wrapper &bitmap,
                                                int sockfd,
                                                int type,

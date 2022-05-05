@@ -5,8 +5,8 @@
  */
 
 #include "streamer_output/sfml_window.h"
-#include <rendering_engine_wrapper.h>
 #include <stdexcept>
+#include "rendering_engine.h"
 
 const int window_width = 100;
 const int window_height = 100;

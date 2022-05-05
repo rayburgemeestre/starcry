@@ -23,7 +23,7 @@ class v8_wrapper;
 class sfml_window;
 class bitmap_wrapper;
 class generator;
-class rendering_engine_wrapper;
+class rendering_engine;
 class render_server;
 class webserver;
 class frame_streamer;
@@ -99,7 +99,7 @@ private:
 
   std::map<int, std::shared_ptr<bitmap_wrapper>> bitmaps;
   std::shared_ptr<generator> gen;
-  std::map<int, std::shared_ptr<rendering_engine_wrapper>> engines;
+  std::map<int, std::shared_ptr<rendering_engine>> engines;
   std::shared_ptr<pipeline_system> system;
   std::shared_ptr<queue> cmds;
   std::shared_ptr<queue> jobs;
@@ -161,11 +161,8 @@ public:
 private:
   void configure_inotify();
 
-  void render_job(size_t thread_num,
-                  rendering_engine_wrapper &engine,
-                  const data::job &job,
-                  image &bmp,
-                  const data::settings &settings);
+  void render_job(
+      size_t thread_num, rendering_engine &engine, const data::job &job, image &bmp, const data::settings &settings);
 
   void command_to_jobs(std::shared_ptr<instruction> cmd_def);
   std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);

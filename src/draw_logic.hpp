@@ -861,7 +861,7 @@ private:
   uint32_t canvas_h_;
   uint32_t width_;
   uint32_t height_;
-  std::vector<std::unique_ptr<text_drawer>> font_;
+  std::vector<std::shared_ptr<text_drawer>> font_;
   motionblur_buffer motionblur_buffer_;
 };
 

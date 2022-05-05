@@ -5,34 +5,24 @@
  */
 #pragma once
 
-#include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
 
-#include "image.hpp"
-
-struct rendering_engine_wrapper_class_data;
-
+namespace draw_logic {
+class draw_logic;
+}
 namespace data {
 struct color;
 struct shape;
 struct settings;
 }  // namespace data
-
+class bitmap_wrapper;
 class metrics;
+class image;
 
-class rendering_engine_wrapper {
+class rendering_engine {
 public:
-  rendering_engine_wrapper();
-
-  // disable copy and move
-  rendering_engine_wrapper(const rendering_engine_wrapper &) = delete;
-  void operator=(const rendering_engine_wrapper &) = delete;
-  rendering_engine_wrapper(const rendering_engine_wrapper &&) = delete;
-  void operator=(const rendering_engine_wrapper &&) = delete;
-
-  void initialize();
-
   image &render(size_t thread_num,
                 size_t job_num,
                 size_t chunk_num,
@@ -47,13 +37,14 @@ public:
                 uint32_t canvas_h,
                 uint32_t width,
                 uint32_t height,
-                double scale,
+                double top_scale,
                 std::vector<double> scales,
                 bool verbose,
                 const data::settings &settings,
                 double debug);
 
-  void write_image(image &bmp, int width, int height, const std::string &filename);
+  void write_image(image &bmp, int width, int height, std::string filename);
 
-  std::shared_ptr<rendering_engine_wrapper_class_data> data;
+  std::shared_ptr<draw_logic::draw_logic> draw_logic_;
+  std::shared_ptr<bitmap_wrapper> bitmap;
 };

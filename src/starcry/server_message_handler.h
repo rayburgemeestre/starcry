@@ -4,7 +4,7 @@
 
 class starcry;
 class render_client;
-class rendering_engine_wrapper;
+class rendering_engine;
 class bitmap_wrapper;
 
 class server_message_handler {
@@ -15,7 +15,7 @@ public:
   server_message_handler(starcry &sc);
 
   bool on_server_message(render_client &client,
-                         rendering_engine_wrapper &engine,
+                         rendering_engine &engine,
                          bitmap_wrapper &bitmap,
                          int sockfd,
                          int type,

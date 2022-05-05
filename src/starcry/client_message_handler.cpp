@@ -1,12 +1,9 @@
 #include "starcry/client_message_handler.h"
 #include "starcry.h"
 
+#include "cereal/archives/binary.hpp"
 #include "network/messages.h"
 #include "network/render_server.h"
-//#include "rendering_engine_wrapper.h"
-//#include "bitmap_wrapper.hpp"
-//
-#include "cereal/archives/binary.hpp"
 #include "starcry/metrics.h"
 
 #include "generator.h"

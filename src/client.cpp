@@ -12,12 +12,12 @@
 #include "data/job.hpp"
 #include "data/shape.hpp"
 
-#include "rendering_engine_wrapper.cpp"
-#include "rendering_engine_wrapper.h"
+#include "rendering_engine.cpp"
+#include "rendering_engine.h"
 
 bool initialized = false;
 std::chrono::high_resolution_clock::time_point begin_time, end_time;
-rendering_engine_wrapper engine;
+rendering_engine engine;
 data::job job;
 std::vector<uint32_t> transfer_pixels;
 SDL_Texture *texture = nullptr;
@@ -160,8 +160,6 @@ void render_shapes_to_texture() {
 }
 
 void initialize(uint32_t width, uint32_t height, uint32_t canvas_w, uint32_t canvas_h) {
-  engine.initialize();
-
   memset(&job, 0x00, sizeof(job));
   job.width = width;
   job.height = height;
