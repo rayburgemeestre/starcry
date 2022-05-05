@@ -110,6 +110,7 @@ public:
       for (auto i = 0; i < height; i++) {
         bmp.set(width / 2, i, r, g, b, a);
       }
+#ifndef EMSCRIPTEN  // TODO: fix for emscripten
       scope_exit([&]() {
         const auto ct = [&](double offset_y, const std::string &text) {
           data::shape shape;  // = shape;
@@ -132,15 +133,14 @@ public:
           return shape;
         };
 
-#ifndef EMSCRIPTEN  // TODO: fix fmt for emscripten at some point
         draw_logic_.render_text(bmp, ct(0, fmt::format("canvas: ({}, {})", canvas_w, canvas_h)), 1., settings, true);
         draw_logic_.render_text(bmp, ct(20, fmt::format("size: ({}, {})", width, height)), 1., settings, true);
         draw_logic_.render_text(bmp, ct(60, fmt::format("offset: ({}, {})", offset_x, offset_y)), 1., settings, true);
         draw_logic_.render_text(bmp, ct(80, fmt::format("view: ({}, {})", view_x, view_y)), 1., settings, true);
         draw_logic_.render_text(bmp, ct(100, fmt::format("scale: {}", top_scale)), 1., settings, true);
         draw_logic_.render_text(bmp, ct(120, fmt::format("scale ratio: {}", scale_ratio)), 1., settings, true);
-#endif
       });
+#endif
     }
 
     if (!shapes.empty()) {
