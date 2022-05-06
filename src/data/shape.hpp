@@ -180,6 +180,7 @@ struct shape {
   // annotate
   std::string id;
   std::string label;
+  std::string random_hash;
   int level;
   bool motion_blur = true;
   int warp_width = 0;

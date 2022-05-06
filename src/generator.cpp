@@ -1410,6 +1410,10 @@ void generator::convert_object_to_render_job(
 
   // TODO: might not need this param after all
   auto dist = i.double_number(instance, "__dist__");
+#define DEBUG_NUM_SHAPES
+#ifdef DEBUG_NUM_SHAPES
+  auto random_hash = i.str(instance, "__random_hash__");
+#endif
 
   data::shape new_shape;
   new_shape.time = time;
@@ -1446,6 +1450,9 @@ void generator::convert_object_to_render_job(
   new_shape.scale = scale;
   new_shape.opacity = std::isnan(shape_opacity) ? 1.0 : shape_opacity;
   new_shape.unique_id = unique_id;
+#ifdef DEBUG_NUM_SHAPES
+  new_shape.random_hash = random_hash;
+#endif
   new_shape.seed = seed;
   new_shape.id = id;
   new_shape.label = label;

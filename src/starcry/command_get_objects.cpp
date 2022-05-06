@@ -33,6 +33,7 @@ std::shared_ptr<render_msg> command_get_objects::to_render_msg(std::shared_ptr<j
       if (shape.type == data::shape_type::circle) {
         json circle = {
             {"index", index},
+            {"unique_id", shape.unique_id},
             {"id", shape.id},
             {"label", shape.label.empty() ? shape.id : shape.label},
             {"level", shape.level},
@@ -42,6 +43,7 @@ std::shared_ptr<render_msg> command_get_objects::to_render_msg(std::shared_ptr<j
             {"y", shape.y},
 #ifdef DEBUG_NUM_SHAPES
             {"#", nums[shape.unique_id]},
+            {"random_hash", shape.random_hash},
 #else
             {"#", -1},
 #endif
@@ -51,6 +53,7 @@ std::shared_ptr<render_msg> command_get_objects::to_render_msg(std::shared_ptr<j
       if (shape.type == data::shape_type::line) {
         json line = {
             {"index", index},
+            {"unique_id", shape.unique_id},
             {"id", shape.id},
             {"label", shape.label.empty() ? shape.id : shape.label},
             {"level", shape.level},
@@ -62,6 +65,7 @@ std::shared_ptr<render_msg> command_get_objects::to_render_msg(std::shared_ptr<j
             {"y2", shape.y2},
 #ifdef DEBUG_NUM_SHAPES
             {"#", nums[shape.unique_id]},
+            {"random_hash", shape.random_hash},
 #else
             {"#", -1},
 #endif

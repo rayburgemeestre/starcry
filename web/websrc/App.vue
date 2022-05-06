@@ -350,16 +350,12 @@ export default {
       [canvas.width, canvas.height] = [canvas1.width, canvas1.height];
       let ctx = canvas.getContext("2d");
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.font = "20px Monaco";
-      ctx.fillStyle = "cyan";
-      ctx.strokeStyle = 'cyan';
+      ctx.font = "15px Monaco";
+      ctx.fillStyle = "white";
+      ctx.strokeStyle = 'white';
       let canvas_w = Module.get_canvas_w();
       let canvas_h = Module.get_canvas_h();
       let scale = this.viewpoint_settings.scale;
-
-      function squared(num) {
-        return num * num;
-      }
       function squared_dist(num, num2) {
         return (num - num2) * (num - num2);
       }
@@ -378,10 +374,14 @@ export default {
         if (get_distance(obj.x, obj.y, view_x, view_y) < 10 / scale) {
           ctx.fillStyle = "red";
         } else {
-          ctx.fillStyle = "cyan";
+          ctx.fillStyle = "white";
         }
         ctx.fillRect(x - 5, y - 5, 10, 10);
         ctx.fillText(obj.label, x, y);
+        ctx.fillText(obj["#"], x, y + 20);
+        ctx.fillText(obj.id, x, y + 40);
+        ctx.fillText(obj.unique_id, x, y + 60);
+        ctx.fillText(obj.random_hash, x, y + 80);
       }
     }
   },

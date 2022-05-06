@@ -1,6 +1,6 @@
 <template>
   <div>
-    <b-table focusable :data="data" :columns="columns" :selected.sync="selected"></b-table>
+    <b-table focusable sortable default-sort="filename" :data="data" :columns="columns" :selected.sync="selected"></b-table>
   </div>
 </template>
 
@@ -17,14 +17,17 @@
           {
             field: 'filename',
             label: 'File Name',
+            sortable: true,
           },
           {
             field: 'filesize',
             label: 'File Size',
+            sortable: true,
           },
           {
             field: 'modified',
             label: 'Modified',
+            sortable: true,
           },
         ],
         selected: null,
