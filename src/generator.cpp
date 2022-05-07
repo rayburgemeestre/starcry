@@ -1108,6 +1108,7 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto type = i.str(instance, "type");
   auto is_line = type == "line";
   auto label = i.str(instance, "label");
+  auto random_hash = i.str(instance, "__random_hash__");
   auto shape_scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
   auto prev_shape_scale = i.has_field(previous_instance, "scale") ? i.double_number(previous_instance, "scale") : 1.0;
 
@@ -1335,11 +1336,7 @@ double generator::get_max_travel_of_object(v8_interact& i,
 
   // TODO: proper support for connected objects, so they can inherit the warped stuff!
   if (dist > 100) {
-    dist = 0.;  // WORKAROUND
-  }
-  if (dist > 100) {
-    std::cout << "dist > 100" << std::endl;
-    std::exit(1);
+    logger(INFO) << "Warning, distance found > 100, id hash: " << random_hash << std::endl;
   }
   return dist;
 }

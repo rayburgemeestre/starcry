@@ -70,7 +70,7 @@ private:
   std::unordered_map<int64_t, size_t> next_instance_mapping;
   data::settings settings_;
 
-  int min_intermediates = 0.;
+  int min_intermediates = 1.;
   int max_intermediates = 30.;
   bool fast_ff = false;
 
