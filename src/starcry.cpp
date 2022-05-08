@@ -24,7 +24,7 @@
 #include "network/render_client.h"
 #include "network/render_server.h"
 #include "rendering_engine.h"
-#include "streamer_output/sfml_window.h"
+#include "sfml_window.h"
 #include "util/image_utils.h"
 #include "util/logger.h"
 #include "webserver.h"

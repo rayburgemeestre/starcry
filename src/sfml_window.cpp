@@ -4,7 +4,7 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "streamer_output/sfml_window.h"
+#include "sfml_window.h"
 #include <stdexcept>
 #include "rendering_engine.h"
 
