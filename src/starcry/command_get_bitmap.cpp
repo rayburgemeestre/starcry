@@ -10,6 +10,7 @@
 #include "starcry/command_get_objects.h"
 
 #include "image.hpp"
+#include "util/image_utils.h"
 #include "util/logger.h"
 #include "webserver.h"  // BitmapHandler
 
@@ -23,7 +24,7 @@ void command_get_bitmap::to_job(std::shared_ptr<instruction> &cmd_def) {
 std::shared_ptr<render_msg> command_get_bitmap::to_render_msg(std::shared_ptr<job_message> &job_msg, image &bmp) {
   auto &job = *job_msg->job;
   job.job_number = std::numeric_limits<uint32_t>::max();
-  auto transfer_pixels = sc.pixels_vec_to_pixel_data(bmp.pixels(), sc.gen->settings());
+  auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels(), sc.gen->settings().dithering);
   auto msg =
       std::make_shared<render_msg>(job_msg->client,
                                    job_msg->type,

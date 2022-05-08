@@ -10,6 +10,7 @@
 #include "fmt/core.h"
 
 #include "data/settings.hpp"
+#include "util/image_utils.h"
 
 #include <sys/prctl.h>
 #include <unistd.h>  // getpid()
@@ -59,7 +60,7 @@ bool server_message_handler::on_server_message(render_client &client,
       if (job.is_raw) {
         dat.pixels_raw = bmp.pixels();
       } else {
-        dat.pixels = sc.pixels_vec_to_pixel_data(bmp.pixels(), settings);
+        dat.pixels = pixels_vec_to_pixel_data(bmp.pixels(), settings.dithering);
       }
       client.send_frame(job, dat, true);
       client.pull_job(true, 0);

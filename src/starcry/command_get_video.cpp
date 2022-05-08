@@ -11,6 +11,7 @@
 #include "starcry.h"
 #include "starcry/command_get_video.h"
 #include "util/image_splitter.hpp"
+#include "util/image_utils.h"
 #include "util/logger.h"
 
 command_get_video::command_get_video(starcry &sc) : command_handler(sc) {}
@@ -77,7 +78,7 @@ std::shared_ptr<render_msg> command_get_video::to_render_msg(std::shared_ptr<job
     return nullptr;
   }
   auto &job = *job_msg->job;
-  auto transfer_pixels = starcry::pixels_vec_to_pixel_data(bmp.pixels(), sc.gen->settings());
+  auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels(), sc.gen->settings().dithering);
   auto raw = job_msg->raw;
   if (raw) {
     return std::make_shared<render_msg>(job_msg->client,

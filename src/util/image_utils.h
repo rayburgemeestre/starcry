@@ -16,3 +16,7 @@ void copy_to_png(const std::vector<data::color> &source,
                  uint32_t height,
                  png::image<png::rgba_pixel> &dest,
                  bool dithering);
+
+std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in, const bool &dithering);
+
+void pixels_vec_insert_checkers_background(std::vector<uint32_t> &pixels, int width, int height);

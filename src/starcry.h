@@ -17,7 +17,7 @@
 #include "data/pixels.hpp"
 #include "data/viewpoint.hpp"
 
-#include "util/periodic_executor.hpp"
+#include "core/periodic_executor.hpp"
 
 class v8_wrapper;
 class sfml_window;
@@ -167,11 +167,6 @@ private:
   void command_to_jobs(std::shared_ptr<instruction> cmd_def);
   std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);
   void handle_frame(std::shared_ptr<render_msg> job_msg);
-
-  static std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in,
-                                                        const data::settings &settings);
-
-  static void pixels_vec_insert_checkers_background(std::vector<uint32_t> &pixels, int width, int height);
 
   void save_images(std::vector<data::color> &pixels_raw,
                    size_t width,

@@ -40,11 +40,11 @@ public:
       }
     }
     if (!t.joinable()) {
-      t = std::thread([=, this]() {
+      t = std::thread([=]() {
         while (!stop) {
           std::unique_lock<std::mutex> lock(mut);
           fun();
-          cv.wait_until(lock, std::chrono::high_resolution_clock::now() + delay, [=, this]() {
+          cv.wait_until(lock, std::chrono::high_resolution_clock::now() + delay, [=]() {
             return stop;
           });
         }
