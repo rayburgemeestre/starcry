@@ -383,6 +383,14 @@ export default {
         ctx.fillText(obj.unique_id, x, y + 60);
         ctx.fillText(obj.random_hash, x, y + 80);
       }
+      // draw the actual canvas of the video
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 2;
+      let x = canvas_w / 2 - ((this.$data.video.width / 2) * scale),
+          y = canvas_h / 2 - ((this.$data.video.height / 2) * scale),
+          w = this.$data.video.width * scale,
+          h = this.$data.video.height * scale;
+      ctx.strokeRect(x, y, w, h);
     }
   },
   watch: {
