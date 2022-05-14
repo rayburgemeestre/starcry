@@ -33,6 +33,7 @@ void ShapesHandler::onData(seasocks::WebSocket *con, const char *data) {
     auto req = std::make_shared<data::frame_request>(script, frame_num, 1);
     req->set_websocket(con);
     req->enable_renderable_shapes();
+    sc->add_image_command(req);
   }
 }
 
