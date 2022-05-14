@@ -11,17 +11,10 @@
 #include "message_type.hpp"
 
 #include "data/color.hpp"
+#include "data/job.hpp"
 #include "data/viewpoint.hpp"
 
-enum class instruction_type {
-  get_image,
-  get_shapes,
-  get_objects,
-  get_bitmap,
-  get_video,
-  get_raw_image,
-  get_raw_video,
-};
+enum class instruction_type2 { image, video };
 
 namespace seasocks {
 class WebSocket;
@@ -29,183 +22,107 @@ class WebSocket;
 
 namespace data {
 struct job;
-}
+class frame_request;
+class video_request;
+}  // namespace data
 
 class instruction : public message_type {
 public:
-  seasocks::WebSocket *client;
-  instruction_type type;
-  size_t frame;
-  std::string script;
-  std::string output_file;
-  int num_chunks;
-  bool raw = false;
-  bool preview = false;
-  bool last = false;
-  // TODO: can this be "merged" with "frame" ? so we can avoid introducing this offset_frame.
-  size_t offset_frames = 0;
+  instruction_type2 type2;
+  std::shared_ptr<data::frame_request> frame_;
+  std::shared_ptr<data::video_request> video_;
 
-  data::viewpoint viewpoint;
+  instruction(std::shared_ptr<data::frame_request> req)
+      : type2(instruction_type2::image), frame_(req), video_(nullptr) {}
 
-  // constructor for stills
-  instruction(seasocks::WebSocket *client,
-              instruction_type type,
-              std::string script,
-              size_t frame,
-              int num_chunks,
-              bool raw,
-              bool preview,
-              bool last_frame,
-              const std::string &output_filename)
-      : client(client),
-        type(type),
-        frame(frame),
-        script(script),
-        output_file(output_filename),
-        num_chunks(num_chunks),
-        raw(raw),
-        preview(preview),
-        last(last_frame) {}
+  instruction(std::shared_ptr<data::video_request> req)
+      : type2(instruction_type2::video), frame_(nullptr), video_(req) {}
 
-  // constructor for video
-  instruction(seasocks::WebSocket *client,
-              instruction_type type,
-              std::string script,
-              std::string output_file,
-              int num_chunks,
-              bool raw,
-              bool preview,
-              size_t offset_frames)
-      : client(client),
-        type(type),
-        frame(0),
-        script(std::move(script)),
-        output_file(std::move(output_file)),
-        num_chunks(num_chunks),
-        raw(raw),
-        preview(preview),
-        offset_frames(offset_frames) {}
+  const data::frame_request& frame() {
+    return *frame_;
+  }
+
+  const data::video_request& video() {
+    return *video_;
+  }
+
+  const std::shared_ptr<data::frame_request> frame_ptr() {
+    return frame_;
+  }
+
+  const std::shared_ptr<data::video_request> video_ptr() {
+    return video_;
+  }
+
+  data::video_request& video_ref() {
+    return *video_;
+  }
 };
 
 class job_message : public message_type {
 public:
-  seasocks::WebSocket *client;
-  instruction_type type;
+  std::shared_ptr<instruction> original_instruction;
   std::shared_ptr<data::job> job;
-  bool raw = false;
 
-  job_message(seasocks::WebSocket *client, instruction_type type, std::shared_ptr<data::job> job, bool raw)
-      : client(client), type(type), job(job), raw(raw) {}
+  job_message(std::shared_ptr<instruction> original_instruction, std::shared_ptr<data::job> job)
+      : original_instruction(original_instruction), job(job) {}
 };
 
 class render_msg : public message_type {
 public:
-  size_t job_number;
-  size_t frame_number;
-  size_t chunk;
-  size_t num_chunks;
-  size_t offset_x;  // for debug
-  size_t offset_y;  // for debug
-  bool last_frame;
-  bool labels;
-  seasocks::WebSocket *client;
-  instruction_type type;
+  std::shared_ptr<job_message> original_job_message;
+
   std::string buffer;
   std::vector<uint32_t> pixels;
   std::vector<data::color> pixels_raw;
-  uint32_t width;
-  uint32_t height;
-  std::string ID;
-  std::string output_file;
+  uint32_t width = 0;
+  uint32_t height = 0;
+  std::string ID;  // ???
 
-  render_msg(seasocks::WebSocket *client,
-             instruction_type type,
-             size_t job_number,
-             size_t frame_number,
-             size_t chunk,
-             size_t num_chunks,
-             size_t offset_x,
-             size_t offset_y,
-             bool last_frame,
-             bool labels,
-             uint32_t width,
-             uint32_t height,
-             std::string buf)
-      : job_number(job_number),
-        frame_number(frame_number),
-        chunk(chunk),
-        num_chunks(num_chunks),
-        offset_x(offset_x),
-        offset_y(offset_y),
-        last_frame(last_frame),
-        labels(labels),
-        client(client),
-        type(type),
-        buffer(std::move(buf)),
-        width(width),
-        height(height) {}
+  render_msg(std::shared_ptr<job_message> original_job_message, std::string buf)
+      : original_job_message(original_job_message), buffer(std::move(buf)) {
+    _init();
+  }
+
+  // new
+  render_msg(std::shared_ptr<job_message> original_job_message) : original_job_message(original_job_message) {
+    _init();
+  }
 
   // non-raw pixels only
-  render_msg(seasocks::WebSocket *client,
-             instruction_type type,
-             size_t job_number,
-             size_t frame_number,
-             size_t chunk,
-             size_t num_chunks,
-             size_t offset_x,
-             size_t offset_y,
-             bool last_frame,
-             bool labels,
-             uint32_t width,
-             uint32_t height,
-             std::vector<uint32_t> &pixels,
-             const std::string &output_file)
-      : job_number(job_number),
-        frame_number(frame_number),
-        chunk(chunk),
-        num_chunks(num_chunks),
-        offset_x(offset_x),
-        offset_y(offset_y),
-        last_frame(last_frame),
-        labels(labels),
-        client(client),
-        type(type),
-        pixels(std::move(pixels)),
-        width(width),
-        height(height),
-        output_file(output_file) {}
+  render_msg(std::shared_ptr<job_message> original_job_message, std::vector<uint32_t>& pixels)
+      : original_job_message(original_job_message), pixels(std::move(pixels)) {
+    _init();
+  }
 
   // raw pixels only
-  render_msg(seasocks::WebSocket *client,
-             instruction_type type,
-             size_t job_number,
-             size_t frame_number,
-             size_t chunk,
-             size_t num_chunks,
-             size_t offset_x,
-             size_t offset_y,
-             bool last_frame,
-             bool labels,
-             uint32_t width,
-             uint32_t height,
-             std::vector<data::color> pixels_raw,
-             const std::string &output_file)
-      : job_number(job_number),
-        frame_number(frame_number),
-        chunk(chunk),
-        num_chunks(num_chunks),
-        offset_x(offset_x),
-        offset_y(offset_y),
-        last_frame(last_frame),
-        labels(labels),
-        client(client),
-        type(type),
-        pixels_raw(std::move(pixels_raw)),
-        width(width),
-        height(height),
-        output_file(output_file) {}
+  render_msg(std::shared_ptr<job_message> original_job_message, std::vector<data::color> pixels_raw)
+      : original_job_message(original_job_message), pixels_raw(std::move(pixels_raw)) {
+    _init();
+  }
 
-  void set_raw(std::vector<data::color> &pixels_raw) {
+  void set_buffer(std::string& buf) {
+    std::swap(this->buffer, buf);
+  }
+
+  void set_pixels(std::vector<uint32_t>& pixels) {
+    std::swap(this->pixels, pixels);
+  }
+
+  void set_raw(std::vector<data::color>& pixels_raw) {
     std::swap(this->pixels_raw, pixels_raw);
+  }
+
+  void set_width(uint32_t w) {
+    width = w;
+  }
+  void set_height(uint32_t h) {
+    height = h;
+  }
+
+private:
+  void _init() {
+    width = original_job_message->job->width;
+    height = original_job_message->job->height;
   }
 };

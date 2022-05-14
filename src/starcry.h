@@ -34,6 +34,8 @@ class client_message_handler;
 namespace data {
 struct job;
 struct settings;
+class frame_request;
+class video_request;
 }  // namespace data
 
 namespace seasocks {
@@ -113,7 +115,6 @@ private:
   std::map<size_t, std::vector<std::shared_ptr<render_msg>>> buffered_frames;
   size_t current_frame = 1;
   periodic_executor pe;
-  std::map<instruction_type, std::shared_ptr<command_handler>> command_handlers;
   std::shared_ptr<server_message_handler> server_message_handler_;
   std::shared_ptr<client_message_handler> client_message_handler_;
   std::shared_ptr<metrics> metrics_;
@@ -133,22 +134,8 @@ public:
 
   void set_script(const std::string &script);
 
-  void add_image_command(seasocks::WebSocket *client,
-                         const std::string &script,
-                         instruction_type it,
-                         int frame_num,
-                         int num_chunks,
-                         bool raw,
-                         bool preview,
-                         bool last_frame,
-                         const std::string &output_filename);
-  void add_video_command(seasocks::WebSocket *client,
-                         const std::string &script,
-                         const std::string &output_file,
-                         int num_chunks,
-                         bool raw,
-                         bool preview,
-                         size_t offset_frames);
+  void add_image_command(std::shared_ptr<data::frame_request> req);
+  void add_video_command(std::shared_ptr<data::video_request> req);
 
   void setup_server();
 

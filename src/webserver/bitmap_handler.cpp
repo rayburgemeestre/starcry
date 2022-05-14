@@ -6,6 +6,7 @@
 #include "starcry.h"
 #include "webserver.h"
 
+#include "data/frame_request.hpp"
 #include "nlohmann/json.hpp"
 #include "util/logger.h"
 
@@ -32,15 +33,16 @@ void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
     num_chunks = json["num_chunks"];
   }
   if (json["filename"].is_string() && json["frame"].is_number_integer()) {
-    sc->add_image_command(con,
-                          json["filename"],
-                          instruction_type::get_bitmap,
-                          json["frame"],
-                          num_chunks,
-                          sc->get_viewpoint().raw,
-                          sc->get_viewpoint().preview,
-                          false,
-                          "");
+    auto req = std::make_shared<data::frame_request>(json["filename"], json["frame"], num_chunks);
+    req->set_websocket(con);
+    req->enable_raw_bitmap();
+    if (sc->get_viewpoint().raw) {
+      req->enable_raw_image();
+    }
+    if (sc->get_viewpoint().preview) {
+      req->set_preview_mode();
+    }
+    sc->add_image_command(req);
   }
 }
 

@@ -15,6 +15,8 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+#include "data/frame_request.hpp"
+#include "data/video_request.hpp"
 #include "generator.h"
 #include "starcry.h"
 #include "util/logger.h"
@@ -118,23 +120,30 @@ public:
       if (!options.interactive) {
         bool is_raw = vm.count("raw");
         if (options.frame_of_interest != std::numeric_limits<size_t>::max()) {
-          sc.add_image_command(nullptr,
-                               options.script_file,
-                               instruction_type::get_raw_image,
-                               options.frame_of_interest,
-                               options.num_chunks,
-                               is_raw,
-                               options.preview,
-                               true,
-                               options.output_file);
+          auto req =
+              std::make_shared<data::frame_request>(options.script_file, options.frame_of_interest, options.num_chunks);
+          if (is_raw) {
+            req->enable_raw_image();
+          } else {
+            req->enable_compressed_image();
+          }
+          if (options.preview) {
+            req->set_preview_mode();
+          }
+          req->set_last_frame();
+          req->set_output(options.output_file);
+          sc.add_image_command(req);
         } else {
-          sc.add_video_command(nullptr,
-                               options.script_file,
-                               options.output_file,
-                               options.num_chunks,
-                               is_raw,
-                               options.preview,
-                               options.frame_offset);
+          auto req = std::make_shared<data::video_request>(
+              options.script_file, options.output_file, options.num_chunks, options.frame_offset);
+          req->enable_compressed_video();
+          if (is_raw) {
+            req->enable_raw_video();
+          }
+          if (options.preview) {
+            req->set_preview_mode();
+          }
+          sc.add_video_command(req);
         }
       }
 

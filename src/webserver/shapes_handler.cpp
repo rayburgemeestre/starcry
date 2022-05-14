@@ -3,6 +3,7 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+#include "data/frame_request.hpp"
 #include "starcry.h"
 #include "util/logger.h"
 #include "webserver.h"
@@ -27,15 +28,11 @@ void ShapesHandler::onData(seasocks::WebSocket *con, const char *data) {
     // logger(INFO) << "ShapesHandler::onData received script: " << input.substr(0, find) << " get shapes for: " <<
     // std::atoi(input.substr(find + 1).c_str()) << std::endl; logger(INFO) << "ShapesHandler::onData recv: " << input
     // << std::endl;
-    sc->add_image_command(con,
-                          input.substr(0, find),
-                          instruction_type::get_shapes,
-                          std::atoi(input.substr(find + 1).c_str()),
-                          1,
-                          false,
-                          false,
-                          false,
-                          "");
+    const auto script = input.substr(0, find);
+    const auto frame_num = std::atoi(input.substr(find + 1).c_str());
+    auto req = std::make_shared<data::frame_request>(script, frame_num, 1);
+    req->set_websocket(con);
+    req->enable_renderable_shapes();
   }
 }
 

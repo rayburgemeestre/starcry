@@ -25,7 +25,7 @@ struct job {
   uint32_t offset_y;
   uint32_t canvas_w;
   uint32_t canvas_h;
-  uint32_t job_number;
+  size_t job_number;
   uint32_t frame_number;
   bool rendered;
   bool last_frame;

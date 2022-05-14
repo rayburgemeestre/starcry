@@ -6,6 +6,8 @@
 #include <regex>
 
 #include <fmt/core.h>
+#include "data/frame_request.hpp"
+#include "data/video_request.hpp"
 #include "starcry.h"
 #include "util/v8_wrapper.hpp"
 
@@ -47,15 +49,10 @@ double sut::test_create_image(const std::string& image_name) {
   vp.canvas_h = 240;
   sc.set_viewpoint(vp);
   sc.setup_server();
-  sc.add_image_command(nullptr,
-                       options.script_file,
-                       instruction_type::get_raw_image,
-                       options.frame_of_interest,
-                       options.num_chunks,
-                       true,
-                       options.preview,
-                       true,
-                       options.output_file);
+  auto req = std::make_shared<data::frame_request>(options.script_file, options.frame_of_interest, options.num_chunks);
+  req->enable_compressed_image();
+  req->set_last_frame();
+  sc.add_image_command(req);
   sc.run_server();
   const auto output_file = fmt::format("test/integration/last-run/{}.png", image_name);
   const auto reference_file = fmt::format("test/integration/reference/{}.png", image_name);
@@ -84,13 +81,9 @@ double sut::test_create_video(const std::string& video_name, int frames, int fps
   vp.canvas_h = 240;
   sc.set_viewpoint(vp);
   sc.setup_server();
-  sc.add_video_command(nullptr,
-                       options.script_file,
-                       options.output_file,
-                       options.num_chunks,
-                       false,  // is_raw,
-                       options.preview,
-                       options.frame_offset);
+  const auto req = std::make_shared<data::video_request>(
+      options.script_file, options.output_file, options.num_chunks, options.frame_offset);
+  sc.add_video_command(req);
   sc.run_server();
 
   // convert video to seekable video
