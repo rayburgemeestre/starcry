@@ -25,7 +25,19 @@ private:
   int line_height = 32;
 
   void load_font() {
-    FILE *fontFile = fopen("monaco.ttf", "rb");
+    std::string filename = "monaco.ttf";
+    const auto exists = [](const std::string &filename) {
+      std::ifstream infile(filename);
+      return infile.good();
+    };
+    if (!exists(filename)) {
+      filename = "/workdir/monaco.ttf";
+    }
+    if (!exists(filename)) {
+      throw std::runtime_error("could not find font");
+    }
+
+    FILE *fontFile = fopen(filename.c_str(), "rb");
     fseek(fontFile, 0, SEEK_END);
     size = ftell(fontFile);
     fseek(fontFile, 0, SEEK_SET);

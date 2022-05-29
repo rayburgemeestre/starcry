@@ -480,7 +480,11 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
         std::swap(pixels, pixels_new);
       }
       // insert checkers background
-      pixels_vec_insert_checkers_background(pixels, width, height);
+      if (pixels.size() < (width * height)) {
+        std::cerr << "pixels.size(), " << pixels.size() << " < (" << width << " * " << height << ")" << std::endl;
+      } else {
+        pixels_vec_insert_checkers_background(pixels, width, height);
+      }
       if (gui) {
         gui->add_frame(width, height, pixels);
       }

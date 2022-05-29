@@ -9,6 +9,7 @@
 #include "starcry.h"
 #include "stats.h"  // piper
 
+#include <filesystem>
 #include <memory>
 
 #include "nlohmann/json.hpp"
@@ -78,7 +79,11 @@ void webserver::set_script(const std::string &script) {
 }
 
 void webserver::run() {
-  server->serve("web/webroot", 18080);
+  std::string str = "web/webroot";
+  if (!std::filesystem::exists(str)) {
+    str = "/workdir/web/webroot";
+  }
+  server->serve(str.c_str(), 18080);
 }
 
 void webserver::stop() {
