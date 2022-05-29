@@ -9,16 +9,16 @@ ccache_enabled = [[ -f '/usr/bin/ccache' ]]
 ccache_env = CXX='ccache g++' CC='ccache gcc' CCACHE_SLOPPINESS=file_macro,locale,time_macros
 
 docker_tty = $$(/bin/sh -c 'if [ "$(interactive)" = "1" ]]; then echo "-t"; else echo ""; fi')
-docker_run = podman run -i $(docker_tty) --rm \
-	                    -e _UID=$(uid) -e _GID=$(gid) \
-	                    -e container=podman \
-	                    -e DISPLAY=$$DISPLAY \
-	                    -v /tmp/.X11-unix:/tmp/.X11-unix \
-	                    -v $$PWD:$$PWD \
-	                    -v $$PWD/.ccache:/root/.ccache \
-	                    -v $$PWD/.emscripten_cache:/tmp/.emscripten_cache \
-	                    --entrypoint /bin/bash \
-	                    -w $$PWD rayburgemeestre/build-starcry-ubuntu:20.04
+docker_run = podman --storage-opt ignore_chown_errors=true run -i $(docker_tty) --rm \
+	                                                           -e _UID=$(uid) -e _GID=$(gid) \
+	                                                           -e container=podman \
+	                                                           -e DISPLAY=$$DISPLAY \
+	                                                           -v /tmp/.X11-unix:/tmp/.X11-unix \
+	                                                           -v $$PWD:$$PWD \
+	                                                           -v $$PWD/.ccache:/root/.ccache \
+	                                                           -v $$PWD/.emscripten_cache:/tmp/.emscripten_cache \
+	                                                           --entrypoint /bin/bash \
+	                                                           -w $$PWD rayburgemeestre/build-starcry-ubuntu:20.04
 
 inside_docker_container = [[ "$$container" == "podman" ]]
 
