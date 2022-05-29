@@ -352,7 +352,8 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
     msg->set_pixels(transfer_pixels);
   }
 
-  if (f.compressed_image()) {
+  if (job_msg->original_instruction->frame_ptr() && !job_msg->original_instruction->frame_ptr()->client() &&
+      f.compressed_image()) {
     png::image<png::rgba_pixel> image(job.width, job.height);
     copy_to_png(bmp.pixels(), job.width, job.height, image, gen->settings().dithering);
     std::ostringstream ss;

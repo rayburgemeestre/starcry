@@ -41,7 +41,6 @@ double sut::test_create_image(const std::string& image_name) {
   std::filesystem::create_directories("test/integration/last-run");
   std::filesystem::create_directories("test/integration/reference");
   options.output_file = fmt::format("test/integration/last-run/{}", image_name);
-  context->set_filename(options.script_file);
   std::remove(image_name.c_str());
   starcry sc(options, context);
   auto vp = sc.get_viewpoint();
@@ -50,7 +49,9 @@ double sut::test_create_image(const std::string& image_name) {
   sc.set_viewpoint(vp);
   sc.setup_server();
   auto req = std::make_shared<data::frame_request>(options.script_file, options.frame_of_interest, options.num_chunks);
-  req->enable_compressed_image();
+  // req->enable_compressed_image(); // compressed image is currently only for Web UI
+  req->set_output(options.output_file);
+  req->enable_raw_image();
   req->enable_raw_bitmap();
   req->set_last_frame();
   sc.add_image_command(req);

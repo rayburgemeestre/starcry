@@ -45,6 +45,11 @@ void sfml_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<ui
   cached_canvas_w = canvas_w;
   cached_canvas_h = canvas_h;
   cached_pixels = pixels;
+  if (pixels.size() < canvas_w * canvas_h) {
+    cached_canvas_w = 0;
+    cached_canvas_h = 0;
+    return;
+  }
   lock.unlock();
   update_window();
 }
@@ -80,10 +85,12 @@ void sfml_window::update_window() {
     }
     sf::Texture texture;
     sf::Image image;
-    image.create(cached_canvas_w, cached_canvas_h, (const sf::Uint8 *)(&(cached_pixels[0])));
-    texture.loadFromImage(image);
-    sf::Sprite sprite(texture);
-    window.draw(sprite);
+    if (cached_canvas_w && cached_canvas_h) {
+      image.create(cached_canvas_w, cached_canvas_h, (const sf::Uint8 *)(&(cached_pixels[0])));
+      texture.loadFromImage(image);
+      sf::Sprite sprite(texture);
+      window.draw(sprite);
+    }
     window.display();
   }
 }
