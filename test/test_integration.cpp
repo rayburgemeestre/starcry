@@ -51,6 +51,7 @@ double sut::test_create_image(const std::string& image_name) {
   sc.setup_server();
   auto req = std::make_shared<data::frame_request>(options.script_file, options.frame_of_interest, options.num_chunks);
   req->enable_compressed_image();
+  req->enable_raw_bitmap();
   req->set_last_frame();
   sc.add_image_command(req);
   sc.run_server();
