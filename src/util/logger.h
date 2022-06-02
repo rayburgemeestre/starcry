@@ -27,6 +27,7 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, FATAL, _NONE };
 
 class metrics;
 extern metrics *_metrics;
+extern bool _stdout;
 
 void set_metrics(metrics *ptr);
 
@@ -38,10 +39,17 @@ public:
   explicit logger(LogLevel level) : _holder(std::make_shared<holder>(level, fi, ss_)) {}
 
   friend logger operator<<(const logger &l, std::ostream &(*fun)(std::ostream &)) {
+    bool line_ended = false;
     if (_metrics) {
       l._holder->_ss << "\n";
+      line_ended = true;
       const auto line = l._holder->_ss.str();
       _metrics->log_callback((int)l._holder->_level, line);
+    }
+    if (_stdout) {
+      if (!line_ended) l._holder->_ss << "\n";
+      const auto line = l._holder->_ss.str();
+      std::cout << line << std::flush;
     }
     l._holder->_os << std::endl;
     return logger(l._holder->_os, l._holder->_ss);

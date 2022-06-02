@@ -27,3 +27,5 @@ jobs:
       run: sudo apt install -y npm
     - name: make build_web
       run: make build_web
+    - name: make dockerize
+      run: make dockerize

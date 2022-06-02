@@ -70,7 +70,8 @@ public:
       ("quiet,q", "disable verbose progress (default no)")
       ("notty,n", "disable terminal (default tty is assumed)")
       ("caching", "enable caching (experimental feature)")
-      ("raw,r", "write raw 32-bit EXR frames (default no)");
+      ("raw,r", "write raw 32-bit EXR frames (default no)")
+      ("stdout", "print logger output to stdout (disables ncurses ui)");
     // clang-format on
 
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
@@ -94,6 +95,7 @@ public:
     options.output = !vm.count("no-output");
     options.render = !vm.count("no-render");
     options.notty = vm.count("notty");
+    options.stdout_ = vm.count("stdout");
     options.compression = vm.count("compression");
     options.rand_seed =
         (rand_seed != std::numeric_limits<double>::max()) ? std::optional<double>(rand_seed) : std::nullopt;

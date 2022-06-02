@@ -25,10 +25,10 @@ spec:
     spec:
       containers:
       - name: starcrycontainer
-        image: rayburgemeestre/starcry:v5
+        image: rayburgemeestre/starcry-no-gui:v6
         command: ["/starcry"]
         #args: ["-i", "--notty"]
-        args: ["-i", "-t", "8", "-c", "8", "--caching", "input/perlin3.js"]
+        args: ["-i", "-t", "8", "-c", "8", "--caching", "--notty", "--no-gui", "input/perlin3.js"]
         workingDir: /workdir
 #        volumeMounts:
 #        - mountPath: /workdir

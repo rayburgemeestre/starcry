@@ -89,7 +89,7 @@ void metrics::notify() {
 
 std::string metrics::to_json() {
   json result = {};
-  if (!initialized) return result;
+  if (!initialized) return result.dump();
   std::unique_lock<std::mutex> lock(mut);
 
   json threads = {};

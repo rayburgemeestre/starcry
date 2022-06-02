@@ -66,9 +66,12 @@ starcry::starcry(starcry_options &options, std::shared_ptr<v8_wrapper> &context)
       pe(std::chrono::milliseconds(1000)),
       server_message_handler_(std::make_shared<server_message_handler>(*this)),
       client_message_handler_(std::make_shared<client_message_handler>(*this)),
-      metrics_(std::make_shared<metrics>(options.notty)),
+      metrics_(std::make_shared<metrics>(options.notty || options.stdout_)),
       script_(options.script_file),
       notifier(nullptr) {
+  if (options.stdout_) {
+    _stdout = true;
+  }
   metrics_->set_script(script_);
   metrics_->init();
   set_metrics(&*metrics_);

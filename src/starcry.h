@@ -69,6 +69,7 @@ struct starcry_options {
   bool render = true;
   bool output = false;
   bool notty = false;
+  bool stdout_ = false;
 
   size_t num_worker_threads = std::thread::hardware_concurrency();
   size_t num_chunks = std::thread::hardware_concurrency() * 2;

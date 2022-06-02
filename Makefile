@@ -153,38 +153,39 @@ clean:  ## clean build artifacts
 .PHONY: dockerize
 dockerize:  ## dockerize starcry executable in stripped down docker image
 	make build
-	@$(call make-clang, mkdir -p out/workdir && \
-	                    cp -prv $$PWD/web/webroot out/workdir/webroot && \
-	                    (cp -prv $$PWD/output/report.html out/workdir/webroot/report.html || true) && \
+	@$(call make-clang, mkdir -p out/workdir/web && \
+	                    cp -prv $$PWD/web/webroot out/workdir/web/webroot && \
+	                    (cp -prv $$PWD/output/report.html out/workdir/web/webroot/report.html || true) && \
 	                    cp -prv $$PWD/input out/workdir/input && \
 	                    strip --strip-debug $$PWD/build/starcry && \
 	                    dockerize --verbose --debug -n -o out --add-file /bin/bash $$PWD/bin/bash --add-file $$PWD/monaco.ttf /workdir/monaco.ttf --add-file $$PWD/build/starcry /starcry /starcry /workdir/input/test.js && \
 	                    mkdir -p out/usr/share/terminfo/x && \
 	                    cp -prv /usr/share/terminfo/x/xterm-16color out/usr/share/terminfo/x/ && \
+	                    mkdir -p out/bin && \
 	                    cp -prv `readlink -f /bin/sh` out/bin/sh && \
 	                    sed -i.bak '2 a ENV TERM=xterm-16color' out/Dockerfile)
 	# first build the non-gui (small) docker image
-	cd out && podman build . -t rayburgemeestre/starcry-no-gui:v`cat ../.version`
+	cd out && podman build . -t docker.io/rayburgemeestre/starcry-no-gui:v`cat ../.version`
 	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then \
 	    echo "$$DOCKER_PASSWORD" | podman login -u "$$DOCKER_USERNAME" --password-stdin; \
-	    podman push rayburgemeestre/starcry-no-gui:v`cat .version`; \
+	    podman push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version`; \
 	else \
-	    echo not executing podman push rayburgemeestre/starcry-no-gui:v`cat .version`; \
+	    echo not executing podman push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version`; \
 	fi
 	# quick test
-	podman run -it rayburgemeestre/starcry:v`cat .version` /starcry --help || true
+	podman run -it docker.io/rayburgemeestre/starcry:v`cat .version` /starcry --help || true
 	# second build the docker image with gui support
 	sed -i.bak 's/FROM scratch/FROM ubuntu:20.04/g' out/Dockerfile
 	sed -i.bak '2 a RUN apt update && apt install mesa-common-dev -y && apt clean && apt autoremove -y' out/Dockerfile
-	cd out && podman build . -t rayburgemeestre/starcry:v`cat ../.version`
+	cd out && podman build . -t docker.io/rayburgemeestre/starcry:v`cat ../.version`
 	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then \
 	    echo "$$DOCKER_PASSWORD" | podman login -u "$$DOCKER_USERNAME" --password-stdin; \
-	    podman push rayburgemeestre/starcry:v`cat .version`; \
+	    podman push docker.io/rayburgemeestre/starcry:v`cat .version`; \
 	else \
-	    echo not executing podman push rayburgemeestre/starcry:v`cat .version`; \
+	    echo not executing podman push docker.io/rayburgemeestre/starcry:v`cat .version`; \
 	fi
 	# quick test
-	podman run -it rayburgemeestre/starcry:v`cat .version` /starcry --help || true
+	podman run -it docker.io/rayburgemeestre/starcry:v`cat .version` /starcry --help || true
 
 build_web:  ## build web static files
 	pushd web && npm ci
@@ -205,7 +206,8 @@ publish:  ## build from scratch starcry, web, client, docker image. (does not pu
 	make build_web
 	make client
 	make dockerize
-	echo docker push rayburgemeestre/starcry:v`cat .version`
+	podman push docker.io/rayburgemeestre/starcry:v`cat .version`
+	podman push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version`
 	echo kubectl apply -f kube/starcry.yaml
 
 #------------

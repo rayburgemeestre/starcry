@@ -10,6 +10,8 @@ std::ofstream logger::fi{"sc.log", std::ios_base::out | std::ios_base::app};
 
 metrics* _metrics = nullptr;
 
+bool _stdout = false;
+
 void set_metrics(metrics* ptr) {
   _metrics = ptr;
 }
