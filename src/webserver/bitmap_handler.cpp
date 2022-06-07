@@ -42,6 +42,9 @@ void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
     if (sc->get_viewpoint().preview) {
       req->set_preview_mode();
     }
+    if (sc->get_viewpoint().labels) {
+      req->enable_metadata_objects();
+    }
     sc->add_image_command(req);
   }
 }
