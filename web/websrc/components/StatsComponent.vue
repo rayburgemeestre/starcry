@@ -4,6 +4,7 @@
           <b-progress
               :value="100"
               size="is-medium"
+              :rounded="false"
               show-value
           >
             <span>{{ dat.name }}</span>
@@ -15,6 +16,7 @@
         <b-progress
             :value="job_progress"
             size="is-medium"
+            :rounded="false"
             show-value
         >
           jobs
@@ -25,6 +27,7 @@
             v-if="busy_last_frame"
             :value="chunk_progress"
             size="is-medium"
+            :rounded="false"
             show-value
         >
           frame
@@ -52,6 +55,9 @@ export default {
       var m = 0;
       for (var job of this.$data.metrics.jobs) {
         m = Math.max(job.number, m);
+      }
+      if (this.$parent.current_frame == 0) {
+        return 100;
       }
       return 100 * (m / this.$parent.current_frame);
     },

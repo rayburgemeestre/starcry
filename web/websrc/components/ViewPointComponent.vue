@@ -16,12 +16,17 @@
     <span v-for="v, k in viewpoint_settings">
         {{ k }}: {{ v }} <br/>
     </span>
+
+    <!--
     Scale: {{ scale }} <br/>
+    -->
     View X: {{ view_x }} <br/>
     View Y: {{ view_y }} <br/>
+    <!--
     View Scale: {{ view_scale }}<br/>
     Offset X: {{ offsetX }} <br/>
     Offset Y: {{ offsetY }} <br/>
+    -->
 
     <strong>Video</strong> <br/>
     <span v-for="v, k in video">

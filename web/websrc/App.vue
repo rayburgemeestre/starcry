@@ -8,6 +8,8 @@
           </b-navbar-item>
         </template>
         <template slot="start">
+          <!--
+          TODO: uncomment when we start using this
           <b-navbar-dropdown href="#" label="File">
             <b-navbar-item href="#">Open</b-navbar-item>
             <b-navbar-item href="#">Save</b-navbar-item>
@@ -23,6 +25,7 @@
               About
             </b-navbar-item>
           </b-navbar-dropdown>
+          -->
         </template>
       </b-navbar>
       <div style="width: 200px; padding-top: 18px">
@@ -30,6 +33,22 @@
           <span v-if="connected" style="color: white;">OK</span>
           <span v-if="!connected" style="color: red;">CONNECTING</span>
         </b-progress>
+      </div>
+      <div style="padding-top: 18px; padding-left: 18px; position: relative; top: -7px;">
+        <b-field grouped>
+          <b-field label="transit" label-position="inside">
+            <b-input size="is-small" type="number" v-model="rendering" style="width: 100px" disabled></b-input>
+          </b-field>
+          <b-field label="frame" label-position="inside">
+            <b-input size="is-small" type="number" v-model="current_frame" style="width: 100px"></b-input>
+          </b-field>
+          <b-field label="max frames" label-position="inside">
+            <b-input size="is-small" type="number" v-model="max_frames" style="width: 100px" disabled></b-input>
+          </b-field>
+          <b-field label="# chunks" label-position="inside">
+            <b-input size="is-small" type="number" v-model="num_chunks" style="width: 100px"></b-input>
+          </b-field>
+        </b-field>
       </div>
     </div>
     <div class="columns main-columns">
@@ -48,18 +67,8 @@
           </b-menu-list>
           -->
         </b-menu>
-
-        <hr>
+        <br>
         <stats-component />
-
-        <br/>
-        TRANSIT: {{ rendering }}<br/>
-        FRAME: {{ current_frame }}<br/>
-        <b-input type="number" v-model="current_frame"></b-input>
-        LAST FRAME: {{ max_frames }}<br/>
-        NUM CHUNKS: {{ num_chunks }}<br/>
-        <b-input type="number" v-model="num_chunks"></b-input>
-
       </div>
       <div v-if="menu === 'files'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
         <scripts-component width="100%" height="100vh - 60px"/>
@@ -114,7 +123,7 @@
       </div>
     </div>
     <div class="columns bottom">
-      <playback-component v-bind:value="current_frame" v-bind:max_frames="max_frames" />
+      <playback-component v-bind:value="current_frame" v-bind:max_frames="max_frames" v-bind:frames_per_scene="frames_per_scene" />
     </div>
   </div>
 </template>
@@ -166,6 +175,7 @@ export default {
       },
       video: {},
       preview: {},
+      frames_per_scene: [],
     };
   },
   computed: {
@@ -468,10 +478,12 @@ export default {
             this.$data.preview = p.parsed()['preview'] || {};
             this.$data.viewpoint_settings.scale = this.$data.video['scale'];
             let total_duration = 0;
+            this.$data.frames_per_scene = [];
             for (let scene of p.parsed()['scenes']) {
               if (scene.duration) {
                 total_duration += scene.duration;
               }
+              this.$data.frames_per_scene.push(scene.duration * this.$data.video['fps']);
             }
             if (!total_duration)
               total_duration = this.$data.video['duration'];
@@ -547,8 +559,8 @@ html, body, body > div {
   height: 60px;
 }
 .toolbar, .toolbar > * {
-  background-color: #333333;
-  color: white;
+  background-color: #b9f0de;
+  color: black;
 }
 .columns.bottom {
   background-color: #333333;
@@ -577,6 +589,10 @@ canvas:active {
 }
 
 /* fixes for dark bg */
+.toolbar .menu-list a, .toolbar .navbar-link {
+  /* Keep this black, since we lightened the toolbar again */
+  color: black;
+}
 .menu-list a, .navbar-link {
     color: white;
 }
