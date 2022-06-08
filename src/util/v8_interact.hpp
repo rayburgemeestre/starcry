@@ -215,7 +215,7 @@ public:
     fun->Call(isolate->GetCurrentContext(), self, sizeof...(Args), argz).ToLocalChecked();
   }
 
-  v8::Local<v8::Function> get_fun(const std::string& field, std::optional<v8::Local<v8::Value>> obj = {}) {
+  v8::Local<v8::Function> get_fun(const std::string& field) {
     auto v8_field = v8_str(ctx, field);
     auto global = isolate->GetCurrentContext()->Global();
     auto funref = global->Get(isolate->GetCurrentContext(), v8_field);

@@ -162,7 +162,7 @@ void instantiate_object(v8_interact& i,
     }
   }
 
-  auto the_fun = i.get_fun("__spawn__", new_instance);
+  auto the_fun = i.get_fun("__spawn__");
   i.set_fun(new_instance, "spawn", the_fun);
 }
 
