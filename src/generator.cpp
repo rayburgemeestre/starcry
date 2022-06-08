@@ -121,6 +121,11 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
   // set_scene requires generator_context to be set
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     genctx = generator_context(isolate, val, 0);
+
+    // refresh the scene object to get rid of left-over state
+    scene_settings tmp;
+    std::swap(scenesettings, tmp);
+
     set_scene(0);
   });
 }
@@ -1069,11 +1074,11 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
   const auto time_settings = get_time();
 
   const auto execute = [&](double scene_time) {
-    i.call_fun(
-        instance, "time", scene_time, time_settings.elapsed, scenesettings.current_scene_next, time_settings.time);
     i.set_field(instance, "__time__", v8::Number::New(i.get_isolate(), scene_time));
     i.set_field(instance, "__global_time__", v8::Number::New(i.get_isolate(), time_settings.time));
     i.set_field(instance, "__elapsed__", v8::Number::New(i.get_isolate(), time_settings.elapsed));
+    i.call_fun(
+        instance, "time", scene_time, time_settings.elapsed, scenesettings.current_scene_next, time_settings.time);
   };
 
   if (scenesettings.current_scene_next > scenesettings.current_scene_intermediate) {
@@ -1278,6 +1283,7 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto [prev_x, prev_y, prev_x2, prev_y2] =
       calculate(i, next_instances, previous_instance, prev_parents, level, is_line);
 
+  // TODO: fix radius, it is needed in test.js scene 3
   // auto radius = i.double_number(instance, "radius");
   // auto radiussize = i.double_number(instance, "radiussize");
 
