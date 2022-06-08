@@ -44,6 +44,7 @@ void metrics::set_script(const std::string &script) {
 void metrics::init() {
   curses = std::thread([&, this]() {
     if (notty) {
+      initialized = true;
       std::unique_lock<std::mutex> lock(cv_mut);
       cv.wait(lock, [&] {
         return ready;
