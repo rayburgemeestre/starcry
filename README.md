@@ -14,22 +14,37 @@ The interface to the user is either the Javascript file or the VueJS based UI.
 
 ## Quickstart
 
-    # allow x11 from podman
+Allow x11 from podman or docker:
+
     xhost +
 
-    # create alias for docker command, image +/- 350 MiB
+Create `starcry` alias that uses podman (recommended):
+
+    # image +/- 350 MiB
     alias starcry='podman run --rm --name starcry -p 18080:18080 -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v6'
 
-    # alternative alias for smaller docker image +/- 50 MiB, but without X11 support
-    alias starcry='podman run --rm --name starcry -p 18080:18080 -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --entrypoint=/starcry docker.io/rayburgemeestre/starcry-no-gui:v6'
+    # smaller image +/- 50 MiB, no X11 support
+    alias starcry='podman run --rm --name starcry -p 18080:18080 -i -t -v `pwd`:`pwd` -w `pwd` --entrypoint=/starcry docker.io/rayburgemeestre/starcry-no-gui:v6'
 
-    # get a video definition file
+Create `starcry` alias that uses docker (tested only with rootless docker):
+
+    alias starcry='docker run --rm --name starcry -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v6'
+    alias starcry='docker run --rm --name starcry -i -t -v `pwd`:`pwd` -w `pwd` --entrypoint=/starcry docker.io/rayburgemeestre/starcry-no-gui:v6'
+
+Use software rendering in case of OpenGL issues:
+
+    alias starcry='docker run --rm --name starcry -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --device /dev/dri/card0:/dev/dri/card0 --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v6'
+
+Get a test project file:
+
     wget https://raw.githubusercontent.com/rayburgemeestre/starcry/master/input/test.js
 
-    # render it
-    starcry test.js
+Render it:
 
-    # view the video
+    starcry ./test.js
+
+View the video:
+
     ffplay output*.h264
 
 ## Building
