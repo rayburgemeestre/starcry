@@ -51,6 +51,7 @@ void metrics::init() {
       });
     } else {
       program = std::make_shared<TStarcry>(this);
+      program->setScript(script_);
       initialized = true;
       program->run();
       program->shutDown();

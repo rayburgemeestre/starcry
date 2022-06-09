@@ -57,9 +57,6 @@ TStarcry::TStarcry(metrics *metrics)
   heap->growMode = gfGrowLoX | gfGrowHiX;
   insert(heap);
 
-  script_filename_view = validView(new TFileWindow("input/test.js", []() {}));
-  if (script_filename_view != nullptr) deskTop->insert(script_filename_view);
-
   startFileViewer(&meta_viewer_win, ":meta");
   startFileViewer(&stdout_viewer_win, ":stdout");
   startLoggerViewer(&ffmpeg_viewer, "ffmpeg");
