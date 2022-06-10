@@ -25,6 +25,7 @@ public:
 private:
   void runner() {
     while (running) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       {
         std::unique_lock<std::mutex> lock(mut);
         const auto buf = buffer.str();
@@ -35,7 +36,6 @@ private:
       while (mybuff.has_line()) {
         logger(INFO) << prefix << ": " << mybuff.get_line() << std::endl;
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
   }
 
