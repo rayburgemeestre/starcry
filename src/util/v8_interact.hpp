@@ -232,14 +232,21 @@ public:
     return fun;
   }
 
+  v8::Local<v8::Value> get_global(const std::string& field) {
+    auto v8_field = v8_str(ctx, field);
+    auto global = isolate->GetCurrentContext()->Global();
+    auto maybelocal = global->Get(isolate->GetCurrentContext(), v8_field);
+    return maybelocal.ToLocalChecked();
+  }
+
   v8::Local<v8::Value> get_index(v8::Local<v8::Array> array, size_t index) {
     return array->Get(ctx, index).ToLocalChecked();
   }
   v8::Local<v8::Value> get_index(v8::Local<v8::Array> array, v8::Local<v8::Value> index) {
     return array->Get(ctx, index).ToLocalChecked();
   }
-  v8::Local<v8::Value> get(v8::Local<v8::Object> array, v8::Local<v8::Value> index) {
-    return array->Get(ctx, index).ToLocalChecked();
+  v8::Local<v8::Value> get(v8::Local<v8::Object> object, v8::Local<v8::Value> index) {
+    return object->Get(ctx, index).ToLocalChecked();
   }
   v8::Local<v8::Value> get(v8::Local<v8::Object> array, const std::string& index) {
     return array->Get(ctx, v8_str(ctx, index)).ToLocalChecked();

@@ -30,7 +30,7 @@ void instantiate_object(v8_interact& i,
                         int64_t level);
 
 v8::Local<v8::Object> instantiate_object_from_scene(v8_interact& i,
-                                                    v8::Local<v8::Array>& objects,
+                                                    v8::Local<v8::Object>& objects,
                                                     v8::Local<v8::Array>& instances_next,
                                                     v8::Local<v8::Object>& scene_object,
                                                     v8::Local<v8::Object>* parent_object = nullptr);

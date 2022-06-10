@@ -32,7 +32,7 @@ _ = {
           this.subobj[0].props.x = jump;
           this.subobj[1].props.x = -jump;
         }
-        script.video.scale = (expf(tt, 10000) * 3.0) + 1.5;
+        if (this.level === 0) script.video.scale = (expf(tt, 10000) * 3.0) + 1.5;
       },
     },
     'text': {
@@ -112,14 +112,14 @@ _ = {
   'scenes': [
     {
       'name': 'scene1',
-      'duration': 0.5 * 5,
+      'duration': 2.5,
       'objects': [
         // {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
         {'id': 'splitter', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
         // {'id': 'text', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
       ]
     },
-    {'name': 'scene2', 'duration': 0.05 * 5, 'objects': []},
-    {'name': 'scene3', 'duration': 0.5 * 5, 'objects': []},
+    {'name': 'scene2', 'duration': 0.25, 'objects': []},
+    {'name': 'scene3', 'duration': 2.5, 'objects': []},
   ]
 };

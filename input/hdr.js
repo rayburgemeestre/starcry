@@ -173,7 +173,6 @@ _ = {
   },
   'video': {
     'mode': 1,
-    //'duration': 5,
     'fps': 25,
     //'width': 1920 * 2.,
     //'height': 1920 * 2.,

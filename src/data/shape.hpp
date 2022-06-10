@@ -23,6 +23,7 @@ enum class shape_type {
   text,
   circle,
   line,
+  script,
 };
 
 // This is not an enum class because it was easier to use this in V8 (or in other words; I didn't know how to use

@@ -76,6 +76,11 @@ private:
 
   scale_settings scalesettings;
   scene_settings scenesettings;
+  struct scene_settings_objs_data {
+    double desired_duration;
+    scene_settings scenesettings;
+  };
+  std::unordered_map<int64_t, scene_settings_objs_data> scenesettings_objs;
 
   struct cache {
     bool enabled = false;
@@ -112,7 +117,11 @@ public:
   void init_toroidals();
   void init_object_instances();
 
+  void instantiate_additional_objects_from_new_scene(v8::Local<v8::Array>& scene_objects,
+                                                     v8::Local<v8::Object>* parent_object = nullptr);
+
   void set_scene(size_t scene);
+  void set_scene_sub_object(scene_settings& scenesettings, size_t scene);
   void fast_forward(int frame_of_interest);
   bool generate_frame();
   void revert_all_changes(v8_interact& i,

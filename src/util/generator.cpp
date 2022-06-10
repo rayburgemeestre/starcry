@@ -168,7 +168,7 @@ void instantiate_object(v8_interact& i,
 
 v8::Local<v8::Object> instantiate_object_from_scene(
     v8_interact& i,
-    v8::Local<v8::Array>& objects,         // the repository of objects
+    v8::Local<v8::Object>& objects,        // the repository of objects
     v8::Local<v8::Array>& instances_dest,  // target instances
     v8::Local<v8::Object>& scene_object,   // object description from scene to be instantiated
     v8::Local<v8::Object>* parent_object   // it's optional parent
@@ -248,6 +248,7 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field_if_exists(dst, "step", src);
     i.copy_field_if_exists(dst, "inherited", src);
     i.copy_field_if_exists(dst, "exists", src);
+    i.copy_field_if_exists(dst, "file", src);
     // functions
     i.copy_field(dst, "on", src);
     i.copy_field(dst, "init", src);
