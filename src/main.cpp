@@ -20,6 +20,7 @@
 #include "generator.h"
 #include "starcry.h"
 #include "util/logger.h"
+#include "util/standard_output_to_logger.hpp"
 
 #include "v8/v8-version.h"
 
@@ -178,6 +179,12 @@ public:
 };
 
 int main(int argc, char *argv[]) {
+  standard_output_to_logger ol(std::cout, "stdout");
+  std::cout << "Wired standard output to logger.." << std::endl;
+
+  standard_output_to_logger el(std::cerr, "stderr");
+  std::cerr << "Wired standard error to logger.." << std::endl;
+
   logger(DEBUG) << "Welcome to Starcry" << std::endl;
   logger(DEBUG) << "Integrated with v8 " << V8_MAJOR_VERSION << "." << V8_MINOR_VERSION << " build: " << V8_BUILD_NUMBER
                 << " patch lvl: " << V8_PATCH_LEVEL << " candidate: " << V8_IS_CANDIDATE_VERSION << std::endl;
