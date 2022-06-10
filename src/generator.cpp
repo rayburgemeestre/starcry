@@ -1283,16 +1283,6 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto [prev_x, prev_y, prev_x2, prev_y2] =
       calculate(i, next_instances, previous_instance, prev_parents, level, is_line);
 
-  // TODO: fix radius, it is needed in test.js scene 3
-  // auto radius = i.double_number(instance, "radius");
-  // auto radiussize = i.double_number(instance, "radiussize");
-
-  // auto prev_radius = i.double_number(previous_instance, "radius");
-  // auto prev_radiussize = i.double_number(previous_instance, "radiussize");
-
-  // auto rad = radius + radiussize;
-  // auto prev_rad = prev_radius + prev_radiussize;
-
   // Calculate how many pixels are maximally covered by this instance, this is currently very simplified
   x *= scalesettings.video_scale_next * shape_scale;
   prev_x *= scalesettings.video_scale_intermediate * prev_shape_scale;
@@ -1323,12 +1313,19 @@ double generator::get_max_travel_of_object(v8_interact& i,
     prev_y2 *= scalesettings.video_scale_intermediate * prev_shape_scale;
     dist = std::max(dist, sqrt(pow(x2 - prev_x2, 2) + pow(y2 - prev_y2, 2)));
   }
-  //  // radius
-  //  rad *= scalesettings.video_scale_next * shape_scale;
-  //  prev_rad *= scalesettings.video_scale_intermediate * prev_shape_scale;
-  //  job->scale = scalesettings.video_scale_next;
-  //  auto new_dist = fabs(prev_rad - rad);
-  //  dist = std::max(dist, new_dist);
+
+  // radius
+  auto radius = i.double_number(instance, "radius");
+  auto radiussize = i.double_number(instance, "radiussize");
+  auto prev_radius = i.double_number(previous_instance, "radius");
+  auto prev_radiussize = i.double_number(previous_instance, "radiussize");
+  auto rad = radius + radiussize;
+  auto prev_rad = prev_radius + prev_radiussize;
+  rad *= scalesettings.video_scale_next * shape_scale;
+  prev_rad *= scalesettings.video_scale_intermediate * prev_shape_scale;
+  // TODO: this is not 100% accurate, if an object is moving and expanding its radius the max distance can be more
+  // but this should at least result in a decent enough effect in most cases
+  dist = std::max(dist, fabs(prev_rad - rad));
 
   // Make sure that we do not include any warped distance
   if (i.has_field(instance, "__warped_dist__")) {
