@@ -31,7 +31,6 @@ _ = {
     },
   },
   'video': {
-    'duration': 3,
     'fps': 30,
     'width': 1920,
     'height': 1080,
@@ -43,6 +42,7 @@ _ = {
   },
   'scenes': [{
     'name': 'scene1',
+    'duration': 3,
     'objects': [
       //      {'id': 'ball', 'x': -700, 'y': -300, 'z': 0, 'props': {'mode': 'linear'}},
       {'id': 'ball', 'x': -700, 'y': 0, 'z': 0, 'props': {'mode': 'expf'}},

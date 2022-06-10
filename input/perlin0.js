@@ -83,7 +83,6 @@ _ = {
     },
   },
   'video': {
-    'duration': 5,
     'fps': 25,
     'width': 1920 / 4,
     'height': 1920 / 4,
@@ -94,6 +93,7 @@ _ = {
   },
   'scenes': [{
     'name': 'scene1',
+    'duration': 5,
     'objects': [
       {
         'id': 'obj',

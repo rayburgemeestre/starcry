@@ -210,26 +210,22 @@ void generator::init_video_meta_info(std::optional<double> rand_seed, bool previ
       i.recursively_copy_object(video, preview_obj);
     }
 
-    auto duration = i.has_field(video, "duration") ? i.double_number(video, "duration") : 0;
-    scenesettings.scene_durations.clear();
-    if (duration == 0) {
-      auto obj = val.As<v8::Object>();
-      auto scenes = i.v8_array(obj, "scenes");
-      for (size_t I = 0; I < scenes->Length(); I++) {
-        auto current_scene = i.get_index(scenes, I);
-        if (!current_scene->IsObject()) continue;
-        auto sceneobj = current_scene.As<v8::Object>();
-        duration += i.double_number(sceneobj, "duration");
-      }
-      for (size_t I = 0; I < scenes->Length(); I++) {
-        auto current_scene = i.get_index(scenes, I);
-        if (!current_scene->IsObject()) continue;
-        auto sceneobj = current_scene.As<v8::Object>();
-        scenesettings.scene_durations.push_back(i.double_number(sceneobj, "duration") / duration);
-      }
-    } else {
-      scenesettings.scene_durations.push_back(1.0);
+    auto& durations = scenesettings.scene_durations;
+    durations.clear();
+    double duration = 0;
+    auto obj = val.As<v8::Object>();
+    auto scenes = i.v8_array(obj, "scenes");
+    for (size_t I = 0; I < scenes->Length(); I++) {
+      auto current_scene = i.get_index(scenes, I);
+      if (!current_scene->IsObject()) continue;
+      auto sceneobj = current_scene.As<v8::Object>();
+      duration += i.double_number(sceneobj, "duration");
+      durations.push_back(i.double_number(sceneobj, "duration"));
     }
+    std::for_each(durations.begin(), durations.end(), [&duration](double& n) {
+      n /= duration;
+    });
+
     use_fps = i.double_number(video, "fps");
     canvas_w = i.double_number(video, "width");
     canvas_h = i.double_number(video, "height");
@@ -374,17 +370,95 @@ void generator::init_object_instances() {
       i.set_field(genctx.current_scene_obj, "instances_intermediate", genctx.instances_intermediate);
     }
 
-    // instantiate all the additional objects from the new scene
-    for (size_t j = 0; j < genctx.scene_objects->Length(); j++) {
-      auto scene_obj = i.get_index(genctx.scene_objects, j).As<v8::Object>();
-      // below can recursively add new objects as init() invocations spawn new objects, and so on
-      util::generator::instantiate_object_from_scene(i, genctx.objects, genctx.instances_next, scene_obj);
-    }
+    instantiate_additional_objects_from_new_scene(genctx.scene_objects);
 
     // since this is invoked directly after a scene change, and in the very beginning, make sure this state is part of
     // the instances "current" frame, or reverting (e.g., due to motion blur requirements) will discard all of this.
     util::generator::copy_instances(i, genctx.instances, genctx.instances_next);
   });
+}
+
+void generator::instantiate_additional_objects_from_new_scene(v8::Local<v8::Array>& scene_objects,
+                                                              v8::Local<v8::Object>* parent_object) {
+  auto& i = genctx.i();
+
+  // instantiate all the additional objects from the new scene
+  for (size_t j = 0; j < scene_objects->Length(); j++) {
+    auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
+    // below can recursively add new objects as init() invocations spawn new objects, and so on
+    v8::Local<v8::Object> created_instance = util::generator::instantiate_object_from_scene(
+        i, genctx.objects, genctx.instances_next, scene_obj, parent_object);
+
+    if (true) {
+      auto type = i.str(created_instance, "type");
+      auto unique_id = i.integer_number(created_instance, "unique_id");
+      if (type == "script") {
+        auto file = i.str(created_instance, "file");
+        std::ifstream stream(file);
+        std::istreambuf_iterator<char> begin(stream), end;
+        // remove "_ =" part from script (which is a workaround to silence 'not in use' linting)
+        if (*begin == '_') {
+          while (*begin != '=') begin++;
+          begin++;
+        }
+
+        // evaluate entire script into temporary variable
+        const auto source = std::string("var tmp = ") + std::string(begin, end) + std::string(";");
+        context->run(source);
+        auto tmp = i.get_global("tmp").As<v8::Object>();
+
+        // process scenes and make the scenes relative, initialize helper objs etc
+        auto scenes = i.v8_array(tmp, "scenes");
+        auto& durations = scenesettings_objs[unique_id].scenesettings.scene_durations;
+        durations.clear();
+        double duration = 0;
+        for (size_t I = 0; I < scenes->Length(); I++) {
+          auto current_scene = i.get_index(scenes, I);
+          if (!current_scene->IsObject()) continue;
+          auto sceneobj = current_scene.As<v8::Object>();
+          duration += i.double_number(sceneobj, "duration");
+          durations.push_back(i.double_number(sceneobj, "duration"));
+        }
+        std::for_each(durations.begin(), durations.end(), [&duration](double& n) {
+          n /= duration;
+        });
+        scenesettings_objs[unique_id].desired_duration = duration;
+
+        // make the scenes a property of the created instance (even though we probably won't need it for now)
+        i.set_field(created_instance, "scenes", scenes);  // TODO: remove?
+
+        // import all gradients from script
+        auto gradients = i.v8_obj(tmp, "gradients");
+        auto gradient_fields = gradients->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+        for (size_t k = 0; k < gradient_fields->Length(); k++) {
+          auto gradient_id = i.get_index(gradient_fields, k);
+          i.set_field(genctx.gradients, gradient_id, i.get(gradients, gradient_id));
+        }
+
+        // import all object definitions from script
+        auto objects = i.v8_obj(tmp, "objects");
+        auto objects_fields = objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+        for (size_t k = 0; k < objects_fields->Length(); k++) {
+          auto object_id = i.get_index(objects_fields, k);
+          i.set_field(genctx.objects, object_id, i.get(objects, object_id));
+        }
+
+        // sub object starts at scene zero
+        set_scene_sub_object(scenesettings_objs[unique_id].scenesettings, 0);
+
+        // recurse for each object in the "sub" scene
+        auto current_scene = i.get_index(scenes, scenesettings_objs[unique_id].scenesettings.current_scene_next);
+        if (current_scene->IsObject()) {
+          auto o = current_scene.As<v8::Object>();
+          auto scene_objects = i.v8_array(o, "objects");
+          instantiate_additional_objects_from_new_scene(scene_objects, &created_instance);
+        }
+
+        // clean-up temporary variable that referenced the entire imported script
+        context->run("tmp = undefined;");
+      }
+    }
+  }
 }
 
 void generator::set_scene(size_t scene) {
@@ -396,6 +470,17 @@ void generator::set_scene(size_t scene) {
       scenesettings.current_scene_next > scenesettings.scene_initialized) {
     scenesettings.scene_initialized = scenesettings.current_scene_next;
     init_object_instances();
+  }
+}
+
+void generator::set_scene_sub_object(scene_settings& scenesettings, size_t scene) {
+  if (scenesettings.current_scene_next == std::numeric_limits<size_t>::max())
+    scenesettings.current_scene_next = scene;
+  else
+    scenesettings.current_scene_next = std::max(scenesettings.current_scene_next, scene);
+  if (scenesettings.scene_initialized == std::numeric_limits<size_t>::max() ||
+      scenesettings.current_scene_next > scenesettings.scene_initialized) {
+    scenesettings.scene_initialized = scenesettings.current_scene_next;
   }
 }
 
@@ -1472,6 +1557,8 @@ void generator::convert_object_to_render_job(
     new_shape.text_size = text_size;
     new_shape.align = text_align;
     new_shape.text_fixed = text_fixed;
+  } else if (type == "script") {
+    new_shape.type = data::shape_type::script;
   } else {
     new_shape.type = data::shape_type::none;
   }
