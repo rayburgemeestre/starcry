@@ -45,7 +45,7 @@ _ = {
       'text_align': 'center',
       'init': function() {},
       'time': function(t, e, s) {
-        this.text = script.scenes[s].name;
+        this.text = 'scene #' + s;
         this.text_size = t * 100;
       },
     },
@@ -116,7 +116,7 @@ _ = {
       'objects': [
         // {'id': 'bg', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
         {'id': 'splitter', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
-        // {'id': 'text', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+        {'id': 'text', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
       ]
     },
     {'name': 'scene2', 'duration': 0.25, 'objects': []},
