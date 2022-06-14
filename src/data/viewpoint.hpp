@@ -19,7 +19,7 @@ struct viewpoint {
   bool save = false;
   bool labels = false;
   bool caching = true;
-  bool debug = true;
+  bool debug = false;
   int canvas_w = 0;
   int canvas_h = 0;
 
