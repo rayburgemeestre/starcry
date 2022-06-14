@@ -42,8 +42,8 @@ private:
   std::mutex mut;
   std::atomic<bool> running;
   std::thread t;
-  std::streambuf* old;
   std::stringstream buffer;
+  std::streambuf* old = nullptr;
   socketbuffer mybuff;
   std::string prefix;
 };
