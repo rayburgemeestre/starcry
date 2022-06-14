@@ -617,7 +617,7 @@ bool generator::_generate_frame() {
       max_dist_found = std::numeric_limits<double>::max();
       scalesettings.reset();
 
-      util::generator::garbage_collect_erased_objects(i, next_instances);
+      util::generator::garbage_collect_erased_objects(i, instances, intermediates, next_instances);
 
       if (min_intermediates > 0.) {
         update_steps(min_intermediates);
@@ -1447,7 +1447,8 @@ void generator::convert_object_to_render_job(
   // Update level for all objects
   auto level = i.integer_number(instance, "level");
   auto exists = !i.has_field(instance, "exists") || i.boolean(instance, "exists");
-  auto type = !exists ? "" : i.str(instance, "type");
+  if (!exists) return;
+  auto type = i.str(instance, "type");
   auto is_line = type == "line";
   parents[level] = instance;
 

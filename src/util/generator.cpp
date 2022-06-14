@@ -375,11 +375,17 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
   }
 }
 
-void garbage_collect_erased_objects(v8_interact& i, v8::Local<v8::Array>& instances) {
+void garbage_collect_erased_objects(v8_interact& i,
+                                    v8::Local<v8::Array>& instances,
+                                    v8::Local<v8::Array>& intermediates,
+                                    v8::Local<v8::Array>& next_instances) {
   size_t remove = 0;
-  for (size_t j = 0; j < instances->Length(); j++) {
+  for (size_t j = 0; j < next_instances->Length(); j++) {
     auto instance = i.get_index(instances, j).As<v8::Object>();
-    bool is_removed = i.has_field(instance, "exists") && !i.boolean(instance, "exists");
+    auto intermediate = i.get_index(intermediates, j).As<v8::Object>();
+    auto next_instance = i.get_index(next_instances, j).As<v8::Object>();
+
+    bool is_removed = i.has_field(next_instance, "exists") && !i.boolean(next_instance, "exists");
     if (is_removed) {
       // Remove this item (we'll overwrite or pop() it later)
       remove++;
@@ -397,17 +403,27 @@ void garbage_collect_erased_objects(v8_interact& i, v8::Local<v8::Array>& instan
 
       // TODO: also purge references such as left[] / right[] props.
 
-      // The instances that has been removed will start the level at -1, making all it's direct children 0, children
-      // below it 1, and so on..
-      update_level(i, instance, -1);
+      // The next_instances that has been removed will start the level at -1, making all it's direct children 0,
+      // children below it 1, and so on..
+      if (false) {
+        // TODO: there may be an issue with this! In any case when hdr.js is included as a script object
+        // uncommenting these lines will cause issues.
+        update_level(i, instance, -1);
+        update_level(i, intermediate, -1);
+        update_level(i, next_instance, -1);
+      }
 
     } else if (remove > 0) {
       // Keep this item
       i.set_field(instances, j - remove, instance);
+      i.set_field(intermediates, j - remove, intermediate);
+      i.set_field(next_instances, j - remove, next_instance);
     }
   }
   for (size_t j = 0; j < remove; j++) {
     i.call_fun(instances, "pop");
+    i.call_fun(intermediates, "pop");
+    i.call_fun(next_instances, "pop");
   }
 }
 
