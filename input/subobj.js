@@ -45,6 +45,7 @@ _ = {
       'subobj': [],
       'on': {
         'collide': function(other) {
+          // TODO: no longer spawns correctly
           this.subobj.push(
               this.spawn({'id': 'tempring', 'label': 'ring_' + this.label, 'x': 0, 'y': 0, 'z': 0, 'props': {}}));
         }
@@ -82,11 +83,12 @@ _ = {
     'granularity': 1,
     'grain_for_opacity': false,
     'dithering': false,
-    'motion_blur': false,
+    //'motion_blur': false, <<< TODO: this causes issues! (object disappears!)
+    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
   },
   'scenes': [{
     'name': 'scene1',
-    'duration': 5,
+    'duration': 1,
     'objects': [
       {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
     ],

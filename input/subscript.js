@@ -1,23 +1,16 @@
 _ = {
   'gradients': {},
   'objects': {
-    'split': {
+    'test': {
       'type': 'script',
-      'file': 'input/split.js',
+      'file': 'input/test.js',
       'props': {},
       'init': function() {},
       'time': function(t, e, s, tt) {},
     },
-    'motion': {
+    'blur': {
       'type': 'script',
-      'file': 'input/subobj.js',
-      'props': {},
-      'init': function() {},
-      'time': function(t, e, s, tt) {},
-    },
-    'subscript': {
-      'type': 'script',
-      'file': 'input/subscript.js',
+      'file': 'input/blur.js',
       'props': {},
       'init': function() {},
       'time': function(t, e, s, tt) {},
@@ -46,16 +39,9 @@ _ = {
       'name': 'scene1',
       'duration': 2.0,
       'objects': [
-        {'id': 'split', 'label': 'split 1', 'x': 0, 'y': -100, 'z': 0, 'props': {}},
-        {'id': 'motion', 'label': 'motion', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+        {'id': 'test', 'label': 'split 1', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+        {'id': 'blur', 'label': 'split 1', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
       ],
-    },
-    {
-      'name': 'scene2',
-      'duration': 2.0,
-      'objects': [
-        {'id': 'subscript', 'label': 'split 2', 'x': 0, 'y': 0, 'z': 0, 'props': {}, 'scale': 0.5},
-      ]
     },
   ]
 };
