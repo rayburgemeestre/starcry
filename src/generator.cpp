@@ -9,6 +9,7 @@
 #include <cmath>
 #include <memory>
 #include <mutex>
+#include <numeric>
 
 #include "v8pp/module.hpp"
 
@@ -126,6 +127,13 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
     scene_settings tmp;
     std::swap(scenesettings, tmp);
 
+    // restore scene durations info in the recreated object
+    scenesettings.scene_durations = tmp.scene_durations;
+    scenesettings.scenes_duration = tmp.scenes_duration;
+
+    // throw away all the scene information for script objects
+    scenesettings_objs.clear();
+
     set_scene(0);
   });
 }
@@ -210,9 +218,9 @@ void generator::init_video_meta_info(std::optional<double> rand_seed, bool previ
       i.recursively_copy_object(video, preview_obj);
     }
 
+    auto& duration = scenesettings.scenes_duration;
     auto& durations = scenesettings.scene_durations;
     durations.clear();
-    double duration = 0;
     auto obj = val.As<v8::Object>();
     auto scenes = i.v8_array(obj, "scenes");
     for (size_t I = 0; I < scenes->Length(); I++) {
@@ -378,6 +386,87 @@ void generator::init_object_instances() {
   });
 }
 
+void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance) {
+  auto& i = genctx.i();
+
+  // only do extra work for script objects
+  if (i.str(created_instance, "type") != "script") {
+    return;
+  }
+
+  auto unique_id = i.integer_number(created_instance, "unique_id");
+  auto file = i.str(created_instance, "file");
+
+  // read the entire script from disk
+  std::ifstream stream(file);
+  std::istreambuf_iterator<char> begin(stream), end;
+  // remove "_ =" part from script (which is a workaround to silence 'not in use' linting)
+  if (*begin == '_') {
+    while (*begin != '=') begin++;
+    begin++;
+  }
+
+  // evaluate script into temporary variable
+  const auto source = std::string("var tmp = ") + std::string(begin, end) + std::string(";");
+  context->run(source);
+  auto tmp = i.get_global("tmp").As<v8::Object>();
+
+  // process scenes and make the scenes relative, initialize helper objs etc
+  auto scenes = i.v8_array(tmp, "scenes");
+  auto& duration = scenesettings_objs[unique_id].scenes_duration;
+  auto& durations = scenesettings_objs[unique_id].scene_durations;
+  durations.clear();
+  for (size_t I = 0; I < scenes->Length(); I++) {
+    auto current_scene = i.get_index(scenes, I);
+    if (!current_scene->IsObject()) continue;
+    auto sceneobj = current_scene.As<v8::Object>();
+    duration += i.double_number(sceneobj, "duration");
+    durations.push_back(i.double_number(sceneobj, "duration"));
+  }
+  std::for_each(durations.begin(), durations.end(), [&duration](double& n) {
+    n /= duration;
+  });
+  // TODO: make this customizable
+  scenesettings_objs[unique_id].desired_duration = 1;  // override duration to 1 second
+
+  // make the scenes a property of the created instance (even though we probably won't need it for now)
+  i.set_field(created_instance, "scenes", scenes);  // TODO: remove?
+
+  // import all gradients from script
+  auto gradients = i.v8_obj(tmp, "gradients");
+  auto gradient_fields = gradients->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+  for (size_t k = 0; k < gradient_fields->Length(); k++) {
+    auto gradient_id = i.get_index(gradient_fields, k);
+    i.set_field(genctx.gradients, gradient_id, i.get(gradients, gradient_id));
+  }
+  init_gradients();
+
+  // import all object definitions from script
+  auto objects = i.v8_obj(tmp, "objects");
+  auto objects_fields = objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+  for (size_t k = 0; k < objects_fields->Length(); k++) {
+    auto object_id = i.get_index(objects_fields, k);
+    i.set_field(genctx.objects, object_id, i.get(objects, object_id));
+  }
+
+  // make sure we start from the current 'global' time as an offset
+  scenesettings_objs[unique_id].parent_offset = get_time(scenesettings).time;
+
+  // sub object starts at scene zero
+  set_scene_sub_object(scenesettings_objs[unique_id], 0);
+
+  // recurse for each object in the "sub" scene
+  auto current_scene = i.get_index(scenes, scenesettings_objs[unique_id].current_scene_next);
+  if (current_scene->IsObject()) {
+    auto o = current_scene.As<v8::Object>();
+    auto scene_objects = i.v8_array(o, "objects");
+    instantiate_additional_objects_from_new_scene(scene_objects, &created_instance);
+  }
+
+  // clean-up temporary variable that referenced the entire imported script
+  context->run("tmp = undefined;");
+}
+
 void generator::instantiate_additional_objects_from_new_scene(v8::Local<v8::Array>& scene_objects,
                                                               v8::Local<v8::Object>* parent_object) {
   auto& i = genctx.i();
@@ -389,75 +478,7 @@ void generator::instantiate_additional_objects_from_new_scene(v8::Local<v8::Arra
     v8::Local<v8::Object> created_instance = util::generator::instantiate_object_from_scene(
         i, genctx.objects, genctx.instances_next, scene_obj, parent_object);
 
-    if (true) {
-      auto type = i.str(created_instance, "type");
-      auto unique_id = i.integer_number(created_instance, "unique_id");
-      if (type == "script") {
-        auto file = i.str(created_instance, "file");
-        std::ifstream stream(file);
-        std::istreambuf_iterator<char> begin(stream), end;
-        // remove "_ =" part from script (which is a workaround to silence 'not in use' linting)
-        if (*begin == '_') {
-          while (*begin != '=') begin++;
-          begin++;
-        }
-
-        // evaluate entire script into temporary variable
-        const auto source = std::string("var tmp = ") + std::string(begin, end) + std::string(";");
-        context->run(source);
-        auto tmp = i.get_global("tmp").As<v8::Object>();
-
-        // process scenes and make the scenes relative, initialize helper objs etc
-        auto scenes = i.v8_array(tmp, "scenes");
-        auto& durations = scenesettings_objs[unique_id].scenesettings.scene_durations;
-        durations.clear();
-        double duration = 0;
-        for (size_t I = 0; I < scenes->Length(); I++) {
-          auto current_scene = i.get_index(scenes, I);
-          if (!current_scene->IsObject()) continue;
-          auto sceneobj = current_scene.As<v8::Object>();
-          duration += i.double_number(sceneobj, "duration");
-          durations.push_back(i.double_number(sceneobj, "duration"));
-        }
-        std::for_each(durations.begin(), durations.end(), [&duration](double& n) {
-          n /= duration;
-        });
-        scenesettings_objs[unique_id].desired_duration = duration;
-
-        // make the scenes a property of the created instance (even though we probably won't need it for now)
-        i.set_field(created_instance, "scenes", scenes);  // TODO: remove?
-
-        // import all gradients from script
-        auto gradients = i.v8_obj(tmp, "gradients");
-        auto gradient_fields = gradients->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
-        for (size_t k = 0; k < gradient_fields->Length(); k++) {
-          auto gradient_id = i.get_index(gradient_fields, k);
-          i.set_field(genctx.gradients, gradient_id, i.get(gradients, gradient_id));
-        }
-
-        // import all object definitions from script
-        auto objects = i.v8_obj(tmp, "objects");
-        auto objects_fields = objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
-        for (size_t k = 0; k < objects_fields->Length(); k++) {
-          auto object_id = i.get_index(objects_fields, k);
-          i.set_field(genctx.objects, object_id, i.get(objects, object_id));
-        }
-
-        // sub object starts at scene zero
-        set_scene_sub_object(scenesettings_objs[unique_id].scenesettings, 0);
-
-        // recurse for each object in the "sub" scene
-        auto current_scene = i.get_index(scenes, scenesettings_objs[unique_id].scenesettings.current_scene_next);
-        if (current_scene->IsObject()) {
-          auto o = current_scene.As<v8::Object>();
-          auto scene_objects = i.v8_array(o, "objects");
-          instantiate_additional_objects_from_new_scene(scene_objects, &created_instance);
-        }
-
-        // clean-up temporary variable that referenced the entire imported script
-        context->run("tmp = undefined;");
-      }
-    }
+    create_bookkeeping_for_script_objects(created_instance);
   }
 }
 
@@ -481,6 +502,8 @@ void generator::set_scene_sub_object(scene_settings& scenesettings, size_t scene
   if (scenesettings.scene_initialized == std::numeric_limits<size_t>::max() ||
       scenesettings.current_scene_next > scenesettings.scene_initialized) {
     scenesettings.scene_initialized = scenesettings.current_scene_next;
+    // TODO: implement:
+    //  init_object_instances();
   }
 }
 
@@ -659,9 +682,18 @@ bool generator::_generate_frame() {
           //               << std::endl;
 
           qts.clear();
-          if (scenesettings.update(get_time().time)) {
+          if (scenesettings.update(get_time(scenesettings).time)) {
             set_scene(scenesettings.current_scene_next + 1);
           }
+
+          for (auto& iter : scenesettings_objs) {
+            auto& unique_id = iter.first;
+            auto& settings = iter.second;
+            if (settings.update(get_time(settings).time)) {
+              set_scene_sub_object(settings, settings.current_scene_next + 1);
+            }
+          }
+
           if (stepper.current_step == 0) {
             call_next_frame_event(i, next_instances);
           }
@@ -672,6 +704,9 @@ bool generator::_generate_frame() {
           util::generator::copy_instances(i, intermediates, next_instances);
           scalesettings.update();
           scenesettings.update();
+          for (auto& iter : scenesettings_objs) {
+            iter.second.update();
+          }
           if (job->shapes.size() != size_t(stepper.max_step)) detected_too_many_steps = true;
           metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
         }
@@ -700,6 +735,9 @@ bool generator::_generate_frame() {
 
       scalesettings.commit();
       scenesettings.commit();
+      for (auto& iter : scenesettings_objs) {
+        iter.second.commit();
+      }
 
       metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
     });
@@ -784,6 +822,9 @@ void generator::revert_all_changes(v8_interact& i,
   util::generator::copy_instances(i, intermediates, instances);
   scalesettings.revert();
   scenesettings.revert();
+  for (auto& iter : scenesettings_objs) {
+    iter.second.revert();
+  }
 }
 
 void generator::revert_position_updates(v8_interact& i,
@@ -827,15 +868,36 @@ void generator::update_object_positions(v8_interact& i,
                                         int max_step,
                                         v8::Local<v8::Object>& video) {
   auto isolate = i.get_isolate();
+  int64_t scenesettings_from_object_id = -1;
+  int64_t scenesettings_from_object_id_level = -1;
   for (size_t j = 0; j < next_instances->Length(); j++) {
     auto instance = i.get_index(next_instances, j).As<v8::Object>();
     if (!instance->IsObject()) continue;
 
-    update_time(i, instance);
-    scalesettings.video_scale_next = i.double_number(video, "scale");
-
+    auto unique_id = i.integer_number(instance, "unique_id");
+    auto level = i.integer_number(instance, "level");
     std::string type = i.str(instance, "type");
     bool is_line = type == "line";
+    bool is_script = type == "script";
+
+    if (is_script) {
+      // TODO: this strategy does not support nested script objects
+      // TODO: we need to use stack for that
+      scenesettings_from_object_id = unique_id;
+      scenesettings_from_object_id_level = level;
+    } else if (scenesettings_from_object_id_level == level) {
+      scenesettings_from_object_id = -1;
+      scenesettings_from_object_id_level = -1;
+    }
+
+    if (scenesettings_from_object_id == -1) {
+      update_time(i, instance, scenesettings);
+    } else {
+      update_time(i, instance, scenesettings_objs[scenesettings_from_object_id]);
+    }
+
+    scalesettings.video_scale_next = i.double_number(video, "scale");
+
     std::string collision_group = i.str(instance, "collision_group");
     auto angle = i.double_number(instance, "angle");
     if (std::isnan(angle)) {
@@ -876,7 +938,6 @@ void generator::update_object_positions(v8_interact& i,
                                   quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32)));
       }
       if (collision_group != "undefined") {
-        auto unique_id = i.integer_number(instance, "unique_id");
         qts[collision_group].insert(point_type(position(x, y), unique_id));
       }
     }
@@ -944,7 +1005,10 @@ void generator::update_object_interactions(v8_interact& i,
       auto a = i.integer_number(next_instance, "unique_id");
       auto b = i.integer_number(intermediate_instance, "unique_id");
       if (a != b) {
-        logger(WARNING) << "Inconsistency, create a lookup table!" << std::endl;
+        auto aa = i.str(next_instance, "type");
+        auto bb = i.str(intermediate_instance, "type");
+        logger(WARNING) << "Inconsistency, create a lookup table! " << a << " vs " << b << ", " << aa << " vs " << bb
+                        << std::endl;
         std::exit(1);
       }
       double dist = get_max_travel_of_object(i, next_instances, intermediate_instance, next_instance);
@@ -1121,7 +1185,7 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
   i.call_fun(on2, instance2, "collide", instance);
 }
 
-inline generator::time_settings generator::get_time() const {
+inline generator::time_settings generator::get_time(scene_settings& scenesettings) const {
   // Intermediate frames between 0 and 1, for two: [0.5, 1.0]
   // This will make vibrations look really vibrating, as back and forth will be rendered differently
   // auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step));
@@ -1142,12 +1206,23 @@ inline generator::time_settings generator::get_time() const {
   // EDIT#2: reverted, to see if it fixes a bug of a possible endlessloop in the generate frame function
   const auto t = std::clamp(fn / (max_frames), 0., 1.);
   const auto e = static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(stepper.max_step);
+  const auto next_scene_duration = scenesettings.scene_durations[scenesettings.current_scene_next];
 
-  // Scene time as well for convenience, with the trade off, of calculating this more often than needed
-  // NOTE: added inline, in the hope the calculation will get optimized away for those cases
-  auto scene_time = std::clamp(
-      (t - scenesettings.offset_next) / scenesettings.scene_durations[scenesettings.current_scene_next], 0., 1.);
+  // block for special script type objects
+  if (scenesettings.parent_offset != -1) {
+    const auto desired_duration =
+        scenesettings.desired_duration != -1 ? scenesettings.desired_duration : scenesettings.scenes_duration;
+    const auto perc_of_t = desired_duration / this->scenesettings.scenes_duration;  // e.g. 0.33
+    const auto Tstart = scenesettings.parent_offset;                                // e.g. 0.50
+    const auto Tend = scenesettings.parent_offset + perc_of_t;                      // e.g. 0.83
+    const auto T = (t - Tstart) / (Tend - Tstart);                                  // e.g. 0.91
+    const auto E = e;
+    auto S = std::clamp((T - scenesettings.offset_next) / next_scene_duration, 0., 1.);
+    return time_settings{T, E, S};
+  }
 
+  // block for normal types
+  const auto scene_time = std::clamp((t - scenesettings.offset_next) / next_scene_duration, 0., 1.);
   return time_settings{t, e, scene_time};
 }
 
@@ -1155,9 +1230,8 @@ std::shared_ptr<v8_wrapper> generator::get_context() const {
   return context;
 }
 
-void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance) {
-  const auto time_settings = get_time();
-
+void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance, scene_settings& scenesettings) {
+  const auto time_settings = get_time(scenesettings);
   const auto execute = [&](double scene_time) {
     i.set_field(instance, "__time__", v8::Number::New(i.get_isolate(), scene_time));
     i.set_field(instance, "__global_time__", v8::Number::New(i.get_isolate(), time_settings.time));
@@ -1653,5 +1727,8 @@ void generator::fix(v8_interact& i, v8::Local<v8::Array>& instances) {
 
 v8::Local<v8::Object> generator::spawn_object(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj) {
   auto& i = genctx.i();
-  return util::generator::instantiate_object_from_scene(i, genctx.objects, genctx.instances_next, obj, &spawner);
+  auto created_instance =
+      util::generator::instantiate_object_from_scene(i, genctx.objects, genctx.instances_next, obj, &spawner);
+  create_bookkeeping_for_script_objects(created_instance);
+  return created_instance;
 }

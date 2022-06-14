@@ -76,11 +76,7 @@ private:
 
   scale_settings scalesettings;
   scene_settings scenesettings;
-  struct scene_settings_objs_data {
-    double desired_duration;
-    scene_settings scenesettings;
-  };
-  std::unordered_map<int64_t, scene_settings_objs_data> scenesettings_objs;
+  std::unordered_map<int64_t, scene_settings> scenesettings_objs;
 
   struct cache {
     bool enabled = false;
@@ -119,7 +115,7 @@ public:
 
   void instantiate_additional_objects_from_new_scene(v8::Local<v8::Array>& scene_objects,
                                                      v8::Local<v8::Object>* parent_object = nullptr);
-
+  void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance);
   void set_scene(size_t scene);
   void set_scene_sub_object(scene_settings& scenesettings, size_t scene);
   void fast_forward(int frame_of_interest);
@@ -149,7 +145,7 @@ public:
                          size_t index,
                          v8::Local<v8::Array> next_instances);
   static void handle_collision(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2);
-  void update_time(v8_interact& i, v8::Local<v8::Object>& instance);
+  void update_time(v8_interact& i, v8::Local<v8::Object>& instance, scene_settings& scenesettings);
   int update_steps(double dist);
   double get_max_travel_of_object(v8_interact& i,
                                   v8::Local<v8::Array>& next_instances,
@@ -191,7 +187,7 @@ public:
     return scalesettings;
   }
 
-  inline time_settings get_time() const;
+  inline time_settings get_time(scene_settings& settings) const;
 
   std::shared_ptr<v8_wrapper> get_context() const;
 

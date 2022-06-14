@@ -114,6 +114,7 @@ void instantiate_object(v8_interact& i,
     i.copy_field_if_exists(new_instance, "text_align", *scene_obj);
     i.copy_field_if_exists(new_instance, "text_size", *scene_obj);
     i.copy_field_if_exists(new_instance, "text_fixed", *scene_obj);
+    i.copy_field_if_exists(new_instance, "file", *scene_obj);
   }
 
   i.set_field(new_instance, "subobj", v8::Array::New(isolate));
