@@ -391,7 +391,8 @@ export default {
         ctx.fillText(obj["#"], x, y + 20);
         ctx.fillText(obj.id, x, y + 40);
         ctx.fillText(obj.unique_id, x, y + 60);
-        ctx.fillText(obj.random_hash, x, y + 80);
+        // ctx.fillText(obj.random_hash, x, y + 80);
+        // ctx.fillText(obj.time, x, y + 100);
       }
       // draw the actual canvas of the video
       ctx.strokeStyle = 'red';
