@@ -287,7 +287,7 @@ public:
     double textX = absolute_positioning ? shape.x : to_abs_x(shape.x);
     double textY = absolute_positioning ? shape.y : to_abs_y(shape.y);
 
-    size_t index = static_cast<size_t>(shape.text_size * (shape.text_fixed ? 1. : scale_));
+    size_t index = static_cast<size_t>(shape.text_size * (shape.text_fixed ? 1. : scale_ * shape.scale));
     if (index >= font_.size()) {
 #ifndef EMSCRIPTEN
       logger(WARNING) << "Cannot read out of font_ bounds with index " << index << "  due to : " << font_.size()
