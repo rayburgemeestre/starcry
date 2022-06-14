@@ -96,18 +96,6 @@ _ = {
         }
       },
     },
-    'split': {
-      'type': 'script',
-      'file': 'input/split.js',
-      'props': {'a': false},
-      'init': function() {},
-      'time': function(t, e, s, tt) {
-        // if (!this.props.a) {
-        //   this.props.a = true;
-        //   this.subobj.push(this.spawn({'id': 'splitter', 'x': 0, 'y': 0, 'z': 0, 'props': {}}));
-        // }
-      },
-    },
   },
   'video': {
     'fps': 25,
@@ -123,17 +111,13 @@ _ = {
   'preview': {
     'width': 512,
     'height': 512,
-    'max_granularity': 1,
   },
   'scenes': [
     {
       'name': 'scene1',
       'duration': 5.0,
-      'objects': [
-        {'id': 'obj0', 'x': 5, 'y': 0, 'z': 0, 'props': {}},
-        {'id': 'obj0', 'x': -5, 'y': 0, 'z': 0, 'props': {}},
-        {'id': 'split', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
-      ],
+      'objects':
+          [{'id': 'obj0', 'x': 5, 'y': 0, 'z': 0, 'props': {}}, {'id': 'obj0', 'x': -5, 'y': 0, 'z': 0, 'props': {}}]
     },
     {'name': 'scene2', 'duration': 1.0, 'objects': []},
     {'name': 'scene3', 'duration': 1.0, 'objects': []},
