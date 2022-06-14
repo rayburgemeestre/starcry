@@ -407,6 +407,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 #else
               {"#", -1},
 #endif
+              {"time", shape.time},
           };
           shapes_json.push_back(circle);
         }
@@ -429,9 +430,11 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 #else
               {"#", -1},
 #endif
+              {"time", shape.time},
           };
           shapes_json.push_back(line);
         }
+        // TODO: script type
         index++;
       }
     }

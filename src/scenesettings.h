@@ -25,8 +25,12 @@ public:
   size_t current_scene_next = 0;
   size_t current_scene_intermediate = std::numeric_limits<size_t>::max();
   size_t scene_initialized = std::numeric_limits<size_t>::max();
-  std::vector<double> scene_durations;
+  double scenes_duration = 0;           // non-relative seconds of duration
+  double desired_duration = -1;         // in seconds
+  std::vector<double> scene_durations;  // normalized
   double offset = 0;
   double offset_next = 0;
   double offset_intermediate = 0;
+
+  double parent_offset = -1;
 };
