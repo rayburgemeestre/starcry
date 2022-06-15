@@ -396,6 +396,8 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
 
   auto unique_id = i.integer_number(created_instance, "unique_id");
   auto file = i.str(created_instance, "file");
+  auto specified_duration =
+      i.has_field(created_instance, "duration") ? i.double_number(created_instance, "duration") : double(-1);
 
   // read the entire script from disk
   std::ifstream stream(file);
@@ -426,8 +428,7 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
   std::for_each(durations.begin(), durations.end(), [&duration](double& n) {
     n /= duration;
   });
-  // TODO: make this customizable
-  scenesettings_objs[unique_id].desired_duration = 1;  // override duration to 1 second
+  scenesettings_objs[unique_id].desired_duration = specified_duration;
 
   // make the scenes a property of the created instance (even though we probably won't need it for now)
   i.set_field(created_instance, "scenes", scenes);  // TODO: remove?

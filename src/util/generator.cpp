@@ -115,6 +115,7 @@ void instantiate_object(v8_interact& i,
     i.copy_field_if_exists(new_instance, "text_size", *scene_obj);
     i.copy_field_if_exists(new_instance, "text_fixed", *scene_obj);
     i.copy_field_if_exists(new_instance, "file", *scene_obj);
+    i.copy_field_if_exists(new_instance, "duration", *scene_obj);
   }
 
   i.set_field(new_instance, "subobj", v8::Array::New(isolate));
@@ -292,6 +293,7 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field_if_exists(dst, "inherited", src);
     i.copy_field_if_exists(dst, "exists", src);
     i.copy_field_if_exists(dst, "file", src);
+    i.copy_field_if_exists(dst, "duration", src);
     // functions
     i.copy_field(dst, "on", src);
     i.copy_field(dst, "init", src);

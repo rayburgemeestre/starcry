@@ -4,16 +4,12 @@ _ = {
     'test': {
       'type': 'script',
       'file': 'input/test.js',
-      'props': {},
-      'init': function() {},
-      'time': function(t, e, s, tt) {},
+      'duration': 1.5,
     },
     'blur': {
       'type': 'script',
       'file': 'input/blur.js',
-      'props': {},
-      'init': function() {},
-      'time': function(t, e, s, tt) {},
+      'duration': 2.0,
     },
   },
   'video': {
@@ -23,9 +19,7 @@ _ = {
     'scale': 1.0,
     'rand_seed': 5,
     'granularity': 1,
-    'minimize_steps_per_object': false,
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
-    'grain_for_opacity': false,
   },
   'preview': {
     'width': 512,
@@ -39,8 +33,8 @@ _ = {
       'name': 'scene1',
       'duration': 2.0,
       'objects': [
-        {'id': 'test', 'label': 'split 1', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
-        {'id': 'blur', 'label': 'split 1', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+        {'id': 'test', 'x': 0, 'y': 0, 'z': 0},
+        {'id': 'blur', 'x': 0, 'y': 0, 'z': 0},
       ],
     },
   ]

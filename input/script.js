@@ -4,23 +4,17 @@ _ = {
     'split': {
       'type': 'script',
       'file': 'input/split.js',
-      'props': {},
-      'init': function() {},
-      'time': function(t, e, s, tt) {},
+      'duration': 4.0,
     },
     'motion': {
       'type': 'script',
       'file': 'input/subobj.js',
-      'props': {},
-      'init': function() {},
-      'time': function(t, e, s, tt) {},
+      'duration': 1.0,
     },
     'subscript': {
       'type': 'script',
       'file': 'input/subscript.js',
-      'props': {},
-      'init': function() {},
-      'time': function(t, e, s, tt) {},
+      'duration': 2.0,
     },
   },
   'video': {
@@ -46,15 +40,15 @@ _ = {
       'name': 'scene1',
       'duration': 2.0,
       'objects': [
-        {'id': 'split', 'label': 'split 1', 'x': 0, 'y': -100, 'z': 0, 'props': {}},
-        {'id': 'motion', 'label': 'motion', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+        {'id': 'split', 'label': 'split', 'x': 0, 'y': -100, 'z': 0},
+        {'id': 'motion', 'label': 'motion', 'x': 0, 'y': 0, 'z': 0},
       ],
     },
     {
       'name': 'scene2',
       'duration': 2.0,
       'objects': [
-        {'id': 'subscript', 'label': 'split 2', 'x': 0, 'y': 0, 'z': 0, 'props': {}, 'scale': 0.5},
+        {'id': 'subscript', 'label': 'subscript', 'x': 0, 'y': 0, 'z': 0, 'scale': 0.5},
       ]
     },
   ]
