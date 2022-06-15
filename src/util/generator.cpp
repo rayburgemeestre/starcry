@@ -191,9 +191,51 @@ v8::Local<v8::Object> instantiate_object_from_scene(
 
   // give it a unique id (it already has been assigned a __random_hash__ for debugging purposes
   i.set_field(instance, "unique_id", v8::Number::New(i.get_isolate(), counter++));
+  i.set_field(
+      instance, "parent_uid", parent_object ? i.v8_number(*parent_object, "unique_id") : v8::Number::New(isolate, -1));
 
-  // push it into the destination array
-  i.call_fun(instances_dest, "push", instance);
+  if (!parent_object) {
+    // push instance at the end of destination array
+    i.call_fun(instances_dest, "push", instance);
+  } else {
+    // calculate first where to insert instance in destination array
+    const auto parent_uid = i.integer_number(*parent_object, "unique_id");
+    size_t insert_offset = instances_dest->Length();
+    int64_t found_level = 0;
+    bool searching = false;
+    for (size_t j = 0; j < instances_dest->Length(); j++) {
+      auto elem = i.get_index(instances_dest, j).As<v8::Object>();
+      const auto uid = i.integer_number(elem, "unique_id");
+      const auto level = i.integer_number(elem, "level");
+      if (searching && level == found_level) {
+        insert_offset = j;
+        break;
+      } else if (uid == parent_uid) {
+        found_level = level;
+        // assume at this point it's the element after this one
+        insert_offset = j + 1;
+        searching = true;
+      }
+    }
+
+    // create extra space at the end of the array
+    i.call_fun(instances_dest, "push", v8::Object::New(isolate));
+
+    // reverse iterate over the destination array
+    for (size_t rev_index = instances_dest->Length() - 1; rev_index; rev_index--) {
+      // insert element where we calculated it should be
+      if (rev_index == insert_offset) {
+        i.set_field(instances_dest, insert_offset, instance);
+        // no need to process the rest of the array at this point
+        break;
+      }
+      // for all elements move them down so that we create space for the new element
+      if (rev_index > 0) {
+        auto element_above = i.get_index(instances_dest, rev_index - 1).As<v8::Object>();
+        i.set_field(instances_dest, rev_index, element_above);
+      }
+    }
+  }
 
   // now invoke init() on the object, which in turn can lead to new objects
   i.call_fun(instance, "init");
@@ -442,9 +484,9 @@ std::string instance_to_string(v8_interact& i, v8::Local<v8::Object>& instance) 
   }
   const auto level = i.integer_number(instance, "level");
 
-  ss << "obj: " << i.integer_number(instance, "unique_id") << " " << i.str(instance, "id") << " "
-     << i.str(instance, "type") << " " << level << " (" << i.double_number(instance, "x") << ", "
-     << i.double_number(instance, "y") << ")";
+  ss << "obj: " << i.integer_number(instance, "unique_id") << " P" << i.integer_number(instance, "parent_uid") << " "
+     << i.str(instance, "id") << " " << i.str(instance, "type") << " L" << level << " ("
+     << i.double_number(instance, "x") << ", " << i.double_number(instance, "y") << ")";
 
   if (i.str(instance, "type") == "line") {
     ss << ",(" << i.double_number(instance, "x2") << ", " << i.double_number(instance, "y2") << ")";

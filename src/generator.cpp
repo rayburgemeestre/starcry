@@ -992,25 +992,27 @@ void generator::update_object_interactions(v8_interact& i,
                                            v8::Local<v8::Object>& video) {
   stepper.reset_current();
   const auto isolate = i.get_isolate();
+
+  // create mapping of intermediate objects
+  std::unordered_map<int64_t, int64_t> map_intermediate;
+  for (size_t index = 0; index < intermediates->Length(); index++) {
+    auto intermediate_instance = i.get_index(intermediates, index).As<v8::Object>();
+    auto uid = i.integer_number(intermediate_instance, "unique_id");
+    map_intermediate[uid] = index;
+  }
+
   for (size_t index = 0; index < next_instances->Length(); index++) {
     auto next_instance = i.get_index(next_instances, index).As<v8::Object>();
-    auto intermediate_instance = i.get_index(intermediates, index).As<v8::Object>();
-    // auto previous_instance = i.get_index(previous_instances, index).As<v8::Object>();
+    auto instance_uid = i.integer_number(next_instance, "unique_id");
+    if (map_intermediate.find(instance_uid) == map_intermediate.end()) {
+      continue;
+    }
+    auto intermediate_instance = i.get_index(intermediates, map_intermediate[instance_uid]).As<v8::Object>();
 
-    if (!next_instance->IsObject() || !intermediate_instance->IsObject()) continue;
     auto motion_blur = !i.has_field(next_instance, "motion_blur") || i.boolean(next_instance, "motion_blur");
     if (!motion_blur) {
       i.set_field(next_instance, "steps", v8::Number::New(isolate, 1));
     } else {
-      auto a = i.integer_number(next_instance, "unique_id");
-      auto b = i.integer_number(intermediate_instance, "unique_id");
-      if (a != b) {
-        auto aa = i.str(next_instance, "type");
-        auto bb = i.str(intermediate_instance, "type");
-        logger(WARNING) << "Inconsistency, create a lookup table! " << a << " vs " << b << ", " << aa << " vs " << bb
-                        << std::endl;
-        std::exit(1);
-      }
       double dist = get_max_travel_of_object(i, next_instances, intermediate_instance, next_instance);
       if (dist > max_dist_found) {
         max_dist_found = dist;
@@ -1025,14 +1027,14 @@ void generator::update_object_interactions(v8_interact& i,
       if (inherit->IsBoolean() && inherit.As<v8::Boolean>()->Value()) {
         // inherited, do not set our own dist etc.
         // EDIT: we need to read from cache as well, in case stuff got reverted..
-        i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
+        i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[instance_uid]));
       } else {
         if (attempt == 1) {
           i.set_field(next_instance, "__dist__", v8::Number::New(isolate, dist));
           i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
-          recorded_steps[a] = steps;
+          recorded_steps[instance_uid] = steps;
         } else if (attempt > 1) {
-          i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
+          i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[instance_uid]));
         }
         // cascade to left and right props, temp
         if (i.has_field(next_instance, "props")) {
