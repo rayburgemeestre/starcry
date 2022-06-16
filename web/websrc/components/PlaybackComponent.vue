@@ -1,7 +1,7 @@
 <template>
   <div style="width: 100%">
     <div class="myslider" style="width: calc(100% - 160px); margin-right: 10px; float: left;" :min="0" @mouseout="mouse_out">
-      <div v-bind:class="t" v-bind:index="index" @click="click" @mouseover="mouse_over" v-for="[index, t] in computed_ticks">&nbsp;</div>
+      <div v-bind:class="t" v-bind:index="index" @click="click" @mouseover="mouse_over" v-for="[index, t] in computed_ticks"></div>
     </div>
     <b-button @click="stop">Stop</b-button>
     <b-button @click="play">Play</b-button>
@@ -44,6 +44,10 @@
             current_scene += this.$data.frames_per_scene.shift();
             color_idx++;
             color_idx = color_idx % (colors.length)
+          }
+          if (this.$data.tick == i) {
+            result.push([i, 'selected']);
+            continue;
           }
           result.push([i, colors[color_idx]]);
         }
@@ -113,6 +117,7 @@ span.info {
 }
 .myslider div.one { background-color: #fd74b0; }
 .myslider div.two { background-color: #b9f0de; }
+.myslider div.selected { background-color: #ffffff; }
 .myslider div:nth-child(even) {
   opacity: 0.7;
 }
