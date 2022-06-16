@@ -12,6 +12,7 @@ _ = {
     'obj': {
       'type': 'circle',
       'gradient': 'white',
+      'blending_type': blending_type.add,
       'radius': 0,
       'radiussize': 5.0,
       'opacity': 1.0,
@@ -22,8 +23,12 @@ _ = {
         // grow circle size until max is reached
         this.radius += elapsed * 40;
         if (this.radius >= this.props.radius) {
+          // comment this for also a cool effect
           this.radius = this.props.radius;
         }
+
+        // uncomment to limit nesting
+        // if (this.level == 5) return;
 
         // if max is reached spawn self recursively with smaller max radius
         if (this.radius >= this.props.radius && this.subobj.length == 0) {
@@ -66,9 +71,10 @@ _ = {
     'fps': 25,
     'width': 1920,
     'height': 1080,
-    'scale': 1.3,
+    'scale': 1.0,
     'rand_seed': 1,
     'granularity': 1,
+    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
   },
   'scenes': [{
     'name': 'scene1',
