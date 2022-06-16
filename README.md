@@ -10,7 +10,7 @@ Javascript engine.
 
 The interface to the user is either the Javascript file or the VueJS based UI.
 
-<img src="https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/webui.png" width="100%">
+<img src="https://cppse.nl/sc.png" width="100%">
 
 ## Quickstart
 
@@ -80,14 +80,3 @@ The Web UI is based on Vue2. Currently the UI is using Buefy, which is not going
 We have to rebase on a new UI framework.
 
 The Web UI also heavily relies on Webpack, it would be nice to move away from it to Vite.
-
-
-## Rendering UI
-
-<img src="https://bitbucket.org/rayburgemeestre/starcry/raw/master/docs/tvui.png" width="100%">
-
-## Regression testing report
-
-https://sc.cppse.nl/report.html
-
-
