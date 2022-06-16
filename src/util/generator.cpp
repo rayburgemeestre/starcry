@@ -208,7 +208,7 @@ v8::Local<v8::Object> instantiate_object_from_scene(
       auto elem = i.get_index(instances_dest, j).As<v8::Object>();
       const auto uid = i.integer_number(elem, "unique_id");
       const auto level = i.integer_number(elem, "level");
-      if (searching && level == found_level) {
+      if (searching && level <= found_level) {
         insert_offset = j;
         break;
       } else if (uid == parent_uid) {
@@ -216,6 +216,9 @@ v8::Local<v8::Object> instantiate_object_from_scene(
         // assume at this point it's the element after this one
         insert_offset = j + 1;
         searching = true;
+        // NOTE: we can early exit here to spawn new objects on top within their parent
+        // We can make that feature configurable, or even add some z-index-like support
+        // break;
       }
     }
 
