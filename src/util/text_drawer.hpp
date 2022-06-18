@@ -60,7 +60,7 @@ private:
 public:
   text_drawer() {}
 
-  text_drawer(int text_height) : bitmap_height_(text_height), line_height(text_height) {
+  text_drawer(int text_height) : bitmap_height_(text_height * 2 /* for rounding issues */), line_height(text_height) {
     load_font();
     prepare_font();
     allocate_bitmap();

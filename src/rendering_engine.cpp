@@ -85,16 +85,14 @@ image &rendering_engine::render(size_t thread_num,
 
   double scale_ratio = (top_scale / 1080.) * canvas_h;  // std::min(canvas_w, canvas_h);
 
-  auto drawlogic = *draw_logic_;
-
-  drawlogic.scale(top_scale /* * scale_ratio */);
-  drawlogic.canvas_width(canvas_w);
-  drawlogic.canvas_height(canvas_h);
-  drawlogic.height(height);
-  drawlogic.width(width);
-  drawlogic.height(height);
-  drawlogic.center(view_x, view_y);
-  drawlogic.offset(offset_x, offset_y);
+  draw_logic_->scale(top_scale /* * scale_ratio */);
+  draw_logic_->canvas_width(canvas_w);
+  draw_logic_->canvas_height(canvas_h);
+  draw_logic_->height(height);
+  draw_logic_->width(width);
+  draw_logic_->height(height);
+  draw_logic_->center(view_x, view_y);
+  draw_logic_->offset(offset_x, offset_y);
 
   if (shapes.empty()) return bmp;
 
@@ -135,12 +133,12 @@ image &rendering_engine::render(size_t thread_num,
         return shape;
       };
 
-      drawlogic.render_text(bmp, ct(0, fmt::format("canvas: ({}, {})", canvas_w, canvas_h)), 1., settings, true);
-      drawlogic.render_text(bmp, ct(20, fmt::format("size: ({}, {})", width, height)), 1., settings, true);
-      drawlogic.render_text(bmp, ct(60, fmt::format("offset: ({}, {})", offset_x, offset_y)), 1., settings, true);
-      drawlogic.render_text(bmp, ct(80, fmt::format("view: ({}, {})", view_x, view_y)), 1., settings, true);
-      drawlogic.render_text(bmp, ct(100, fmt::format("scale: {}", top_scale)), 1., settings, true);
-      drawlogic.render_text(bmp, ct(120, fmt::format("scale ratio: {}", scale_ratio)), 1., settings, true);
+      draw_logic_->render_text(bmp, ct(0, fmt::format("canvas: ({}, {})", canvas_w, canvas_h)), 1., settings, true);
+      draw_logic_->render_text(bmp, ct(20, fmt::format("size: ({}, {})", width, height)), 1., settings, true);
+      draw_logic_->render_text(bmp, ct(60, fmt::format("offset: ({}, {})", offset_x, offset_y)), 1., settings, true);
+      draw_logic_->render_text(bmp, ct(80, fmt::format("view: ({}, {})", view_x, view_y)), 1., settings, true);
+      draw_logic_->render_text(bmp, ct(100, fmt::format("scale: {}", top_scale)), 1., settings, true);
+      draw_logic_->render_text(bmp, ct(120, fmt::format("scale ratio: {}", scale_ratio)), 1., settings, true);
     };
     scope_exit<decltype(fun)> se(fun);
 #endif
@@ -156,22 +154,22 @@ image &rendering_engine::render(size_t thread_num,
 #endif
 
       if (true && !scales.empty()) {
-        drawlogic.capture_pixels(true);
+        draw_logic_->capture_pixels(true);
 
         // first one
         double opacity = 1.0;
         const auto scale = scales[scales.size() - 1] /* * scale_ratio */;
-        drawlogic.scale(top_scale * scale);
+        draw_logic_->scale(top_scale * scale);
         bounding_box box;
         switch (shape.type) {
           case data::shape_type::circle:
-            box = drawlogic.render_circle(bmp, shape, opacity, settings);
+            box = draw_logic_->render_circle(bmp, shape, opacity, settings);
             break;
           case data::shape_type::line:
-            drawlogic.render_line(bmp, shape, opacity, settings);
+            draw_logic_->render_line(bmp, shape, opacity, settings);
             break;
           case data::shape_type::text:
-            box = drawlogic.render_text(bmp, shape, opacity, settings);
+            box = draw_logic_->render_text(bmp, shape, opacity, settings);
             break;
           case data::shape_type::none:
             break;
@@ -200,17 +198,17 @@ image &rendering_engine::render(size_t thread_num,
                                      const auto &view_y,
                                      bool update = false) {
           warp_view += double(warp_value);
-          drawlogic.center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
+          draw_logic_->center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
           if (!update) {
             switch (shape.type) {
               case data::shape_type::circle:
-                box = drawlogic.render_circle(bmp, shape, opacity, settings);
+                box = draw_logic_->render_circle(bmp, shape, opacity, settings);
                 break;
               case data::shape_type::line:
-                drawlogic.render_line(bmp, shape, opacity, settings);
+                draw_logic_->render_line(bmp, shape, opacity, settings);
                 break;
               case data::shape_type::text:
-                box = drawlogic.render_text(bmp, shape, opacity, settings);
+                box = draw_logic_->render_text(bmp, shape, opacity, settings);
                 break;
               case data::shape_type::none:
                 break;
@@ -218,20 +216,20 @@ image &rendering_engine::render(size_t thread_num,
           } else {
             switch (shape.type) {
               case data::shape_type::circle:
-                box.update(drawlogic.render_circle(bmp, shape, opacity, settings));
+                box.update(draw_logic_->render_circle(bmp, shape, opacity, settings));
                 break;
               case data::shape_type::line:
-                drawlogic.render_line(bmp, shape, opacity, settings);
+                draw_logic_->render_line(bmp, shape, opacity, settings);
                 break;
               case data::shape_type::text:
-                box.update(drawlogic.render_text(bmp, shape, opacity, settings));
+                box.update(draw_logic_->render_text(bmp, shape, opacity, settings));
                 break;
               case data::shape_type::none:
                 break;
             }
           }
           warp_view -= double(warp_value);
-          drawlogic.center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
+          draw_logic_->center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
         };
         if (warp_view_x && warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y);
         if (warp_view_y && warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y);
@@ -241,16 +239,16 @@ image &rendering_engine::render(size_t thread_num,
           const auto &index = index_data.second;
           const auto &shape = shapes[step][index];
           const auto scale = scales[step] /* * scale_ratio */;
-          drawlogic.scale(top_scale * scale);
+          draw_logic_->scale(top_scale * scale);
           switch (shape.type) {
             case data::shape_type::circle:
-              box.update(drawlogic.render_circle(bmp, shape, opacity, settings));
+              box.update(draw_logic_->render_circle(bmp, shape, opacity, settings));
               break;
             case data::shape_type::line:
-              drawlogic.render_line(bmp, shape, opacity, settings);
+              draw_logic_->render_line(bmp, shape, opacity, settings);
               break;
             case data::shape_type::text:
-              box.update(drawlogic.render_text(bmp, shape, opacity, settings));
+              box.update(draw_logic_->render_text(bmp, shape, opacity, settings));
               break;
             case data::shape_type::none:
               break;
@@ -263,9 +261,9 @@ image &rendering_engine::render(size_t thread_num,
         box_x.normalize(width, height);
         box_y.normalize(width, height);
 
-        drawlogic.capture_pixels(false);
+        draw_logic_->capture_pixels(false);
 
-        auto &ref = drawlogic.motionblur_buf();
+        auto &ref = draw_logic_->motionblur_buf();
         ref.set_layers(shape.indexes.size());
         for (const auto &p : ref.buffer()) {
           // These clamps should be avoided, and in draw_logic we should make sure we don't draw outside bounds!
@@ -277,7 +275,7 @@ image &rendering_engine::render(size_t thread_num,
             const auto &color_dat = q.second;
             const auto col = ref.get_color(color_dat);
             // TODO: design is suffering a bit, draw_logic_ needs a refactoring
-            drawlogic.blend_the_pixel(bmp, shape, x, y, col.a, col);
+            draw_logic_->blend_the_pixel(bmp, shape, x, y, col.a, col);
           }
         }
       }

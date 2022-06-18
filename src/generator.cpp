@@ -1020,6 +1020,7 @@ void generator::update_object_interactions(v8_interact& i,
       }
       auto steps = update_steps(dist);
 
+      // TODO: why is this recorded_steps static
       // experimentally put this here for now
       static std::unordered_map<int64_t, int> recorded_steps;
 

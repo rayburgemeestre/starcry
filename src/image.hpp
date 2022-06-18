@@ -70,6 +70,12 @@ public:
   }
 
   void set(const int &x, const int &y, double &r, double &g, double &b, double &a) {
+#ifdef DEBUG
+    if (pixels_.size() <= (y * width) + x) {
+      logger(INFO) << "bmp.set(" << x << "," << y << ") exceeds vector length: " << pixels_.size() << std::endl;
+      abort();
+    }
+#endif
     auto &p = pixels_[(y * width) + x];
     p.r = r;
     p.g = g;

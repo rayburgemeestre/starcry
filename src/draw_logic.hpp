@@ -286,8 +286,9 @@ public:
     bounding_box bound_box;
     double textX = absolute_positioning ? shape.x : to_abs_x(shape.x);
     double textY = absolute_positioning ? shape.y : to_abs_y(shape.y);
+    const auto text_size = std::isnan(shape.text_size) ? 99 : shape.text_size;
 
-    size_t index = static_cast<size_t>(shape.text_size * (shape.text_fixed ? 1. : scale_ * shape.scale));
+    size_t index = static_cast<size_t>(text_size * (shape.text_fixed ? 1. : scale_ * shape.scale));
     if (index >= font_.size()) {
 #ifndef EMSCRIPTEN
       logger(WARNING) << "Cannot read out of font_ bounds with index " << index << "  due to : " << font_.size()
@@ -333,9 +334,9 @@ public:
         }
         if (absX < 0 || absX >= width_) continue;
         if (absY < 0 || absY >= height_) continue;
+        if (std::isnan(absX) || std::isnan(absY)) continue;
         bound_box.update_x(absX);
         bound_box.update_y(absY);
-        // TODO: potential crashes happening here..
         render_pixel(bmp, shape, textX, textY, absX, absY, c, opacity, settings);
       }
     }
