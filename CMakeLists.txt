@@ -102,12 +102,13 @@ target_link_libraries(integration_tests PRIVATE Catch2::Catch2WithMain)
 configure_links(integration_tests)
 
 target_link_libraries(integration_tests PRIVATE -static-libgcc -static-libstdc++)
-target_link_libraries(starcry PRIVATE -static-libgcc -static-libstdc++)
 
 if (SANITIZER)
     # ASAN
-    target_link_libraries(starcry /usr/lib/llvm-12/lib/clang/12.0.1/lib/linux/libclang_rt.asan-x86_64.a)
+    target_link_libraries(starcry PRIVATE -static-libgcc -static-libstdc++ /usr/lib/llvm-12/lib/clang/12.0.1/lib/linux/libclang_rt.asan-x86_64.a)
     # target_link_libraries(starcry -lclang_rt.asan-x86_64)
+else()
+    target_link_libraries(starcry PRIVATE -static-libgcc -static-libstdc++)
 endif()
 
 # SDL

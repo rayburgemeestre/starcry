@@ -99,11 +99,11 @@ debug:  ## build starcry binary using docker with debug
 
 debug-sanitizer:  ## build starcry binary using docker with debug + address sanitizer
 	make debug-clean
-	@$(call make-clang, pushd build && ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
+	@$(call make-clang, mkdir -p build && pushd build && ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
 	                                   CXX=$$(which c++) cmake -DSANITIZER=1 -DDEBUG=on .. \
 	                                                     cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on .. && \
 	                                   ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
-	                                   make VERBOSE=1 -j $$(nproc) starcry) && \
+	                                   make VERBOSE=1 -j $$(nproc) starcry && \
 	                                   ln -fs $$PWD/build/compile_commands.json $$PWD/compile_commands.json)
 
 debug-clean:
