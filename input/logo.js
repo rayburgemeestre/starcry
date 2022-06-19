@@ -132,15 +132,17 @@ _ = {
         }
         for (let i = 0; i < n; i++) {
           let angle = (360. / n) * i;
-          let newobj2 = this.spawn({
-            'id': 'logo_art_v2_sub',
-            'x': 9 * n,
-            'y': 0,
-            'z': 0,
-            'opacity': 1.0,
-            'angle': angle,
-            'props': {'level': this.props.level + 1}
-          });
+          for (let j = 0; j < 9; j++) {  // force real white
+            let newobj2 = this.spawn({
+              'id': 'logo_art_v2_sub',
+              'x': 9 * n,
+              'y': 0,
+              'z': 0,
+              'opacity': 1.0,
+              'angle': angle,
+              'props': {'level': this.props.level + 1}
+            });
+          }
         }
       },
 

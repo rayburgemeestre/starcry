@@ -27,7 +27,8 @@ private:
   bounding_box the_box;
 
   void load_font() {
-    std::string filename = "monaco.ttf";
+    // std::string filename = "monaco.ttf";
+    std::string filename = "monogram.ttf";
     const auto exists = [](const std::string &filename) {
       std::ifstream infile(filename);
       return infile.good();
