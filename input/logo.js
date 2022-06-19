@@ -181,7 +181,7 @@ _ = {
       'time': function(time) {
         var total_frames = 5 * 25.;
         var current_frame = total_frames * time;
-        this.x = this.props.x + triangular_wave(current_frame, 1., 1.0) * 5;
+        this.x = this.props.x + (this.props.direction * triangular_wave(current_frame, 1., 1.0) * 5);
       }
     },
     'logo_art_hue': {
@@ -225,8 +225,8 @@ _ = {
       'duration': 5,
       'objects': [
         {'id': 'logo_art_bg', 'x': -250, 'y': 0, 'z': 0, 'props': {}},
-        {'id': 'logo_art_bg_2', 'x': -250, 'y': 0, 'z': 0, 'props': {}},
-        {'id': 'logo_art_bg_2', 'x': -250, 'y': 0, 'z': 0, 'props': {}},
+        {'id': 'logo_art_bg_2', 'x': -250, 'y': 0, 'z': 0, 'props': {'direction': 1.}},
+        {'id': 'logo_art_bg_2', 'x': -250, 'y': 0, 'z': 0, 'props': {'direction': -1.}},
         //{'id': 'logo_art', 'x': -200, 'y': 0, 'z': 0, 'props': {}},
         {'id': 'logo_art_v2', 'x': 250, 'y': 0, 'z': 0, 'angle': 180, 'props': {}},
         //{'id': 'logo_text_v2', 'x': 160, 'y': 25, 'z': 0, 'props': {}},
