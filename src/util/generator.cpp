@@ -186,6 +186,10 @@ v8::Local<v8::Object> instantiate_object_from_scene(
 
   // create a new javascript object
   v8::Local<v8::Object> instance = v8::Object::New(isolate);
+  if (!object_prototype->IsObject()) {
+    logger(WARNING) << "cannot instantiate object id: " << object_id << ", does not exist" << std::endl;
+    return instance;
+  }
 
   // instantiate the prototype into newly allocated javascript object
   instantiate_object(i, scene_object, object_prototype, instance, current_level);
