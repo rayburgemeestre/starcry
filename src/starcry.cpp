@@ -92,6 +92,7 @@ void starcry::configure_inotify() {
   inotifypp::filesystem::path path("input");
   auto handleNotification = [&](inotify::Notification notification) {
     logger(DEBUG) << "File modified on disk: " << notification.path.string() << std::endl;
+    logger(DEBUG) << "File of interest: " << script_ << std::endl;
     if (notification.path.string() == script_) {
       // TODO: for the future implement HOT swapping (requires parsing JSON and merging intelligently)
       gen->reset_context();

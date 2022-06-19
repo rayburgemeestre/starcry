@@ -93,7 +93,7 @@ public:
     options.interactive = vm.count("interactive");
     options.preview = vm.count("preview");
     options.enable_remote_workers = vm.count("server");
-    options.gui = !vm.count("no-gui");
+    options.gui = !vm.count("no-gui") && !vm.count("interactive");
     options.output = !vm.count("no-output");
     options.render = !vm.count("no-render");
     options.notty = vm.count("notty");

@@ -281,6 +281,7 @@ void generator::init_video_meta_info(std::optional<double> rand_seed, bool previ
 }
 
 void generator::init_gradients() {
+  gradients.clear();
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
@@ -304,6 +305,7 @@ void generator::init_gradients() {
 }
 
 void generator::init_textures() {
+  textures.clear();
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
