@@ -1,6 +1,6 @@
 [![Build Status](https://api.travis-ci.com/rayburgemeestre/starcry.svg?branch=master&status=created)](https://travis-ci.com/rayburgemeestre/starcry) [![MPL 2.0 License](https://img.shields.io/badge/license-MPL2.0-blue.svg)](http://veldstra.org/2016/12/09/you-should-choose-mpl2-for-your-opensource-project.html)
 
-<img src="https://cppse.nl/sc_logo.png" width="404">
+<img src="https://cppse.nl/sc_logo.png?V2" width="404">
 
 This is a rendering engine that aims to be a blend between photoshop and
 code-based generative art.
