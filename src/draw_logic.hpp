@@ -127,13 +127,15 @@ inline data::coord move(data::coord c, double angle, double rotate, double move)
 }
 
 class draw_logic {
+  static constexpr const size_t max_font_size = 2048;
+
 public:
   /**
    * Constructor
    */
   draw_logic() {
-    font_.reserve(1024);
-    for (size_t i = 0; i < 1024; i++) {
+    font_.reserve(max_font_size);
+    for (size_t i = 0; i < max_font_size; i++) {
       font_.push_back(nullptr);
     }
   }
@@ -294,7 +296,7 @@ public:
       logger(WARNING) << "Cannot read out of font_ bounds with index " << index << "  due to : " << font_.size()
                       << std::endl;
 #endif
-      index = 1024 - 1;
+      index = max_font_size - 1;
     }
     if (font_[index] == nullptr) {
       font_[index] = std::make_unique<text_drawer>(index);
@@ -318,10 +320,13 @@ public:
     // copy text from bitmap to our bmp canvas
     double absX = 0;
     double absY = 0;
-    for (int bitmap_y = 0; bitmap_y < font_[index]->bitmap_height(); bitmap_y++) {
-      for (int bitmap_x = 0; bitmap_x < font_[index]->bitmap_width(); bitmap_x++) {
-        double c = double(*(bitmap_pixel++)) / 255.;
-        if (!c) continue;
+    const auto the_box = font_[index]->box();
+    const auto bitmap_width = font_[index]->bitmap_width();
+    for (int bitmap_y = the_box.top_left.y; bitmap_y < the_box.bottom_right.y; bitmap_y++) {
+      for (int bitmap_x = the_box.top_left.x; bitmap_x < the_box.bottom_right.x; bitmap_x++) {
+        auto pixel = bitmap_pixel + bitmap_x + bitmap_y * bitmap_width;
+        double c = 1.0 - std::clamp(double(*pixel) / 255., double(0), double(1.));
+        if (c > 1.0 - std::numeric_limits<double>::epsilon()) continue;
         if (shape.align.empty() || shape.align == "left") {
           absX = textX + bitmap_x;
           absY = textY + bitmap_y;

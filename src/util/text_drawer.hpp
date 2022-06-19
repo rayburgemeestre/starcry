@@ -24,6 +24,7 @@ private:
   int bitmap_width_ = 1920;
   int bitmap_height_ = 32;
   int line_height = 32;
+  bounding_box the_box;
 
   void load_font() {
     std::string filename = "monaco.ttf";
@@ -73,6 +74,7 @@ public:
 
   void draw(image &bmp, double target_x, double target_y, const std::string &text) {
     memset(bitmap_, 0x00, bitmap_width_ * bitmap_height_ * sizeof(unsigned char));
+    the_box = bounding_box();
     float scale = stbtt_ScaleForPixelHeight(&info, line_height);
     const char *word = text.c_str();
     int x = 0;
@@ -94,29 +96,26 @@ public:
       int y = ascent + c_y1;
       // render character (stride and offset is important here)
       int byteOffset = x + roundf(lsb * scale) + (y * bitmap_width_);
-      stbtt_MakeCodepointBitmap(
-          &info, bitmap_ + byteOffset, c_x2 - c_x1, c_y2 - c_y1, bitmap_width_, scale, scale, word[i]);
+
+      const auto width = c_x2 - c_x1;
+      const auto height = c_y2 - c_y1;
+      the_box.update_x(x);
+      the_box.update_y(y);
+      the_box.update_x(x + width);
+      the_box.update_y(y + height);
+      stbtt_MakeCodepointBitmap(&info, bitmap_ + byteOffset, width, height, bitmap_width_, scale, scale, word[i]);
       // advance x
       x += roundf(ax * scale);
       // add kerning
       int kern = 0;
       kern = stbtt_GetCodepointKernAdvance(&info, word[i], word[i + 1]);
       x += roundf(kern * scale);
+      the_box.update_x(x);
+      the_box.update_y(y);
     }
   }
 
   bounding_box box() {
-    bounding_box the_box;
-    auto bitmap_pixel = bitmap_;
-    for (int bitmap_y = 0; bitmap_y < bitmap_height_; bitmap_y++) {
-      for (int bitmap_x = 0; bitmap_x < bitmap_width_; bitmap_x++) {
-        double c = double(*(bitmap_pixel++)) / 255.;
-        if (c) {
-          the_box.update_x(bitmap_x);
-          the_box.update_y(bitmap_y);
-        }
-      }
-    }
     return the_box;
   }
 
