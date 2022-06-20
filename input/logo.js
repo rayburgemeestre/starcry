@@ -38,6 +38,7 @@ _ = {
       'text': 'starcry',
       'text_size': 225,
       'text_align': 'center',
+      'text_font': 'monogram.ttf',
       'text_fixed': false,
     },
     'logo_text_v2': {
@@ -48,6 +49,7 @@ _ = {
       'text': 'starcry',
       'text_size': 220,
       'text_align': 'center',
+      'text_font': 'monogram.ttf',
       'text_fixed': false,
     },
     'logo_art': {

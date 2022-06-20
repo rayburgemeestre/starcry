@@ -130,15 +130,7 @@ class draw_logic {
   static constexpr const size_t max_font_size = 2048;
 
 public:
-  /**
-   * Constructor
-   */
-  draw_logic() {
-    font_.reserve(max_font_size);
-    for (size_t i = 0; i < max_font_size; i++) {
-      font_.push_back(nullptr);
-    }
-  }
+  draw_logic() = default;
 
   /**
    * Circle drawing function
@@ -289,39 +281,51 @@ public:
     double textX = absolute_positioning ? shape.x : to_abs_x(shape.x);
     double textY = absolute_positioning ? shape.y : to_abs_y(shape.y);
     const auto text_size = std::isnan(shape.text_size) ? 99 : shape.text_size;
+    const auto &font_name = shape.text_font.empty() ? "monaco.ttf" : shape.text_font;
 
+    // reserve space in vector for all font sizes
+    if (font_[font_name].size() == 0) {
+      font_[font_name].reserve(max_font_size);
+      for (size_t i = 0; i < max_font_size; i++) {
+        font_[font_name].push_back(nullptr);
+      }
+    }
+
+    // determine font size to use
     size_t index = static_cast<size_t>(text_size * (shape.text_fixed ? 1. : scale_ * shape.scale));
-    if (index >= font_.size()) {
+    if (index >= font_[font_name].size()) {
 #ifndef EMSCRIPTEN
       logger(WARNING) << "Cannot read out of font_ bounds with index " << index << "  due to : " << font_.size()
                       << std::endl;
 #endif
       index = max_font_size - 1;
     }
-    if (font_[index] == nullptr) {
-      font_[index] = std::make_unique<text_drawer>(index);
-      if (!font_[index]) {
+
+    // initialize text drawer for font + font size
+    if (font_[font_name][index] == nullptr) {
+      font_[font_name][index] = std::make_unique<text_drawer>(index, font_name);
+      if (!font_[font_name][index]) {
         fprintf(stderr, "Could not load font.\n");
         return bound_box;
       }
     }
 
-    // draws internal 1 channel bitmap
-    font_[index]->draw(bmp, textY, textY, shape.text);
+    // draws internal single-channel bitmap
+    font_[font_name][index]->draw(bmp, textY, textY, shape.text);
 
     // calculate some stuff so we can justify the text
-    auto box = font_[index]->box();
+    auto box = font_[font_name][index]->box();
     int full_text_width = static_cast<int>(box.bottom_right.x - box.top_left.x);
     int full_text_height = static_cast<int>(box.bottom_right.y - box.top_left.y);
     int half_text_width = abs(full_text_width / 2);
     // int half_text_height = abs(full_text_height / 2);
-    auto bitmap_pixel = font_[index]->bitmap();
+    auto bitmap_pixel = font_[font_name][index]->bitmap();
 
     // copy text from bitmap to our bmp canvas
     double absX = 0;
     double absY = 0;
-    const auto the_box = font_[index]->box();
-    const auto bitmap_width = font_[index]->bitmap_width();
+    const auto the_box = font_[font_name][index]->box();
+    const auto bitmap_width = font_[font_name][index]->bitmap_width();
     for (int bitmap_y = the_box.top_left.y; bitmap_y < the_box.bottom_right.y; bitmap_y++) {
       for (int bitmap_x = the_box.top_left.x; bitmap_x < the_box.bottom_right.x; bitmap_x++) {
         auto pixel = bitmap_pixel + bitmap_x + bitmap_y * bitmap_width;
@@ -867,7 +871,7 @@ private:
   uint32_t canvas_h_;
   uint32_t width_;
   uint32_t height_;
-  std::vector<std::shared_ptr<text_drawer>> font_;
+  std::map<std::string, std::vector<std::shared_ptr<text_drawer>>> font_;
   motionblur_buffer motionblur_buffer_;
 };
 

@@ -1573,6 +1573,7 @@ void generator::convert_object_to_render_job(
   auto text_align = i.str(instance, "text_align");
   auto text_size = i.integer_number(instance, "text_size");
   auto text_fixed = i.boolean(instance, "text_fixed");
+  auto text_font = i.has_field(instance, "text_font") ? i.str(instance, "text_font") : "";
 
   // TODO: might not need this param after all
   auto dist = i.double_number(instance, "__dist__");
@@ -1638,6 +1639,7 @@ void generator::convert_object_to_render_job(
     new_shape.text_size = text_size;
     new_shape.align = text_align;
     new_shape.text_fixed = text_fixed;
+    new_shape.text_font = text_font;
   } else if (type == "script") {
     new_shape.type = data::shape_type::script;
   } else {

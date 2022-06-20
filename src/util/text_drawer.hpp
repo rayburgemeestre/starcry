@@ -25,19 +25,19 @@ private:
   int bitmap_height_ = 32;
   int line_height = 32;
   bounding_box the_box;
+  std::string font_;
 
   void load_font() {
-    // std::string filename = "monaco.ttf";
-    std::string filename = "monogram.ttf";
+    std::string filename = std::string("docs/fonts/") + font_;
     const auto exists = [](const std::string &filename) {
       std::ifstream infile(filename);
       return infile.good();
     };
     if (!exists(filename)) {
-      filename = "/workdir/monaco.ttf";
+      filename = std::string("/workdir/") + font_;
     }
     if (!exists(filename)) {
-      throw std::runtime_error("could not find font");
+      throw std::runtime_error(std::string("could not find font: ") + filename);
     }
 
     FILE *fontFile = fopen(filename.c_str(), "rb");
@@ -62,7 +62,8 @@ private:
 public:
   text_drawer() {}
 
-  text_drawer(int text_height) : bitmap_height_(text_height * 2 /* for rounding issues */), line_height(text_height) {
+  text_drawer(int text_height, std::string font)
+      : bitmap_height_(text_height * 2 /* for rounding issues */), line_height(text_height), font_(std::move(font)) {
     load_font();
     prepare_font();
     allocate_bitmap();

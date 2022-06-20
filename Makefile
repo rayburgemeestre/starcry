@@ -158,7 +158,7 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 	                    (cp -prv $$PWD/output/report.html out/workdir/web/webroot/report.html || true) && \
 	                    cp -prv $$PWD/input out/workdir/input && \
 	                    strip --strip-debug $$PWD/build/starcry && \
-	                    dockerize --verbose --debug -n -o out --add-file /bin/bash $$PWD/bin/bash --add-file $$PWD/monaco.ttf /workdir/monaco.ttf --add-file $$PWD/build/starcry /starcry /starcry /workdir/input/test.js && \
+	                    dockerize --verbose --debug -n -o out --add-file /bin/bash $$PWD/bin/bash --add-file $$PWD/docs/fonts/*.ttf /workdir/ --add-file $$PWD/build/starcry /starcry /starcry /workdir/input/test.js && \
 	                    mkdir -p out/usr/share/terminfo/x && \
 	                    cp -prv /usr/share/terminfo/x/xterm-16color out/usr/share/terminfo/x/ && \
 	                    mkdir -p out/bin && \
