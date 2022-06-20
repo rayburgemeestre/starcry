@@ -5,12 +5,10 @@ MAINTAINER Ray Burgemeestre
 RUN mkdir docs
 
 COPY docs/install_deps.sh docs/
-COPY docs/install_client_deps.sh docs/
 COPY docs/install_dockerize_deps.sh docs/
 COPY Makefile /
 
 RUN make deps
-RUN make client_deps
 RUN make dockerize_deps
 
 # warmup emscripten (this will pre-fetch SDL2, and cache it)

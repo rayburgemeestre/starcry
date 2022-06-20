@@ -130,9 +130,6 @@ runtime_deps:  ## install run-time dependencies
 deps: ## install dependencies required for running and building starcry
 	./docs/install_deps.sh
 
-client_deps:  ## install dependencies for building webassembly client
-	./docs/install_client_deps.sh
-
 dockerize_deps:
 	./docs/install_dockerize_deps.sh
 
