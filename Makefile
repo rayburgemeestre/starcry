@@ -73,7 +73,7 @@ integration-test-sanitizer:
 	                        ./build/integration_tests)
 
 client:  ## build webassembly javascript file using docker
-	@$(call make-clang, /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 --bind \
+	@$(call make-clang, /emsdk/upstream/emscripten/em++ --std=c++20 -s WASM=1 -s USE_SDL=2 -O3 --bind \
 	                    -o web/webroot/client.js src/client.cpp src/stb.cpp \
 	                    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
 	                    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s ALLOW_MEMORY_GROWTH=0)
@@ -85,7 +85,7 @@ client_desktop:  ## build webassembly client for desktop for testing purposes
 	                    -I src -I./libs/cereal/include -I./libs/perlin_noise/ -I/opt/cppse/build/fmt/include/ -I/opt/cppse/build/png++/ -I./libs/stb/ -I/usr/include/SDL2 -lSDL2 /usr/lib/x86_64-linux-gnu/libpng16.a)
 
 client_debug:  ## build webassembly javascript file using docker with debug
-	@$(call make-clang, /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -O3 -g --bind \
+	@$(call make-clang, /emsdk/upstream/emscripten/em++ --std=c++20 -s WASM=1 -s USE_SDL=2 -O3 -g --bind \
 	                    -o web/webroot/client.js src/client.cpp src/stb.cpp \
 	                    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
 	                    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1)
