@@ -121,8 +121,10 @@ pull:  ## pull the starcry docker build image
 	docker pull rayburgemeestre/build-starcry-ubuntu:20.04
 
 build-image:  ## build the starcry build image using podman
-	podman pull -q rayburgemeestre/build-ubuntu:20.04 && \
-	podman build -t rayburgemeestre/build-starcry-ubuntu:20.04 -f Dockerfile .
+	(podman pull -q rayburgemeestre/build-ubuntu:20.04 && \
+	 podman build -t rayburgemeestre/build-starcry-ubuntu:20.04 -f Dockerfile .) || \
+	(docker pull -q rayburgemeestre/build-ubuntu:20.04 && \
+	 docker build -t rayburgemeestre/build-starcry-ubuntu:20.04 -f Dockerfile .)
 
 runtime_deps:  ## install run-time dependencies
 	./docs/install_runtime_deps.sh
