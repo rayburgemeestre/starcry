@@ -161,7 +161,8 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 	                    cp -prv `readlink -f /bin/sh` out/bin/sh && \
 	                    sed -i.bak '2 a ENV TERM=xterm-16color' out/Dockerfile)
 	# first build the non-gui (small) docker image
-	cd out && ${docker_exe} build . -t docker.io/rayburgemeestre/starcry-no-gui:v`cat ../.version`; \
+	(cd out && ${docker_exe} build . -t docker.io/rayburgemeestre/starcry-no-gui:v`cat ../.version`); \
+	echo test; pwd; echo test2; \
 	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then \
 	    echo "$$DOCKER_PASSWORD" | $(docker_exe) login -u "$$DOCKER_USERNAME" --password-stdin; \
 	    $(docker_exe) push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version`; \
@@ -171,9 +172,9 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 	# quick test
 	$(docker_exe) run -it docker.io/rayburgemeestre/starcry:v`cat .version` /starcry --help || true
 	# second build the docker image with gui support
-	sed -i.bak 's/FROM scratch/FROM ubuntu:20.04/g' out/Dockerfile
-	sed -i.bak '2 a RUN apt update && apt install mesa-common-dev -y && apt clean && apt autoremove -y' out/Dockerfile
-	cd out && $(docker_exe) build . -t docker.io/rayburgemeestre/starcry:v`cat ../.version`
+	sudo sed -i.bak 's/FROM scratch/FROM ubuntu:20.04/g' out/Dockerfile
+	sudo sed -i.bak '2 a RUN apt update && apt install mesa-common-dev -y && apt clean && apt autoremove -y' out/Dockerfile
+	(cd out && $(docker_exe) build . -t docker.io/rayburgemeestre/starcry:v`cat ../.version`); \
 	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then \
 	    echo "$$DOCKER_PASSWORD" | $(docker_exe) login -u "$$DOCKER_USERNAME" --password-stdin; \
 	    $(docker_exe) push docker.io/rayburgemeestre/starcry:v`cat .version`; \
