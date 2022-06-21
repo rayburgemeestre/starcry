@@ -112,13 +112,11 @@ format:  ## format source code (build at least once first)
 	                    cmake --build build --target clangformat)
 
 pull:  ## pull the starcry docker build image
-	docker pull rayburgemeestre/build-starcry-ubuntu:20.04
+	$(docker_exe) pull rayburgemeestre/build-starcry-ubuntu:20.04
 
 build-image:  ## build the starcry build image using podman
-	(podman pull -q rayburgemeestre/build-ubuntu:20.04 && \
-	 podman build -t rayburgemeestre/build-starcry-ubuntu:20.04 -f Dockerfile .) || \
-	(docker pull -q rayburgemeestre/build-ubuntu:20.04 && \
-	 docker build -t rayburgemeestre/build-starcry-ubuntu:20.04 -f Dockerfile .)
+	$(docker_exe) pull -q rayburgemeestre/build-ubuntu:20.04 && \
+	$(docker_exe) build -t rayburgemeestre/build-starcry-ubuntu:20.04 -f Dockerfile .
 
 runtime_deps:  ## install run-time dependencies
 	./docs/install_runtime_deps.sh
@@ -162,27 +160,27 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 	                    cp -prv `readlink -f /bin/sh` out/bin/sh && \
 	                    sed -i.bak '2 a ENV TERM=xterm-16color' out/Dockerfile)
 	# first build the non-gui (small) docker image
-	cd out && podman build . -t docker.io/rayburgemeestre/starcry-no-gui:v`cat ../.version`
+	cd out && ($(docker_exe) build . -t docker.io/rayburgemeestre/starcry-no-gui:v`cat ../.version`
 	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then \
-	    echo "$$DOCKER_PASSWORD" | podman login -u "$$DOCKER_USERNAME" --password-stdin; \
-	    podman push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version`; \
+	    echo "$$DOCKER_PASSWORD" | $(docker_exe) login -u "$$DOCKER_USERNAME" --password-stdin; \
+	    $(docker_exe) push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version`; \
 	else \
 	    echo not executing podman push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version`; \
 	fi
 	# quick test
-	podman run -it docker.io/rayburgemeestre/starcry:v`cat .version` /starcry --help || true
+	$(docker_exe) run -it docker.io/rayburgemeestre/starcry:v`cat .version` /starcry --help || true
 	# second build the docker image with gui support
 	sed -i.bak 's/FROM scratch/FROM ubuntu:20.04/g' out/Dockerfile
 	sed -i.bak '2 a RUN apt update && apt install mesa-common-dev -y && apt clean && apt autoremove -y' out/Dockerfile
-	cd out && podman build . -t docker.io/rayburgemeestre/starcry:v`cat ../.version`
+	cd out && $(docker_exe) build . -t docker.io/rayburgemeestre/starcry:v`cat ../.version`
 	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then \
-	    echo "$$DOCKER_PASSWORD" | podman login -u "$$DOCKER_USERNAME" --password-stdin; \
-	    podman push docker.io/rayburgemeestre/starcry:v`cat .version`; \
+	    echo "$$DOCKER_PASSWORD" | $(docker_exe) login -u "$$DOCKER_USERNAME" --password-stdin; \
+	    $(docker_exe) push docker.io/rayburgemeestre/starcry:v`cat .version`; \
 	else \
-	    echo not executing podman push docker.io/rayburgemeestre/starcry:v`cat .version`; \
+	    echo not executing $(docker_exe) push docker.io/rayburgemeestre/starcry:v`cat .version`; \
 	fi
 	# quick test
-	podman run -it docker.io/rayburgemeestre/starcry:v`cat .version` /starcry --help || true
+	$(docker_exe) run -it docker.io/rayburgemeestre/starcry:v`cat .version` /starcry --help || true
 
 build_web:  ## build web static files
 	pushd web && npm ci
@@ -203,8 +201,8 @@ publish:  ## build from scratch starcry, web, client, docker image. (does not pu
 	make build_web
 	make client
 	make dockerize
-	podman push docker.io/rayburgemeestre/starcry:v`cat .version`
-	podman push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version`
+	$(docker_exe) push docker.io/rayburgemeestre/starcry:v`cat .version`
+	$(docker_exe) push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version`
 	echo kubectl apply -f kube/starcry.yaml
 
 #------------
