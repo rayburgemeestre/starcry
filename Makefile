@@ -2,36 +2,29 @@ SHELL:=/bin/bash
 
 uid:=$(shell id -u)
 gid:=$(shell id -g)
-
 interactive:=$(shell [ -t 0 ] && echo 1)
-
 ccache_enabled = [[ -f '/usr/bin/ccache' ]]
 ccache_env = CXX='ccache g++' CC='ccache gcc' CCACHE_SLOPPINESS=file_macro,locale,time_macros
-
 docker_tty = $$(/bin/sh -c 'if [ "$(interactive)" = "1" ]]; then echo "-t"; else echo ""; fi')
 docker_exe = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo "podman"; else echo "docker"; fi')
-docker_run = $(docker_exe) --storage-opt ignore_chown_errors=true run -i $(docker_tty) --rm \
-	                                                           -e _UID=$(uid) -e _GID=$(gid) \
-	                                                           -e container=podman \
-	                                                           -e DISPLAY=$$DISPLAY \
-	                                                           -v /tmp/.X11-unix:/tmp/.X11-unix \
-	                                                           -v $$PWD:$$PWD \
-	                                                           -v $$PWD/.ccache:/root/.ccache \
-	                                                           -v $$PWD/.emscripten_cache:/tmp/.emscripten_cache \
-	                                                           --entrypoint /bin/bash \
-	                                                           -w $$PWD rayburgemeestre/build-starcry-ubuntu:20.04
-
+docker_params = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo "--storage-opt ignore_chown_errors=true"; else echo ""; fi')
+docker_run = $(docker_exe) $(docker_params) run -i $(docker_tty) --rm \
+	                                            -e _UID=$(uid) -e _GID=$(gid) \
+	                                            -e container=podman \
+	                                            -e DISPLAY=$$DISPLAY \
+	                                            -v /tmp/.X11-unix:/tmp/.X11-unix \
+	                                            -v $$PWD:$$PWD \
+	                                            -v $$PWD/.ccache:/root/.ccache \
+	                                            -v $$PWD/.emscripten_cache:/tmp/.emscripten_cache \
+	                                            --entrypoint /bin/bash \
+	                                            -w $$PWD rayburgemeestre/build-starcry-ubuntu:20.04
 inside_docker_container = [[ "$$container" == "podman" ]]
-
 run_in_container = ($(docker_run) -c "if $(ccache_enabled); then $(ccache_env) $1; else $1; fi")
 run_locally = (if $(ccache_enabled); then $(ccache_env) $1; else $1; fi)
 run_in_container_clang = ($(docker_run) -c "sudo switch-to-latest-clang; if $(ccache_enabled); then $(ccache_env) $1; else $1; fi")
 run_locally_clang = (if $(ccache_enabled); then sudo switch-to-latest-clang; $(ccache_env) $1; else sudo switch-to-latest-clang; $1; fi)
-
 make = if ! $(inside_docker_container); then $(run_in_container); \
 	   else $(run_locally); fi
-
-
 make-clang = if ! $(inside_docker_container); then $(run_in_container_clang); \
 	         else $(run_locally_clang); fi
 
