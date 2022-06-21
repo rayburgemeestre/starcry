@@ -6,9 +6,10 @@ interactive:=$(shell [ -t 0 ] && echo 1)
 ccache_enabled = [[ -f '/usr/bin/ccache' ]]
 ccache_env = CXX='ccache g++' CC='ccache gcc' CCACHE_SLOPPINESS=file_macro,locale,time_macros
 docker_tty = $$(/bin/sh -c 'if [ "$(interactive)" = "1" ]]; then echo "-t"; else echo ""; fi')
-docker_exe = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo "podman"; else echo "docker"; fi')
+docker_exe_tmp := $$(/bin/sh -c 'if [ $$(which podman) ]; then echo "podman"; else echo "docker"; fi')
+docker_exe:=$(shell if [ $$(which podman) ]; then echo "podman"; else echo "docker"; fi)
 docker_params = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo "--storage-opt ignore_chown_errors=true"; else echo ""; fi')
-docker_run = $(docker_exe) $(docker_params) run -i $(docker_tty) --rm \
+docker_run = $(docker_exe_tmp) $(docker_params) run -i $(docker_tty) --rm \
 	                                            -e _UID=$(uid) -e _GID=$(gid) \
 	                                            -e container=podman \
 	                                            -e DISPLAY=$$DISPLAY \
@@ -160,7 +161,7 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 	                    cp -prv `readlink -f /bin/sh` out/bin/sh && \
 	                    sed -i.bak '2 a ENV TERM=xterm-16color' out/Dockerfile)
 	# first build the non-gui (small) docker image
-	cd out && ($(docker_exe) build . -t docker.io/rayburgemeestre/starcry-no-gui:v`cat ../.version`
+	cd out && ${docker_exe} build . -t docker.io/rayburgemeestre/starcry-no-gui:v`cat ../.version`; \
 	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then \
 	    echo "$$DOCKER_PASSWORD" | $(docker_exe) login -u "$$DOCKER_USERNAME" --password-stdin; \
 	    $(docker_exe) push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version`; \
