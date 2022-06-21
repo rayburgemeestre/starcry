@@ -12,8 +12,9 @@
 #include "bitmap_wrapper.hpp"
 #include "rendering_engine.h"
 
-#ifndef EMSCRIPTEN
 #include <fmt/core.h>
+
+#ifndef EMSCRIPTEN
 #include "util/image_utils.h"
 #endif
 #include "util/scope_exit.hpp"
@@ -110,8 +111,7 @@ image &rendering_engine::render(size_t thread_num,
     for (auto i = 0; i < height; i++) {
       bmp.set(width / 2, i, r, g, b, a);
     }
-#ifndef EMSCRIPTEN  // TODO: fix for emscripten
-    auto fun = [&]() {
+    scope_exit se([&]() {
       const auto ct = [&](double offset_y, const std::string &text) {
         data::shape shape;  // = shape;
         shape.x = 0;
@@ -139,9 +139,7 @@ image &rendering_engine::render(size_t thread_num,
       draw_logic_->render_text(bmp, ct(80, fmt::format("view: ({}, {})", view_x, view_y)), 1., settings, true);
       draw_logic_->render_text(bmp, ct(100, fmt::format("scale: {}", top_scale)), 1., settings, true);
       draw_logic_->render_text(bmp, ct(120, fmt::format("scale ratio: {}", scale_ratio)), 1., settings, true);
-    };
-    scope_exit<decltype(fun)> se(fun);
-#endif
+    });
   }
 
   if (!shapes.empty()) {
