@@ -51,8 +51,11 @@ View the video:
 
     git clone --recursive https://github.com/rayburgemeestre/starcry
     cd starcry
-    make        # will do a dockerized build
-    make debug  # same, but debug build
+    make            # display all targets
+    make build      # execute containerized clang build
+    make build-gcc  # execute containerized gcc build
+    make debug      # execute containerized clang debug build
+    make dockerize  # create starcry runtime containers
 
 The executable from the dockerized build will be in `build` and should run on
 Ubuntu 20.04.

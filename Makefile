@@ -9,7 +9,8 @@ ccache_enabled = [[ -f '/usr/bin/ccache' ]]
 ccache_env = CXX='ccache g++' CC='ccache gcc' CCACHE_SLOPPINESS=file_macro,locale,time_macros
 
 docker_tty = $$(/bin/sh -c 'if [ "$(interactive)" = "1" ]]; then echo "-t"; else echo ""; fi')
-docker_run = podman --storage-opt ignore_chown_errors=true run -i $(docker_tty) --rm \
+docker_exe = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo "podman"; else echo "docker"; fi')
+docker_run = $(docker_exe) --storage-opt ignore_chown_errors=true run -i $(docker_tty) --rm \
 	                                                           -e _UID=$(uid) -e _GID=$(gid) \
 	                                                           -e container=podman \
 	                                                           -e DISPLAY=$$DISPLAY \
