@@ -184,6 +184,10 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 	# quick test
 	$(docker_exe) run -it docker.io/rayburgemeestre/starcry:v`cat .version` /starcry --help || true
 
+docker-finalize:
+	@$(call make-clang, chown $$_UID:$$_GID . -R)  # docker specific workaround for CI
+
+
 build_web:  ## build web static files
 	pushd web && npm ci
 	pushd web && npm run build
