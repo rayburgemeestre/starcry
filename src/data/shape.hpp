@@ -157,6 +157,8 @@ struct shape {
   double x2;
   double y2;
   double z2;
+  double vel_x;
+  double vel_y;
   shape_type type;
   double r;
   double g;
@@ -199,6 +201,8 @@ struct shape {
        x2,
        y2,
        z2,
+       vel_x,
+       vel_y,
        type,
        r,
        g,

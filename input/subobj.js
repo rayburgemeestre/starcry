@@ -1,5 +1,11 @@
 _ = {
-  'gradients': {},
+  'gradients': {
+    'full_white': [
+      {'position': 0, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
+      {'position': 0.90, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
+      {'position': 1, 'r': 1, 'g': 1, 'b': 1, 'a': 0},
+    ],
+  },
   'textures': {},
   'objects': {
     'balls': {
@@ -16,7 +22,7 @@ _ = {
           'x': -100,
           'y': 0,
           'z': 0,
-          'velocity': 10,
+          'velocity': 10,  // do not specify negative velocity
           'vel_x': 1,
           'vel_y': 0,
         }));
@@ -26,8 +32,8 @@ _ = {
           'x': 100,
           'y': 0,
           'z': 0,
-          'velocity': -10,
-          'vel_x': 1,
+          'velocity': 10,  // do not specify negative velocity
+          'vel_x': -1,
           'vel_y': 0,
         }));
       },
@@ -36,16 +42,14 @@ _ = {
     'ball': {
       'collision_group': 'group1',
       'type': 'circle',
-      'gradients': [],
+      'gradient': 'full_white',
       'radius': 0,
       'radiussize': 20.0,
-      'props': {'grad': 'white'},
       'init': function() {},
       'time': function(t, elapsed) {},
       'subobj': [],
       'on': {
         'collide': function(other) {
-          // TODO: no longer spawns correctly
           this.subobj.push(
               this.spawn({'id': 'tempring', 'label': 'ring_' + this.label, 'x': 0, 'y': 0, 'z': 0, 'props': {}}));
         }

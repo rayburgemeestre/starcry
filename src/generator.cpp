@@ -1545,6 +1545,8 @@ void generator::convert_object_to_render_job(
   auto transitive_y = i.double_number(instance, "transitive_y");
   auto transitive_x2 = is_line ? i.double_number(instance, "transitive_x2") : 0.0;
   auto transitive_y2 = is_line ? i.double_number(instance, "transitive_y2") : 0.0;
+  auto vel_x = i.double_number(instance, "vel_x");
+  auto vel_y = i.double_number(instance, "vel_y");
 
   auto inherited_x = i.has_field(instance, "inherited_x") ? i.double_number(instance, "inherited_x") : 0.;
   auto inherited_y = i.has_field(instance, "inherited_y") ? i.double_number(instance, "inherited_y") : 0.;
@@ -1611,6 +1613,8 @@ void generator::convert_object_to_render_job(
     new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(1.0, data::color{0.0, 0, 0, 1}));
   }
   new_shape.z = 0;
+  new_shape.vel_x = vel_x;
+  new_shape.vel_y = vel_y;
   new_shape.radius = radius;
   new_shape.radius_size = radiussize;
   new_shape.blending_ = blending_type;

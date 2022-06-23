@@ -54,6 +54,14 @@
             label: 'Y',
           },
           {
+            field: 'vel_x',
+            label: 'VelX',
+          },
+          {
+            field: 'vel_y',
+            label: 'VelY',
+          },
+          {
             field: '#',
             label: '#',
           },

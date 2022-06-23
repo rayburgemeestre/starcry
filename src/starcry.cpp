@@ -404,6 +404,8 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
               {"type", "circle"},
               {"x", shape.x},
               {"y", shape.y},
+              {"vel_x", shape.vel_x},
+              {"vel_y", shape.vel_y},
 #ifdef DEBUG_NUM_SHAPES
               {"#", nums[shape.unique_id]},
               {"random_hash", shape.random_hash},
