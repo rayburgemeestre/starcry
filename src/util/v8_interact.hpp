@@ -101,6 +101,14 @@ public:
     return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext()).ToChecked();
   }
 
+  double double_number(v8::Local<v8::Object>& obj, const std::string& field, double default_value) {
+    if (has_field(obj, field)) {
+      return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext()).ToChecked();
+    } else {
+      return default_value;
+    }
+  }
+
   double double_number(v8::Local<v8::Array>& obj, size_t index) {
     return v8_number(obj, index)->NumberValue(isolate->GetCurrentContext()).ToChecked();
   }

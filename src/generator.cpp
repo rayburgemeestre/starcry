@@ -1150,6 +1150,8 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
   auto radiussize = i.double_number(instance, "radiussize");
   auto radius2 = i.double_number(instance2, "radius");
   auto radiussize2 = i.double_number(instance2, "radiussize");
+  auto mass = i.double_number(instance, "mass", 1.);
+  auto mass2 = i.double_number(instance2, "mass", 1.);
 
   // If the quadtree reported a match, it doesn't mean the objects fully collide
   circle a(position(x, y), radius, radiussize);
@@ -1170,13 +1172,14 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
   const auto normal = unit_vector(subtract_vector(vector2d(x, y), vector2d(x2, y2)));
   const auto ta = dot_product(vector2d(vel_x, vel_y), normal);
   const auto tb = dot_product(vector2d(vel_x2, vel_y2), normal);
-  const auto optimized_p = (2.0 * (ta - tb)) / 2.0;
+  const auto optimized_p = (2.0 * (ta - tb)) / (mass + mass2);  // speed
 
   // save velocities
-  auto updated_vel1 = subtract_vector(vector2d(vel_x, vel_y), multiply_vector(normal, optimized_p));
+  const auto multiplied_vector = multiply_vector(normal, optimized_p);
+  auto updated_vel1 = subtract_vector(vector2d(vel_x, vel_y), multiply_vector(multiplied_vector, mass2));
   i.set_field(instance, "vel_x", v8::Number::New(isolate, updated_vel1.x));
   i.set_field(instance, "vel_y", v8::Number::New(isolate, updated_vel1.y));
-  auto updated_vel2 = add_vector(vector2d(vel_x2, vel_y2), multiply_vector(normal, optimized_p));
+  auto updated_vel2 = add_vector(vector2d(vel_x2, vel_y2), multiply_vector(multiplied_vector, mass));
   i.set_field(instance2, "vel_x", v8::Number::New(isolate, updated_vel2.x));
   i.set_field(instance2, "vel_y", v8::Number::New(isolate, updated_vel2.y));
 
