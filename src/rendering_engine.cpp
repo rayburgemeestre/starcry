@@ -151,7 +151,7 @@ image &rendering_engine::render(size_t thread_num,
 #endif
 #endif
 
-      if (true && !scales.empty()) {
+      if (!scales.empty()) {
         draw_logic_->capture_pixels(true);
 
         // first one
@@ -196,7 +196,7 @@ image &rendering_engine::render(size_t thread_num,
                                      const auto &view_y,
                                      bool update = false) {
           warp_view += double(warp_value);
-          draw_logic_->center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
+          draw_logic_->center(view_x, view_y);
           if (!update) {
             switch (shape.type) {
               case data::shape_type::circle:
@@ -227,7 +227,7 @@ image &rendering_engine::render(size_t thread_num,
             }
           }
           warp_view -= double(warp_value);
-          draw_logic_->center(canvas_w / 2 - (view_x * scale), canvas_h / 2 - (view_y * scale));
+          draw_logic_->center(view_x, view_y);
         };
         if (warp_view_x && warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y);
         if (warp_view_y && warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y);

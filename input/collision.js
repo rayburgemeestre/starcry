@@ -34,12 +34,24 @@ _ = {
             }));
           }
         }
+        // one massive object
+        this.subobj.push(this.spawn({
+          'id': 'ball',
+          'x': -1920 / 2 + 500,
+          'y': -1080 / 2 + 500,
+          'z': 0,
+          'radiussize': 100,
+          'mass': 100,
+          'velocity': 0.,
+          'vel_x': 0,
+          'vel_y': 0,
+        }));
       },
     },
     'ball': {
       'type': 'circle',
       'collision_group': 'group1',
-      // 'toroidal': 't1', --- toroidal seems broken
+      'toroidal': 't1',
       'blending_type': blending_type.normal,
       'gradient': 'blue',
       'radius': 0,
@@ -69,7 +81,7 @@ _ = {
   },
   'scenes': [{
     'name': 'scene1',
-    'duration': 5,
+    'duration': 10,
     'objects': [
       {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
     ],

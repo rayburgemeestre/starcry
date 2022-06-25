@@ -69,6 +69,7 @@ _ = {
     // 'min_intermediates': 5.,
     // 'max_intermediates': 50.,
     'grain_for_opacity': true,
+    'bg_color': {r: 0, g: 0, b: 0, a: 1},
   },
   'preview': {
     'max_intermediates': 1.,
