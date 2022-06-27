@@ -19,4 +19,5 @@ public:
   bool contains(const position& point) const;
   bool intersects(const rectangle& range) const;
   bool overlaps(const circle& other) const;
+  bool overlaps(const circle& other, double& dist) const;
 };

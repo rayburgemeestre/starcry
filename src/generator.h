@@ -30,6 +30,7 @@
 class v8_wrapper;
 class step_calculator;
 class metrics;
+class vector2d;
 
 namespace util {
 namespace generator {
@@ -67,6 +68,7 @@ private:
   double total_skipped_frames = 0.;
 
   std::map<std::string, quadtree> qts;
+  std::map<std::string, quadtree> qts_gravity;
   std::unordered_map<int64_t, size_t> next_instance_mapping;
   data::settings settings_;
 
@@ -130,10 +132,7 @@ public:
                                       v8::Local<v8::Array>& intermediates);
   void call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances);
   void create_next_instance_mapping(v8_interact& i, v8::Local<v8::Array>& next_instances);
-  void update_object_positions(v8_interact& i,
-                               v8::Local<v8::Array>& next_instances,
-                               int max_step,
-                               v8::Local<v8::Object>& video);
+  void update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, v8::Local<v8::Object>& video);
   void update_object_toroidal(v8_interact& i, v8::Local<v8::Object>& instance, double& x, double& y);
   void update_object_interactions(v8_interact& i,
                                   v8::Local<v8::Array>& next_instances,
@@ -144,7 +143,15 @@ public:
                          v8::Local<v8::Object> instance,
                          size_t index,
                          v8::Local<v8::Array> next_instances);
+  void handle_gravity(v8_interact& i,
+                      v8::Local<v8::Object> instance,
+                      size_t index,
+                      v8::Local<v8::Array> next_instances);
   static void handle_collision(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2);
+  void handle_gravity(v8_interact& i,
+                      v8::Local<v8::Object> instance,
+                      v8::Local<v8::Object> instance2,
+                      vector2d& acceleration);
   void update_time(v8_interact& i, v8::Local<v8::Object>& instance, scene_settings& scenesettings);
   int update_steps(double dist);
   double get_max_travel_of_object(v8_interact& i,

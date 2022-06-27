@@ -14,6 +14,7 @@ private:
 
 public:
   v8::Local<v8::Object> script_obj;
+  v8::Local<v8::Object> video_obj;
   v8::Local<v8::Array> scenes;
   v8::Local<v8::Object> gradients;
   v8::Local<v8::Object> objects;

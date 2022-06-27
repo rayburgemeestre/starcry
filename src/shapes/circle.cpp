@@ -39,3 +39,12 @@ bool circle::overlaps(const circle& other) const {
   auto p = ((radius + radiussize) + (other.radius + other.radiussize));
   return distanceSquared <= p * p;
 }
+
+bool circle::overlaps(const circle& other, double& dist) const {
+  double distanceX = pos.x - other.pos.x;
+  double distanceY = pos.y - other.pos.y;
+  double distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+  auto p = ((radius + radiussize) * (radius + radiussize));
+  dist = sqrt(distanceSquared);
+  return distanceSquared <= p;
+}

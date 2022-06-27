@@ -7,6 +7,7 @@ generator_context::generator_context(v8::Isolate* isolate, v8::Local<v8::Value> 
     : v8_interact_instance(std::make_unique<v8_interact>(isolate)) {
   auto& i = this->i();
   script_obj = script_value.As<v8::Object>();
+  video_obj = i.v8_array(script_obj, "video");
   scenes = i.v8_array(script_obj, "scenes");
   objects = i.v8_obj(script_obj, "objects");
   gradients = i.v8_obj(script_obj, "gradients");
