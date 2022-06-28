@@ -169,6 +169,7 @@ image &rendering_engine::render(size_t thread_num,
           case data::shape_type::text:
             box = draw_logic_->render_text(bmp, shape, opacity, settings);
             break;
+          case data::shape_type::script:
           case data::shape_type::none:
             break;
         }
@@ -208,6 +209,7 @@ image &rendering_engine::render(size_t thread_num,
               case data::shape_type::text:
                 box = draw_logic_->render_text(bmp, shape, opacity, settings);
                 break;
+              case data::shape_type::script:
               case data::shape_type::none:
                 break;
             }
@@ -222,6 +224,7 @@ image &rendering_engine::render(size_t thread_num,
               case data::shape_type::text:
                 box.update(draw_logic_->render_text(bmp, shape, opacity, settings));
                 break;
+              case data::shape_type::script:
               case data::shape_type::none:
                 break;
             }
@@ -248,6 +251,7 @@ image &rendering_engine::render(size_t thread_num,
             case data::shape_type::text:
               box.update(draw_logic_->render_text(bmp, shape, opacity, settings));
               break;
+            case data::shape_type::script:
             case data::shape_type::none:
               break;
           }

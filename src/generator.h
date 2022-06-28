@@ -198,8 +198,6 @@ public:
 
   std::shared_ptr<v8_wrapper> get_context() const;
 
-  void fix(v8_interact& i, v8::Local<v8::Array>& instances);
-
   v8::Local<v8::Object> spawn_object(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj);
 
 private:

@@ -654,7 +654,7 @@ bool generator::_generate_frame() {
         // tolerated_granularity
         //             << std::endl;
         ++attempt;
-        if (attempt >= 3) { // quits after 2nd attempt, 4 is after 3rd, 5 is after 4th...
+        if (attempt >= 3) {  // quits after 2nd attempt, 4 is after 3rd, 5 is after 4th...
           break;
           /* std::exit(1);  // below thrown exception wasn't handled correctly anyway..
           throw std::runtime_error(
@@ -691,7 +691,6 @@ bool generator::_generate_frame() {
           }
 
           for (auto& iter : scenesettings_objs) {
-            auto& unique_id = iter.first;
             auto& settings = iter.second;
             if (settings.update(get_time(settings).time)) {
               set_scene_sub_object(settings, settings.current_scene_next + 1);
@@ -914,8 +913,8 @@ void generator::update_object_positions(v8_interact& i,
     auto velocity = i.double_number(instance, "velocity", 1.);
     auto vel_x = i.double_number(instance, "vel_x", 0.0);
     auto vel_y = i.double_number(instance, "vel_y", 0.0);
-    auto vel_x2 = is_line ? i.double_number(instance, "vel_x2") : 0.0;
-    auto vel_y2 = is_line ? i.double_number(instance, "vel_y2") : 0.0;
+    // auto vel_x2 = is_line ? i.double_number(instance, "vel_x2") : 0.0;
+    // auto vel_y2 = is_line ? i.double_number(instance, "vel_y2") : 0.0;
 
     velocity /= static_cast<double>(stepper.max_step);
     x += (vel_x * velocity);
@@ -1130,7 +1129,7 @@ void generator::handle_collisions(v8_interact& i,
       handle_collision(i, instance, instance2);
     }
   }
-};
+}
 
 void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2) {
   const auto isolate = i.get_isolate();
@@ -1220,8 +1219,6 @@ void generator::handle_gravity(v8_interact& i,
       const auto unique_id2 = in_range.userdata;
       const auto index2 = next_instance_mapping.at(unique_id2);
       auto instance2 = i.get_index(next_instances, index2).As<v8::Object>();
-      auto vel_x = i.double_number(instance, "vel_x");
-      auto vel_y = i.double_number(instance, "vel_y");
       handle_gravity(i, instance, instance2, acceleration);
     }
     vector2d vel(i.double_number(instance, "vel_x", 0.), i.double_number(instance, "vel_y", 0.));
@@ -1229,16 +1226,13 @@ void generator::handle_gravity(v8_interact& i,
     i.set_field(instance, "vel_x", v8::Number::New(i.get_isolate(), vel.x));
     i.set_field(instance, "vel_y", v8::Number::New(i.get_isolate(), vel.y));
   }
-};
+}
 
 void generator::handle_gravity(v8_interact& i,
                                v8::Local<v8::Object> instance,
                                v8::Local<v8::Object> instance2,
                                vector2d& acceleration) {
   auto& video = genctx.video_obj;
-  auto isolate = i.get_isolate();
-  auto unique_id = i.integer_number(instance, "unique_id");
-  auto unique_id2 = i.integer_number(instance2, "unique_id");
 
   auto x = i.double_number(instance, "x");
   auto y = i.double_number(instance, "y");
@@ -1259,12 +1253,10 @@ void generator::handle_gravity(v8_interact& i,
   circle b(position(x2, y2), radius2 + range, radiussize2);
   double dist = 0;
   if (!a.overlaps(b, dist)) return;
-  double ratio = dist / range;
   if (!instance2->IsObject()) return;
 
-  const auto normal = unit_vector(subtract_vector(vector2d(x, y), vector2d(x2, y2)));
-  auto constrain_dist_min = i.double_number(video, "gravity_constrain_dist_min", 5.);
-  auto constrain_dist_max = i.double_number(video, "gravity_constrain_dist_max", 25.);
+  const auto constrain_dist_min = i.double_number(video, "gravity_constrain_dist_min", 5.);
+  const auto constrain_dist_max = i.double_number(video, "gravity_constrain_dist_max", 25.);
   const auto constrained_distance = std::clamp(dist, constrain_dist_min, constrain_dist_max);
 
   vector2d vec_a(x, y);
@@ -1750,79 +1742,6 @@ void generator::convert_object_to_render_job(
 
 std::shared_ptr<data::job> generator::get_job() const {
   return job;
-}
-
-// TODO: temporary function we can probably get rid of soon
-void generator::fix(v8_interact& i, v8::Local<v8::Array>& instances) {
-  std::unordered_map<int64_t, size_t> obj_indexes;
-  for (size_t j = 0; j < instances->Length(); j++) {
-    auto instance = i.get_index(instances, j).As<v8::Object>();
-    auto unique_id = i.integer_number(instance, "unique_id");
-    obj_indexes[unique_id] = j;
-  }
-
-  if (false)
-    for (size_t j = 0; j < instances->Length(); j++) {
-      auto instance = i.get_index(instances, j).As<v8::Object>();
-      if (i.has_field(instance, "subobj")) {
-        auto subobjs = i.get(instance, "subobj").As<v8::Array>();
-        for (size_t k = 0; k < subobjs->Length(); k++) {
-          auto object = i.get_index(subobjs, k).As<v8::Object>();
-          auto unique_id = i.integer_number(object, "unique_id");
-          /// make sure the subobj will also point to the new instance
-          if (obj_indexes.find(unique_id) == obj_indexes.end()) {
-            logger(INFO) << "ERROR: terminate #0" << std::endl;
-            std::exit(0);
-          }
-          auto object_ = i.get_index(instances, obj_indexes[unique_id]).As<v8::Object>();
-          i.set_field(subobjs, k, object_);
-        }
-      }
-    }
-
-  // props left and right
-  if (true)
-    for (size_t j = 0; j < instances->Length(); j++) {
-      auto instance = i.get_index(instances, j).As<v8::Object>();
-      if (!i.has_field(instance, "props")) {
-        continue;
-      }
-      auto props = i.v8_obj(instance, "props");
-      auto obj_fields = i.prop_names(props);
-      for (size_t k = 0; k < obj_fields->Length(); k++) {
-        auto field_name = i.get_index(obj_fields, k);
-        auto field_value = i.get(props, field_name);
-        auto str = i.str(obj_fields, k);
-        if (str == "left" || str == "right") {
-          if (field_value->IsArray()) {
-            auto a = field_value.As<v8::Array>();
-            for (size_t m = 0; m < a->Length(); m++) {
-              auto o = i.get_index(a, m).As<v8::Object>();
-              // TODO: lambdafy: below is copied from block above.
-              auto oid = i.integer_number(o, "unique_id");
-              // get unique id of this object
-              if (obj_indexes.find(oid) == obj_indexes.end()) {
-                logger(INFO) << "ERROR: terminate #1B" << std::endl;
-                std::exit(0);
-              }
-              auto object_ = i.get_index(instances, obj_indexes[oid]).As<v8::Object>();
-              // TODO: do not include this line in labmda.
-              i.set_field(a, m, object_);
-            }
-          } else if (field_value->IsObject()) {
-            auto o = field_value.As<v8::Object>();
-            auto oid = i.integer_number(o, "unique_id");
-            // get unique id of this object
-            if (obj_indexes.find(oid) == obj_indexes.end()) {
-              logger(INFO) << "ERROR: terminate #1" << std::endl;
-              std::exit(0);
-            }
-            auto object_ = i.get_index(instances, obj_indexes[oid]).As<v8::Object>();
-            i.set_field(props, field_name, object_);
-          }
-        }
-      }
-    }
 }
 
 v8::Local<v8::Object> generator::spawn_object(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj) {
