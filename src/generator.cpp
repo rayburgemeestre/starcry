@@ -654,7 +654,7 @@ bool generator::_generate_frame() {
         // tolerated_granularity
         //             << std::endl;
         ++attempt;
-        if (attempt >= 5) {
+        if (attempt >= 3) { // quits after 2nd attempt, 4 is after 3rd, 5 is after 4th...
           break;
           /* std::exit(1);  // below thrown exception wasn't handled correctly anyway..
           throw std::runtime_error(
