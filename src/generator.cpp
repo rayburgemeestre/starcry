@@ -120,7 +120,7 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
   scenesettings.scene_initialized = std::numeric_limits<size_t>::max();
 
   // set_scene requires generator_context to be set
-  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     genctx = generator_context(isolate, val, 0);
 
     // refresh the scene object to get rid of left-over state
@@ -196,7 +196,7 @@ v8::Local<v8::Context> current_context(std::shared_ptr<v8_wrapper>& wrapper_cont
 
 void generator::init_video_meta_info(std::optional<double> rand_seed, bool preview) {
   // "run_array" is a bit of a misnomer, this only invokes the callback once
-  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  context->run_array("script", [this, &preview, &rand_seed](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto video = v8_index_object(current_context(context), val, "video").As<v8::Object>();
     if (preview) {
@@ -282,7 +282,7 @@ void generator::init_video_meta_info(std::optional<double> rand_seed, bool previ
 
 void generator::init_gradients() {
   gradients.clear();
-  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
     auto gradient_objects = i.v8_obj(obj, "gradients");
@@ -298,7 +298,7 @@ void generator::init_gradients() {
         auto g = i.double_number(position, "g");
         auto b = i.double_number(position, "b");
         auto a = i.double_number(position, "a");
-        gradients[id].colors.emplace_back(std::make_tuple(pos, data::color{r, g, b, a}));
+        gradients[id].colors.emplace_back(pos, data::color{r, g, b, a});
       }
     }
   });
@@ -306,7 +306,7 @@ void generator::init_gradients() {
 
 void generator::init_textures() {
   textures.clear();
-  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i(isolate);
     auto obj = val.As<v8::Object>();
     if (!i.has_field(obj, "textures")) return;
@@ -924,17 +924,13 @@ void generator::update_object_positions(v8_interact& i,
     if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
       update_object_toroidal(i, instance, x, y);
       if (collision_group != "undefined") {
-        if (qts.find(collision_group) == qts.end()) {
-          qts.insert(std::make_pair(collision_group,
-                                    quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32)));
-        }
+        qts.try_emplace(collision_group,
+                        quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
         qts[collision_group].insert(point_type(position(x, y), unique_id));
       }
       if (gravity_group != "undefined") {
-        if (qts_gravity.find(gravity_group) == qts_gravity.end()) {
-          qts_gravity.insert(std::make_pair(
-              gravity_group, quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32)));
-        }
+        qts_gravity.try_emplace(gravity_group,
+                                quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
         qts_gravity[gravity_group].insert(point_type(position(x, y), unique_id));
       }
     }

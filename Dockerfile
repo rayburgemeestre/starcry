@@ -17,6 +17,13 @@ RUN /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -s USE_SDL_TTF=2 -O3 
 # IDE dependencies (LSP plugin)
 RUN apt install -y clangd-10
 
+# IDE plugin SonarLint requires nodejs
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+RUN sudo apt-get install -y nodejs
+
+# IDE needs browser as well sometimes
+RUN sudo apt install -y firefox
+
 # Integration tests dependencies
 RUN apt install -y imagemagick-6.q16 ffmpeg
 
