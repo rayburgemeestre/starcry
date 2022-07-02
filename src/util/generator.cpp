@@ -21,7 +21,9 @@ void copy_gradient_from_object_to_shape(v8_interact& i,
                                         data::shape& destination_shape,
                                         std::unordered_map<std::string, data::gradient>& known_gradients_map,
                                         std::string* gradient_id_str) {
-  std::string gradient_id = i.str(source_object, "gradient");
+  std::string namespace_ = i.str(source_object, "namespace");
+  std::string gradient_id = namespace_ + i.str(source_object, "gradient");
+
   if (!gradient_id.empty()) {
     if (gradient_id_str) {
       *gradient_id_str += gradient_id;
@@ -40,7 +42,7 @@ void copy_gradient_from_object_to_shape(v8_interact& i,
         continue;
       }
       auto opacity = i.double_number(gradient_data, size_t(0));
-      auto gradient_id = i.str(gradient_data, size_t(1));
+      auto gradient_id = namespace_ + i.str(gradient_data, size_t(1));
       if (gradient_id_str) {
         if (!gradient_id_str->empty()) *gradient_id_str += ",";
         *gradient_id_str += gradient_id;
@@ -81,10 +83,15 @@ void instantiate_object(v8_interact& i,
                         std::optional<v8::Local<v8::Object>> scene_obj,
                         v8::Local<v8::Object> object_prototype,
                         v8::Local<v8::Object> new_instance,
-                        int64_t level) {
+                        int64_t level,
+                        const std::string& namespace_) {
   v8::Isolate* isolate = i.get_isolate();
 
   i.recursively_copy_object(new_instance, object_prototype);
+
+  if (!namespace_.empty()) {
+    i.set_field(new_instance, "namespace", v8_str(i.get_context(), namespace_));
+  }
 
   if (scene_obj) {
     i.copy_field_if_exists(new_instance, "id", *scene_obj);
@@ -176,8 +183,8 @@ v8::Local<v8::Object> instantiate_object_from_scene(
 ) {
   v8::Isolate* isolate = i.get_isolate();
 
-  // determine level from it's parent
   int64_t current_level = (parent_object == nullptr) ? 0 : i.integer_number(*parent_object, "level") + 1;
+  auto parent_object_ns = (parent_object == nullptr) ? "" : i.str(*parent_object, "namespace");
 
   // lookup the object prototype to be instantiated
   auto object_id = i.str(scene_object, "id");
@@ -191,7 +198,7 @@ v8::Local<v8::Object> instantiate_object_from_scene(
   }
 
   // instantiate the prototype into newly allocated javascript object
-  instantiate_object(i, scene_object, object_prototype, instance, current_level);
+  instantiate_object(i, scene_object, object_prototype, instance, current_level, parent_object_ns);
 
   // give it a unique id (it already has been assigned a __random_hash__ for debugging purposes
   i.set_field(instance, "unique_id", v8::Number::New(i.get_isolate(), counter++));
@@ -262,6 +269,7 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     auto src = i.get_index(source, j).As<v8::Object>();
     auto dst = i.get_index(dest, j).As<v8::Object>();
 
+    i.copy_field_if_exists(dst, "namespace", src);
     i.copy_field_if_exists(dst, "x", src);
     i.copy_field_if_exists(dst, "y", src);
     i.copy_field_if_exists(dst, "x2", src);

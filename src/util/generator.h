@@ -27,7 +27,8 @@ void instantiate_object(v8_interact& i,
                         std::optional<v8::Local<v8::Object>> scene_obj,
                         v8::Local<v8::Object> object_prototype,
                         v8::Local<v8::Object> new_instance,
-                        int64_t level);
+                        int64_t level,
+                        const std::string& namespace_);
 
 v8::Local<v8::Object> instantiate_object_from_scene(v8_interact& i,
                                                     v8::Local<v8::Object>& objects,

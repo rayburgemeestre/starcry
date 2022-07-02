@@ -396,9 +396,11 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
     return;
   }
 
-  auto unique_id = i.integer_number(created_instance, "unique_id");
-  auto file = i.str(created_instance, "file");
-  auto specified_duration =
+  const auto unique_id = i.integer_number(created_instance, "unique_id");
+  const auto namespace_ = i.str(created_instance, "id") + "_";
+  i.set_field(created_instance, "namespace", v8_str(i.get_context(), namespace_));
+  const auto file = i.str(created_instance, "file");
+  const auto specified_duration =
       i.has_field(created_instance, "duration") ? i.double_number(created_instance, "duration") : double(-1);
 
   // read the entire script from disk
@@ -439,8 +441,9 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
   auto gradients = i.v8_obj(tmp, "gradients");
   auto gradient_fields = gradients->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
   for (size_t k = 0; k < gradient_fields->Length(); k++) {
-    auto gradient_id = i.get_index(gradient_fields, k);
-    i.set_field(genctx.gradients, gradient_id, i.get(gradients, gradient_id));
+    auto gradient_src_id = i.get_index(gradient_fields, k);
+    auto gradient_dst_id = namespace_ + i.str(gradient_fields, k);
+    i.set_field(genctx.gradients, gradient_dst_id, i.get(gradients, gradient_src_id));
   }
   init_gradients();
 
@@ -448,7 +451,7 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
   auto objects = i.v8_obj(tmp, "objects");
   auto objects_fields = objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
   for (size_t k = 0; k < objects_fields->Length(); k++) {
-    auto object_id = i.get_index(objects_fields, k);
+    auto object_id = i.str(objects_fields, k);
     i.set_field(genctx.objects, object_id, i.get(objects, object_id));
   }
 
