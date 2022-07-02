@@ -87,14 +87,11 @@ void instantiate_object(v8_interact& i,
   i.recursively_copy_object(new_instance, object_prototype);
 
   if (scene_obj) {
-    i.copy_field(new_instance, "id", *scene_obj);
-    if (i.has_field(*scene_obj, "label")) {
-      i.copy_field(new_instance, "label", *scene_obj);
-    }
-    i.copy_field(new_instance, "x", *scene_obj);
-    i.copy_field(new_instance, "y", *scene_obj);
-    i.copy_field(new_instance, "x2", *scene_obj);
-    i.copy_field(new_instance, "y2", *scene_obj);
+    i.copy_field_if_exists(new_instance, "id", *scene_obj);
+    i.copy_field_if_exists(new_instance, "x", *scene_obj);
+    i.copy_field_if_exists(new_instance, "y", *scene_obj);
+    i.copy_field_if_exists(new_instance, "x2", *scene_obj);
+    i.copy_field_if_exists(new_instance, "y2", *scene_obj);
     i.copy_field_if_exists(new_instance, "vel_x", *scene_obj);
     i.copy_field_if_exists(new_instance, "vel_y", *scene_obj);
     i.copy_field_if_exists(new_instance, "vel_x2", *scene_obj);
@@ -265,28 +262,28 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     auto src = i.get_index(source, j).As<v8::Object>();
     auto dst = i.get_index(dest, j).As<v8::Object>();
 
-    i.copy_field(dst, "x", src);
-    i.copy_field(dst, "y", src);
-    i.copy_field(dst, "x2", src);
-    i.copy_field(dst, "y2", src);
+    i.copy_field_if_exists(dst, "x", src);
+    i.copy_field_if_exists(dst, "y", src);
+    i.copy_field_if_exists(dst, "x2", src);
+    i.copy_field_if_exists(dst, "y2", src);
     i.copy_field_if_exists(dst, "vel_x", src);
     i.copy_field_if_exists(dst, "vel_y", src);
     i.copy_field_if_exists(dst, "vel_x2", src);
     i.copy_field_if_exists(dst, "vel_y2", src);
     i.copy_field_if_exists(dst, "velocity", src);
     i.copy_field_if_exists(dst, "mass", src);
-    i.copy_field(dst, "radius", src);
-    i.copy_field(dst, "radiussize", src);
-    i.copy_field(dst, "last_collide", src);
-    i.copy_field(dst, "gradient", src);
-    i.copy_field(dst, "texture", src);
-    i.copy_field(dst, "seed", src);
-    i.copy_field(dst, "id", src);
-    i.copy_field(dst, "label", src);
-    i.copy_field(dst, "level", src);
-    i.copy_field(dst, "unique_id", src);
-    i.copy_field(dst, "type", src);
-    i.copy_field(dst, "collision_group", src);
+    i.copy_field_if_exists(dst, "radius", src);
+    i.copy_field_if_exists(dst, "radiussize", src);
+    i.copy_field_if_exists(dst, "last_collide", src);
+    i.copy_field_if_exists(dst, "gradient", src);
+    i.copy_field_if_exists(dst, "texture", src);
+    i.copy_field_if_exists(dst, "seed", src);
+    i.copy_field_if_exists(dst, "id", src);
+    i.copy_field_if_exists(dst, "label", src);
+    i.copy_field_if_exists(dst, "level", src);
+    i.copy_field_if_exists(dst, "unique_id", src);
+    i.copy_field_if_exists(dst, "type", src);
+    i.copy_field_if_exists(dst, "collision_group", src);
     i.copy_field_if_exists(dst, "blending_type", src);
     i.copy_field_if_exists(dst, "scale", src);
     i.copy_field_if_exists(dst, "opacity", src);
@@ -306,10 +303,10 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field_if_exists(dst, "file", src);
     i.copy_field_if_exists(dst, "duration", src);
     // functions
-    i.copy_field(dst, "on", src);
-    i.copy_field(dst, "init", src);
-    i.copy_field(dst, "init2", src);
-    i.copy_field(dst, "time", src);
+    i.copy_field_if_exists(dst, "on", src);
+    i.copy_field_if_exists(dst, "init", src);
+    i.copy_field_if_exists(dst, "init2", src);
+    i.copy_field_if_exists(dst, "time", src);
     // props
     i.set_field(dst, "props", v8::Object::New(i.get_isolate()));
 

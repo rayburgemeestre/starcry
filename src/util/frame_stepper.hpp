@@ -11,6 +11,7 @@ public:
   int current_step_max = std::numeric_limits<int>::max();
   int current_step = 0;
   int next_step = 0;
+  bool frozen = false;
 
   frame_stepper() = default;
 
@@ -19,6 +20,7 @@ public:
     current_step_max = std::numeric_limits<int>::max();
     current_step = 0;
     next_step = 0;
+    frozen = false;
   }
 
   void reset_current() {
@@ -26,14 +28,10 @@ public:
   }
 
   void update(int steps) {
+    if (frozen) return;
     max_step = std::max(max_step, steps);
     current_step_max = std::max(current_step_max, steps);
   }
-
-  //  void multiply(double multiplier) {
-  //    const auto add = std::max(1.0, static_cast<double>(max_step) * multiplier);
-  //    max_step += add;
-  //  }
 
   void rewind() {
     current_step = 0;
@@ -45,5 +43,9 @@ public:
     bool ret = current_step < max_step;
     next_step++;
     return ret;
+  }
+
+  void freeze() {
+    frozen = true;
   }
 };

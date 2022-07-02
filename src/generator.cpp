@@ -649,20 +649,10 @@ bool generator::_generate_frame() {
         update_steps(min_intermediates);
       }
 
-      while (max_dist_found > tolerated_granularity) {
-        // logger(INFO) << "max_dist_found > tolerated_granularity -> " << max_dist_found << " > " <<
-        // tolerated_granularity
-        //             << std::endl;
-        ++attempt;
-        if (attempt >= 3) {  // quits after 2nd attempt, 4 is after 3rd, 5 is after 4th...
-          break;
-          /* std::exit(1);  // below thrown exception wasn't handled correctly anyway..
-          throw std::runtime_error(
-              fmt::format("Possible endless loop detected, max_step = {} (while {} > {}). Frame = {}",
-                          stepper.max_step,
-                          max_dist_found,
-                          tolerated_granularity,
-                          job->frame_number)); */
+      static const auto max_attempts = 2;
+      while (max_dist_found > tolerated_granularity && !stepper.frozen) {
+        if (++attempt >= max_attempts) {
+          stepper.freeze();
         }
         max_dist_found = 0;
         if (attempt > 1) {
@@ -677,8 +667,8 @@ bool generator::_generate_frame() {
         bool detected_too_many_steps = false;
         while (stepper.has_next_step() && !detected_too_many_steps) {
           // i.get_isolate()->AdjustAmountOfExternalAllocatedMemory(0);
-          v8::HeapStatistics v8_heap_stats;
-          isolate->GetHeapStatistics(&v8_heap_stats);
+          // v8::HeapStatistics v8_heap_stats;
+          // isolate->GetHeapStatistics(&v8_heap_stats);
           // logger(DEBUG) << "heap used: " << v8_heap_stats.used_heap_size()
           //               << ", external: " << v8_heap_stats.external_memory()
           //               << ", adjusted: " << v8::Isolate::GetCurrent()->AdjustAmountOfExternalAllocatedMemory(0)
