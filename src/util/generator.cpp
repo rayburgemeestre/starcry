@@ -187,7 +187,7 @@ v8::Local<v8::Object> instantiate_object_from_scene(
   auto parent_object_ns = (parent_object == nullptr) ? "" : i.str(*parent_object, "namespace");
 
   // lookup the object prototype to be instantiated
-  auto object_id = i.str(scene_object, "id");
+  auto object_id = parent_object_ns + i.str(scene_object, "id");
   auto object_prototype = v8_index_object(i.get_context(), objects, object_id).template As<v8::Object>();
 
   // create a new javascript object

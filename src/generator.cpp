@@ -451,8 +451,9 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
   auto objects = i.v8_obj(tmp, "objects");
   auto objects_fields = objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
   for (size_t k = 0; k < objects_fields->Length(); k++) {
-    auto object_id = i.str(objects_fields, k);
-    i.set_field(genctx.objects, object_id, i.get(objects, object_id));
+    auto object_src_id = i.get_index(objects_fields, k);
+    auto object_dst_id = namespace_ + i.str(objects_fields, k);
+    i.set_field(genctx.objects, object_dst_id, i.get(objects, object_src_id));
   }
 
   // make sure we start from the current 'global' time as an offset
