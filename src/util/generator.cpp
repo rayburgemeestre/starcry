@@ -21,7 +21,7 @@ void copy_gradient_from_object_to_shape(v8_interact& i,
                                         data::shape& destination_shape,
                                         std::unordered_map<std::string, data::gradient>& known_gradients_map,
                                         std::string* gradient_id_str) {
-  std::string namespace_ = i.str(source_object, "namespace");
+  std::string namespace_ = i.str(source_object, "namespace", "");
   std::string gradient_id = namespace_ + i.str(source_object, "gradient");
 
   if (!gradient_id.empty()) {
@@ -184,10 +184,10 @@ v8::Local<v8::Object> instantiate_object_from_scene(
   v8::Isolate* isolate = i.get_isolate();
 
   int64_t current_level = (parent_object == nullptr) ? 0 : i.integer_number(*parent_object, "level") + 1;
-  auto parent_object_ns = (parent_object == nullptr) ? "" : i.str(*parent_object, "namespace");
+  auto parent_object_ns = (parent_object == nullptr) ? "" : i.str(*parent_object, "namespace", "");
 
   // lookup the object prototype to be instantiated
-  auto object_id = parent_object_ns + i.str(scene_object, "id");
+  auto object_id = parent_object_ns + i.str(scene_object, "id", "");
   auto object_prototype = v8_index_object(i.get_context(), objects, object_id).template As<v8::Object>();
 
   // create a new javascript object
