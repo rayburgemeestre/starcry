@@ -113,7 +113,7 @@ public:
     return v8_number(obj, index)->NumberValue(isolate->GetCurrentContext()).ToChecked();
   }
 
-  double boolean(v8::Local<v8::Object>& obj, const std::string& field) {
+  bool boolean(const v8::Local<v8::Object>& obj, const std::string& field) {
     auto tmp = obj->Get(get_context(), v8_str(ctx, field)).ToLocalChecked();
     if (!tmp->IsBoolean()) return false;
     return tmp->BooleanValue(isolate);

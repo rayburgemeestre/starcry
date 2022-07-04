@@ -402,7 +402,7 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     // fix props, we need to recursively walk it and make sure we fix all objects with a unique_id
     auto props = i.v8_obj(dst, "props");
     std::function<void(v8::Local<v8::Object> & obj)> walk =
-        [&i, &obj_indexes, &dest, &walk](v8::Local<v8::Object>& obj) {
+        [&i, &obj_indexes, &dest, &walk](const v8::Local<v8::Object>& obj) {
           auto obj_fields = i.prop_names(obj);
           for (size_t k = 0; k < obj_fields->Length(); k++) {
             auto field_name = i.get_index(obj_fields, k);
@@ -444,9 +444,9 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
 }
 
 void garbage_collect_erased_objects(v8_interact& i,
-                                    v8::Local<v8::Array>& instances,
-                                    v8::Local<v8::Array>& intermediates,
-                                    v8::Local<v8::Array>& next_instances) {
+                                    const v8::Local<v8::Array>& instances,
+                                    const v8::Local<v8::Array>& intermediates,
+                                    const v8::Local<v8::Array>& next_instances) {
   size_t remove = 0;
   for (size_t j = 0; j < next_instances->Length(); j++) {
     auto instance = i.get_index(instances, j).As<v8::Object>();
@@ -460,7 +460,7 @@ void garbage_collect_erased_objects(v8_interact& i,
 
       // Make all objects underneath it top level objects
       std::function<void(v8_interact&, v8::Local<v8::Object>&, int)> update_level =
-          [&](v8_interact& i, v8::Local<v8::Object>& instance, int current_level = -1) {
+          [&](v8_interact& i, const v8::Local<v8::Object>& instance, int current_level = -1) {
             i.set_field(instance, "level", v8::Number::New(i.get_isolate(), current_level));
             auto instance_subobjs = i.get(instance, "subobj").As<v8::Array>();
             for (size_t k = 0; k < i.get(instance, "subobj").As<v8::Array>()->Length(); k++) {

@@ -38,9 +38,9 @@ v8::Local<v8::Object> instantiate_object_from_scene(v8_interact& i,
 void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Array> source);
 
 void garbage_collect_erased_objects(v8_interact& i,
-                                    v8::Local<v8::Array>& instances,
-                                    v8::Local<v8::Array>& intermediates,
-                                    v8::Local<v8::Array>& next_instances);
+                                    const v8::Local<v8::Array>& instances,
+                                    const v8::Local<v8::Array>& intermediates,
+                                    const v8::Local<v8::Array>& next_instances);
 
 std::string instance_to_string(v8_interact& i, v8::Local<v8::Object>& instance);
 
