@@ -726,10 +726,6 @@ bool generator::_generate_frame() {
 
       util::generator::copy_instances(i, instances, next_instances);
 
-      // util::generator::debug_print(i, instances, "instances");
-      // util::generator::debug_print(i, next_instances, "next_instances");
-      // util::generator::debug_print(i, intermediates, "intermediates");
-
       scalesettings.commit();
       scenesettings.commit();
       for (auto& iter : scenesettings_objs) {

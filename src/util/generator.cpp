@@ -265,9 +265,16 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     // resize dest array if needed
     if (dest->Length() < source->Length()) {
       i.call_fun(dest, "push", v8::Object::New(i.get_isolate()));
+    } else {
+      // clear the destination object completely
+      i.set_field(dest, j, v8::Object::New(i.get_isolate()));
     }
     auto src = i.get_index(source, j).As<v8::Object>();
     auto dst = i.get_index(dest, j).As<v8::Object>();
+
+    // re-create the spawn function
+    auto the_fun = i.get_fun("__spawn__");
+    i.set_fun(dst, "spawn", the_fun);
 
     i.copy_field_if_exists(dst, "namespace", src);
     i.copy_field_if_exists(dst, "x", src);
@@ -292,6 +299,7 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field_if_exists(dst, "unique_id", src);
     i.copy_field_if_exists(dst, "type", src);
     i.copy_field_if_exists(dst, "collision_group", src);
+    i.copy_field_if_exists(dst, "gravity_group", src);
     i.copy_field_if_exists(dst, "blending_type", src);
     i.copy_field_if_exists(dst, "scale", src);
     i.copy_field_if_exists(dst, "opacity", src);
@@ -302,8 +310,8 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field_if_exists(dst, "text_size", src);
     i.copy_field_if_exists(dst, "text_fixed", src);
     i.copy_field_if_exists(dst, "text_font", src);
-    i.copy_field(dst, "__time__", src);
-    i.copy_field(dst, "__elapsed__", src);
+    i.copy_field_if_exists(dst, "__time__", src);
+    i.copy_field_if_exists(dst, "__elapsed__", src);
     i.copy_field_if_exists(dst, "__dist__", src);
     i.copy_field_if_exists(dst, "step", src);
     i.copy_field_if_exists(dst, "inherited", src);
@@ -379,8 +387,7 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
       auto pos = obj_indexes.find(unique_id);
       if (pos == obj_indexes.end()) {
         logger(WARNING) << "Found a unique_id[" << unique_id << "] in subobj that shouldn't exist![1]" << std::endl;
-        continue;  // ??
-        std::exit(1);
+        continue;
       }
       auto the_subobj = i.get_index(dest, pos->second).As<v8::Object>();
       i.set_field(d, k, the_subobj);
@@ -534,14 +541,14 @@ void debug_print(v8_interact& i, v8::Local<v8::Object>& instance) {
     return ss.str();
   };
   const auto level = i.integer_number(instance, "level");
-  logger(INFO) << indent(level) << instance_to_string(i, instance) << std::endl;
-  if (i.has_field(instance, "subobj")) {
-    auto subobjs = i.get(instance, "subobj").As<v8::Array>();
-    for (size_t k = 0; k < subobjs->Length(); k++) {
-      auto object = i.get_index(subobjs, k).As<v8::Object>();
-      logger(INFO) << indent(level + 2) << "subobj: " << instance_to_string(i, object) << std::endl;
-    }
-  }
+  logger(DEBUG) << indent(level) << instance_to_string(i, instance) << std::endl;
+  //  if (i.has_field(instance, "subobj")) {
+  //    auto subobjs = i.get(instance, "subobj").As<v8::Array>();
+  //    for (size_t k = 0; k < subobjs->Length(); k++) {
+  //      auto object = i.get_index(subobjs, k).As<v8::Object>();
+  //      logger(DEBUG) << indent(level + 2) << "subobj: " << instance_to_string(i, object) << std::endl;
+  //    }
+  //  }
   if (i.has_field(instance, "props")) {
     auto props = i.v8_obj(instance, "props");
     auto obj_fields = i.prop_names(props);
@@ -555,11 +562,11 @@ void debug_print(v8_interact& i, v8::Local<v8::Object>& instance) {
           auto a = field_value.As<v8::Array>();
           for (size_t l = 0; l < a->Length(); l++) {
             auto o = i.get_index(a, l).As<v8::Object>();
-            logger(INFO) << indent(level + 2) << "prop." << str << ": " << instance_to_string(i, o) << std::endl;
+            logger(DEBUG) << indent(level + 2) << "prop." << str << ": " << instance_to_string(i, o) << std::endl;
           }
         } else if (field_value->IsObject()) {
           auto o = field_value.As<v8::Object>();
-          logger(INFO) << indent(level + 2) << "prop!." << str << ": " << instance_to_string(i, o) << std::endl;
+          logger(DEBUG) << indent(level + 2) << "prop!." << str << ": " << instance_to_string(i, o) << std::endl;
         }
       }
     }
@@ -567,7 +574,7 @@ void debug_print(v8_interact& i, v8::Local<v8::Object>& instance) {
 }
 
 void debug_print(v8_interact& i, v8::Local<v8::Array>& instances, const std::string& desc) {
-  logger(INFO) << "printing " << desc << ":" << std::endl;
+  logger(DEBUG) << "printing " << desc << ":" << std::endl;
   for (size_t j = 0; j < instances->Length(); j++) {
     auto instance = i.get_index(instances, j).As<v8::Object>();
     debug_print(i, instance);
