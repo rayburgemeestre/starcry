@@ -296,6 +296,7 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     i.copy_field_if_exists(dst, "label", src);
     i.copy_field_if_exists(dst, "level", src);
     i.copy_field_if_exists(dst, "unique_id", src);
+    i.copy_field_if_exists(dst, "parent_uid", src);
     i.copy_field_if_exists(dst, "type", src);
     i.copy_field_if_exists(dst, "collision_group", src);
     i.copy_field_if_exists(dst, "gravity_group", src);

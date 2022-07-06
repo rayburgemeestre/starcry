@@ -127,6 +127,13 @@ public:
     return v8_number(obj, field)->IntegerValue(isolate->GetCurrentContext()).ToChecked();
   }
 
+  int64_t integer_number(v8::Local<v8::Object>& obj, const std::string& field, int64_t default_val) {
+    if (has_field(obj, field)) {
+      return v8_number(obj, field)->IntegerValue(isolate->GetCurrentContext()).ToChecked();
+    }
+    return default_val;
+  }
+
   std::string str(v8::Local<v8::Object>& obj, const std::string& field) {
     return v8_str(isolate, v8_string(obj, field));
   }

@@ -110,11 +110,9 @@ _ = {
         if (this.gradients[0][0] > 1.0) {
           this.gradients[0][0] = 1.0;
           this.gradients[1][0] = 0.0;
-        }
-        else if (s == 1) {
+        } else if (s == 1) {
           this.gravity_group = 'group';
-        }
-        else if (s == 2) {
+        } else if (s == 2) {
           this.opacity = 1. - t;
         }
       }

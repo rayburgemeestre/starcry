@@ -20,7 +20,7 @@ _ = {
     },
     'orbit': {
       'type': 'script',
-      'file': 'input/orbit.js',
+      'file': 'input/orbit2.js',
     },
   },
   'video': {

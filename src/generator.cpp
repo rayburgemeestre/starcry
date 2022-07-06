@@ -48,6 +48,7 @@ void generator::reset_context() {
   // clear c++ caches
   cache.job_cache.clear();
   cache.next_instance_mapping.clear();
+  // TODO: we need to update this caching feature
   cache.scalesettings.clear();
   cache.scenesettings.clear();
 
@@ -488,8 +489,6 @@ void generator::instantiate_additional_objects_from_new_scene(v8::Local<v8::Arra
     v8::Local<v8::Object> created_instance = util::generator::instantiate_object_from_scene(
         i, genctx.objects, genctx.instances_next, scene_obj, parent_object);
     create_bookkeeping_for_script_objects(created_instance);
-    // TODO: util::generator::instantiate_object_from_scene might be able to do this in real-time
-    create_next_instance_mapping(i, genctx.instances_next);
   }
 }
 
@@ -643,8 +642,6 @@ bool generator::_generate_frame() {
         }
       }
 
-      parents.clear();
-      prev_parents.clear();
       stepper.reset();
       indexes.clear();
       attempt = 0;
@@ -696,9 +693,7 @@ bool generator::_generate_frame() {
           }
 
           // create mappings
-          create_next_instance_mapping(i, next_instances);
-
-          create_intermediates_mapping(i, intermediates);
+          create_new_mappings(i, next_instances, intermediates);
 
           // handle object movement (velocity added to position)
           update_object_positions(i, next_instances, video);
@@ -761,14 +756,14 @@ bool generator::_generate_frame() {
 void generator::_load_cache() {
   scenesettings = cache.scenesettings[job->job_number];
   scalesettings = cache.scalesettings[job->job_number];
-  next_instance_mapping = cache.next_instance_mapping[job->job_number];
+  // next_instance_map = cache.next_instance_mapping[job->job_number];
   util::generator::counter = cache.counter[job->job_number];
 }
 
 void generator::_save_cache() {
   cache.scenesettings[job->job_number] = scenesettings;
   cache.scalesettings[job->job_number] = scalesettings;
-  cache.next_instance_mapping[job->job_number] = next_instance_mapping;
+  // cache.next_instance_mapping[job->job_number] = next_instance_map;
   cache.counter[job->job_number] = util::generator::counter;
 }
 
@@ -858,36 +853,20 @@ void generator::call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next
   }
 }
 
-void generator::create_next_instance_mapping(v8_interact& i, v8::Local<v8::Array>& next_instances) {
-  // TODO: instances already have a parent_uid, so we don't need the tree
-  next_instance_mapping.clear();
-  parents.clear();
-  parents_stack.clear();
+void generator::create_new_mappings(v8_interact& i,
+                                    v8::Local<v8::Array>& next_instances,
+                                    v8::Local<v8::Array>& intermediates) {
+  next_instance_map.clear();
+  intermediate_map.clear();
   for (size_t j = 0; j < next_instances->Length(); j++) {
     auto next = i.get_index(next_instances, j).As<v8::Object>();
     const auto unique_id = i.integer_number(next, "unique_id");
-    const auto level = i.integer_number(next, "level");
-    parents_stack[level] = next;
-    if (level > 0) {
-      parents[unique_id] = parents_stack[level - 1];
-    }
-    next_instance_mapping[unique_id] = j;
+    next_instance_map[unique_id] = next;
   }
-}
-
-void generator::create_intermediates_mapping(v8_interact& i, v8::Local<v8::Array>& intermediates) {
-  map_intermediate.clear();
-  prev_parents.clear();
-  prev_parents_stack.clear();
   for (size_t index = 0; index < intermediates->Length(); index++) {
     auto intermediate_instance = i.get_index(intermediates, index).As<v8::Object>();
     const auto uid = i.integer_number(intermediate_instance, "unique_id");
-    const auto level = i.integer_number(intermediate_instance, "level");
-    prev_parents_stack[level] = intermediate_instance;
-    if (level > 0) {
-      prev_parents[uid] = prev_parents_stack[level - 1];
-    }
-    map_intermediate[uid] = index;
+    intermediate_map[uid] = intermediate_instance;
   }
 }
 
@@ -953,7 +932,7 @@ void generator::update_object_positions(v8_interact& i,
                         quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
         auto x_copy = x;
         auto y_copy = y;
-        fix_xy(i, unique_id, level, x_copy, y_copy);
+        fix_xy(i, instance, unique_id, x_copy, y_copy);
         qts[collision_group].insert(point_type(position(x_copy, y_copy), unique_id));
       }
       if (gravity_group != "undefined") {
@@ -1014,9 +993,6 @@ void generator::update_object_interactions(v8_interact& i,
   stepper.reset_current();
   const auto isolate = i.get_isolate();
 
-  // TODO: will be obsoleted asap
-  create_intermediates_mapping(i, intermediates);
-
   // we cannot simply iterate over the next_instances array, since the array might mutate
   // during looping (since objects can trigger spawned objects, etc.) for this reason, create
   // a copy of the array and iterate over that
@@ -1029,15 +1005,13 @@ void generator::update_object_interactions(v8_interact& i,
 
   for (auto& next_instance : instances) {
     auto instance_uid = i.integer_number(next_instance, "unique_id");
-    if (map_intermediate.find(instance_uid) == map_intermediate.end()) {
+    auto find = intermediate_map.find(instance_uid);
+    if (find == intermediate_map.end()) {
       continue;
     }
-    auto intermediate_instance = i.get_index(intermediates, map_intermediate[instance_uid]).As<v8::Object>();
+    auto intermediate_instance = find->second;
 
     auto motion_blur = !i.has_field(next_instance, "motion_blur") || i.boolean(next_instance, "motion_blur");
-    auto level = i.integer_number(next_instance, "level");
-    parents_stack[level] = next_instance;
-    prev_parents_stack[level] = intermediate_instance;
 
     if (!motion_blur) {
       i.set_field(next_instance, "steps", v8::Number::New(isolate, 1));
@@ -1144,9 +1118,8 @@ void generator::handle_collisions(v8_interact& i, v8::Local<v8::Object> instance
   }
   auto x = i.double_number(instance, "x");
   auto y = i.double_number(instance, "y");
-  auto level = i.integer_number(instance, "level");
   auto unique_id = i.integer_number(instance, "unique_id");
-  fix_xy(i, unique_id, level, x, y);
+  fix_xy(i, instance, unique_id, x, y);
 
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
@@ -1155,8 +1128,7 @@ void generator::handle_collisions(v8_interact& i, v8::Local<v8::Object> instance
   if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
     for (const auto& collide : found) {
       const auto unique_id2 = collide.userdata;
-      const auto index2 = next_instance_mapping.at(unique_id2);
-      auto instance2 = i.get_index(next_instances, index2).As<v8::Object>();
+      auto instance2 = next_instance_map.at(unique_id2);
       handle_collision(i, instance, instance2);
     }
   }
@@ -1170,13 +1142,11 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
 
   auto x = i.double_number(instance, "x");
   auto y = i.double_number(instance, "y");
-  auto level = i.integer_number(instance, "level");
-  fix_xy(i, unique_id, level, x, y);
+  fix_xy(i, instance, unique_id, x, y);
 
   auto x2 = i.double_number(instance2, "x");
   auto y2 = i.double_number(instance2, "y");
-  auto level2 = i.integer_number(instance2, "level");
-  fix_xy(i, unique_id2, level2, x2, y2);
+  fix_xy(i, instance2, unique_id2, x2, y2);
 
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
@@ -1229,12 +1199,8 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
 void generator::handle_gravity(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Array> next_instances) {
   std::vector<point_type> found;
 
-  // TODO: will be obsoleted asap
-  create_next_instance_mapping(i, next_instances);
-
   auto type = i.str(instance, "type");
   auto unique_id = i.integer_number(instance, "unique_id");
-  auto level = i.integer_number(instance, "level");
   auto gravity_group = i.str(instance, "gravity_group");
   if (gravity_group == "undefined") {
     return;
@@ -1245,7 +1211,7 @@ void generator::handle_gravity(v8_interact& i, v8::Local<v8::Object> instance, v
   auto& video = genctx.video_obj;
   auto x = i.double_number(instance, "x");
   auto y = i.double_number(instance, "y");
-  fix_xy(i, unique_id, level, x, y);
+  fix_xy(i, instance, unique_id, x, y);
 
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
@@ -1258,8 +1224,7 @@ void generator::handle_gravity(v8_interact& i, v8::Local<v8::Object> instance, v
     vector2d acceleration(0, 0);
     for (const auto& in_range : found) {
       const auto unique_id2 = in_range.userdata;
-      const auto index2 = next_instance_mapping.at(unique_id2);
-      auto instance2 = i.get_index(next_instances, index2).As<v8::Object>();
+      auto instance2 = next_instance_map.at(unique_id2);
       handle_gravity(i, instance, instance2, acceleration);
     }
     vector2d vel(i.double_number(instance, "vel_x", 0.), i.double_number(instance, "vel_y", 0.));
@@ -1276,16 +1241,14 @@ void generator::handle_gravity(v8_interact& i,
   auto& video = genctx.video_obj;
 
   auto unique_id = i.integer_number(instance, "unique_id");
-  auto level = i.integer_number(instance, "level");
   auto x = i.double_number(instance, "x");
   auto y = i.double_number(instance, "y");
-  fix_xy(i, unique_id, level, x, y);
+  fix_xy(i, instance, unique_id, x, y);
 
   auto unique_id2 = i.integer_number(instance2, "unique_id");
-  auto level2 = i.integer_number(instance2, "level");
   auto x2 = i.double_number(instance2, "x");
   auto y2 = i.double_number(instance2, "y");
-  fix_xy(i, unique_id2, level2, x2, y2);
+  fix_xy(i, instance2, unique_id2, x2, y2);
 
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
@@ -1414,7 +1377,7 @@ double generator::get_max_travel_of_object(v8_interact& i,
   const auto calculate = [this](v8_interact& i,
                                 v8::Local<v8::Array>& next_instances,
                                 v8::Local<v8::Object>& instance,
-                                std::unordered_map<int64_t, v8::Local<v8::Object>>& parents,
+                                std::unordered_map<int64_t, v8::Local<v8::Object>>& lookup,
                                 int64_t level,
                                 bool is_line) {
     double angle = 0;
@@ -1426,16 +1389,13 @@ double generator::get_max_travel_of_object(v8_interact& i,
                          //    data::coord parent3; // centered X,Y of parent (i.o.w., middle of the line for lines)
     data::coord pos_for_parent;
 
-    // TODO: will be obsoleted asap
-    create_next_instance_mapping(i, next_instances);
-
     std::vector<v8::Local<v8::Object>> lineage;
-    auto unique_id = i.integer_number(instance, "unique_id");
     lineage.push_back(instance);
-    // TODO: will be obsoleted asap
-    while (parents.contains(unique_id)) {
-      lineage.push_back(parents[unique_id]);
-      unique_id = i.integer_number(parents[unique_id], "unique_id");
+    auto parent_uid = i.integer_number(instance, "parent_uid");
+    while (parent_uid != -1) {
+      auto parent = lookup.at(parent_uid);
+      lineage.push_back(parent);
+      parent_uid = i.integer_number(parent, "parent_uid");
     }
 
     // reverse iterate over lineage vector
@@ -1535,21 +1495,19 @@ double generator::get_max_travel_of_object(v8_interact& i,
 
     // pass along x, y, x2, y2.
     if (i.has_field(instance, "props")) {
-      const auto process_obj = [&i, &next_instances, &pos, /* &pos2,*/ this](v8::Local<v8::Object>& o,
-                                                                             const std::string& inherit_x,
-                                                                             const std::string& inherit_y) {
-        const auto unique_id = i.integer_number(o, "unique_id");
-        const auto find = next_instance_mapping.find(unique_id);
-        if (find != next_instance_mapping.end()) {
-          const auto instance_index = find->second;
-          auto other_val = i.get_index(next_instances, instance_index);
-          if (other_val->IsObject()) {
-            auto other = other_val.As<v8::Object>();
-            i.set_field(other, inherit_x, v8::Number::New(i.get_isolate(), pos.x));
-            i.set_field(other, inherit_y, v8::Number::New(i.get_isolate(), pos.y));
-          }
-        }
-      };
+      const auto process_obj =
+          [&i, &pos, this](v8::Local<v8::Object>& o, const std::string& inherit_x, const std::string& inherit_y) {
+            const auto unique_id = i.integer_number(o, "unique_id");
+            const auto find = next_instance_map.find(unique_id);
+            if (find != next_instance_map.end()) {
+              auto other_val = find->second;
+              if (other_val->IsObject()) {
+                auto other = other_val.As<v8::Object>();
+                i.set_field(other, inherit_x, v8::Number::New(i.get_isolate(), pos.x));
+                i.set_field(other, inherit_y, v8::Number::New(i.get_isolate(), pos.y));
+              }
+            }
+          };
       const auto process = [&i, &process_obj](const v8::Local<v8::Value>& field_value,
                                               const std::string& inherit_x,
                                               const std::string& inherit_y) {
@@ -1582,9 +1540,9 @@ double generator::get_max_travel_of_object(v8_interact& i,
     return std::make_tuple(pos.x, pos.y, pos2.x, pos2.y);
   };
 
-  auto [x, y, x2, y2] = calculate(i, next_instances, instance, parents, level, is_line);
+  auto [x, y, x2, y2] = calculate(i, next_instances, instance, next_instance_map, level, is_line);
   auto [prev_x, prev_y, prev_x2, prev_y2] =
-      calculate(i, next_instances, previous_instance, prev_parents, level, is_line);
+      calculate(i, next_instances, previous_instance, intermediate_map, level, is_line);
 
   // Calculate how many pixels are maximally covered by this instance, this is currently very simplified
   x *= scalesettings.video_scale_next * shape_scale;
@@ -1747,9 +1705,9 @@ void generator::convert_object_to_render_job(
   new_shape.gradient_id_str = gradient_id_str;
   if (new_shape.gradients_.empty()) {
     new_shape.gradients_.emplace_back(1.0, data::gradient{});
-    new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
-    new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
-    new_shape.gradients_[0].second.colors.emplace_back(std::make_tuple(1.0, data::color{0.0, 0, 0, 1}));
+    new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
+    new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
+    new_shape.gradients_[0].second.colors.emplace_back(1.0, data::color{0.0, 0, 0, 1});
   }
   new_shape.z = 0;
   new_shape.vel_x = vel_x;
@@ -1807,19 +1765,20 @@ v8::Local<v8::Object> generator::spawn_object(v8::Local<v8::Object> spawner, v8:
   auto& i = genctx.i();
   auto created_instance =
       util::generator::instantiate_object_from_scene(i, genctx.objects, genctx.instances_next, obj, &spawner);
-  // TODO: util::generator::instantiate_object_from_scene might be able to do this in real-time
-  create_next_instance_mapping(i, genctx.instances_next);
+  next_instance_map[i.integer_number(created_instance, "unique_id")] = created_instance;
   create_bookkeeping_for_script_objects(created_instance);
   return created_instance;
 }
 
 // TODO: will refactor soon
-void generator::fix_xy(v8_interact& i, int64_t uid, int64_t level, double& x, double& y) {
-  while (parents.contains(uid)) {
-    if (i.str(parents[uid], "type", "") == "script") {
-      x += i.double_number(parents[uid], "x");
-      y += i.double_number(parents[uid], "y");
+void generator::fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t uid, double& x, double& y) {
+  auto parent_uid = i.integer_number(instance, "parent_uid", -1);
+  while (parent_uid != -1) {
+    auto parent = next_instance_map.at(parent_uid);
+    if (i.str(parent, "type", "") == "script") {
+      x += i.double_number(parent, "x");
+      y += i.double_number(parent, "y");
     }
-    uid = i.integer_number(parents[uid], "unique_id");
+    parent_uid = i.integer_number(parent, "parent_uid");
   }
 }
