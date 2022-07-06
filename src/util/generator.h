@@ -45,7 +45,10 @@ void garbage_collect_erased_objects(v8_interact& i,
 std::string instance_to_string(v8_interact& i, v8::Local<v8::Object>& instance);
 
 void debug_print(v8_interact& i, v8::Local<v8::Object>& instance);
-void debug_print(v8_interact& i, v8::Local<v8::Array>& instances, const std::string& desc);
+void debug_print(v8_interact& i,
+                 v8::Local<v8::Array>& instances,
+                 const std::string& desc,
+                 int64_t unique_id_of_interest = -1);
 
 v8::Local<v8::Object> get_object_by_id(v8_interact& i, v8::Local<v8::Array>& instances, int id);
 

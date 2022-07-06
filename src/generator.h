@@ -59,6 +59,8 @@ private:
   frame_stepper stepper;
   std::unordered_map<int64_t, v8::Local<v8::Object>> parents;
   std::unordered_map<int64_t, v8::Local<v8::Object>> prev_parents;
+  std::unordered_map<int64_t, v8::Local<v8::Object>> parents_stack;
+  std::unordered_map<int64_t, v8::Local<v8::Object>> prev_parents_stack;
   int attempt = 0;
   double max_dist_found = std::numeric_limits<double>::max();
   double sample_include = 0.;
@@ -70,6 +72,7 @@ private:
   std::map<std::string, quadtree> qts;
   std::map<std::string, quadtree> qts_gravity;
   std::unordered_map<int64_t, size_t> next_instance_mapping;
+  std::unordered_map<int64_t, int64_t> map_intermediate;
   data::settings settings_;
 
   int min_intermediates = 1.;
@@ -132,6 +135,7 @@ public:
                                       v8::Local<v8::Array>& intermediates);
   void call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances);
   void create_next_instance_mapping(v8_interact& i, v8::Local<v8::Array>& next_instances);
+  void create_intermediates_mapping(v8_interact& i, v8::Local<v8::Array>& next_instances);
   void update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, v8::Local<v8::Object>& video);
   void update_object_toroidal(v8_interact& i, v8::Local<v8::Object>& instance, double& x, double& y);
   void update_object_interactions(v8_interact& i,
@@ -139,15 +143,9 @@ public:
                                   v8::Local<v8::Array>& intermediates,
                                   v8::Local<v8::Array>& previous_instances,
                                   v8::Local<v8::Object>& video);
-  void handle_collisions(v8_interact& i,
-                         v8::Local<v8::Object> instance,
-                         size_t index,
-                         v8::Local<v8::Array> next_instances);
-  void handle_gravity(v8_interact& i,
-                      v8::Local<v8::Object> instance,
-                      size_t index,
-                      v8::Local<v8::Array> next_instances);
-  static void handle_collision(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2);
+  void handle_collisions(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Array> next_instances);
+  void handle_gravity(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Array> next_instances);
+  void handle_collision(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2);
   void handle_gravity(v8_interact& i,
                       v8::Local<v8::Object> instance,
                       v8::Local<v8::Object> instance2,
@@ -215,6 +213,7 @@ private:
                       v8::Local<v8::Array>* instances,
                       v8::Local<v8::Array>* intermediates,
                       v8::Local<v8::Array>* next_instances);
+  void fix_xy(v8_interact& i, int64_t uid, int64_t level, double& x, double& y);
 };
 
 void call_print_exception(const std::string& fn);

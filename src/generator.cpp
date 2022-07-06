@@ -6,6 +6,8 @@
 #include "generator.h"
 
 #include <fmt/core.h>
+#include <linux/prctl.h>
+#include <sys/prctl.h>
 #include <cmath>
 #include <memory>
 #include <mutex>
@@ -108,6 +110,7 @@ void generator::reset_context() {
   context->context->set("blending_type", consts);
 }
 void generator::init(const std::string& filename, std::optional<double> rand_seed, bool preview, bool caching) {
+  prctl(PR_SET_NAME, "generator thread");
   filename_ = filename;
   cache.enabled = caching;
   init_context();
@@ -484,8 +487,9 @@ void generator::instantiate_additional_objects_from_new_scene(v8::Local<v8::Arra
     // below can recursively add new objects as init() invocations spawn new objects, and so on
     v8::Local<v8::Object> created_instance = util::generator::instantiate_object_from_scene(
         i, genctx.objects, genctx.instances_next, scene_obj, parent_object);
-
     create_bookkeeping_for_script_objects(created_instance);
+    // TODO: util::generator::instantiate_object_from_scene might be able to do this in real-time
+    create_next_instance_mapping(i, genctx.instances_next);
   }
 }
 
@@ -658,6 +662,7 @@ bool generator::_generate_frame() {
         if (++attempt >= max_attempts) {
           stepper.freeze();
         }
+        logger(DEBUG) << "Generating frame " << job->frame_number << " attempt " << attempt << std::endl;
         max_dist_found = 0;
         if (attempt > 1) {
           if (!settings_.motion_blur) break;
@@ -670,34 +675,40 @@ bool generator::_generate_frame() {
         stepper.rewind();
         bool detected_too_many_steps = false;
         while (stepper.has_next_step() && !detected_too_many_steps) {
-          // i.get_isolate()->AdjustAmountOfExternalAllocatedMemory(0);
-          // v8::HeapStatistics v8_heap_stats;
-          // isolate->GetHeapStatistics(&v8_heap_stats);
-          // logger(DEBUG) << "heap used: " << v8_heap_stats.used_heap_size()
-          //               << ", external: " << v8_heap_stats.external_memory()
-          //               << ", adjusted: " << v8::Isolate::GetCurrent()->AdjustAmountOfExternalAllocatedMemory(0)
-          //               << std::endl;
-
           qts.clear();
           qts_gravity.clear();
+
+          // initialize scene
           if (scenesettings.update(get_time(scenesettings).time)) {
             set_scene(scenesettings.current_scene_next + 1);
           }
 
-          for (auto& iter : scenesettings_objs) {
-            auto& settings = iter.second;
+          // initialize scenes for script objects
+          for (auto& [_, settings] : scenesettings_objs) {
             if (settings.update(get_time(settings).time)) {
               set_scene_sub_object(settings, settings.current_scene_next + 1);
             }
           }
 
+          // call next frame event on all objects (TODO: optimize)
           if (stepper.current_step == 0) {
             call_next_frame_event(i, next_instances);
           }
+
+          // create mappings
           create_next_instance_mapping(i, next_instances);
+
+          create_intermediates_mapping(i, intermediates);
+
+          // handle object movement (velocity added to position)
           update_object_positions(i, next_instances, video);
+
+          // handle collisions, gravity and "inherited" objects
           update_object_interactions(i, next_instances, intermediates, instances, video);
+
+          // convert javascript to renderable objects
           convert_objects_to_render_job(i, next_instances, sc, video);
+
           util::generator::copy_instances(i, intermediates, next_instances);
           scalesettings.update();
           scenesettings.update();
@@ -728,8 +739,8 @@ bool generator::_generate_frame() {
 
       scalesettings.commit();
       scenesettings.commit();
-      for (auto& iter : scenesettings_objs) {
-        iter.second.commit();
+      for (auto& [_, scenesetting] : scenesettings_objs) {
+        scenesetting.commit();
       }
 
       metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
@@ -848,11 +859,35 @@ void generator::call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next
 }
 
 void generator::create_next_instance_mapping(v8_interact& i, v8::Local<v8::Array>& next_instances) {
+  // TODO: instances already have a parent_uid, so we don't need the tree
   next_instance_mapping.clear();
+  parents.clear();
+  parents_stack.clear();
   for (size_t j = 0; j < next_instances->Length(); j++) {
     auto next = i.get_index(next_instances, j).As<v8::Object>();
-    auto unique_id = i.integer_number(next, "unique_id");
+    const auto unique_id = i.integer_number(next, "unique_id");
+    const auto level = i.integer_number(next, "level");
+    parents_stack[level] = next;
+    if (level > 0) {
+      parents[unique_id] = parents_stack[level - 1];
+    }
     next_instance_mapping[unique_id] = j;
+  }
+}
+
+void generator::create_intermediates_mapping(v8_interact& i, v8::Local<v8::Array>& intermediates) {
+  map_intermediate.clear();
+  prev_parents.clear();
+  prev_parents_stack.clear();
+  for (size_t index = 0; index < intermediates->Length(); index++) {
+    auto intermediate_instance = i.get_index(intermediates, index).As<v8::Object>();
+    const auto uid = i.integer_number(intermediate_instance, "unique_id");
+    const auto level = i.integer_number(intermediate_instance, "level");
+    prev_parents_stack[level] = intermediate_instance;
+    if (level > 0) {
+      prev_parents[uid] = prev_parents_stack[level - 1];
+    }
+    map_intermediate[uid] = index;
   }
 }
 
@@ -916,7 +951,10 @@ void generator::update_object_positions(v8_interact& i,
       if (collision_group != "undefined") {
         qts.try_emplace(collision_group,
                         quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
-        qts[collision_group].insert(point_type(position(x, y), unique_id));
+        auto x_copy = x;
+        auto y_copy = y;
+        fix_xy(i, unique_id, level, x_copy, y_copy);
+        qts[collision_group].insert(point_type(position(x_copy, y_copy), unique_id));
       }
       if (gravity_group != "undefined") {
         qts_gravity.try_emplace(gravity_group,
@@ -976,16 +1014,20 @@ void generator::update_object_interactions(v8_interact& i,
   stepper.reset_current();
   const auto isolate = i.get_isolate();
 
-  // create mapping of intermediate objects
-  std::unordered_map<int64_t, int64_t> map_intermediate;
-  for (size_t index = 0; index < intermediates->Length(); index++) {
-    auto intermediate_instance = i.get_index(intermediates, index).As<v8::Object>();
-    auto uid = i.integer_number(intermediate_instance, "unique_id");
-    map_intermediate[uid] = index;
-  }
+  // TODO: will be obsoleted asap
+  create_intermediates_mapping(i, intermediates);
 
+  // we cannot simply iterate over the next_instances array, since the array might mutate
+  // during looping (since objects can trigger spawned objects, etc.) for this reason, create
+  // a copy of the array and iterate over that
+
+  std::vector<v8::Local<v8::Object>> instances;
   for (size_t index = 0; index < next_instances->Length(); index++) {
     auto next_instance = i.get_index(next_instances, index).As<v8::Object>();
+    instances.push_back(next_instance);
+  }
+
+  for (auto& next_instance : instances) {
     auto instance_uid = i.integer_number(next_instance, "unique_id");
     if (map_intermediate.find(instance_uid) == map_intermediate.end()) {
       continue;
@@ -993,6 +1035,10 @@ void generator::update_object_interactions(v8_interact& i,
     auto intermediate_instance = i.get_index(intermediates, map_intermediate[instance_uid]).As<v8::Object>();
 
     auto motion_blur = !i.has_field(next_instance, "motion_blur") || i.boolean(next_instance, "motion_blur");
+    auto level = i.integer_number(next_instance, "level");
+    parents_stack[level] = next_instance;
+    prev_parents_stack[level] = intermediate_instance;
+
     if (!motion_blur) {
       i.set_field(next_instance, "steps", v8::Number::New(isolate, 1));
     } else {
@@ -1025,9 +1071,9 @@ void generator::update_object_interactions(v8_interact& i,
           auto p = i.get(next_instance, "props");
           if (p->IsObject()) {
             auto props = p.As<v8::Object>();
-            for (const auto& left_or_right : {"left", "right"})
-              if (i.has_field(props, left_or_right)) {
-                auto l = i.get(props, left_or_right);
+            for (const auto& left_or_right_str : {"left", "right"})
+              if (i.has_field(props, left_or_right_str)) {
+                auto l = i.get(props, left_or_right_str);
                 if (l->IsArray()) {
                   auto a = l.As<v8::Array>();
                   for (size_t m = 0; m < a->Length(); m++) {
@@ -1078,15 +1124,12 @@ void generator::update_object_interactions(v8_interact& i,
         }
       }
     }
-    handle_collisions(i, next_instance, index, next_instances);
-    handle_gravity(i, next_instance, index, next_instances);
+    handle_collisions(i, next_instance, next_instances);
+    handle_gravity(i, next_instance, next_instances);
   }
 }
 
-void generator::handle_collisions(v8_interact& i,
-                                  v8::Local<v8::Object> instance,
-                                  size_t index,
-                                  v8::Local<v8::Array> next_instances) {
+void generator::handle_collisions(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Array> next_instances) {
   // Now do the collision detection part
   // NOTE: we multiple radius/size * 2.0 since we're not looking up a point, and querying the quadtree does
   // not check for overlap, but only whether the x,y is inside the specified range. If we don't want to miss
@@ -1101,16 +1144,18 @@ void generator::handle_collisions(v8_interact& i,
   }
   auto x = i.double_number(instance, "x");
   auto y = i.double_number(instance, "y");
+  auto level = i.integer_number(instance, "level");
+  auto unique_id = i.integer_number(instance, "unique_id");
+  fix_xy(i, unique_id, level, x, y);
+
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
-  auto unique_id = i.integer_number(instance, "unique_id");
+
   qts[collision_group].query(unique_id, circle(position(x, y), radius * 2.0, radiussize * 2.0), found);
   if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
     for (const auto& collide : found) {
       const auto unique_id2 = collide.userdata;
       const auto index2 = next_instance_mapping.at(unique_id2);
-      // TODO: can we uncomment this one again, if not, why-not?
-      //  if (index2 <= index) continue;
       auto instance2 = i.get_index(next_instances, index2).As<v8::Object>();
       handle_collision(i, instance, instance2);
     }
@@ -1125,8 +1170,14 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
 
   auto x = i.double_number(instance, "x");
   auto y = i.double_number(instance, "y");
+  auto level = i.integer_number(instance, "level");
+  fix_xy(i, unique_id, level, x, y);
+
   auto x2 = i.double_number(instance2, "x");
   auto y2 = i.double_number(instance2, "y");
+  auto level2 = i.integer_number(instance2, "level");
+  fix_xy(i, unique_id2, level2, x2, y2);
+
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
   auto radius2 = i.double_number(instance2, "radius");
@@ -1175,12 +1226,15 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
   i.call_fun(on2, instance2, "collide", instance);
 }
 
-void generator::handle_gravity(v8_interact& i,
-                               v8::Local<v8::Object> instance,
-                               size_t index,
-                               v8::Local<v8::Array> next_instances) {
+void generator::handle_gravity(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Array> next_instances) {
   std::vector<point_type> found;
+
+  // TODO: will be obsoleted asap
+  create_next_instance_mapping(i, next_instances);
+
   auto type = i.str(instance, "type");
+  auto unique_id = i.integer_number(instance, "unique_id");
+  auto level = i.integer_number(instance, "level");
   auto gravity_group = i.str(instance, "gravity_group");
   if (gravity_group == "undefined") {
     return;
@@ -1191,9 +1245,10 @@ void generator::handle_gravity(v8_interact& i,
   auto& video = genctx.video_obj;
   auto x = i.double_number(instance, "x");
   auto y = i.double_number(instance, "y");
+  fix_xy(i, unique_id, level, x, y);
+
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
-  auto unique_id = i.integer_number(instance, "unique_id");
   auto range = i.double_number(video, "gravity_range", 1000);
 
   qts_gravity[gravity_group].query(
@@ -1220,10 +1275,18 @@ void generator::handle_gravity(v8_interact& i,
                                vector2d& acceleration) {
   auto& video = genctx.video_obj;
 
+  auto unique_id = i.integer_number(instance, "unique_id");
+  auto level = i.integer_number(instance, "level");
   auto x = i.double_number(instance, "x");
   auto y = i.double_number(instance, "y");
+  fix_xy(i, unique_id, level, x, y);
+
+  auto unique_id2 = i.integer_number(instance2, "unique_id");
+  auto level2 = i.integer_number(instance2, "level");
   auto x2 = i.double_number(instance2, "x");
   auto y2 = i.double_number(instance2, "y");
+  fix_xy(i, unique_id2, level2, x2, y2);
+
   auto radius = i.double_number(instance, "radius");
   auto radiussize = i.double_number(instance, "radiussize");
   auto radius2 = i.double_number(instance2, "radius");
@@ -1348,9 +1411,6 @@ double generator::get_max_travel_of_object(v8_interact& i,
   auto shape_scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
   auto prev_shape_scale = i.has_field(previous_instance, "scale") ? i.double_number(previous_instance, "scale") : 1.0;
 
-  parents[level] = instance;
-  prev_parents[level] = previous_instance;
-
   const auto calculate = [this](v8_interact& i,
                                 v8::Local<v8::Array>& next_instances,
                                 v8::Local<v8::Object>& instance,
@@ -1366,16 +1426,28 @@ double generator::get_max_travel_of_object(v8_interact& i,
                          //    data::coord parent3; // centered X,Y of parent (i.o.w., middle of the line for lines)
     data::coord pos_for_parent;
 
-    for (int current_lvl = 0; current_lvl <= level; current_lvl++) {
-      auto& current_obj = parents[current_lvl];
-      const bool current_is_line = i.str(parents[current_lvl], "type") == "line";
+    // TODO: will be obsoleted asap
+    create_next_instance_mapping(i, next_instances);
+
+    std::vector<v8::Local<v8::Object>> lineage;
+    auto unique_id = i.integer_number(instance, "unique_id");
+    lineage.push_back(instance);
+    // TODO: will be obsoleted asap
+    while (parents.contains(unique_id)) {
+      lineage.push_back(parents[unique_id]);
+      unique_id = i.integer_number(parents[unique_id], "unique_id");
+    }
+
+    // reverse iterate over lineage vector
+    for (auto it = lineage.rbegin(); it != lineage.rend(); ++it) {
+      auto& current_obj = *it;
+      const bool current_is_line = i.str(current_obj, "type") == "line";
       // const bool current_is_pivot =
-      //    i.has_field(parents[current_lvl], "pivot") ? i.boolean(current_obj, "pivot") : false;
+      //    i.has_field(parent, "pivot") ? i.boolean(current_obj, "pivot") : false;
 
       // X,Y
       data::coord current{i.double_number(current_obj, "x"), i.double_number(current_obj, "y")};
-      const double current_angle =
-          i.has_field(parents[current_lvl], "angle") ? i.double_number(current_obj, "angle") : 0.;
+      const double current_angle = i.double_number(current_obj, "angle", 0.);
 
       // X2, Y2, and centerX, centerY, for lines
       data::coord current2, current_center;
@@ -1596,7 +1668,7 @@ void generator::convert_object_to_render_job(
   if (!exists) return;
   auto type = i.str(instance, "type");
   auto is_line = type == "line";
-  parents[level] = instance;
+  parents_stack[level] = instance;
 
   // See if we require this step for this object
   auto steps = i.integer_number(instance, "steps");
@@ -1664,9 +1736,10 @@ void generator::convert_object_to_render_job(
   util::generator::copy_texture_from_object_to_shape(i, instance, new_shape, textures);
   while (level > 0) {
     level--;
-    util::generator::copy_gradient_from_object_to_shape(i, parents[level], new_shape, gradients, &gradient_id_str);
-    util::generator::copy_texture_from_object_to_shape(i, parents[level], new_shape, textures);
-    auto s = i.double_number(parents[level], "scale");
+    util::generator::copy_gradient_from_object_to_shape(
+        i, parents_stack[level], new_shape, gradients, &gradient_id_str);
+    util::generator::copy_texture_from_object_to_shape(i, parents_stack[level], new_shape, textures);
+    auto s = i.double_number(parents_stack[level], "scale");
     if (!std::isnan(s)) {
       scale *= s;
     }
@@ -1734,6 +1807,19 @@ v8::Local<v8::Object> generator::spawn_object(v8::Local<v8::Object> spawner, v8:
   auto& i = genctx.i();
   auto created_instance =
       util::generator::instantiate_object_from_scene(i, genctx.objects, genctx.instances_next, obj, &spawner);
+  // TODO: util::generator::instantiate_object_from_scene might be able to do this in real-time
+  create_next_instance_mapping(i, genctx.instances_next);
   create_bookkeeping_for_script_objects(created_instance);
   return created_instance;
+}
+
+// TODO: will refactor soon
+void generator::fix_xy(v8_interact& i, int64_t uid, int64_t level, double& x, double& y) {
+  while (parents.contains(uid)) {
+    if (i.str(parents[uid], "type", "") == "script") {
+      x += i.double_number(parents[uid], "x");
+      y += i.double_number(parents[uid], "y");
+    }
+    uid = i.integer_number(parents[uid], "unique_id");
+  }
 }

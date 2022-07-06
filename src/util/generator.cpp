@@ -265,10 +265,9 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
     // resize dest array if needed
     if (dest->Length() < source->Length()) {
       i.call_fun(dest, "push", v8::Object::New(i.get_isolate()));
-    } else {
-      // clear the destination object completely
-      i.set_field(dest, j, v8::Object::New(i.get_isolate()));
     }
+    // first ensure destination object is clean
+    i.set_field(dest, j, v8::Object::New(i.get_isolate()));
     auto src = i.get_index(source, j).As<v8::Object>();
     auto dst = i.get_index(dest, j).As<v8::Object>();
 
@@ -573,10 +572,16 @@ void debug_print(v8_interact& i, v8::Local<v8::Object>& instance) {
   }
 }
 
-void debug_print(v8_interact& i, v8::Local<v8::Array>& instances, const std::string& desc) {
+void debug_print(v8_interact& i,
+                 v8::Local<v8::Array>& instances,
+                 const std::string& desc,
+                 int64_t unique_id_of_interest) {
   logger(DEBUG) << "printing " << desc << ":" << std::endl;
   for (size_t j = 0; j < instances->Length(); j++) {
     auto instance = i.get_index(instances, j).As<v8::Object>();
+    if (unique_id_of_interest != -1 && i.integer_number(instance, "unique_id") != unique_id_of_interest) {
+      continue;
+    }
     debug_print(i, instance);
   }
 }
