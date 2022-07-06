@@ -33,7 +33,7 @@ _ = {
       'name': 'scene1',
       'duration': 2.0,
       'objects': [
-        {'id': 'test', 'x': 0, 'y': 0, 'z': 0},
+        {'id': 'test', 'x': 0, 'y': 0, 'z': 0, 'scale': 2.},
         {'id': 'blur', 'x': 0, 'y': 0, 'z': 0},
       ],
     },

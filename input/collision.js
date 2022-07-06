@@ -5,6 +5,11 @@ _ = {
       {'position': 0.9, 'r': 0, 'g': 0, 'b': 1, 'a': 1},
       {'position': 1.0, 'r': 0, 'g': 0, 'b': 1, 'a': 0},
     ],
+    'red': [
+      {'position': 0.0, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
+      {'position': 0.9, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
+      {'position': 1.0, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
+    ],
   },
   'toroidal': {
     't1': {
@@ -34,28 +39,33 @@ _ = {
             }));
           }
         }
-        // one massive object
-        this.subobj.push(this.spawn({
-          'id': 'ball',
-          'x': -1920 / 2 + 500,
-          'y': -1080 / 2 + 500,
-          'z': 0,
-          'radiussize': 100,
-          'mass': 100,
-          'velocity': 0.,
-          'vel_x': 0,
-          'vel_y': 0,
-        }));
       },
     },
     'ball': {
       'type': 'circle',
       'collision_group': 'group1',
+      'gravity_group': 'group1',
       'toroidal': 't1',
       'blending_type': blending_type.normal,
-      'gradient': 'blue',
+      'gradients': [[1, 'blue'], [0, 'red']],
       'radius': 0,
       'radiussize': 10.0,
+      'on': {
+        'collide': function(other) {
+          this.gradients[0][0] = 0.0;
+          this.gradients[1][0] = 1.0;
+          if (this.gradients[0][0] < 0.0) this.gradients[0][0] = 0.;
+          if (this.gradients[1][0] > 1.0) this.gradients[1][0] = 1.;
+        }
+      },
+      'time': function(t, e) {
+        if (this.gradients[0][0] < 1.0) {
+          this.gradients[0][0] += e;
+          this.gradients[1][0] -= e;
+        }
+        if (this.gradients[0][0] > 1.0) this.gradients[0][0] = 1.;
+        if (this.gradients[1][0] < 0.0) this.gradients[1][0] = 0.;
+      }
     },
   },
   'video': {
@@ -69,6 +79,8 @@ _ = {
     'dithering': false,
     'minimize_steps_per_object': false,
     'bg_color': {'r': 1., 'g': 1., 'b': 1., 'a': 1},
+    'gravity_constrain_dist_min': 50.,
+    'gravity_constrain_dist_max': 60.,
   },
   'preview': {
     'motion_blur': false,

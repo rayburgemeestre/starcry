@@ -88,6 +88,7 @@ _ = {
     'grain_for_opacity': false,
     'dithering': false,
     //'motion_blur': false, <<< TODO: this causes issues! (object disappears!)
+    'max_intermediates': 3,
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
   },
   'scenes': [{

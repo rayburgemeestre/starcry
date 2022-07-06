@@ -1,20 +1,26 @@
 _ = {
   'gradients': {},
   'objects': {
+    'text': {
+      'type': 'script',
+      'file': 'input/text.js',
+    },
     'split': {
       'type': 'script',
       'file': 'input/split.js',
-      'duration': 4.0,
+      'duration': 5.0,
     },
     'motion': {
       'type': 'script',
       'file': 'input/subobj.js',
-      'duration': 1.0,
     },
     'subscript': {
       'type': 'script',
       'file': 'input/subscript.js',
-      'duration': 2.0,
+    },
+    'orbit': {
+      'type': 'script',
+      'file': 'input/orbit.js',
     },
   },
   'video': {
@@ -24,9 +30,9 @@ _ = {
     'scale': 1.0,
     'rand_seed': 5,
     'granularity': 1,
-    'minimize_steps_per_object': false,
+    'minimize_steps_per_object': true,
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
-    'grain_for_opacity': false,
+    'grain_for_opacity': true,
   },
   'preview': {
     'width': 512,
@@ -38,16 +44,19 @@ _ = {
   'scenes': [
     {
       'name': 'scene1',
-      'duration': 2.0,
+      'duration': 10.0,
       'objects': [
         {'id': 'split', 'label': 'split', 'x': 0, 'y': -100, 'z': 0},
         {'id': 'motion', 'label': 'motion', 'x': 0, 'y': 0, 'z': 0},
+        {'id': 'orbit', 'label': 'orbit1', 'x': -500, 'y': 0, 'z': 0},
+        {'id': 'orbit', 'label': 'orbit2', 'x': 500, 'y': 0, 'z': 0},
       ],
     },
     {
       'name': 'scene2',
-      'duration': 2.0,
+      'duration': 10.0,
       'objects': [
+        {'id': 'text', 'label': 'text', 'x': 0, 'y': 0, 'z': 0},
         {'id': 'subscript', 'label': 'subscript', 'x': 0, 'y': 0, 'z': 0, 'scale': 0.5},
       ]
     },
