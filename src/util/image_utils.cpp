@@ -5,15 +5,14 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 
 #include "util/image_utils.h"
-
-// TODO: we need some better project-wide generic solution for pseudo random numbers
-extern double rand_fun_vx();
+#include "util/random.hpp"
 
 void copy_to_png(const std::vector<data::color> &source,
                  uint32_t width,
                  uint32_t height,
                  png::image<png::rgba_pixel> &dest,
                  bool dithering) {
+  static util::random_generator rand;
   size_t index = 0;
   auto m = std::numeric_limits<uint8_t>::max();
   for (uint32_t y = 0; y < height; y++) {
@@ -40,16 +39,16 @@ void copy_to_png(const std::vector<data::color> &source,
         double g_offset = g_dbl - static_cast<double>(g);
         double b_offset = b_dbl - static_cast<double>(b);
         double a_offset = a_dbl - static_cast<double>(a);
-        if (rand_fun_vx() >= r_offset && r > 0) {
+        if (rand.get() >= r_offset && r > 0) {
           r -= 1;
         }
-        if (rand_fun_vx() >= g_offset && g > 0) {
+        if (rand.get() >= g_offset && g > 0) {
           g -= 1;
         }
-        if (rand_fun_vx() >= b_offset && b > 0) {
+        if (rand.get() >= b_offset && b > 0) {
           b -= 1;
         }
-        if (rand_fun_vx() >= a_offset && a > 0) {
+        if (rand.get() >= a_offset && a > 0) {
           a -= 1;
         }
       }
@@ -60,6 +59,7 @@ void copy_to_png(const std::vector<data::color> &source,
 }
 
 std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in, const bool &dithering) {
+  static util::random_generator rand;
   std::vector<uint32_t> pixels_out;
   pixels_out.reserve(pixels_in.size());
 
@@ -79,16 +79,16 @@ std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &p
       double g_offset = g_dbl - static_cast<double>(g);
       double b_offset = b_dbl - static_cast<double>(b);
       double a_offset = a_dbl - static_cast<double>(a);
-      if (rand_fun_vx() >= r_offset && r > 0) {
+      if (rand.get() >= r_offset && r > 0) {
         r -= 1;
       }
-      if (rand_fun_vx() >= g_offset && g > 0) {
+      if (rand.get() >= g_offset && g > 0) {
         g -= 1;
       }
-      if (rand_fun_vx() >= b_offset && b > 0) {
+      if (rand.get() >= b_offset && b > 0) {
         b -= 1;
       }
-      if (rand_fun_vx() >= a_offset && a > 0) {
+      if (rand.get() >= a_offset && a > 0) {
         a -= 1;
       }
       *cptr = r;

@@ -20,15 +20,8 @@
 #endif
 #include "util/math.h"
 #include "util/motionblur_buffer.hpp"
+#include "util/random.hpp"
 #include "util/text_drawer.hpp"
-
-static std::mt19937 mt_v3;
-void set_rand_seed_v3(double seed) {
-  mt_v3.seed(seed);
-}
-double rand_fun_v3() {
-  return (mt_v3() / (double)mt_v3.max());
-}
 
 namespace draw_logic {
 
@@ -700,7 +693,7 @@ public:
     // clr.a *= expf;
     // clr.a *= logn;
 
-    auto rand1 = (rand_fun_v3() * 2.0) - 1.0;  // -1 .. +1
+    auto rand1 = (random_.get() * 2.0) - 1.0;  // -1 .. +1
     auto amount_of_blur = 1.0 - linear;        // was: ?? opacity;       // i.e. 0.5 blur
     amount_of_blur += settings.extra_grain;    // extra default grain amount
     // clr.a = logn * noise * (1.0 - amount_of_blur * rand1);
@@ -873,6 +866,7 @@ private:
   uint32_t height_;
   std::map<std::string, std::vector<std::shared_ptr<text_drawer>>> font_;
   motionblur_buffer motionblur_buffer_;
+  util::random_generator random_;
 };
 
 }  // namespace draw_logic

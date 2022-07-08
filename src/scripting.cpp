@@ -6,6 +6,7 @@
 
 #include "scripting.h"
 #include "util/logger.h"
+#include "util/random.hpp"
 
 #include <iostream>
 #include <random>
@@ -14,24 +15,19 @@ void output_fun(const std::string& s) {
   logger(INFO) << "script: " << s << std::endl;
 }
 
-std::mt19937 mt_v2;
-std::mt19937 mt_v2_b;
+static util::random_generator rand_;
 
 void set_rand_seed(double seed) {
-  mt_v2.seed(seed);
-  mt_v2_b.seed(seed);
+  rand_.set_seed(seed);
 }
 
-double rand_fun_v2() {
-  return (mt_v2() / (double)mt_v2.max());
-}
-
-double rand_fun_v2b() {
-  return (mt_v2_b() / (double)mt_v2_b.max());
+double rand_fun() {
+  return rand_.get();
 }
 
 std::vector<double> random_velocity() {
-  double x = rand_fun_v2b();
+  static util::random_generator rand;
+  double x = rand.get();
   double y = 0;
 
   const auto degrees_to_radian = [](double degrees) {
@@ -39,7 +35,7 @@ std::vector<double> random_velocity() {
     return degrees * pi / 180.0;
   };
 
-  const auto radian = degrees_to_radian(rand_fun_v2b() * 360.0);
+  const auto radian = degrees_to_radian(rand.get() * 360.0);
   const auto sine = sin(radian);
   const auto cosine = cos(radian);
   x = x * cosine - y * sine;

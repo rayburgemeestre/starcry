@@ -48,13 +48,6 @@
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
 
-// TODO: old code was not thread-safe. We should pre-calculate random arrays at startup
-std::map<std::thread::id, std::mt19937> rands;
-double rand_fun_vx() {
-  auto &mt = rands[std::this_thread::get_id()];
-  return (mt() / (double)mt.max());
-}
-
 starcry::starcry(starcry_options &options, std::shared_ptr<v8_wrapper> &context)
     : context(context),
       options_(options),

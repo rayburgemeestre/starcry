@@ -60,7 +60,7 @@ void generator::reset_context() {
 
   // add context global functions
   context->add_fun("output", &output_fun);
-  context->add_fun("rand", &rand_fun_v2);
+  context->add_fun("rand", &rand_fun);
   context->add_fun("random_velocity", &random_velocity);
   context->add_fun("expf", &expf_fun);
   context->add_fun("logn", &logn_fun);
