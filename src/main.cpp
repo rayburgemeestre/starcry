@@ -181,11 +181,22 @@ public:
 };
 
 int main(int argc, char *argv[]) {
-  standard_output_to_logger ol(std::cout, "stdout");
-  std::cout << "Wired standard output to logger.." << std::endl;
+  const auto wire_stdout_and_stderr = [=]() {
+    for (int i = 1; i < argc; i++) {
+      if (std::string(argv[i]).find("--stdout") != std::string::npos) {
+        return false;
+      }
+    }
+    return true;
+  };
 
-  standard_output_to_logger el(std::cerr, "stderr");
-  std::cerr << "Wired standard error to logger.." << std::endl;
+  if (wire_stdout_and_stderr()) {
+    standard_output_to_logger ol(std::cout, "stdout");
+    std::cout << "Wired standard output to logger.." << std::endl;
+
+    standard_output_to_logger el(std::cerr, "stderr");
+    std::cerr << "Wired standard error to logger.." << std::endl;
+  }
 
   logger(DEBUG) << "Welcome to Starcry" << std::endl;
   logger(DEBUG) << "Integrated with v8 " << V8_MAJOR_VERSION << "." << V8_MINOR_VERSION << " build: " << V8_BUILD_NUMBER
