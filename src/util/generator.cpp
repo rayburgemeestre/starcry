@@ -386,7 +386,8 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
       auto unique_id = i.integer_number(sub_dst, "unique_id");
       auto pos = obj_indexes.find(unique_id);
       if (pos == obj_indexes.end()) {
-        logger(WARNING) << "Found a unique_id[" << unique_id << "] in subobj that shouldn't exist![1]" << std::endl;
+        // TODO: get rid of subobj
+        // logger(WARNING) << "Found a unique_id[" << unique_id << "] in subobj that shouldn't exist![1]" << std::endl;
         continue;
       }
       auto the_subobj = i.get_index(dest, pos->second).As<v8::Object>();
@@ -413,7 +414,8 @@ void copy_instances(v8_interact& i, v8::Local<v8::Array> dest, v8::Local<v8::Arr
                 auto unique_id = i.integer_number(field_value_obj, "unique_id");
                 auto pos = obj_indexes.find(unique_id);
                 if (pos == obj_indexes.end()) {
-                  logger(WARNING) << "Found a unique_id in subobj that shouldn't exist![2]" << std::endl;
+                  // TODO: get rid of subobj
+                  // logger(WARNING) << "Found a unique_id in subobj that shouldn't exist![2]" << std::endl;
                   std::exit(1);
                 }
                 auto the_subobj = i.get_index(dest, pos->second).As<v8::Object>();

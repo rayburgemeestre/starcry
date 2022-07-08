@@ -1602,7 +1602,7 @@ double generator::get_max_travel_of_object(v8_interact& i,
 
   // TODO: proper support for connected objects, so they can inherit the warped stuff!
   if (dist > 100) {
-    logger(INFO) << "Warning, distance found > 100, id hash: " << random_hash << std::endl;
+    // logger(INFO) << "Warning, distance found > 100, id hash: " << random_hash << std::endl;
   }
   return dist;
 }
