@@ -873,6 +873,8 @@ void generator::create_new_mappings(v8_interact& i,
 void generator::update_object_positions(v8_interact& i,
                                         v8::Local<v8::Array>& next_instances,
                                         v8::Local<v8::Object>& video) {
+  // clear function caching
+  cached_xy.clear();
   auto isolate = i.get_isolate();
   int64_t scenesettings_from_object_id = -1;
   int64_t scenesettings_from_object_id_level = -1;
@@ -1772,13 +1774,26 @@ v8::Local<v8::Object> generator::spawn_object(v8::Local<v8::Object> spawner, v8:
 
 // TODO: will refactor soon
 void generator::fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t uid, double& x, double& y) {
+  // experimental function caching
+  double xx = 0;
+  double yy = 0;
+  auto find = cached_xy.find(uid);
+  if (find != cached_xy.end()) {
+    std::tie(xx, yy) = find->second;
+    x += xx;
+    y += yy;
+    return;
+  }
   auto parent_uid = i.integer_number(instance, "parent_uid", -1);
   while (parent_uid != -1) {
     auto parent = next_instance_map.at(parent_uid);
     if (i.str(parent, "type", "") == "script") {
-      x += i.double_number(parent, "x");
-      y += i.double_number(parent, "y");
+      xx += i.double_number(parent, "x");
+      yy += i.double_number(parent, "y");
     }
     parent_uid = i.integer_number(parent, "parent_uid");
   }
+  cached_xy[uid] = std::make_pair(xx, yy);
+  x += xx;
+  y += yy;
 }

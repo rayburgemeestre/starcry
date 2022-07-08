@@ -209,5 +209,7 @@ private:
                       v8::Local<v8::Array>* instances,
                       v8::Local<v8::Array>* intermediates,
                       v8::Local<v8::Array>* next_instances);
+
+  std::map<int64_t, std::pair<double, double>> cached_xy;
   void fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t uid, double& x, double& y);
 };
