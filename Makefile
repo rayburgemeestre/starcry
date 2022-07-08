@@ -224,7 +224,7 @@ webstorm:
 	podman run --rm --name starcry_webstorm -p 8081:8080 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix rayburgemeestre/build-starcry-ubuntu:20.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/webstorm ${HOME}"
 
 profile:  ## run starcry with valgrind's callgrind for profiling
-	valgrind --tool=callgrind ./build/starcry input/contrast.js -f 1
+	valgrind --tool=callgrind ./build/starcry input/script.js
 	ls -althrst | tail -n 1
 
 debug-last:
