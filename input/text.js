@@ -61,8 +61,10 @@ _ = {
       'text_fixed': true,
       'init': function() {},
       'time': function(t, e, s) {
-        this.text = script.scenes[s].name;
-        this.text_size = t * script.scenes[s].max_text_size;
+        if (s < script.scenes.length) {
+          this.text = script.scenes[s].name;
+          this.text_size = t * script.scenes[s].max_text_size;
+        }
       },
     },
   },
