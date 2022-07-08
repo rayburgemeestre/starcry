@@ -9,6 +9,7 @@
 #include "starcry/metrics.h"
 
 #include "generator.h"
+#include "native_generator.h"
 
 client_message_handler::client_message_handler(starcry &sc) : sc(sc) {}
 

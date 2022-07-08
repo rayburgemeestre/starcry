@@ -23,6 +23,7 @@ class v8_wrapper;
 class sfml_window;
 class bitmap_wrapper;
 class generator;
+class native_generator;
 class rendering_engine;
 class render_server;
 class webserver;
@@ -102,7 +103,11 @@ private:
   feature_settings features_;
 
   std::map<int, std::shared_ptr<bitmap_wrapper>> bitmaps;
+#ifdef DEVELOP
+  std::shared_ptr<native_generator> gen;
+#else
   std::shared_ptr<generator> gen;
+#endif
   std::map<int, std::shared_ptr<rendering_engine>> engines;
   std::shared_ptr<pipeline_system> system;
   std::shared_ptr<queue> cmds;

@@ -42,6 +42,10 @@ if (SANITIZER)
     add_definitions("-fsanitize=address")
 endif()
 
+if (DEVELOP)
+    add_definitions("-DDEVELOP")
+endif()
+
 if (DEBUG)
     message("This is a DEBUG build.")
     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
