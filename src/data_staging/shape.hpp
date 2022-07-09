@@ -19,5 +19,5 @@ template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace data_staging {
-using shape_t = std::variant<data_staging::circle, data_staging::line>;
+using shape_t = std::variant<std::monostate, data_staging::circle, data_staging::line>;
 }

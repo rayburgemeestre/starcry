@@ -18,12 +18,15 @@ namespace data_staging {
 
 class line {
 private:
-  vector2d line_start_;
-  vector2d line_end_;
+  int64_t unique_id_;
+  int64_t level_;
+
+  //  vector2d line_start_;
+  //  vector2d line_end_;
   // double z_ = 0;
   // double z2_ = 0;
 
-  double line_width_ = 1.;
+  //  double line_width_ = 1.;
 
   // double scale_ = 1.;
   // double opacity_ = 1.;
@@ -39,8 +42,16 @@ private:
   std::string toroidal_group_;
 
 public:
-  line(vector2d line_start, vector2d line_end, double line_width)
-      : line_start_(line_start), line_end_(line_end), line_width_(line_width) {}
+  //  line(vector2d line_start, vector2d line_end, double line_width)
+  //      : line_start_(line_start), line_end_(line_end), line_width_(line_width) {}
+
+  int64_t unique_id() const {
+    return unique_id_;
+  }
+
+  int64_t level() const {
+    return level_;
+  }
 
   void set_gradient(std::string_view gradient) {
     gradient_ = gradient;

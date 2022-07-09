@@ -75,8 +75,9 @@ private:
 
   std::map<std::string, quadtree> qts;
   std::map<std::string, quadtree> qts_gravity;
-  std::unordered_map<int64_t, v8::Local<v8::Object>> next_instance_map;
-  std::unordered_map<int64_t, v8::Local<v8::Object>> intermediate_map;
+  // TODO: Can we do without copies, please?
+  std::unordered_map<int64_t, data_staging::shape_t> next_instance_map;
+  std::unordered_map<int64_t, data_staging::shape_t> intermediate_map;
   data::settings settings_;
 
   int min_intermediates = 1.;
@@ -122,7 +123,7 @@ public:
   void revert_all_changes(v8_interact& i);
   static void revert_position_updates(v8_interact& i);
   void call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances);
-  void create_new_mappings(v8_interact& i, v8::Local<v8::Array>& next_instances, v8::Local<v8::Array>& intermediates);
+  void create_new_mappings(v8_interact& i);
   void update_object_positions(v8_interact& i, v8::Local<v8::Object>& video);
   void update_object_toroidal(v8_interact& i, v8::Local<v8::Object>& instance, double& x, double& y);
   void update_object_interactions(v8_interact& i,

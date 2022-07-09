@@ -355,13 +355,13 @@ void native_generator::init_object_instances() {
   // This function is called whenever a scene is set. (once per scene)
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     genctx.set_scene(scenesettings.current_scene_next);
-    auto& i = genctx.i();
+    // auto& i = genctx.i();
 
     // whenever we switch to a new scene, we'll copy all the object state from the previous scene
     if (scenesettings.current_scene_next > 0) {
       logger(INFO) << "Switching to new scene, copying all state from previous." << std::endl;
-      auto prev_current_scene = i.get_index(genctx.scenes, scenesettings.current_scene_next - 1);
-      auto prev_sceneobj = prev_current_scene.As<v8::Object>();
+      // auto prev_current_scene = i.get_index(genctx.scenes, scenesettings.current_scene_next - 1);
+      // auto prev_sceneobj = prev_current_scene.As<v8::Object>();
       // continue from previous
       //      genctx.instances = i.v8_array(prev_sceneobj, "instances", v8::Array::New(isolate));
       //      genctx.instances_next = i.v8_array(prev_sceneobj, "instances_next", v8::Array::New(isolate));
@@ -472,11 +472,11 @@ void native_generator::create_bookkeeping_for_script_objects(v8::Local<v8::Objec
 
 void native_generator::instantiate_additional_objects_from_new_scene(v8::Local<v8::Array>& scene_objects,
                                                                      v8::Local<v8::Object>* parent_object) {
-  auto& i = genctx.i();
+  // auto& i = genctx.i();
 
   // instantiate all the additional objects from the new scene
   for (size_t j = 0; j < scene_objects->Length(); j++) {
-    auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
+    // auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
     // below can recursively add new objects as init() invocations spawn new objects, and so on
 
     static util::random_generator rng;
@@ -587,7 +587,7 @@ bool native_generator::_generate_frame() {
       // auto objects = i.v8_array(obj, "objects");
       auto current_scene = i.get_index(scenes, scenesettings.current_scene_next);
       if (!current_scene->IsObject()) return;
-      auto sceneobj = current_scene.As<v8::Object>();
+      // auto sceneobj = current_scene.As<v8::Object>();
 
       stepper.reset();
       indexes.clear();
@@ -641,7 +641,7 @@ bool native_generator::_generate_frame() {
           }
 
           // create mappings
-          // create_new_mappings(i, next_instances, intermediates);
+          create_new_mappings(i);
 
           // handle object movement (velocity added to position)
           update_object_positions(i, video);
@@ -741,32 +741,43 @@ void native_generator::call_next_frame_event(v8_interact& i, v8::Local<v8::Array
   }
 }
 
-void native_generator::create_new_mappings(v8_interact& i,
-                                           v8::Local<v8::Array>& next_instances,
-                                           v8::Local<v8::Array>& intermediates) {
+void native_generator::create_new_mappings(v8_interact& i) {
   next_instance_map.clear();
   intermediate_map.clear();
-  for (size_t j = 0; j < next_instances->Length(); j++) {
-    auto next = i.get_index(next_instances, j).As<v8::Object>();
-    const auto unique_id = i.integer_number(next, "unique_id");
-    next_instance_map[unique_id] = next;
+  for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
+    // Will we just put copies here now??
+    std::visit(overloaded{[](std::monostate) {},
+                          [&](data_staging::circle& shape) {
+                            next_instance_map[shape.unique_id()] = shape;
+                          },
+                          [&](data_staging::line& shape) {
+                            next_instance_map[shape.unique_id()] = shape;
+                          }},
+               shape);
   }
-  for (size_t index = 0; index < intermediates->Length(); index++) {
-    auto intermediate_instance = i.get_index(intermediates, index).As<v8::Object>();
-    const auto uid = i.integer_number(intermediate_instance, "unique_id");
-    intermediate_map[uid] = intermediate_instance;
+  for (auto& shape : scene_shapes_intermediate[scenesettings.current_scene_next]) {
+    // Will we just put copies here now??
+    std::visit(overloaded{[](std::monostate) {},
+                          [&](data_staging::circle& shape) {
+                            intermediate_map[shape.unique_id()] = shape;
+                          },
+                          [&](data_staging::line& shape) {
+                            intermediate_map[shape.unique_id()] = shape;
+                          }},
+               shape);
   }
 }
 
 void native_generator::update_object_positions(v8_interact& i, v8::Local<v8::Object>& video) {
   // clear function caching
   cached_xy.clear();
-  auto isolate = i.get_isolate();
+  // auto isolate = i.get_isolate();
   int64_t scenesettings_from_object_id = -1;
   int64_t scenesettings_from_object_id_level = -1;
 
   for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
-    std::visit(overloaded{[&](data_staging::circle& shape) {
+    std::visit(overloaded{[](std::monostate) {},
+                          [&](data_staging::circle& shape) {
                             // auto unique_id = i.integer_number(instance, "unique_id");
                             // auto level = i.integer_number(instance, "level");
                             // std::string type = i.str(instance, "type");
@@ -891,150 +902,150 @@ void native_generator::update_object_interactions(v8_interact& i,
                                                   v8::Local<v8::Array>& intermediates,
                                                   v8::Local<v8::Array>& previous_instances,
                                                   v8::Local<v8::Object>& video) {
-  stepper.reset_current();
-  const auto isolate = i.get_isolate();
-
-  // we cannot simply iterate over the next_instances array, since the array might mutate
-  // during looping (since objects can trigger spawned objects, etc.) for this reason, create
-  // a copy of the array and iterate over that
-
-  std::vector<v8::Local<v8::Object>> instances;
-  for (size_t index = 0; index < next_instances->Length(); index++) {
-    auto next_instance = i.get_index(next_instances, index).As<v8::Object>();
-    instances.push_back(next_instance);
-  }
-
-  for (auto& next_instance : instances) {
-    auto instance_uid = i.integer_number(next_instance, "unique_id");
-    auto find = intermediate_map.find(instance_uid);
-    if (find == intermediate_map.end()) {
-      continue;
-    }
-    auto intermediate_instance = find->second;
-
-    auto motion_blur = !i.has_field(next_instance, "motion_blur") || i.boolean(next_instance, "motion_blur");
-
-    if (!motion_blur) {
-      i.set_field(next_instance, "steps", v8::Number::New(isolate, 1));
-    } else {
-      double dist = get_max_travel_of_object(i, next_instances, intermediate_instance, next_instance);
-      if (dist > max_dist_found) {
-        max_dist_found = dist;
-      }
-      auto steps = update_steps(dist);
-
-      // TODO: why is this recorded_steps static
-      // experimentally put this here for now
-      static std::unordered_map<int64_t, int> recorded_steps;
-
-      // below code is ugly and should be refactored soon anyway
-      auto inherit = i.get(next_instance, "inherited");
-      if (inherit->IsBoolean() && inherit.As<v8::Boolean>()->Value()) {
-        // inherited, do not set our own dist etc.
-        // EDIT: we need to read from cache as well, in case stuff got reverted..
-        i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[instance_uid]));
-      } else {
-        if (attempt == 1) {
-          i.set_field(next_instance, "__dist__", v8::Number::New(isolate, dist));
-          i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
-          recorded_steps[instance_uid] = steps;
-        } else if (attempt > 1) {
-          i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[instance_uid]));
-        }
-        // cascade to left and right props, temp
-        if (i.has_field(next_instance, "props")) {
-          auto p = i.get(next_instance, "props");
-          if (p->IsObject()) {
-            auto props = p.As<v8::Object>();
-            for (const auto& left_or_right_str : {"left", "right"})
-              if (i.has_field(props, left_or_right_str)) {
-                auto l = i.get(props, left_or_right_str);
-                if (l->IsArray()) {
-                  auto a = l.As<v8::Array>();
-                  for (size_t m = 0; m < a->Length(); m++) {
-                    auto left_or_right = i.get_index(a, m).As<v8::Object>();
-                    // TODO: lambdafy: below is copied from block above.
-                    if (attempt == 1) {
-                      auto use_dist = dist;
-                      auto use_steps = steps;
-                      if (i.has_field(left_or_right, "__dist__")) {
-                        use_dist = std::max(use_dist, i.double_number(left_or_right, "__dist__"));
-                      }
-                      if (i.has_field(left_or_right, "steps")) {
-                        use_steps = std::max(use_steps, (int)i.integer_number(left_or_right, "steps"));
-                      }
-                      auto a = i.integer_number(left_or_right, "unique_id");
-                      recorded_steps[a] = use_steps;
-                      i.set_field(left_or_right, "__dist__", v8::Number::New(isolate, dist));
-                      i.set_field(left_or_right, "steps", v8::Number::New(isolate, use_steps));
-                    } else if (attempt > 1) {
-                      auto a = i.integer_number(left_or_right, "unique_id");
-                      i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
-                    }
-                    i.set_field(left_or_right, "inherited", v8::Boolean::New(isolate, true));
-                  }
-                } else if (l->IsObject()) {
-                  auto left_or_right = l.As<v8::Object>();
-                  if (attempt == 1) {
-                    auto use_dist = dist;
-                    auto use_steps = steps;
-                    if (i.has_field(left_or_right, "__dist__")) {
-                      use_dist = std::max(use_dist, i.double_number(left_or_right, "__dist__"));
-                    }
-                    if (i.has_field(left_or_right, "steps")) {
-                      use_steps = std::max(use_steps, (int)i.integer_number(left_or_right, "steps"));
-                    }
-                    auto a = i.integer_number(left_or_right, "unique_id");
-                    recorded_steps[a] = use_steps;
-                    i.set_field(left_or_right, "__dist__", v8::Number::New(isolate, use_dist));
-                    i.set_field(left_or_right, "steps", v8::Number::New(isolate, use_steps));
-                  } else if (attempt > 1) {
-                    auto a = i.integer_number(left_or_right, "unique_id");
-                    i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
-                  }
-                  i.set_field(left_or_right, "inherited", v8::Boolean::New(isolate, true));
-                }
-              }
-          }
-        }
-      }
-    }
-    handle_collisions(i, next_instance, next_instances);
-    handle_gravity(i, next_instance, next_instances);
-  }
+  //  stepper.reset_current();
+  //  const auto isolate = i.get_isolate();
+  //
+  //  // we cannot simply iterate over the next_instances array, since the array might mutate
+  //  // during looping (since objects can trigger spawned objects, etc.) for this reason, create
+  //  // a copy of the array and iterate over that
+  //
+  //  std::vector<v8::Local<v8::Object>> instances;
+  //  for (size_t index = 0; index < next_instances->Length(); index++) {
+  //    auto next_instance = i.get_index(next_instances, index).As<v8::Object>();
+  //    instances.push_back(next_instance);
+  //  }
+  //
+  //  for (auto& next_instance : instances) {
+  //    auto instance_uid = i.integer_number(next_instance, "unique_id");
+  //    auto find = intermediate_map.find(instance_uid);
+  //    if (find == intermediate_map.end()) {
+  //      continue;
+  //    }
+  //    auto intermediate_instance = find->second;
+  //
+  //    auto motion_blur = !i.has_field(next_instance, "motion_blur") || i.boolean(next_instance, "motion_blur");
+  //
+  //    if (!motion_blur) {
+  //      i.set_field(next_instance, "steps", v8::Number::New(isolate, 1));
+  //    } else {
+  //      double dist = get_max_travel_of_object(i, next_instances, intermediate_instance, next_instance);
+  //      if (dist > max_dist_found) {
+  //        max_dist_found = dist;
+  //      }
+  //      auto steps = update_steps(dist);
+  //
+  //      // TODO: why is this recorded_steps static
+  //      // experimentally put this here for now
+  //      static std::unordered_map<int64_t, int> recorded_steps;
+  //
+  //      // below code is ugly and should be refactored soon anyway
+  //      auto inherit = i.get(next_instance, "inherited");
+  //      if (inherit->IsBoolean() && inherit.As<v8::Boolean>()->Value()) {
+  //        // inherited, do not set our own dist etc.
+  //        // EDIT: we need to read from cache as well, in case stuff got reverted..
+  //        i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[instance_uid]));
+  //      } else {
+  //        if (attempt == 1) {
+  //          i.set_field(next_instance, "__dist__", v8::Number::New(isolate, dist));
+  //          i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
+  //          recorded_steps[instance_uid] = steps;
+  //        } else if (attempt > 1) {
+  //          i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[instance_uid]));
+  //        }
+  //        // cascade to left and right props, temp
+  //        if (i.has_field(next_instance, "props")) {
+  //          auto p = i.get(next_instance, "props");
+  //          if (p->IsObject()) {
+  //            auto props = p.As<v8::Object>();
+  //            for (const auto& left_or_right_str : {"left", "right"})
+  //              if (i.has_field(props, left_or_right_str)) {
+  //                auto l = i.get(props, left_or_right_str);
+  //                if (l->IsArray()) {
+  //                  auto a = l.As<v8::Array>();
+  //                  for (size_t m = 0; m < a->Length(); m++) {
+  //                    auto left_or_right = i.get_index(a, m).As<v8::Object>();
+  //                    // TODO: lambdafy: below is copied from block above.
+  //                    if (attempt == 1) {
+  //                      auto use_dist = dist;
+  //                      auto use_steps = steps;
+  //                      if (i.has_field(left_or_right, "__dist__")) {
+  //                        use_dist = std::max(use_dist, i.double_number(left_or_right, "__dist__"));
+  //                      }
+  //                      if (i.has_field(left_or_right, "steps")) {
+  //                        use_steps = std::max(use_steps, (int)i.integer_number(left_or_right, "steps"));
+  //                      }
+  //                      auto a = i.integer_number(left_or_right, "unique_id");
+  //                      recorded_steps[a] = use_steps;
+  //                      i.set_field(left_or_right, "__dist__", v8::Number::New(isolate, dist));
+  //                      i.set_field(left_or_right, "steps", v8::Number::New(isolate, use_steps));
+  //                    } else if (attempt > 1) {
+  //                      auto a = i.integer_number(left_or_right, "unique_id");
+  //                      i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
+  //                    }
+  //                    i.set_field(left_or_right, "inherited", v8::Boolean::New(isolate, true));
+  //                  }
+  //                } else if (l->IsObject()) {
+  //                  auto left_or_right = l.As<v8::Object>();
+  //                  if (attempt == 1) {
+  //                    auto use_dist = dist;
+  //                    auto use_steps = steps;
+  //                    if (i.has_field(left_or_right, "__dist__")) {
+  //                      use_dist = std::max(use_dist, i.double_number(left_or_right, "__dist__"));
+  //                    }
+  //                    if (i.has_field(left_or_right, "steps")) {
+  //                      use_steps = std::max(use_steps, (int)i.integer_number(left_or_right, "steps"));
+  //                    }
+  //                    auto a = i.integer_number(left_or_right, "unique_id");
+  //                    recorded_steps[a] = use_steps;
+  //                    i.set_field(left_or_right, "__dist__", v8::Number::New(isolate, use_dist));
+  //                    i.set_field(left_or_right, "steps", v8::Number::New(isolate, use_steps));
+  //                  } else if (attempt > 1) {
+  //                    auto a = i.integer_number(left_or_right, "unique_id");
+  //                    i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
+  //                  }
+  //                  i.set_field(left_or_right, "inherited", v8::Boolean::New(isolate, true));
+  //                }
+  //              }
+  //          }
+  //        }
+  //      }
+  //    }
+  //    handle_collisions(i, next_instance, next_instances);
+  //    handle_gravity(i, next_instance, next_instances);
+  //  }
 }
 
 void native_generator::handle_collisions(v8_interact& i,
                                          v8::Local<v8::Object> instance,
                                          v8::Local<v8::Array> next_instances) {
-  // Now do the collision detection part
-  // NOTE: we multiple radius/size * 2.0 since we're not looking up a point, and querying the quadtree does
-  // not check for overlap, but only whether the x,y is inside the specified range. If we don't want to miss
-  // points on the edge of our circle, we need to widen the matching range.
-  // TODO: for different sizes of circle collision detection, we need to somehow adjust the interface to this
-  // lookup somehow.
-  std::vector<point_type> found;
-  auto type = i.str(instance, "type");
-  auto collision_group = i.str(instance, "collision_group");
-  if (collision_group == "undefined") {
-    return;
-  }
-  auto x = i.double_number(instance, "x");
-  auto y = i.double_number(instance, "y");
-  auto unique_id = i.integer_number(instance, "unique_id");
-  fix_xy(i, instance, unique_id, x, y);
-
-  auto radius = i.double_number(instance, "radius");
-  auto radiussize = i.double_number(instance, "radiussize");
-
-  qts[collision_group].query(unique_id, circle(position(x, y), radius * 2.0, radiussize * 2.0), found);
-  if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
-    for (const auto& collide : found) {
-      const auto unique_id2 = collide.userdata;
-      auto instance2 = next_instance_map.at(unique_id2);
-      handle_collision(i, instance, instance2);
-    }
-  }
+  //  // Now do the collision detection part
+  //  // NOTE: we multiple radius/size * 2.0 since we're not looking up a point, and querying the quadtree does
+  //  // not check for overlap, but only whether the x,y is inside the specified range. If we don't want to miss
+  //  // points on the edge of our circle, we need to widen the matching range.
+  //  // TODO: for different sizes of circle collision detection, we need to somehow adjust the interface to this
+  //  // lookup somehow.
+  //  std::vector<point_type> found;
+  //  auto type = i.str(instance, "type");
+  //  auto collision_group = i.str(instance, "collision_group");
+  //  if (collision_group == "undefined") {
+  //    return;
+  //  }
+  //  auto x = i.double_number(instance, "x");
+  //  auto y = i.double_number(instance, "y");
+  //  auto unique_id = i.integer_number(instance, "unique_id");
+  //  fix_xy(i, instance, unique_id, x, y);
+  //
+  //  auto radius = i.double_number(instance, "radius");
+  //  auto radiussize = i.double_number(instance, "radiussize");
+  //
+  //  qts[collision_group].query(unique_id, circle(position(x, y), radius * 2.0, radiussize * 2.0), found);
+  //  if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
+  //    for (const auto& collide : found) {
+  //      const auto unique_id2 = collide.userdata;
+  //      auto instance2 = next_instance_map.at(unique_id2);
+  //      handle_collision(i, instance, instance2);
+  //    }
+  //  }
 }
 
 void native_generator::handle_collision(v8_interact& i,
@@ -1104,41 +1115,41 @@ void native_generator::handle_collision(v8_interact& i,
 void native_generator::handle_gravity(v8_interact& i,
                                       v8::Local<v8::Object> instance,
                                       v8::Local<v8::Array> next_instances) {
-  std::vector<point_type> found;
-
-  auto type = i.str(instance, "type");
-  auto unique_id = i.integer_number(instance, "unique_id");
-  auto gravity_group = i.str(instance, "gravity_group");
-  if (gravity_group == "undefined") {
-    return;
-  }
-
-  if (i.double_number(instance, "velocity", 0) == 0) return;  // skip this one.
-
-  auto& video = genctx.video_obj;
-  auto x = i.double_number(instance, "x");
-  auto y = i.double_number(instance, "y");
-  fix_xy(i, instance, unique_id, x, y);
-
-  auto radius = i.double_number(instance, "radius");
-  auto radiussize = i.double_number(instance, "radiussize");
-  auto range = i.double_number(video, "gravity_range", 1000);
-
-  qts_gravity[gravity_group].query(
-      unique_id, circle(position(x, y), range + (radius * 2.0), range + (radiussize * 2.0)), found);
-
-  if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
-    vector2d acceleration(0, 0);
-    for (const auto& in_range : found) {
-      const auto unique_id2 = in_range.userdata;
-      auto instance2 = next_instance_map.at(unique_id2);
-      handle_gravity(i, instance, instance2, acceleration);
-    }
-    vector2d vel(i.double_number(instance, "vel_x", 0.), i.double_number(instance, "vel_y", 0.));
-    vel = add_vector(vel, acceleration);
-    i.set_field(instance, "vel_x", v8::Number::New(i.get_isolate(), vel.x));
-    i.set_field(instance, "vel_y", v8::Number::New(i.get_isolate(), vel.y));
-  }
+  //  std::vector<point_type> found;
+  //
+  //  auto type = i.str(instance, "type");
+  //  auto unique_id = i.integer_number(instance, "unique_id");
+  //  auto gravity_group = i.str(instance, "gravity_group");
+  //  if (gravity_group == "undefined") {
+  //    return;
+  //  }
+  //
+  //  if (i.double_number(instance, "velocity", 0) == 0) return;  // skip this one.
+  //
+  //  auto& video = genctx.video_obj;
+  //  auto x = i.double_number(instance, "x");
+  //  auto y = i.double_number(instance, "y");
+  //  fix_xy(i, instance, unique_id, x, y);
+  //
+  //  auto radius = i.double_number(instance, "radius");
+  //  auto radiussize = i.double_number(instance, "radiussize");
+  //  auto range = i.double_number(video, "gravity_range", 1000);
+  //
+  //  qts_gravity[gravity_group].query(
+  //      unique_id, circle(position(x, y), range + (radius * 2.0), range + (radiussize * 2.0)), found);
+  //
+  //  if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
+  //    vector2d acceleration(0, 0);
+  //    for (const auto& in_range : found) {
+  //      const auto unique_id2 = in_range.userdata;
+  //      auto instance2 = next_instance_map.at(unique_id2);
+  //      handle_gravity(i, instance, instance2, acceleration);
+  //    }
+  //    vector2d vel(i.double_number(instance, "vel_x", 0.), i.double_number(instance, "vel_y", 0.));
+  //    vel = add_vector(vel, acceleration);
+  //    i.set_field(instance, "vel_x", v8::Number::New(i.get_isolate(), vel.x));
+  //    i.set_field(instance, "vel_y", v8::Number::New(i.get_isolate(), vel.y));
+  //  }
 }
 
 void native_generator::handle_gravity(v8_interact& i,
@@ -1271,245 +1282,247 @@ double native_generator::get_max_travel_of_object(v8_interact& i,
                                                   v8::Local<v8::Array>& next_instances,
                                                   v8::Local<v8::Object>& previous_instance,
                                                   v8::Local<v8::Object>& instance) {
-  // Update level for all objects
-  // TODO: move to better place
-  auto level = i.integer_number(instance, "level");
-  auto type = i.str(instance, "type");
-  auto is_line = type == "line";
-  auto label = i.str(instance, "label");
-  auto random_hash = i.str(instance, "__random_hash__");
-  auto shape_scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
-  auto prev_shape_scale = i.has_field(previous_instance, "scale") ? i.double_number(previous_instance, "scale") : 1.0;
-
-  const auto calculate = [this](v8_interact& i,
-                                v8::Local<v8::Array>& next_instances,
-                                v8::Local<v8::Object>& instance,
-                                std::unordered_map<int64_t, v8::Local<v8::Object>>& lookup,
-                                int64_t level,
-                                bool is_line) {
-    double angle = 0;
-
-    data::coord pos;     // X, Y
-    data::coord pos2;    // for lines there is an X2, Y2.
-    data::coord parent;  // X, Y of parent
-                         //    data::coord parent2; // X2, Y2 of parent
-                         //    data::coord parent3; // centered X,Y of parent (i.o.w., middle of the line for lines)
-    data::coord pos_for_parent;
-
-    std::vector<v8::Local<v8::Object>> lineage;
-    lineage.push_back(instance);
-    auto parent_uid = i.integer_number(instance, "parent_uid");
-    while (parent_uid != -1) {
-      auto parent = lookup.at(parent_uid);
-      lineage.push_back(parent);
-      parent_uid = i.integer_number(parent, "parent_uid");
-    }
-
-    // reverse iterate over lineage vector
-    for (auto it = lineage.rbegin(); it != lineage.rend(); ++it) {
-      auto& current_obj = *it;
-      const bool current_is_line = i.str(current_obj, "type") == "line";
-      // const bool current_is_pivot =
-      //    i.has_field(parent, "pivot") ? i.boolean(current_obj, "pivot") : false;
-
-      // X,Y
-      data::coord current{i.double_number(current_obj, "x"), i.double_number(current_obj, "y")};
-      const double current_angle = i.double_number(current_obj, "angle", 0.);
-
-      // X2, Y2, and centerX, centerY, for lines
-      data::coord current2, current_center;
-      if (current_is_line) {
-        current2 = data::coord{i.double_number(current_obj, "x2"), i.double_number(current_obj, "y2")};
-        current_center.x = ((current.x - current2.x) / 2) + current2.x;
-        current_center.y = ((current.y - current2.y) / 2) + current2.y;
-      }
-
-      // OPTION 1: simply center from X,Y always (option for points and lines)
-      // pos.add(current);
-
-      // OPTION 2: center from X2, Y2 (only option for lines)
-      // pos.add(current2);
-
-      // OPTION 3: center from centerX, centerY (only option for lines)
-      // pos.add(current_center);
-
-      // for now, let's go for the most intuitive choice
-      pos_for_parent.add(current_is_line ? current_center : current);
-      pos.add(current);
-      pos2.add(current_is_line ? current2 : current);
-
-      // angle = current_is_pivot ? current_angle : (angle + current_angle);
-
-      // total angle, cumulative no matter what
-      if (!std::isnan(current_angle)) angle += current_angle;
-
-      if (angle != 0.) {
-        if (current_is_line) {
-          // current angle + angle with parent
-          auto angle1 = angle + get_angle(parent.x, parent.y, pos2.x, pos2.y);
-          while (angle1 > 360.) angle1 -= 360.;
-          auto rads = angle1 * M_PI / 180.0;
-          auto ratio = 1.0;
-          // rotates around its center
-          auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
-          auto move = dist * ratio * -1;
-          if (false) {
-            // auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
-            // auto move = dist * ratio * -1;
-            pos.x = parent.x + (cos(rads) * move) + current_center.x;
-            pos.y = parent.y + (sin(rads) * move) + current_center.y;
-            pos2.x = parent.x - (cos(rads) * move) + current_center.x;
-            pos2.y = parent.y - (sin(rads) * move) + current_center.y;
-          }
-          // rotates in length
-          if (true) {
-            dist = get_distance(current.x, current.y, current2.x, current2.y);
-            move = dist * ratio * -1;
-            // pos.x = parent.x + (cos(rads) * move);
-            // pos.y = parent.y + (sin(rads) * move);
-            pos2.x = parent.x + (cos(rads) * move);
-            pos2.y = parent.y + (sin(rads) * move);
-          }
-          // unsure
-          pos_for_parent.x = parent.x + (cos(rads) * move);  // + current_center.x;
-          pos_for_parent.y = parent.y + (sin(rads) * move);  // + current_center.y;
-        } else {
-          // current angle + angle with parent
-          auto angle1 = angle + get_angle(parent.x, parent.y, pos.x, pos.y);
-          while (angle1 > 360.) angle1 -= 360.;
-          auto rads = angle1 * M_PI / 180.0;
-          auto ratio = 1.0;
-          auto dist = get_distance(0, 0, current.x, current.y);
-          auto move = dist * ratio * -1;
-          pos.x = parent.x + (cos(rads) * move);
-          pos.y = parent.y + (sin(rads) * move);
-          pos_for_parent.x = parent.x + (cos(rads) * move);
-          pos_for_parent.y = parent.y + (sin(rads) * move);
-        }
-      }
-
-      // now we can update the parent for the next level we're about to handle
-      parent = pos_for_parent;
-    }
-
-    // store transitive x & y etc.
-    i.set_field(instance, "transitive_x", v8::Number::New(i.get_isolate(), pos.x));
-    i.set_field(instance, "transitive_y", v8::Number::New(i.get_isolate(), pos.y));
-    if (is_line) {
-      i.set_field(instance, "transitive_x2", v8::Number::New(i.get_isolate(), pos2.x));
-      i.set_field(instance, "transitive_y2", v8::Number::New(i.get_isolate(), pos2.y));
-    }
-
-    // pass along x, y, x2, y2.
-    if (i.has_field(instance, "props")) {
-      const auto process_obj =
-          [&i, &pos, this](v8::Local<v8::Object>& o, const std::string& inherit_x, const std::string& inherit_y) {
-            const auto unique_id = i.integer_number(o, "unique_id");
-            const auto find = next_instance_map.find(unique_id);
-            if (find != next_instance_map.end()) {
-              auto other_val = find->second;
-              if (other_val->IsObject()) {
-                auto other = other_val.As<v8::Object>();
-                i.set_field(other, inherit_x, v8::Number::New(i.get_isolate(), pos.x));
-                i.set_field(other, inherit_y, v8::Number::New(i.get_isolate(), pos.y));
-              }
-            }
-          };
-      const auto process = [&i, &process_obj](const v8::Local<v8::Value>& field_value,
-                                              const std::string& inherit_x,
-                                              const std::string& inherit_y) {
-        if (field_value->IsArray()) {
-          auto a = field_value.As<v8::Array>();
-          for (size_t l = 0; l < a->Length(); l++) {
-            auto o = i.get_index(a, l).As<v8::Object>();
-            process_obj(o, inherit_x, inherit_y);
-          }
-        } else if (field_value->IsObject()) {
-          auto o = field_value.As<v8::Object>();
-          process_obj(o, inherit_x, inherit_y);
-        }
-      };
-      auto props = i.v8_obj(instance, "props");
-      auto obj_fields = i.prop_names(props);
-      for (size_t k = 0; k < obj_fields->Length(); k++) {
-        auto field_name = i.get_index(obj_fields, k);
-        auto field_value = i.get(props, field_name);
-        if (!field_value->IsObject()) continue;
-        auto str = i.str(obj_fields, k);
-        if (str == "left") {
-          process(field_value, "inherited_x", "inherited_y");
-        } else if (str == "right") {
-          process(field_value, "inherited_x2", "inherited_y2");
-        }
-      }
-    }
-
-    return std::make_tuple(pos.x, pos.y, pos2.x, pos2.y);
-  };
-
-  auto [x, y, x2, y2] = calculate(i, next_instances, instance, next_instance_map, level, is_line);
-  auto [prev_x, prev_y, prev_x2, prev_y2] =
-      calculate(i, next_instances, previous_instance, intermediate_map, level, is_line);
-
-  // Calculate how many pixels are maximally covered by this instance, this is currently very simplified
-  x *= scalesettings.video_scale_next * shape_scale;
-  prev_x *= scalesettings.video_scale_intermediate * prev_shape_scale;
-  y *= scalesettings.video_scale_next * shape_scale;
-  prev_y *= scalesettings.video_scale_intermediate * prev_shape_scale;
-
-  //  // TODO: make smarter for circles and lines, this is just temporary code
-  //  rectangle canvas(position(-canvas_w / 2., -canvas_h/2.), position(canvas_w / 2., canvas_h/2.));
+  return 1;  // temp
+  //  // Update level for all objects
+  //  // TODO: move to better place
+  //  auto level = i.integer_number(instance, "level");
+  //  auto type = i.str(instance, "type");
+  //  auto is_line = type == "line";
+  //  auto label = i.str(instance, "label");
+  //  auto random_hash = i.str(instance, "__random_hash__");
+  //  auto shape_scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
+  //  auto prev_shape_scale = i.has_field(previous_instance, "scale") ? i.double_number(previous_instance, "scale")
+  //  : 1.0;
+  //
+  //  const auto calculate = [this](v8_interact& i,
+  //                                v8::Local<v8::Array>& next_instances,
+  //                                v8::Local<v8::Object>& instance,
+  //                                std::unordered_map<int64_t, v8::Local<v8::Object>>& lookup,
+  //                                int64_t level,
+  //                                bool is_line) {
+  //    double angle = 0;
+  //
+  //    data::coord pos;     // X, Y
+  //    data::coord pos2;    // for lines there is an X2, Y2.
+  //    data::coord parent;  // X, Y of parent
+  //                         //    data::coord parent2; // X2, Y2 of parent
+  //                         //    data::coord parent3; // centered X,Y of parent (i.o.w., middle of the line for lines)
+  //    data::coord pos_for_parent;
+  //
+  //    std::vector<v8::Local<v8::Object>> lineage;
+  //    lineage.push_back(instance);
+  //    auto parent_uid = i.integer_number(instance, "parent_uid");
+  //    while (parent_uid != -1) {
+  //      auto parent = lookup.at(parent_uid);
+  //      lineage.push_back(parent);
+  //      parent_uid = i.integer_number(parent, "parent_uid");
+  //    }
+  //
+  //    // reverse iterate over lineage vector
+  //    for (auto it = lineage.rbegin(); it != lineage.rend(); ++it) {
+  //      auto& current_obj = *it;
+  //      const bool current_is_line = i.str(current_obj, "type") == "line";
+  //      // const bool current_is_pivot =
+  //      //    i.has_field(parent, "pivot") ? i.boolean(current_obj, "pivot") : false;
+  //
+  //      // X,Y
+  //      data::coord current{i.double_number(current_obj, "x"), i.double_number(current_obj, "y")};
+  //      const double current_angle = i.double_number(current_obj, "angle", 0.);
+  //
+  //      // X2, Y2, and centerX, centerY, for lines
+  //      data::coord current2, current_center;
+  //      if (current_is_line) {
+  //        current2 = data::coord{i.double_number(current_obj, "x2"), i.double_number(current_obj, "y2")};
+  //        current_center.x = ((current.x - current2.x) / 2) + current2.x;
+  //        current_center.y = ((current.y - current2.y) / 2) + current2.y;
+  //      }
+  //
+  //      // OPTION 1: simply center from X,Y always (option for points and lines)
+  //      // pos.add(current);
+  //
+  //      // OPTION 2: center from X2, Y2 (only option for lines)
+  //      // pos.add(current2);
+  //
+  //      // OPTION 3: center from centerX, centerY (only option for lines)
+  //      // pos.add(current_center);
+  //
+  //      // for now, let's go for the most intuitive choice
+  //      pos_for_parent.add(current_is_line ? current_center : current);
+  //      pos.add(current);
+  //      pos2.add(current_is_line ? current2 : current);
+  //
+  //      // angle = current_is_pivot ? current_angle : (angle + current_angle);
+  //
+  //      // total angle, cumulative no matter what
+  //      if (!std::isnan(current_angle)) angle += current_angle;
+  //
+  //      if (angle != 0.) {
+  //        if (current_is_line) {
+  //          // current angle + angle with parent
+  //          auto angle1 = angle + get_angle(parent.x, parent.y, pos2.x, pos2.y);
+  //          while (angle1 > 360.) angle1 -= 360.;
+  //          auto rads = angle1 * M_PI / 180.0;
+  //          auto ratio = 1.0;
+  //          // rotates around its center
+  //          auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
+  //          auto move = dist * ratio * -1;
+  //          if (false) {
+  //            // auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
+  //            // auto move = dist * ratio * -1;
+  //            pos.x = parent.x + (cos(rads) * move) + current_center.x;
+  //            pos.y = parent.y + (sin(rads) * move) + current_center.y;
+  //            pos2.x = parent.x - (cos(rads) * move) + current_center.x;
+  //            pos2.y = parent.y - (sin(rads) * move) + current_center.y;
+  //          }
+  //          // rotates in length
+  //          if (true) {
+  //            dist = get_distance(current.x, current.y, current2.x, current2.y);
+  //            move = dist * ratio * -1;
+  //            // pos.x = parent.x + (cos(rads) * move);
+  //            // pos.y = parent.y + (sin(rads) * move);
+  //            pos2.x = parent.x + (cos(rads) * move);
+  //            pos2.y = parent.y + (sin(rads) * move);
+  //          }
+  //          // unsure
+  //          pos_for_parent.x = parent.x + (cos(rads) * move);  // + current_center.x;
+  //          pos_for_parent.y = parent.y + (sin(rads) * move);  // + current_center.y;
+  //        } else {
+  //          // current angle + angle with parent
+  //          auto angle1 = angle + get_angle(parent.x, parent.y, pos.x, pos.y);
+  //          while (angle1 > 360.) angle1 -= 360.;
+  //          auto rads = angle1 * M_PI / 180.0;
+  //          auto ratio = 1.0;
+  //          auto dist = get_distance(0, 0, current.x, current.y);
+  //          auto move = dist * ratio * -1;
+  //          pos.x = parent.x + (cos(rads) * move);
+  //          pos.y = parent.y + (sin(rads) * move);
+  //          pos_for_parent.x = parent.x + (cos(rads) * move);
+  //          pos_for_parent.y = parent.y + (sin(rads) * move);
+  //        }
+  //      }
+  //
+  //      // now we can update the parent for the next level we're about to handle
+  //      parent = pos_for_parent;
+  //    }
+  //
+  //    // store transitive x & y etc.
+  //    i.set_field(instance, "transitive_x", v8::Number::New(i.get_isolate(), pos.x));
+  //    i.set_field(instance, "transitive_y", v8::Number::New(i.get_isolate(), pos.y));
+  //    if (is_line) {
+  //      i.set_field(instance, "transitive_x2", v8::Number::New(i.get_isolate(), pos2.x));
+  //      i.set_field(instance, "transitive_y2", v8::Number::New(i.get_isolate(), pos2.y));
+  //    }
+  //
+  //    // pass along x, y, x2, y2.
+  //    if (i.has_field(instance, "props")) {
+  //      const auto process_obj =
+  //          [&i, &pos, this](v8::Local<v8::Object>& o, const std::string& inherit_x, const std::string& inherit_y) {
+  //            const auto unique_id = i.integer_number(o, "unique_id");
+  //            const auto find = next_instance_map.find(unique_id);
+  //            if (find != next_instance_map.end()) {
+  //              auto other_val = find->second;
+  //              if (other_val->IsObject()) {
+  //                auto other = other_val.As<v8::Object>();
+  //                i.set_field(other, inherit_x, v8::Number::New(i.get_isolate(), pos.x));
+  //                i.set_field(other, inherit_y, v8::Number::New(i.get_isolate(), pos.y));
+  //              }
+  //            }
+  //          };
+  //      const auto process = [&i, &process_obj](const v8::Local<v8::Value>& field_value,
+  //                                              const std::string& inherit_x,
+  //                                              const std::string& inherit_y) {
+  //        if (field_value->IsArray()) {
+  //          auto a = field_value.As<v8::Array>();
+  //          for (size_t l = 0; l < a->Length(); l++) {
+  //            auto o = i.get_index(a, l).As<v8::Object>();
+  //            process_obj(o, inherit_x, inherit_y);
+  //          }
+  //        } else if (field_value->IsObject()) {
+  //          auto o = field_value.As<v8::Object>();
+  //          process_obj(o, inherit_x, inherit_y);
+  //        }
+  //      };
+  //      auto props = i.v8_obj(instance, "props");
+  //      auto obj_fields = i.prop_names(props);
+  //      for (size_t k = 0; k < obj_fields->Length(); k++) {
+  //        auto field_name = i.get_index(obj_fields, k);
+  //        auto field_value = i.get(props, field_name);
+  //        if (!field_value->IsObject()) continue;
+  //        auto str = i.str(obj_fields, k);
+  //        if (str == "left") {
+  //          process(field_value, "inherited_x", "inherited_y");
+  //        } else if (str == "right") {
+  //          process(field_value, "inherited_x2", "inherited_y2");
+  //        }
+  //      }
+  //    }
+  //
+  //    return std::make_tuple(pos.x, pos.y, pos2.x, pos2.y);
+  //  };
+  //
+  //  auto [x, y, x2, y2] = calculate(i, next_instances, instance, next_instance_map, level, is_line);
+  //  auto [prev_x, prev_y, prev_x2, prev_y2] =
+  //      calculate(i, next_instances, previous_instance, intermediate_map, level, is_line);
+  //
+  //  // Calculate how many pixels are maximally covered by this instance, this is currently very simplified
+  //  x *= scalesettings.video_scale_next * shape_scale;
+  //  prev_x *= scalesettings.video_scale_intermediate * prev_shape_scale;
+  //  y *= scalesettings.video_scale_next * shape_scale;
+  //  prev_y *= scalesettings.video_scale_intermediate * prev_shape_scale;
+  //
+  //  //  // TODO: make smarter for circles and lines, this is just temporary code
+  //  //  rectangle canvas(position(-canvas_w / 2., -canvas_h/2.), position(canvas_w / 2., canvas_h/2.));
+  //  //  if (is_line) {
+  //  //    rectangle shape_rect(position(x, y), position(x2, y2));
+  //  //    rectangle prev_shape_rect(position(prev_x - rad, prev_y - rad), position(prev_x + rad, prev_y + rad));
+  //  //    if (!canvas.overlaps(shape_rect) && !canvas.overlaps(prev_shape_rect)) {
+  //  //      return 0.;
+  //  //    }
+  //  //  } else {
+  //  //    rectangle shape_rect(position(x - rad, y - rad), position(x + rad, y + rad));
+  //  //    rectangle prev_shape_rect(position(prev_x - rad, prev_y - rad), position(prev_x + rad, prev_y + rad));
+  //  //    if (!canvas.overlaps(shape_rect) && !canvas.overlaps(prev_shape_rect)) {
+  //  //      return 0.;
+  //  //    }
+  //  //  }
+  //  auto dist = sqrt(pow(x - prev_x, 2) + pow(y - prev_y, 2));
+  //  // x2, y2
   //  if (is_line) {
-  //    rectangle shape_rect(position(x, y), position(x2, y2));
-  //    rectangle prev_shape_rect(position(prev_x - rad, prev_y - rad), position(prev_x + rad, prev_y + rad));
-  //    if (!canvas.overlaps(shape_rect) && !canvas.overlaps(prev_shape_rect)) {
-  //      return 0.;
-  //    }
-  //  } else {
-  //    rectangle shape_rect(position(x - rad, y - rad), position(x + rad, y + rad));
-  //    rectangle prev_shape_rect(position(prev_x - rad, prev_y - rad), position(prev_x + rad, prev_y + rad));
-  //    if (!canvas.overlaps(shape_rect) && !canvas.overlaps(prev_shape_rect)) {
-  //      return 0.;
-  //    }
+  //    x2 *= scalesettings.video_scale_next * shape_scale;
+  //    prev_x2 *= scalesettings.video_scale_intermediate * prev_shape_scale;
+  //    y2 *= scalesettings.video_scale_next * shape_scale;
+  //    prev_y2 *= scalesettings.video_scale_intermediate * prev_shape_scale;
+  //    dist = std::max(dist, sqrt(pow(x2 - prev_x2, 2) + pow(y2 - prev_y2, 2)));
   //  }
-  auto dist = sqrt(pow(x - prev_x, 2) + pow(y - prev_y, 2));
-  // x2, y2
-  if (is_line) {
-    x2 *= scalesettings.video_scale_next * shape_scale;
-    prev_x2 *= scalesettings.video_scale_intermediate * prev_shape_scale;
-    y2 *= scalesettings.video_scale_next * shape_scale;
-    prev_y2 *= scalesettings.video_scale_intermediate * prev_shape_scale;
-    dist = std::max(dist, sqrt(pow(x2 - prev_x2, 2) + pow(y2 - prev_y2, 2)));
-  }
-
-  // radius
-  auto radius = i.double_number(instance, "radius");
-  auto radiussize = i.double_number(instance, "radiussize");
-  auto prev_radius = i.double_number(previous_instance, "radius");
-  auto prev_radiussize = i.double_number(previous_instance, "radiussize");
-  auto rad = radius + radiussize;
-  auto prev_rad = prev_radius + prev_radiussize;
-  rad *= scalesettings.video_scale_next * shape_scale;
-  prev_rad *= scalesettings.video_scale_intermediate * prev_shape_scale;
-  // TODO: this is not 100% accurate, if an object is moving and expanding its radius the max distance can be more
-  // but this should at least result in a decent enough effect in most cases
-  dist = std::max(dist, fabs(prev_rad - rad));
-
-  // Make sure that we do not include any warped distance
-  if (i.has_field(instance, "__warped_dist__")) {
-    dist -= i.double_number(instance, "__warped_dist__");
-    // If object moves two pixels to the right, is then warped 500 px to the left
-    // It has traveled 498, and the above statement has resulted in a value of -2.
-    // If it moves to the left for 2 pixels, and is moved 500px to the right, the
-    // distance is 502px - 500px = 2px as well.
-    dist = fabs(dist);
-  }
-
-  // TODO: proper support for connected objects, so they can inherit the warped stuff!
-  if (dist > 100) {
-    // logger(INFO) << "Warning, distance found > 100, id hash: " << random_hash << std::endl;
-  }
-  return dist;
+  //
+  //  // radius
+  //  auto radius = i.double_number(instance, "radius");
+  //  auto radiussize = i.double_number(instance, "radiussize");
+  //  auto prev_radius = i.double_number(previous_instance, "radius");
+  //  auto prev_radiussize = i.double_number(previous_instance, "radiussize");
+  //  auto rad = radius + radiussize;
+  //  auto prev_rad = prev_radius + prev_radiussize;
+  //  rad *= scalesettings.video_scale_next * shape_scale;
+  //  prev_rad *= scalesettings.video_scale_intermediate * prev_shape_scale;
+  //  // TODO: this is not 100% accurate, if an object is moving and expanding its radius the max distance can be more
+  //  // but this should at least result in a decent enough effect in most cases
+  //  dist = std::max(dist, fabs(prev_rad - rad));
+  //
+  //  // Make sure that we do not include any warped distance
+  //  if (i.has_field(instance, "__warped_dist__")) {
+  //    dist -= i.double_number(instance, "__warped_dist__");
+  //    // If object moves two pixels to the right, is then warped 500 px to the left
+  //    // It has traveled 498, and the above statement has resulted in a value of -2.
+  //    // If it moves to the left for 2 pixels, and is moved 500px to the right, the
+  //    // distance is 502px - 500px = 2px as well.
+  //    dist = fabs(dist);
+  //  }
+  //
+  //  // TODO: proper support for connected objects, so they can inherit the warped stuff!
+  //  if (dist > 100) {
+  //    // logger(INFO) << "Warning, distance found > 100, id hash: " << random_hash << std::endl;
+  //  }
+  //  return dist;
 }
 
 void native_generator::convert_objects_to_render_job(v8_interact& i, step_calculator& sc, v8::Local<v8::Object> video) {
@@ -1531,6 +1544,7 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
                                                     v8::Local<v8::Object> video) {
   // Update level for all objects
   std::visit(overloaded{
+                 [](std::monostate) {},
                  [&](data_staging::circle& shape) {
                    auto level = 0;      // shape.level;
                    auto exists = true;  // !i.has_field(instance, "exists") || i.boolean(instance, "exists");
@@ -1737,33 +1751,34 @@ v8::Local<v8::Object> native_generator::spawn_object_native(v8::Local<v8::Object
   auto& i = genctx.i();
   auto created_instance =
       util::generator::instantiate_object_from_scene(i, genctx.objects, genctx.instances_next, obj, &spawner);
-  next_instance_map[i.integer_number(created_instance, "unique_id")] = created_instance;
+  // TODO:
+  // next_instance_map[i.integer_number(created_instance, "unique_id")] = created_instance;
   create_bookkeeping_for_script_objects(created_instance);
   return created_instance;
 }
 
 // TODO: will refactor soon
 void native_generator::fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t uid, double& x, double& y) {
-  // experimental function caching
-  double xx = 0;
-  double yy = 0;
-  auto find = cached_xy.find(uid);
-  if (find != cached_xy.end()) {
-    std::tie(xx, yy) = find->second;
-    x += xx;
-    y += yy;
-    return;
-  }
-  auto parent_uid = i.integer_number(instance, "parent_uid", -1);
-  while (parent_uid != -1) {
-    auto parent = next_instance_map.at(parent_uid);
-    if (i.str(parent, "type", "") == "script") {
-      xx += i.double_number(parent, "x");
-      yy += i.double_number(parent, "y");
-    }
-    parent_uid = i.integer_number(parent, "parent_uid");
-  }
-  cached_xy[uid] = std::make_pair(xx, yy);
-  x += xx;
-  y += yy;
+  //  // experimental function caching
+  //  double xx = 0;
+  //  double yy = 0;
+  //  auto find = cached_xy.find(uid);
+  //  if (find != cached_xy.end()) {
+  //    std::tie(xx, yy) = find->second;
+  //    x += xx;
+  //    y += yy;
+  //    return;
+  //  }
+  //  auto parent_uid = i.integer_number(instance, "parent_uid", -1);
+  //  while (parent_uid != -1) {
+  //    auto parent = next_instance_map.at(parent_uid);
+  //    if (i.str(parent, "type", "") == "script") {
+  //      xx += i.double_number(parent, "x");
+  //      yy += i.double_number(parent, "y");
+  //    }
+  //    parent_uid = i.integer_number(parent, "parent_uid");
+  //  }
+  //  cached_xy[uid] = std::make_pair(xx, yy);
+  //  x += xx;
+  //  y += yy;
 }
