@@ -17,7 +17,36 @@ _ = {
       'height': 1080,
     }
   },
-  'objects': {},
+  'objects': {
+    'balls': {
+      'x': 0,
+      'y': 0,
+      'init': function() {
+        for (let i = 0; i < 10000; i++) {
+          this.subobj.push(this.spawn({
+            'id': 'ball',
+            'x': rand() * 1000 - 500,
+            'y': rand() * 1000 - 500,
+            'z': 0,
+            'velocity': 10.,
+            'vel_x': Math.random(),
+            'vel_y': Math.random(),
+          }));
+        }
+      }
+    },
+    'ball': {
+      'type': 'circle',
+      //'collision_group': 'group1',
+      //'gravity_group': 'group1',
+      //'toroidal': 't1',
+      'blending_type': blending_type.normal,
+      'gradient': 'blue',
+      'radius': 0,
+      'radiussize': 5.0,
+    },
+
+  },
   'video': {
     'fps': 25,
     'width': 1920,
@@ -47,6 +76,7 @@ _ = {
     'name': 'scene1',
     'duration': 60,
     'objects': [
+      {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
       {'id': 'ball', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
     ],
   }]
