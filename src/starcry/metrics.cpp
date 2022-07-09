@@ -5,6 +5,7 @@
  */
 
 #include "starcry/metrics.h"
+#include "util/logger.h"
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
@@ -60,10 +61,10 @@ void metrics::init() {
         // Setup handler
         auto signal_handler = [](int signal) {
           if (signal == SIGABRT) {
-            std::cerr << "User exited the UI.\n";
+            logger(INFO) << "User exited the UI" << std::endl;
             std::_Exit(EXIT_SUCCESS);
           } else {
-            std::cerr << "Unexpected signal " << signal << " received\n";
+            logger(WARNING) << "Unexpected signal " << signal << " received" << std::endl;
           }
           std::_Exit(EXIT_FAILURE);
         };
