@@ -25,9 +25,15 @@
 
 #include "data/coord.hpp"
 #include "data/texture.hpp"
+#include "data_staging/circle.hpp"
 #include "shapes/circle.h"
 #include "shapes/position.h"
 #include "shapes/rectangle.h"
+
+void __test__() {
+  data_staging::circle c(vector2d(0, 0), 100, 1);
+  c.set_gradient("blue");
+}
 
 native_generator::native_generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context)
     : context(context), metrics_(metrics) {}
@@ -114,7 +120,7 @@ void native_generator::init(const std::string& filename, std::optional<double> r
 
   // set_scene requires generator_context to be set
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    genctx = generator_context(isolate, val, 0);
+    genctx = native_generator_context(isolate, val, 0);
 
     // refresh the scene object to get rid of left-over state
     scene_settings tmp;
@@ -556,7 +562,7 @@ bool native_generator::_generate_frame() {
     metrics_->register_job(job->job_number + 1, job->frame_number, job->chunk, job->num_chunks);
 
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-      genctx = generator_context(isolate, val, scenesettings.current_scene_next);
+      genctx = native_generator_context(isolate, val, scenesettings.current_scene_next);
       auto& i = genctx.i();
 
       auto obj = val.As<v8::Object>();

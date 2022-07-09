@@ -21,7 +21,7 @@
 #include "data/toroidal.hpp"
 
 #include "util/frame_stepper.hpp"
-#include "util/generator_context.h"
+#include "util/native_generator_context.h"
 #include "util/v8_interact.hpp"
 #include "util/v8_wrapper.hpp"
 
@@ -82,7 +82,7 @@ private:
 
   std::string filename_;
 
-  generator_context genctx;
+  native_generator_context genctx;
 
 public:
   struct time_settings {

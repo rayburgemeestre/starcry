@@ -7,8 +7,8 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 class vector2d {
 public:
-  double x;
-  double y;
+  double x = 0;
+  double y = 0;
 
   vector2d(double x, double y) : x(x), y(y) {}
   void rotate(double degrees) {
