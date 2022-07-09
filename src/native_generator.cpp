@@ -30,11 +30,6 @@
 #include "shapes/position.h"
 #include "shapes/rectangle.h"
 
-void __test__() {
-  data_staging::circle c(vector2d(0, 0), 100, 1);
-  c.set_gradient("blue");
-}
-
 native_generator::native_generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context)
     : context(context), metrics_(metrics) {}
 
@@ -216,6 +211,9 @@ void native_generator::init_video_meta_info(std::optional<double> rand_seed, boo
     auto obj = val.As<v8::Object>();
     auto scenes = i.v8_array(obj, "scenes");
     for (size_t I = 0; I < scenes->Length(); I++) {
+      scene_shapes.emplace_back();
+      scene_shapes_next.emplace_back();
+      scene_shapes_intermediate.emplace_back();
       auto current_scene = i.get_index(scenes, I);
       if (!current_scene->IsObject()) continue;
       auto sceneobj = current_scene.As<v8::Object>();
@@ -364,19 +362,24 @@ void native_generator::init_object_instances() {
       auto prev_current_scene = i.get_index(genctx.scenes, scenesettings.current_scene_next - 1);
       auto prev_sceneobj = prev_current_scene.As<v8::Object>();
       // continue from previous
-      genctx.instances = i.v8_array(prev_sceneobj, "instances", v8::Array::New(isolate));
-      genctx.instances_next = i.v8_array(prev_sceneobj, "instances_next", v8::Array::New(isolate));
-      genctx.instances_intermediate = i.v8_array(prev_sceneobj, "instances_intermediate", v8::Array::New(isolate));
-      i.set_field(genctx.current_scene_obj, "instances", genctx.instances);
-      i.set_field(genctx.current_scene_obj, "instances_next", genctx.instances_next);
-      i.set_field(genctx.current_scene_obj, "instances_intermediate", genctx.instances_intermediate);
+      //      genctx.instances = i.v8_array(prev_sceneobj, "instances", v8::Array::New(isolate));
+      //      genctx.instances_next = i.v8_array(prev_sceneobj, "instances_next", v8::Array::New(isolate));
+      //      genctx.instances_intermediate = i.v8_array(prev_sceneobj, "instances_intermediate",
+      //      v8::Array::New(isolate)); i.set_field(genctx.current_scene_obj, "instances", genctx.instances);
+      //      i.set_field(genctx.current_scene_obj, "instances_next", genctx.instances_next);
+      //      i.set_field(genctx.current_scene_obj, "instances_intermediate", genctx.instances_intermediate);
+      scene_shapes[scenesettings.current_scene_next] = scene_shapes[scenesettings.current_scene_next - 1];
+      scene_shapes_next[scenesettings.current_scene_next] = scene_shapes_next[scenesettings.current_scene_next - 1];
+      scene_shapes_intermediate[scenesettings.current_scene_next] =
+          scene_shapes_intermediate[scenesettings.current_scene_next - 1];
     }
 
     instantiate_additional_objects_from_new_scene(genctx.scene_objects);
 
     // since this is invoked directly after a scene change, and in the very beginning, make sure this state is part of
     // the instances "current" frame, or reverting (e.g., due to motion blur requirements) will discard all of this.
-    util::generator::copy_instances(i, genctx.instances, genctx.instances_next);
+    ////util::generator::copy_instances(i, genctx.instances, genctx.instances_next);
+    scene_shapes = scene_shapes_next;
   });
 }
 
@@ -474,9 +477,16 @@ void native_generator::instantiate_additional_objects_from_new_scene(v8::Local<v
   for (size_t j = 0; j < scene_objects->Length(); j++) {
     auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
     // below can recursively add new objects as init() invocations spawn new objects, and so on
-    v8::Local<v8::Object> created_instance = util::generator::instantiate_object_from_scene(
-        i, genctx.objects, genctx.instances_next, scene_obj, parent_object);
-    create_bookkeeping_for_script_objects(created_instance);
+    static int64_t unique_id = 1;
+    data_staging::circle c(unique_id++, vector2d(0, 0), 100, 1);
+    c.set_gradient("blue");
+    for (int i = 0; i < 10000; i++) {
+      scene_shapes_next[scenesettings.current_scene_next].push_back(c);
+    }
+
+    //    v8::Local<v8::Object> created_instance = util::generator::instantiate_object_from_scene(
+    //        i, genctx.objects, genctx.instances_next, scene_obj, parent_object);
+    //    create_bookkeeping_for_script_objects(created_instance);
   }
 }
 
@@ -572,10 +582,6 @@ bool native_generator::_generate_frame() {
       auto current_scene = i.get_index(scenes, scenesettings.current_scene_next);
       if (!current_scene->IsObject()) return;
       auto sceneobj = current_scene.As<v8::Object>();
-      auto instances = i.v8_array(sceneobj, "instances");
-      auto intermediates = i.v8_array(sceneobj, "instances_intermediate");
-      auto next_instances = i.v8_array(sceneobj, "instances_next");
-      if (!next_instances->IsArray()) return;
 
       stepper.reset();
       indexes.clear();
@@ -583,7 +589,7 @@ bool native_generator::_generate_frame() {
       max_dist_found = std::numeric_limits<double>::max();
       scalesettings.reset();
 
-      util::generator::garbage_collect_erased_objects(i, instances, intermediates, next_instances);
+      // util::generator::garbage_collect_erased_objects(i, instances, intermediates, next_instances);
 
       if (min_intermediates > 0.) {
         update_steps(min_intermediates);
@@ -594,11 +600,11 @@ bool native_generator::_generate_frame() {
         if (++attempt >= max_attempts) {
           stepper.freeze();
         }
-        logger(DEBUG) << "Generating frame " << job->frame_number << " attempt " << attempt << std::endl;
+        logger(DEBUG) << "Generating frame [native] " << job->frame_number << " attempt " << attempt << std::endl;
         max_dist_found = 0;
         if (attempt > 1) {
           if (!settings_.motion_blur) break;
-          revert_all_changes(i, instances, next_instances, intermediates);
+          revert_all_changes(i);
         }
         step_calculator sc(stepper.max_step);
         job->resize_for_num_steps(stepper.max_step);
@@ -624,22 +630,24 @@ bool native_generator::_generate_frame() {
 
           // call next frame event on all objects (TODO: optimize)
           if (stepper.current_step == 0) {
-            call_next_frame_event(i, next_instances);
+            // call_next_frame_event(i, next_instances);
           }
 
           // create mappings
-          create_new_mappings(i, next_instances, intermediates);
+          // create_new_mappings(i, next_instances, intermediates);
 
           // handle object movement (velocity added to position)
-          update_object_positions(i, next_instances, video);
+          // update_object_positions(i, next_instances, video);
 
           // handle collisions, gravity and "inherited" objects
-          update_object_interactions(i, next_instances, intermediates, instances, video);
+          // update_object_interactions(i, next_instances, intermediates, instances, video);
 
           // convert javascript to renderable objects
-          convert_objects_to_render_job(i, next_instances, sc, video);
+          convert_objects_to_render_job(i, sc, video);
 
-          util::generator::copy_instances(i, intermediates, next_instances);
+          // util::generator::copy_instances(i, intermediates, next_instances);
+          scene_shapes_intermediate = scene_shapes_next;
+
           scalesettings.update();
           scenesettings.update();
           for (auto& iter : scenesettings_objs) {
@@ -662,10 +670,11 @@ bool native_generator::_generate_frame() {
       }
 
       if (!settings_.update_positions) {
-        revert_position_updates(i, instances, next_instances, intermediates);
+        revert_position_updates(i);
       }
 
-      util::generator::copy_instances(i, instances, next_instances);
+      // util::generator::copy_instances(i, instances, next_instances);
+      scene_shapes = scene_shapes_next;
 
       scalesettings.commit();
       scenesettings.commit();
@@ -685,16 +694,13 @@ bool native_generator::_generate_frame() {
   return job->frame_number != max_frames;
 }
 
-void native_generator::revert_all_changes(v8_interact& i,
-                                          v8::Local<v8::Array>& instances,
-                                          v8::Local<v8::Array>& next_instances,
-                                          v8::Local<v8::Array>& intermediates) {
+void native_generator::revert_all_changes(v8_interact& i) {
   job->shapes.clear();
   indexes.clear();
 
   // reset next and intermediate instances
-  util::generator::copy_instances(i, next_instances, instances);
-  util::generator::copy_instances(i, intermediates, instances);
+  scene_shapes_next = scene_shapes;
+  scene_shapes_intermediate = scene_shapes;
   scalesettings.revert();
   scenesettings.revert();
   for (auto& iter : scenesettings_objs) {
@@ -702,23 +708,21 @@ void native_generator::revert_all_changes(v8_interact& i,
   }
 }
 
-void native_generator::revert_position_updates(v8_interact& i,
-                                               v8::Local<v8::Array>& instances,
-                                               v8::Local<v8::Array>& next_instances,
-                                               v8::Local<v8::Array>& intermediates) {
-  for (size_t j = 0; j < next_instances->Length(); j++) {
-    auto src = i.get_index(instances, j).As<v8::Object>();
-    auto dst = i.get_index(next_instances, j).As<v8::Object>();
-    auto dst2 = i.get_index(intermediates, j).As<v8::Object>();
-    i.copy_field(dst, "x", src, "x");
-    i.copy_field(dst, "y", src, "y");
-    i.copy_field(dst, "x2", src, "x2");
-    i.copy_field(dst, "y2", src, "y2");
-    i.copy_field(dst2, "x", src, "x");
-    i.copy_field(dst2, "y", src, "y");
-    i.copy_field(dst2, "x2", src, "x2");
-    i.copy_field(dst2, "y2", src, "y2");
-  }
+void native_generator::revert_position_updates(v8_interact& i) {
+  return;  // todo
+  //  for (size_t j = 0; j < next_instances->Length(); j++) {
+  //    auto src = i.get_index(instances, j).As<v8::Object>();
+  //    auto dst = i.get_index(next_instances, j).As<v8::Object>();
+  //    auto dst2 = i.get_index(intermediates, j).As<v8::Object>();
+  //    i.copy_field(dst, "x", src, "x");
+  //    i.copy_field(dst, "y", src, "y");
+  //    i.copy_field(dst, "x2", src, "x2");
+  //    i.copy_field(dst, "y2", src, "y2");
+  //    i.copy_field(dst2, "x", src, "x");
+  //    i.copy_field(dst2, "y", src, "y");
+  //    i.copy_field(dst2, "x2", src, "x2");
+  //    i.copy_field(dst2, "y2", src, "y2");
+  //  }
 }
 
 void native_generator::call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances) {
@@ -1489,156 +1493,208 @@ double native_generator::get_max_travel_of_object(v8_interact& i,
   return dist;
 }
 
-void native_generator::convert_objects_to_render_job(v8_interact& i,
-                                                     v8::Local<v8::Array> next_instances,
-                                                     step_calculator& sc,
-                                                     v8::Local<v8::Object> video) {
-  // Risking doing this for nothing, as this may still be discarded, we'll translate all the instances to
-  // objects ready for rendering Note that we save object states for multiple "steps" per frame if needed.
-  for (size_t index = 0; index < next_instances->Length(); index++) {
-    auto instance = i.get_index(next_instances, index).As<v8::Object>();
-    if (!instance->IsObject()) continue;
-    convert_object_to_render_job(i, instance, index, sc, video);
+void native_generator::convert_objects_to_render_job(v8_interact& i, step_calculator& sc, v8::Local<v8::Object> video) {
+  //  // Risking doing this for nothing, as this may still be discarded, we'll translate all the instances to
+  //  // objects ready for rendering Note that we save object states for multiple "steps" per frame if needed.
+  //  for (size_t index = 0; index < next_instances->Length(); index++) {
+  //    auto instance = i.get_index(next_instances, index).As<v8::Object>();
+  //    if (!instance->IsObject()) continue;
+  //    convert_object_to_render_job(i, instance, index, sc, video);
+  //  }
+  for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
+    convert_object_to_render_job(i, shape, sc, video);
   }
 }
 
-void native_generator::convert_object_to_render_job(
-    v8_interact& i, v8::Local<v8::Object> instance, size_t index, step_calculator& sc, v8::Local<v8::Object> video) {
+void native_generator::convert_object_to_render_job(v8_interact& i,
+                                                    data_staging::shape_t& shape,
+                                                    step_calculator& sc,
+                                                    v8::Local<v8::Object> video) {
   // Update level for all objects
-  auto level = i.integer_number(instance, "level");
-  auto exists = !i.has_field(instance, "exists") || i.boolean(instance, "exists");
-  if (!exists) return;
-  auto type = i.str(instance, "type");
-  auto is_line = type == "line";
-  parents_stack[level] = instance;
+  std::visit(overloaded{
+                 [&](data_staging::circle& shape) {
+                   auto level = 0;      // shape.level;
+                   auto exists = true;  // !i.has_field(instance, "exists") || i.boolean(instance, "exists");
+                   if (!exists) return;
+                   // auto type = i.str(instance, "type");
+                   // auto is_line = type == "line";
+                   // parents_stack[level] = instance;
 
-  // See if we require this step for this object
-  auto steps = i.integer_number(instance, "steps");
-  if (minimize_steps_per_object && !sc.do_step(steps, stepper.next_step)) {
-    // TODO: make this a property also for objects, if they are vibrating they need this
-    return;
-  }
-  auto id = i.str(instance, "id");
-  auto label = i.str(instance, "label");
-  auto time = i.double_number(instance, "__time__");
-  auto transitive_x = i.double_number(instance, "transitive_x");
-  auto transitive_y = i.double_number(instance, "transitive_y");
-  auto transitive_x2 = is_line ? i.double_number(instance, "transitive_x2") : 0.0;
-  auto transitive_y2 = is_line ? i.double_number(instance, "transitive_y2") : 0.0;
-  auto vel_x = i.double_number(instance, "vel_x");
-  auto vel_y = i.double_number(instance, "vel_y");
+                   // See if we require this step for this object
+                   // auto steps = i.integer_number(instance, "steps");
+                   // if (minimize_steps_per_object && !sc.do_step(steps, stepper.next_step)) {
+                   // TODO: make this a property also for objects, if they are vibrating they need this
+                   //  return;
+                   //}
+                   // auto id = i.str(instance, "id");
+                   // auto label = i.str(instance, "label");
+                   // auto time = i.double_number(instance, "__time__");
+                   // auto transitive_x = i.double_number(instance, "transitive_x");
+                   // auto transitive_y = i.double_number(instance, "transitive_y");
+                   // auto transitive_x2 = is_line ? i.double_number(instance, "transitive_x2") : 0.0;
+                   // auto transitive_y2 = is_line ? i.double_number(instance, "transitive_y2") : 0.0;
+                   // auto vel_x = i.double_number(instance, "vel_x");
+                   // auto vel_y = i.double_number(instance, "vel_y");
 
-  auto inherited_x = i.has_field(instance, "inherited_x") ? i.double_number(instance, "inherited_x") : 0.;
-  auto inherited_y = i.has_field(instance, "inherited_y") ? i.double_number(instance, "inherited_y") : 0.;
-  auto inherited_x2 = i.has_field(instance, "inherited_x2") ? i.double_number(instance, "inherited_x2") : 0.;
-  auto inherited_y2 = i.has_field(instance, "inherited_y2") ? i.double_number(instance, "inherited_y2") : 0.;
+                   // auto inherited_x = i.has_field(instance, "inherited_x") ?
+                   // i.double_number(instance, "inherited_x") : 0.; auto inherited_y =
+                   // i.has_field(instance, "inherited_y") ? i.double_number(instance, "inherited_y")
+                   // : 0.; auto inherited_x2 = i.has_field(instance, "inherited_x2") ?
+                   // i.double_number(instance, "inherited_x2") : 0.; auto inherited_y2 =
+                   // i.has_field(instance, "inherited_y2") ? i.double_number(instance,
+                   // "inherited_y2") : 0.;
+                   //
+                   // if (inherited_x) transitive_x = inherited_x;
+                   // if (inherited_y) transitive_y = inherited_y;
+                   // if (inherited_x2) transitive_x2 = inherited_x2;
+                   // if (inherited_y2) transitive_y2 = inherited_y2;
 
-  if (inherited_x) transitive_x = inherited_x;
-  if (inherited_y) transitive_y = inherited_y;
-  if (inherited_x2) transitive_x2 = inherited_x2;
-  if (inherited_y2) transitive_y2 = inherited_y2;
+                   auto radius = shape.radius();           // i.double_number(instance, "radius");
+                   auto radiussize = shape.radius_size();  // i.double_number(instance, "radiussize");
+                   // auto seed = i.double_number(instance, "seed");
+                   auto blending_type = shape.blending_type();  // i.has_field(instance, "blending_type") ?
+                                                                // i.integer_number(instance, "blending_type")
+                                                                //              : data::blending_type::normal;
+                   auto scale = shape.scale();  // i.has_field(instance, "scale") ? i.double_number(instance, "scale")
+                                                // : 1.0; auto unique_id = i.integer_number(instance, "unique_id");
 
-  auto radius = i.double_number(instance, "radius");
-  auto radiussize = i.double_number(instance, "radiussize");
-  auto seed = i.double_number(instance, "seed");
-  auto blending_type = i.has_field(instance, "blending_type") ? i.integer_number(instance, "blending_type")
-                                                              : data::blending_type::normal;
-  auto scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
-  auto unique_id = i.integer_number(instance, "unique_id");
-  // auto video_scale = i.double_number(video, "scale");
-  auto shape_opacity = i.double_number(instance, "opacity");
-  auto motion_blur = i.boolean(instance, "motion_blur");
-  auto warp_width = i.has_field(instance, "__warp_width__") ? i.integer_number(instance, "__warp_width__") : 0;
-  auto warp_height = i.has_field(instance, "__warp_height__") ? i.integer_number(instance, "__warp_height__") : 0;
+    // auto shape_opacity = i.double_number(instance, "opacity");
+    // auto motion_blur = i.boolean(instance, "motion_blur");
+    // auto warp_width = i.has_field(instance, "__warp_width__") ? i.integer_number(instance, "__warp_width__") : 0;
+    // auto warp_height = i.has_field(instance, "__warp_height__") ? i.integer_number(instance, "__warp_height__") : 0;
 
-  auto text = i.str(instance, "text");
-  auto text_align = i.str(instance, "text_align");
-  auto text_size = i.integer_number(instance, "text_size");
-  auto text_fixed = i.boolean(instance, "text_fixed");
-  auto text_font = i.has_field(instance, "text_font") ? i.str(instance, "text_font") : "";
+    // auto text = i.str(instance, "text");
+    // auto text_align = i.str(instance, "text_align");
+    // auto text_size = i.integer_number(instance, "text_size");
+    // auto text_fixed = i.boolean(instance, "text_fixed");
+    // auto text_font = i.has_field(instance, "text_font") ? i.str(instance, "text_font") : "";
 
-  // TODO: might not need this param after all
-  auto dist = i.double_number(instance, "__dist__");
+    // TODO: might not need this param after all
+// auto dist = i.double_number(instance, "__dist__");
 #define DEBUG_NUM_SHAPES
 #ifdef DEBUG_NUM_SHAPES
-  auto random_hash = i.str(instance, "__random_hash__");
+// auto random_hash = i.str(instance, "__random_hash__");
 #endif
 
-  data::shape new_shape;
-  new_shape.time = time;
-  new_shape.x = transitive_x;
-  new_shape.y = transitive_y;
-  new_shape.level = level;
-  new_shape.dist = dist;
+                   // temp
+                   double transitive_x = shape.position().x;
+                   double transitive_y = shape.position().y;
 
-  new_shape.gradients_.clear();
-  new_shape.textures.clear();
-  std::string gradient_id_str;
-  util::generator::copy_gradient_from_object_to_shape(i, instance, new_shape, gradients, &gradient_id_str);
-  util::generator::copy_texture_from_object_to_shape(i, instance, new_shape, textures);
-  while (level > 0) {
-    level--;
-    util::generator::copy_gradient_from_object_to_shape(
-        i, parents_stack[level], new_shape, gradients, &gradient_id_str);
-    util::generator::copy_texture_from_object_to_shape(i, parents_stack[level], new_shape, textures);
-    auto s = i.double_number(parents_stack[level], "scale");
-    if (!std::isnan(s)) {
-      scale *= s;
-    }
-  }
-  new_shape.gradient_id_str = gradient_id_str;
-  if (new_shape.gradients_.empty()) {
-    new_shape.gradients_.emplace_back(1.0, data::gradient{});
-    new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
-    new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
-    new_shape.gradients_[0].second.colors.emplace_back(1.0, data::color{0.0, 0, 0, 1});
-  }
-  new_shape.z = 0;
-  new_shape.vel_x = vel_x;
-  new_shape.vel_y = vel_y;
-  new_shape.radius = radius;
-  new_shape.radius_size = radiussize;
-  new_shape.blending_ = blending_type;
-  new_shape.scale = scale;
-  new_shape.opacity = std::isnan(shape_opacity) ? 1.0 : shape_opacity;
-  new_shape.unique_id = unique_id;
+                   data::shape new_shape;
+                   // new_shape.time = time;
+                   new_shape.x = transitive_x;
+                   new_shape.y = transitive_y;
+                   new_shape.level = level;
+                   // new_shape.dist = dist;
+
+                   new_shape.gradients_.clear();
+                   new_shape.textures.clear();
+                   std::string gradient_id_str;
+                   // util::generator::copy_gradient_from_object_to_shape(i, instance, new_shape, gradients,
+                   // &gradient_id_str); util::generator::copy_texture_from_object_to_shape(i, instance, new_shape,
+                   // textures);
+
+                   // temp hack
+                   std::string namespace_ = "";                 // i.str(source_object, "namespace", "");
+                   std::string gradient_id = shape.gradient();  // namespace_ + i.str(source_object, "gradient");
+
+                   if (!gradient_id.empty()) {
+                     // if (gradient_id_str) {
+                     //   *gradient_id_str += gradient_id;
+                     // }
+                     if (new_shape.gradients_.empty()) {
+                       auto& known_gradients_map = gradients;
+                       if (known_gradients_map.find(gradient_id) != known_gradients_map.end()) {
+                         new_shape.gradients_.emplace_back(1.0, known_gradients_map[gradient_id]);
+                       }
+                     }
+                   }
+                   // auto gradient_array = i.v8_array(source_object, "gradients");
+                   // if (destination_shape.gradients_.empty()) {
+                   //   for (size_t k = 0; k < gradient_array->Length(); k++) {
+                   //     auto gradient_data = i.get_index(gradient_array, k).As<v8::Array>();
+                   //     if (!gradient_data->IsArray()) {
+                   //       continue;
+                   //     }
+                   //     auto opacity = i.double_number(gradient_data, size_t(0));
+                   //     auto gradient_id = namespace_ + i.str(gradient_data, size_t(1));
+                   //     if (gradient_id_str) {
+                   //       if (!gradient_id_str->empty()) *gradient_id_str += ",";
+                   //       *gradient_id_str += gradient_id;
+                   //     }
+                   //     destination_shape.gradients_.emplace_back(opacity,
+                   //     known_gradients_map[gradient_id]);
+                   //   }
+                   // }
+
+                   // while (level > 0) {
+                   //   level--;
+                   //   util::generator::copy_gradient_from_object_to_shape(
+                   //       i, parents_stack[level], new_shape, gradients, &gradient_id_str);
+                   //   util::generator::copy_texture_from_object_to_shape(i, parents_stack[level], new_shape,
+                   //   textures); auto s = i.double_number(parents_stack[level], "scale"); if (!std::isnan(s)) {
+                   //     scale *= s;
+                   //   }
+                   // }
+                   // new_shape.gradient_id_str = gradient_id_str;
+                   if (new_shape.gradients_.empty()) {
+                     new_shape.gradients_.emplace_back(1.0, data::gradient{});
+                     new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
+                     new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
+                     new_shape.gradients_[0].second.colors.emplace_back(1.0, data::color{0.0, 0, 0, 1});
+                   }
+                   new_shape.z = 0;
+                   // new_shape.vel_x = vel_x;
+                   // new_shape.vel_y = vel_y;
+                   new_shape.radius = radius;
+                   new_shape.radius_size = radiussize;
+                   new_shape.blending_ = blending_type;
+                   new_shape.scale = scale;
+                   new_shape.opacity = 1.0;  // std::isnan(shape_opacity) ? 1.0 : shape_opacity;
+    // new_shape.unique_id = unique_id;
 #ifdef DEBUG_NUM_SHAPES
-  new_shape.random_hash = random_hash;
+    // new_shape.random_hash = random_hash;
 #endif
-  new_shape.seed = seed;
-  new_shape.id = id;
-  new_shape.label = label;
-  new_shape.motion_blur = motion_blur;
-  new_shape.warp_width = warp_width;
-  new_shape.warp_height = warp_height;
+                   new_shape.seed = seed;
+                   // new_shape.id = id;
+                   // new_shape.label = label;
+                   // new_shape.motion_blur = motion_blur;
+                   // new_shape.warp_width = warp_width;
+                   // new_shape.warp_height = warp_height;
 
-  if (type == "circle") {
-    new_shape.type = data::shape_type::circle;
-  } else if (type == "line") {
-    new_shape.type = data::shape_type::line;
-    new_shape.x2 = transitive_x2;
-    new_shape.y2 = transitive_y2;
-  } else if (type == "text") {
-    new_shape.type = data::shape_type::text;
-    new_shape.text = text;
-    new_shape.text_size = text_size;
-    new_shape.align = text_align;
-    new_shape.text_fixed = text_fixed;
-    new_shape.text_font = text_font;
-  } else if (type == "script") {
-    new_shape.type = data::shape_type::script;
-  } else {
-    new_shape.type = data::shape_type::none;
-  }
-  // wrap this in a proper add method
-  if (stepper.next_step != stepper.max_step) {
-    indexes[unique_id][stepper.current_step] = job->shapes[stepper.current_step].size();
-  } else {
-    new_shape.indexes = indexes[unique_id];
-  }
-  job->shapes[stepper.current_step].push_back(new_shape);
-  job->scale = scalesettings.video_scale;
-  job->scales = scalesettings.video_scales;
+                   // if (type == "circle") {
+                   new_shape.type = data::shape_type::circle;
+                   // } else if (type == "line") {
+                   //   new_shape.type = data::shape_type::line;
+                   //   new_shape.x2 = transitive_x2;
+                   //   new_shape.y2 = transitive_y2;
+                   // } else if (type == "text") {
+                   //   new_shape.type = data::shape_type::text;
+                   //   new_shape.text = text;
+                   //   new_shape.text_size = text_size;
+                   //   new_shape.align = text_align;
+                   //   new_shape.text_fixed = text_fixed;
+                   //   new_shape.text_font = text_font;
+                   // } else if (type == "script") {
+                   //   new_shape.type = data::shape_type::script;
+                   // } else {
+                   //   new_shape.type = data::shape_type::none;
+                   // }
+                   // wrap this in a proper add method
+                   if (stepper.next_step != stepper.max_step) {
+                     indexes[shape.unique_id()][stepper.current_step] = job->shapes[stepper.current_step].size();
+                   } else {
+                     new_shape.indexes = indexes[shape.unique_id()];
+                   }
+                   job->shapes[stepper.current_step].push_back(new_shape);
+                   job->scale = scalesettings.video_scale;
+                   job->scales = scalesettings.video_scales;
+                 },
+                 [](data_staging::line& shape) {
+                   // TODO
+                 },
+             },
+             shape);
 }
 
 std::shared_ptr<data::job> native_generator::get_job() const {

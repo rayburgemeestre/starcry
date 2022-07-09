@@ -19,6 +19,7 @@
 #include "data/settings.hpp"
 #include "data/texture.hpp"
 #include "data/toroidal.hpp"
+#include "data_staging/shape.hpp"
 
 #include "util/frame_stepper.hpp"
 #include "util/native_generator_context.h"
@@ -43,6 +44,9 @@ private:
   std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
   std::shared_ptr<data::job> job;
+  std::vector<std::vector<data_staging::shape_t>> scene_shapes;
+  std::vector<std::vector<data_staging::shape_t>> scene_shapes_next;
+  std::vector<std::vector<data_staging::shape_t>> scene_shapes_intermediate;
   uint32_t frame_number = 0;
 
   size_t max_frames = 0;
@@ -112,14 +116,8 @@ public:
   void set_scene_sub_object(scene_settings& scenesettings, size_t scene);
   void fast_forward(int frame_of_interest);
   bool generate_frame();
-  void revert_all_changes(v8_interact& i,
-                          v8::Local<v8::Array>& instances,
-                          v8::Local<v8::Array>& next_instances,
-                          v8::Local<v8::Array>& intermediates);
-  static void revert_position_updates(v8_interact& i,
-                                      v8::Local<v8::Array>& instances,
-                                      v8::Local<v8::Array>& next_instances,
-                                      v8::Local<v8::Array>& intermediates);
+  void revert_all_changes(v8_interact& i);
+  static void revert_position_updates(v8_interact& i);
   void call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances);
   void create_new_mappings(v8_interact& i, v8::Local<v8::Array>& next_instances, v8::Local<v8::Array>& intermediates);
   void update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, v8::Local<v8::Object>& video);
@@ -144,12 +142,11 @@ public:
                                   v8::Local<v8::Object>& instance
 
   );
-  void convert_objects_to_render_job(v8_interact& i,
-                                     v8::Local<v8::Array> next_instances,
-                                     step_calculator& sc,
-                                     v8::Local<v8::Object> video);
-  void convert_object_to_render_job(
-      v8_interact& i, v8::Local<v8::Object> instance, size_t index, step_calculator& sc, v8::Local<v8::Object> video);
+  void convert_objects_to_render_job(v8_interact& i, step_calculator& sc, v8::Local<v8::Object> video);
+  void convert_object_to_render_job(v8_interact& i,
+                                    data_staging::shape_t& shape,
+                                    step_calculator& sc,
+                                    v8::Local<v8::Object> video);
 
   std::shared_ptr<data::job> get_job() const;
   double fps() const {

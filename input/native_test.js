@@ -44,6 +44,8 @@ _ = {
   'scenes': [{
     'name': 'scene1',
     'duration': 1,
-    'objects': [],
+    'objects': [
+      {'id': 'ball', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
+    ],
   }]
 };

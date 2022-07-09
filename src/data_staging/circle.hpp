@@ -5,20 +5,21 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 #pragma once
 
-#include "util/vector_logic.hpp"
+#include "data/blending_type.hpp"
 #include "data/gradient.hpp"
 #include "data/texture.hpp"
-#include "data/blending_type.hpp"
+#include "util/vector_logic.hpp"
 
-#include <vector>
 #include <string>
+#include <vector>
 
 // merged into data namespace when ready
 namespace data_staging {
 
-class circle
-{
+class circle {
 private:
+  int64_t unique_id_;
+
   vector2d position_;
   double z_ = 0;
 
@@ -39,11 +40,47 @@ private:
   std::string toroidal_group_;
 
 public:
-  circle(vector2d position, double radius, double radiussize)
-  : position_(position), radius_(radius), radius_size_(radiussize) {}
+  circle(int64_t unique_id, vector2d position, double radius, double radiussize)
+      : unique_id_(unique_id), position_(position), radius_(radius), radius_size_(radiussize) {}
+
+  int64_t unique_id() const {
+    return unique_id_;
+  }
+
+  vector2d position() const {
+    return position_;
+  }
 
   void set_gradient(std::string_view gradient) {
     gradient_ = gradient;
   }
+
+  double radius() {
+    return radius_;
+  }
+  double radius_size() {
+    return radius_size_;
+  }
+  double scale() {
+    return scale_;
+  }
+  double opacity() {
+    return opacity_;
+  }
+  std::string gradient() {
+    return gradient_;
+  }
+  data::blending_type blending_type() {
+    return blending_type_;
+  }
+  std::string collision_group() {
+    return collision_group_;
+  }
+  std::string gravity_group() {
+    return gravity_group_;
+  }
+  std::string toroidal_group() {
+    return toroidal_group_;
+  }
 };
-}
+}  // namespace data_staging

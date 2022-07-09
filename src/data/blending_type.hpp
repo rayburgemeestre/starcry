@@ -130,4 +130,4 @@ inline std::string blending_type::to_str(int type) {
   }
 }
 
-}
+}  // namespace data
