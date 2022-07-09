@@ -21,6 +21,8 @@
 #include "data/toroidal.hpp"
 #include "data_staging/shape.hpp"
 
+#include "core/fps_progress.hpp"
+
 #include "util/frame_stepper.hpp"
 #include "util/native_generator_context.h"
 #include "util/v8_interact.hpp"
@@ -41,6 +43,7 @@ extern int64_t counter;
 
 class native_generator {
 private:
+  fps_progress fpsp;
   std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
   std::shared_ptr<data::job> job;
@@ -120,7 +123,7 @@ public:
   static void revert_position_updates(v8_interact& i);
   void call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances);
   void create_new_mappings(v8_interact& i, v8::Local<v8::Array>& next_instances, v8::Local<v8::Array>& intermediates);
-  void update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, v8::Local<v8::Object>& video);
+  void update_object_positions(v8_interact& i, v8::Local<v8::Object>& video);
   void update_object_toroidal(v8_interact& i, v8::Local<v8::Object>& instance, double& x, double& y);
   void update_object_interactions(v8_interact& i,
                                   v8::Local<v8::Array>& next_instances,

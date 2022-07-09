@@ -10,6 +10,7 @@
 #include "cereal/types/vector.hpp"
 
 #include "color.hpp"
+#include "data_staging/shape.hpp"
 #include "shape.hpp"
 
 namespace data {

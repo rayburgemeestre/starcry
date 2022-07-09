@@ -20,6 +20,7 @@
 #include "util/generator.h"
 #include "util/logger.h"
 #include "util/math.h"
+#include "util/random.hpp"
 #include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
 
@@ -477,10 +478,15 @@ void native_generator::instantiate_additional_objects_from_new_scene(v8::Local<v
   for (size_t j = 0; j < scene_objects->Length(); j++) {
     auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
     // below can recursively add new objects as init() invocations spawn new objects, and so on
+
+    static util::random_generator rng;
     static int64_t unique_id = 1;
-    data_staging::circle c(unique_id++, vector2d(0, 0), 100, 1);
-    c.set_gradient("blue");
+
+    logger(INFO) << "Instantiating 10.000 objects.." << std::endl;
     for (int i = 0; i < 10000; i++) {
+      data_staging::circle c(unique_id++, vector2d(rng.get() * 1000 - 500, rng.get() * 1000 - 500), 0, 5);
+      c.set_velocity(rng.get(), rng.get(), 10.);
+      c.set_gradient("blue");
       scene_shapes_next[scenesettings.current_scene_next].push_back(c);
     }
 
@@ -613,6 +619,7 @@ bool native_generator::_generate_frame() {
         stepper.rewind();
         bool detected_too_many_steps = false;
         while (stepper.has_next_step() && !detected_too_many_steps) {
+          logger(DEBUG) << "Stepper at step " << stepper.current_step << " out of " << stepper.max_step << std::endl;
           qts.clear();
           qts_gravity.clear();
 
@@ -637,7 +644,7 @@ bool native_generator::_generate_frame() {
           // create_new_mappings(i, next_instances, intermediates);
 
           // handle object movement (velocity added to position)
-          // update_object_positions(i, next_instances, video);
+          update_object_positions(i, video);
 
           // handle collisions, gravity and "inherited" objects
           // update_object_interactions(i, next_instances, intermediates, instances, video);
@@ -678,6 +685,7 @@ bool native_generator::_generate_frame() {
 
       scalesettings.commit();
       scenesettings.commit();
+      fpsp.inc();
       for (auto& [_, scenesetting] : scenesettings_objs) {
         scenesetting.commit();
       }
@@ -750,88 +758,99 @@ void native_generator::create_new_mappings(v8_interact& i,
   }
 }
 
-void native_generator::update_object_positions(v8_interact& i,
-                                               v8::Local<v8::Array>& next_instances,
-                                               v8::Local<v8::Object>& video) {
+void native_generator::update_object_positions(v8_interact& i, v8::Local<v8::Object>& video) {
   // clear function caching
   cached_xy.clear();
   auto isolate = i.get_isolate();
   int64_t scenesettings_from_object_id = -1;
   int64_t scenesettings_from_object_id_level = -1;
-  for (size_t j = 0; j < next_instances->Length(); j++) {
-    auto instance = i.get_index(next_instances, j).As<v8::Object>();
-    if (!instance->IsObject()) continue;
 
-    auto unique_id = i.integer_number(instance, "unique_id");
-    auto level = i.integer_number(instance, "level");
-    std::string type = i.str(instance, "type");
-    bool is_line = type == "line";
-    bool is_script = type == "script";
+  for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
+    std::visit(overloaded{[&](data_staging::circle& shape) {
+                            // auto unique_id = i.integer_number(instance, "unique_id");
+                            // auto level = i.integer_number(instance, "level");
+                            // std::string type = i.str(instance, "type");
+                            // bool is_line = type == "line";
+                            // bool is_script = type == "script";
+                            //
+                            // if (is_script) {
+                            //   // TODO: this strategy does not support nested script objects
+                            //   // TODO: we need to use stack for that
+                            //   scenesettings_from_object_id = unique_id;
+                            //   scenesettings_from_object_id_level = level;
+                            // } else if (scenesettings_from_object_id_level == level) {
 
-    if (is_script) {
-      // TODO: this strategy does not support nested script objects
-      // TODO: we need to use stack for that
-      scenesettings_from_object_id = unique_id;
-      scenesettings_from_object_id_level = level;
-    } else if (scenesettings_from_object_id_level == level) {
-      scenesettings_from_object_id = -1;
-      scenesettings_from_object_id_level = -1;
-    }
+                            if (scenesettings_from_object_id_level == shape.level()) {
+                              scenesettings_from_object_id = -1;
+                              scenesettings_from_object_id_level = -1;
+                            }
 
-    if (scenesettings_from_object_id == -1) {
-      update_time(i, instance, scenesettings);
-    } else {
-      update_time(i, instance, scenesettings_objs[scenesettings_from_object_id]);
-    }
+                            if (scenesettings_from_object_id == -1) {
+                              // TODO:
+                              //  update_time(i, instance, scenesettings);
+                            } else {
+                              // TODO:
+                              // update_time(i, instance, scenesettings_objs[scenesettings_from_object_id]);
+                            }
 
-    scalesettings.video_scale_next = i.double_number(video, "scale");
+                            scalesettings.video_scale_next = i.double_number(video, "scale");
 
-    std::string collision_group = i.str(instance, "collision_group");
-    std::string gravity_group = i.str(instance, "gravity_group");
-    auto angle = i.double_number(instance, "angle");
-    if (std::isnan(angle)) {
-      angle = 0.;
-    }
-    auto x = i.double_number(instance, "x");
-    auto y = i.double_number(instance, "y");
-    auto x2 = i.double_number(instance, "x2");
-    auto y2 = i.double_number(instance, "y2");
-    auto velocity = i.double_number(instance, "velocity", 1.);
-    auto vel_x = i.double_number(instance, "vel_x", 0.0);
-    auto vel_y = i.double_number(instance, "vel_y", 0.0);
-    // auto vel_x2 = is_line ? i.double_number(instance, "vel_x2") : 0.0;
-    // auto vel_y2 = is_line ? i.double_number(instance, "vel_y2") : 0.0;
+                            auto angle = shape.angle();
+                            if (std::isnan(angle)) {
+                              angle = 0.;
+                            }
+                            auto x = shape.position().x;
+                            auto y = shape.position().y;
+                            // auto x2 = i.double_number(instance, "x2");
+                            // auto y2 = i.double_number(instance, "y2");
+                            auto velocity = shape.velocity_speed();
+                            auto vel_x = shape.velocity().x;
+                            auto vel_y = shape.velocity().y;
+                            // // auto vel_x2 = is_line ? i.double_number(instance, "vel_x2") : 0.0;
+                            // // auto vel_y2 = is_line ? i.double_number(instance, "vel_y2") : 0.0;
 
-    velocity /= static_cast<double>(stepper.max_step);
-    x += (vel_x * velocity);
-    y += (vel_y * velocity);
+                            velocity /= static_cast<double>(stepper.max_step);
+                            x += (vel_x * velocity);
+                            y += (vel_y * velocity);
 
-    // For now we only care about circles
-    if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
-      update_object_toroidal(i, instance, x, y);
-      if (collision_group != "undefined") {
-        qts.try_emplace(collision_group,
-                        quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
-        auto x_copy = x;
-        auto y_copy = y;
-        fix_xy(i, instance, unique_id, x_copy, y_copy);
-        qts[collision_group].insert(point_type(position(x_copy, y_copy), unique_id));
-      }
-      if (gravity_group != "undefined") {
-        qts_gravity.try_emplace(gravity_group,
-                                quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
-        qts_gravity[gravity_group].insert(point_type(position(x, y), unique_id));
-      }
-    }
-    i.set_field(instance, "x", v8::Number::New(isolate, x));
-    i.set_field(instance, "y", v8::Number::New(isolate, y));
-    if (is_line) {
-      i.set_field(instance, "x2", v8::Number::New(isolate, x2));
-      i.set_field(instance, "y2", v8::Number::New(isolate, y2));
-    }
-    if (attempt == 1) {
-      i.set_field(instance, "steps", v8::Number::New(isolate, 1));
-    }
+                            // For now we only care about circles
+                            // if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create
+                            // property of course */) {
+                            if (shape.radius_size() < 1000 /* todo create property of course */) {
+                              // TODO:
+                              //  update_object_toroidal(i, instance, x, y);
+                              const auto collision_group = shape.collision_group();
+                              const auto gravity_group = shape.gravity_group();
+                              if (!collision_group.empty()) {
+                                qts.try_emplace(
+                                    collision_group,
+                                    quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
+                                auto x_copy = x;
+                                auto y_copy = y;
+                                // TODO: fix
+                                //  fix_xy(i, instance, unique_id, x_copy, y_copy);
+                                qts[collision_group].insert(point_type(position(x_copy, y_copy), shape.unique_id()));
+                              }
+                              if (!gravity_group.empty()) {
+                                qts_gravity.try_emplace(
+                                    gravity_group,
+                                    quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
+                                qts_gravity[gravity_group].insert(point_type(position(x, y), shape.unique_id()));
+                              }
+                            }
+                            shape.position_ref().x = x;
+                            shape.position_ref().y = y;
+                            // if (is_line) {
+                            //   i.set_field(instance, "x2", v8::Number::New(isolate, x2));
+                            //   i.set_field(instance, "y2", v8::Number::New(isolate, y2));
+                            //                            }
+                            // Needed?
+                            // if (attempt == 1) {
+                            //   i.set_field(instance, "steps", v8::Number::New(isolate, 1));
+                            // }
+                          },
+                          [&](const data_staging::line& shape) {}},
+               shape);
   }
 }
 
@@ -1238,7 +1257,7 @@ void native_generator::update_time(v8_interact& i, v8::Local<v8::Object>& instan
 }
 
 int native_generator::update_steps(double dist) {
-  auto steps = round(std::max(1.0, (fabs(dist) + 0.5) / (tolerated_granularity)));
+  auto steps = round(std::max(1.0, fabs(dist) / tolerated_granularity));
   if (steps > max_intermediates) {
     steps = max_intermediates;
   }
@@ -1651,7 +1670,7 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
                    new_shape.blending_ = blending_type;
                    new_shape.scale = scale;
                    new_shape.opacity = 1.0;  // std::isnan(shape_opacity) ? 1.0 : shape_opacity;
-    // new_shape.unique_id = unique_id;
+                                             // new_shape.unique_id = unique_id;
 #ifdef DEBUG_NUM_SHAPES
     // new_shape.random_hash = random_hash;
 #endif
@@ -1686,7 +1705,20 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
                    } else {
                      new_shape.indexes = indexes[shape.unique_id()];
                    }
-                   job->shapes[stepper.current_step].push_back(new_shape);
+                   // logger(INFO) << "sizeof shape: " << sizeof(new_shape) << " circle was size: " << sizeof(shape) <<
+                   // std::endl;
+                   //                   if (job->shapes[stepper.current_step].capacity() < 10000) {
+                   //                     logger(INFO) << "resizing to fix capacity" << std::endl;
+                   //                     job->shapes[stepper.current_step].reserve(10000);
+                   //                   }
+                   // why is this shit super slow
+                   job->shapes[stepper.current_step].emplace_back(std::move(new_shape));
+                   // and this reasonably fast
+                   // job->shapes_prototype_test[stepper.current_step].emplace_back(shape);
+                   // job->shapes[stepper.current_step].emplace_back(data::shape{});
+                   //                   if (job->shapes[stepper.current_step].size() > 9999)
+                   //                     logger(INFO) << "current_step = " << stepper.current_step << ", shapes: " <<
+                   //                     job->shapes[stepper.current_step].size() << std::endl;
                    job->scale = scalesettings.video_scale;
                    job->scales = scalesettings.video_scales;
                  },

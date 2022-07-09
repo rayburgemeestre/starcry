@@ -20,6 +20,8 @@
 #include "data/texture.hpp"
 #include "data/toroidal.hpp"
 
+#include "core/fps_progress.hpp"
+
 #include "util/frame_stepper.hpp"
 #include "util/generator_context.h"
 #include "util/v8_interact.hpp"
@@ -40,6 +42,7 @@ extern int64_t counter;
 
 class generator {
 private:
+  fps_progress fpsp;
   std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
   std::shared_ptr<data::job> job;

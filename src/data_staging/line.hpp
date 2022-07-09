@@ -25,8 +25,8 @@ private:
 
   double line_width_ = 1.;
 
-  double scale_ = 1.;
-  double opacity_ = 1.;
+  // double scale_ = 1.;
+  // double opacity_ = 1.;
 
   std::string gradient_;
   std::vector<std::pair<double, data::gradient>> gradients_;

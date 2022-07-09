@@ -29,6 +29,8 @@
 #include "shapes/position.h"
 #include "shapes/rectangle.h"
 
+// #define TEMPORARY_PERF_COMPARE_WITH_NATIVE 1
+
 generator::generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context)
     : context(context), metrics_(metrics) {}
 
@@ -672,6 +674,7 @@ bool generator::_generate_frame() {
         stepper.rewind();
         bool detected_too_many_steps = false;
         while (stepper.has_next_step() && !detected_too_many_steps) {
+          logger(DEBUG) << "Stepper at step " << stepper.current_step << " out of " << stepper.max_step << std::endl;
           qts.clear();
           qts_gravity.clear();
 
@@ -693,13 +696,17 @@ bool generator::_generate_frame() {
           }
 
           // create mappings
+#ifndef TEMPORARY_PERF_COMPARE_WITH_NATIVE
           create_new_mappings(i, next_instances, intermediates);
+#endif
 
           // handle object movement (velocity added to position)
           update_object_positions(i, next_instances, video);
 
           // handle collisions, gravity and "inherited" objects
+#ifndef TEMPORARY_PERF_COMPARE_WITH_NATIVE
           update_object_interactions(i, next_instances, intermediates, instances, video);
+#endif
 
           // convert javascript to renderable objects
           convert_objects_to_render_job(i, next_instances, sc, video);
@@ -734,6 +741,7 @@ bool generator::_generate_frame() {
 
       scalesettings.commit();
       scenesettings.commit();
+      fpsp.inc();
       for (auto& [_, scenesetting] : scenesettings_objs) {
         scenesetting.commit();
       }
@@ -934,7 +942,9 @@ void generator::update_object_positions(v8_interact& i,
                         quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
         auto x_copy = x;
         auto y_copy = y;
+#ifndef TEMPORARY_PERF_COMPARE_WITH_NATIVE
         fix_xy(i, instance, unique_id, x_copy, y_copy);
+#endif
         qts[collision_group].insert(point_type(position(x_copy, y_copy), unique_id));
       }
       if (gravity_group != "undefined") {
@@ -1352,7 +1362,8 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance, sce
 }
 
 int generator::update_steps(double dist) {
-  auto steps = round(std::max(1.0, (fabs(dist) + 0.5) / (tolerated_granularity)));
+  // auto steps = round(std::max(1.0, (fabs(dist) + 0.5) / (tolerated_granularity)));
+  auto steps = round(std::max(1.0, fabs(dist) / tolerated_granularity));
   if (steps > max_intermediates) {
     steps = max_intermediates;
   }
@@ -1639,8 +1650,13 @@ void generator::convert_object_to_render_job(
   auto id = i.str(instance, "id");
   auto label = i.str(instance, "label");
   auto time = i.double_number(instance, "__time__");
+#ifndef TEMPORARY_PERF_COMPARE_WITH_NATIVE
   auto transitive_x = i.double_number(instance, "transitive_x");
   auto transitive_y = i.double_number(instance, "transitive_y");
+#else
+  auto transitive_x = i.double_number(instance, "x");
+  auto transitive_y = i.double_number(instance, "y");
+#endif
   auto transitive_x2 = is_line ? i.double_number(instance, "transitive_x2") : 0.0;
   auto transitive_y2 = is_line ? i.double_number(instance, "transitive_y2") : 0.0;
   auto vel_x = i.double_number(instance, "vel_x");
