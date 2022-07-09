@@ -77,15 +77,17 @@ public:
     // clang-format on
 
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
+
+    if (vm.count("help")) {
+      std::cerr << argv[0] << " [ <script> ] [ <output> ]" << std::endl << std::endl << desc << "\n";
+      std::exit(0);
+    }
+
     try {
       po::notify(vm);
     } catch (po::error &ex) {
       std::cerr << "Error: " << ex.what() << std::endl;
       std::cerr << desc << std::endl;
-      std::exit(1);
-    }
-    if (vm.count("help")) {
-      std::cerr << argv[0] << " [ <script> ] [ <output> ]" << std::endl << std::endl << desc << "\n";
       std::exit(1);
     }
 
@@ -184,6 +186,9 @@ int main(int argc, char *argv[]) {
   const auto wire_stdout_and_stderr = [=]() {
     for (int i = 1; i < argc; i++) {
       if (std::string(argv[i]).find("--stdout") != std::string::npos) {
+        return false;
+      }
+      if (std::string(argv[i]).find("--help") != std::string::npos) {
         return false;
       }
     }
