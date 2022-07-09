@@ -13,6 +13,7 @@
 #include <thread>
 
 #include "util/a.hpp"
+#include "util/logger.h"
 
 class fps_progress {
 private:
@@ -42,8 +43,10 @@ public:
               continue;  // ignore spurious wake-ups
             }
             std::chrono::duration<double, std::milli> passed = now - start;
-            a(std::cout) << "FPS: frame=" << counter << ", average=" << (double)counter / (passed.count() / 1000.0)
-                         << ", current=" << (double)(counter - counter_current) << std::endl;
+            // a(std::cout) << "FPS: frame=" << counter << ", average=" << (double)counter / (passed.count() / 1000.0)
+            //              << ", current=" << (double)(counter - counter_current) << std::endl;
+            logger(DEBUG) << "FPS: frame=" << counter << ", average=" << (double)counter / (passed.count() / 1000.0)
+                          << ", current=" << (double)(counter - counter_current) << std::endl;
             counter_current.store(counter);
           }
         }) {}
