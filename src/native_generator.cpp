@@ -45,16 +45,6 @@ v8::Local<v8::Object> spawn_object_native(const v8::FunctionCallbackInfo<v8::Val
 }
 
 void native_generator::reset_context() {
-  // clear c++ caches
-  cache.job_cache.clear();
-  cache.next_instance_mapping.clear();
-  // TODO: we need to update this caching feature
-  cache.scalesettings.clear();
-  cache.scenesettings.clear();
-
-  // clear js caches
-  context->run("cache = {};");
-
   // reset context
   context->reset();
 
@@ -113,7 +103,6 @@ void native_generator::reset_context() {
 void native_generator::init(const std::string& filename, std::optional<double> rand_seed, bool preview, bool caching) {
   prctl(PR_SET_NAME, "generator thread");
   filename_ = filename;
-  cache.enabled = caching;
   init_context();
   init_user_script();
   init_job();
@@ -148,13 +137,6 @@ void native_generator::init_context() {
 }
 
 void native_generator::init_user_script() {
-  // {
-  //   std::ifstream stream("web/webroot/lodash.js");
-  //   std::istreambuf_iterator<char> begin(stream), end;
-  //   const auto source = std::string(begin, end);
-  //   context->run(source);
-  //   // context->run("var a = {};");
-  //   // context->run("var b = _.cloneDeep(a);");
   // }
   std::ifstream stream(filename().c_str());
   if (!stream && filename() != "-") {
@@ -518,9 +500,6 @@ void native_generator::set_scene_sub_object(scene_settings& scenesettings, size_
 }
 
 void native_generator::fast_forward(int frame_of_interest) {
-  if (_forward_latest_cached_frame(frame_of_interest)) {
-    return;
-  }
   if (fast_ff && frame_of_interest > 2) {
     int backup_min_intermediates = min_intermediates;
     int backup_max_intermediates = max_intermediates;
@@ -541,32 +520,6 @@ void native_generator::fast_forward(int frame_of_interest) {
       metrics_->skip_job(job->job_number);
     }
   }
-}
-
-bool native_generator::_forward_latest_cached_frame(int frame_of_interest) {
-  if (!cache.enabled) return false;
-  cache.use = false;
-  // minus one, because frame of interest doesn't start counting at zero
-  if (cache.job_cache.find(frame_of_interest - 1) != cache.job_cache.end()) {
-    job->job_number = frame_of_interest - 1;
-    job->frame_number = frame_of_interest - 1;
-    cache.use = true;
-    return true;
-  }
-  for (int i = 1; frame_of_interest - 1 - i > 0; i++) {
-    if (cache.job_cache.find(frame_of_interest - 1 - i) != cache.job_cache.end()) {
-      job->job_number = frame_of_interest - 1 - i;
-      job->frame_number = frame_of_interest - 1 - i;
-      for (int j = 0; j < i; j++) {
-        cache.use = j == 0;
-        generate_frame();
-        metrics_->skip_job(job->job_number);
-      }
-      cache.use = false;
-      return true;
-    }
-  }
-  return false;
 }
 
 bool native_generator::generate_frame() {
@@ -602,28 +555,12 @@ bool native_generator::_generate_frame() {
     // job_number is incremented later, hence we do a +1 on the next line.
     metrics_->register_job(job->job_number + 1, job->frame_number, job->chunk, job->num_chunks);
 
-    if (cache.enabled) {
-      if (cache.use) {
-        _load_cache();
-      } else {
-        _save_cache();
-      }
-    }
-
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
       genctx = generator_context(isolate, val, scenesettings.current_scene_next);
       auto& i = genctx.i();
 
-      v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
-      auto cache_ =
-          global->Get(isolate->GetCurrentContext(), v8_str(current_context_native(context), "cache")).ToLocalChecked();
-      auto cache = cache_.As<v8::Object>();
-
       auto obj = val.As<v8::Object>();
       auto scenes = i.v8_array(obj, "scenes");
-      if (!cache->IsObject()) {
-        throw std::runtime_error("Could not access cache object.");
-      }
       auto video = i.v8_obj(obj, "video");
       // auto objects = i.v8_array(obj, "objects");
       auto current_scene = i.get_index(scenes, scenesettings.current_scene_next);
@@ -633,14 +570,6 @@ bool native_generator::_generate_frame() {
       auto intermediates = i.v8_array(sceneobj, "instances_intermediate");
       auto next_instances = i.v8_array(sceneobj, "instances_next");
       if (!next_instances->IsArray()) return;
-
-      if (this->cache.enabled) {
-        if (this->cache.use) {
-          _load_js_cache(i, cache, instances, intermediates, next_instances);
-        } else {
-          _save_js_cache(i, cache, &instances, &intermediates, &next_instances);
-        }
-      }
 
       stepper.reset();
       indexes.clear();
@@ -740,9 +669,6 @@ bool native_generator::_generate_frame() {
 
       metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
     });
-    if (cache.enabled) {
-      cache.job_cache[job->frame_number] = true;
-    }
     job->job_number++;
     job->frame_number++;
     metrics_->complete_job(job->job_number);
@@ -751,62 +677,6 @@ bool native_generator::_generate_frame() {
   }
   job->last_frame = job->frame_number == max_frames;
   return job->frame_number != max_frames;
-}
-
-void native_generator::_load_cache() {
-  scenesettings = cache.scenesettings[job->job_number];
-  scalesettings = cache.scalesettings[job->job_number];
-  // next_instance_map = cache.next_instance_mapping[job->job_number];
-  util::generator::counter = cache.counter[job->job_number];
-}
-
-void native_generator::_save_cache() {
-  cache.scenesettings[job->job_number] = scenesettings;
-  cache.scalesettings[job->job_number] = scalesettings;
-  // cache.next_instance_mapping[job->job_number] = next_instance_map;
-  cache.counter[job->job_number] = util::generator::counter;
-}
-
-void native_generator::_load_js_cache(v8_interact& i,
-                                      v8::Local<v8::Object> cache,
-                                      v8::Local<v8::Array>& instances,
-                                      v8::Local<v8::Array>& intermediates,
-                                      v8::Local<v8::Array>& next_instances) {
-  std::string frame_index = std::string("frame") + std::to_string(job->job_number);
-  auto frame_cache = i.v8_obj(cache, frame_index);
-  if (frame_cache->IsObject()) {
-    auto cache_instances = i.v8_array(frame_cache, "instances");
-    auto cache_intermediates = i.v8_array(frame_cache, "instances_intermediate");
-    auto cache_next_instances = i.v8_array(frame_cache, "instances_next");
-    i.empty_and_resize(instances, cache_instances->Length());
-    i.empty_and_resize(intermediates, cache_intermediates->Length());
-    i.empty_and_resize(next_instances, cache_next_instances->Length());
-    util::generator::copy_instances(i, instances, cache_instances);
-    util::generator::copy_instances(i, intermediates, cache_intermediates);
-    util::generator::copy_instances(i, next_instances, cache_next_instances);
-  }
-}
-
-void native_generator::_save_js_cache(v8_interact& i,
-                                      v8::Local<v8::Object> cache,
-                                      v8::Local<v8::Array>* instances,
-                                      v8::Local<v8::Array>* intermediates,
-                                      v8::Local<v8::Array>* next_instances) {
-  std::string frame_index = std::string("frame") + std::to_string(job->job_number);
-  i.set_field(cache, frame_index, v8::Object::New(i.get_isolate()));
-  auto frame_cache = i.v8_obj(cache, frame_index);
-  i.set_field(frame_cache, "instances", v8::Array::New(i.get_isolate()));
-  i.set_field(frame_cache, "instances_intermediate", v8::Array::New(i.get_isolate()));
-  i.set_field(frame_cache, "instances_next", v8::Array::New(i.get_isolate()));
-  auto cache_instances = i.v8_array(frame_cache, "instances");
-  auto cache_intermediates = i.v8_array(frame_cache, "instances_intermediate");
-  auto cache_next_instances = i.v8_array(frame_cache, "instances_next");
-  i.empty_and_resize(cache_instances, (*instances)->Length());
-  i.empty_and_resize(cache_intermediates, (*intermediates)->Length());
-  i.empty_and_resize(cache_next_instances, (*next_instances)->Length());
-  util::generator::copy_instances(i, cache_instances, *instances);
-  util::generator::copy_instances(i, cache_intermediates, *intermediates);
-  util::generator::copy_instances(i, cache_next_instances, *next_instances);
 }
 
 void native_generator::revert_all_changes(v8_interact& i,

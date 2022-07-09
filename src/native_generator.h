@@ -80,16 +80,6 @@ private:
   scene_settings scenesettings;
   std::unordered_map<int64_t, scene_settings> scenesettings_objs;
 
-  struct cache {
-    bool enabled = false;
-    bool use = false;
-    std::unordered_map<size_t, bool> job_cache;
-    std::map<size_t, std::unordered_map<int64_t, size_t>> next_instance_mapping;
-    std::map<size_t, int64_t> counter;
-    std::map<size_t, scale_settings> scalesettings;
-    std::map<size_t, scene_settings> scenesettings;
-  } cache;
-
   std::string filename_;
 
   generator_context genctx;
@@ -196,19 +186,6 @@ public:
 
 private:
   bool _generate_frame();
-  bool _forward_latest_cached_frame(int frame_of_interest);
-  void _load_cache();
-  void _save_cache();
-  void _load_js_cache(v8_interact& i,
-                      v8::Local<v8::Object> cache,
-                      v8::Local<v8::Array>& instances,
-                      v8::Local<v8::Array>& intermediates,
-                      v8::Local<v8::Array>& next_instances);
-  void _save_js_cache(v8_interact& i,
-                      v8::Local<v8::Object> cache,
-                      v8::Local<v8::Array>* instances,
-                      v8::Local<v8::Array>* intermediates,
-                      v8::Local<v8::Array>* next_instances);
 
   std::map<int64_t, std::pair<double, double>> cached_xy;
   void fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t uid, double& x, double& y);
