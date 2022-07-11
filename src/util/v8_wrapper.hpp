@@ -234,7 +234,6 @@ inline void v8_wrapper::loop_object(std::string const& source,
   if (result->IsObject()) {
     auto obj = result.As<v8::Object>();
     auto fields = obj->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
-    logger(INFO) << "Looping over obj elements: " << fields->Length() << std::endl;
     for (size_t k = 0; k < fields->Length(); k++) {
       auto field = fields->Get(isolate->GetCurrentContext(), k).ToLocalChecked();
       auto element = obj->Get(isolate->GetCurrentContext(), field).ToLocalChecked();
