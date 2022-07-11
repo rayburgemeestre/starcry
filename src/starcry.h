@@ -74,7 +74,9 @@ struct starcry_options {
   bool debug = false;
 
   size_t num_worker_threads = std::thread::hardware_concurrency();
-  size_t num_chunks = std::thread::hardware_concurrency() * 2;
+  // large number of chunks can actually significantly reduce performance if the number of objects is large relative to
+  // the render time required since all objects have to be copied for each chunk.
+  size_t num_chunks = 1;
 
   std::string host = "localhost";
   bool enable_remote_workers = false;
