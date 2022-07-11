@@ -18,6 +18,8 @@ namespace data_staging {
 
 class line {
 private:
+  std::string namespace_;
+  std::string id_;
   int64_t unique_id_;
   int64_t level_;
 
@@ -44,6 +46,14 @@ private:
 public:
   //  line(vector2d line_start, vector2d line_end, double line_width)
   //      : line_start_(line_start), line_end_(line_end), line_width_(line_width) {}
+
+  const std::string& namespace_name() const {
+    return namespace_;
+  }
+
+  const std::string& id() const {
+    return id_;
+  }
 
   int64_t unique_id() const {
     return unique_id_;

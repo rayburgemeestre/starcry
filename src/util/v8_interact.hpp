@@ -29,9 +29,27 @@ inline std::string v8_str(v8::Isolate* isolate, const v8::Local<v8::String>& str
 }
 
 inline v8::Local<v8::Value> v8_index_object(v8::Local<v8::Context> context,
+                                            v8::Persistent<v8::Object>& val,
+                                            const std::string& str) {
+  return val.Get(context->GetIsolate())->Get(context, v8_str(context, str)).ToLocalChecked();
+}
+
+inline v8::Local<v8::Value> v8_index_object(v8::Local<v8::Context> context,
                                             v8::Local<v8::Value> val,
                                             const std::string& str) {
   return val.As<v8::Object>()->Get(context, v8_str(context, str)).ToLocalChecked();
+}
+
+inline v8::Local<v8::Value> v8_index_object(v8::Local<v8::Context> context,
+                                            v8::Persistent<v8::Array>& val,
+                                            size_t index) {
+  return val.Get(context->GetIsolate()).As<v8::Object>()->Get(context, index).ToLocalChecked();
+}
+
+inline v8::Local<v8::Value> v8_index_object(v8::Local<v8::Context> context,
+                                            v8::Persistent<v8::Value>& val,
+                                            size_t index) {
+  return val.Get(context->GetIsolate()).As<v8::Object>()->Get(context, index).ToLocalChecked();
 }
 
 inline v8::Local<v8::Value> v8_index_object(v8::Local<v8::Context> context, v8::Local<v8::Value> val, size_t index) {
@@ -62,8 +80,16 @@ public:
     return ctx;
   }
 
+  v8::Local<v8::Object> v8_obj(v8::Persistent<v8::Object>& obj, const std::string& field) {
+    return v8_index_object(ctx, obj, field).As<v8::Object>();
+  }
+
   v8::Local<v8::Object> v8_obj(v8::Local<v8::Object>& obj, const std::string& field) {
     return v8_index_object(ctx, obj, field).As<v8::Object>();
+  }
+
+  v8::Local<v8::Array> v8_array(v8::Persistent<v8::Object>& obj, const std::string& field) {
+    return v8_index_object(ctx, obj, field).As<v8::Array>();
   }
 
   v8::Local<v8::Array> v8_array(v8::Local<v8::Object>& obj, const std::string& field) {
@@ -81,12 +107,24 @@ public:
     return tmp;
   }
 
+  v8::Local<v8::Number> v8_number(v8::Persistent<v8::Object>& obj, const std::string& field) {
+    return v8_index_object(ctx, obj, field).As<v8::Number>();
+  }
+
   v8::Local<v8::Number> v8_number(v8::Local<v8::Object>& obj, const std::string& field) {
     return v8_index_object(ctx, obj, field).As<v8::Number>();
   }
 
+  v8::Local<v8::Number> v8_number(v8::Persistent<v8::Array>& obj, size_t index) {
+    return v8_index_object(ctx, obj, index).As<v8::Number>();
+  }
+
   v8::Local<v8::Number> v8_number(v8::Local<v8::Array>& obj, size_t index) {
     return v8_index_object(ctx, obj, index).As<v8::Number>();
+  }
+
+  v8::Local<v8::String> v8_string(v8::Persistent<v8::Object>& obj, const std::string& field) {
+    return v8_index_object(ctx, obj, field).As<v8::String>();
   }
 
   v8::Local<v8::String> v8_string(v8::Local<v8::Object>& obj, const std::string& field) {
@@ -99,6 +137,14 @@ public:
 
   double double_number(v8::Local<v8::Object>& obj, const std::string& field) {
     return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext()).ToChecked();
+  }
+
+  double double_number(v8::Persistent<v8::Object>& obj, const std::string& field, double default_value) {
+    if (has_field(obj, field)) {
+      return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext()).ToChecked();
+    } else {
+      return default_value;
+    }
   }
 
   double double_number(v8::Local<v8::Object>& obj, const std::string& field, double default_value) {
@@ -134,6 +180,10 @@ public:
     return default_val;
   }
 
+  std::string str(v8::Persistent<v8::Object>& obj, const std::string& field) {
+    return v8_str(isolate, v8_string(obj, field));
+  }
+
   std::string str(v8::Local<v8::Object>& obj, const std::string& field) {
     return v8_str(isolate, v8_string(obj, field));
   }
@@ -147,6 +197,10 @@ public:
 
   std::string str(v8::Local<v8::Array>& obj, size_t index) {
     return v8_str(isolate, v8_string(obj, index));
+  }
+
+  bool has_field(v8::Persistent<v8::Object>& source, const std::string& source_field) {
+    return source.Get(isolate)->Has(ctx, v8_str(ctx, source_field)).ToChecked();
   }
 
   bool has_field(v8::Local<v8::Object> source, const std::string& source_field) {
@@ -179,9 +233,18 @@ public:
     handle_error(dest->Set(ctx, v8_str(ctx, dest_field), source->Get(ctx, v8_str(ctx, dest_field)).ToLocalChecked()));
   }
 
+  void set_field(v8::Persistent<v8::Object>& object, v8::Local<v8::Value> field, v8::Local<v8::Value> value) {
+    handle_error(object.Get(isolate)->Set(ctx, field, value));
+  }
+
   void set_field(v8::Local<v8::Object> object, v8::Local<v8::Value> field, v8::Local<v8::Value> value) {
     handle_error(object->Set(ctx, field, value));
   }
+
+  void set_field(v8::Persistent<v8::Object>& object, const std::string& field, v8::Local<v8::Value> value) {
+    handle_error(object.Get(isolate)->Set(ctx, v8_str(ctx, field), value));
+  }
+
   void set_field(v8::Local<v8::Object> object, const std::string& field, v8::Local<v8::Value> value) {
     handle_error(object->Set(ctx, v8_str(ctx, field), value));
   }
@@ -190,6 +253,10 @@ public:
   }
   void remove_field(v8::Local<v8::Object> object, const std::string& field) {
     handle_error(object->Delete(ctx, v8_str(ctx, field)));
+  }
+
+  void set_fun(v8::Persistent<v8::Object>& object, const std::string& field, v8::Local<v8::Function> fun) {
+    handle_error(object.Get(isolate)->Set(ctx, v8_str(ctx, field), fun));
   }
 
   void set_fun(v8::Local<v8::Object> object, const std::string& field, v8::Local<v8::Function> fun) {
@@ -259,6 +326,10 @@ public:
     auto global = isolate->GetCurrentContext()->Global();
     auto maybelocal = global->Get(isolate->GetCurrentContext(), v8_field);
     return maybelocal.ToLocalChecked();
+  }
+
+  v8::Local<v8::Value> get_index(v8::Persistent<v8::Array>& array, size_t index) {
+    return array.Get(isolate)->Get(ctx, index).ToLocalChecked();
   }
 
   v8::Local<v8::Value> get_index(v8::Local<v8::Array> array, size_t index) {

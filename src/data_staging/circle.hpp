@@ -18,12 +18,14 @@ namespace data_staging {
 
 class circle {
 private:
+  std::string namespace_;
+  std::string id_;
   int64_t unique_id_;
   int64_t level_;
 
-  vector2d position_;
+  vector2d position_ = {0, 0};
   // double z_ = 0;
-  vector2d velocity_;
+  vector2d velocity_ = {0, 0};
   double velocity_speed_ = 0;
 
   double radius_ = 100.;
@@ -44,8 +46,16 @@ private:
   std::string toroidal_group_;
 
 public:
-  circle(int64_t unique_id, vector2d position, double radius, double radiussize)
-      : unique_id_(unique_id), position_(position), velocity_(0, 0), radius_(radius), radius_size_(radiussize) {}
+  circle(std::string id, int64_t unique_id, vector2d position, double radius, double radiussize)
+      : id_(std::move(id)), unique_id_(unique_id), position_(position), radius_(radius), radius_size_(radiussize) {}
+
+  const std::string& namespace_name() const {
+    return namespace_;
+  }
+
+  const std::string& id() const {
+    return id_;
+  }
 
   int64_t unique_id() const {
     return unique_id_;

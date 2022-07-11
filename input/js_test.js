@@ -44,6 +44,12 @@ _ = {
       'gradient': 'blue',
       'radius': 0,
       'radiussize': 5.0,
+      'init': function() {
+        // output("in init function for object id ball");
+      },
+      'time': function(t, e, s, tt) {
+        // output("in time function for object id ball with: " + t + " / " + e + " / " + s + " / " + tt);
+      }
     },
 
   },

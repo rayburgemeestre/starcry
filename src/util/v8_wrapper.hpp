@@ -37,6 +37,9 @@ public:
 
   inline void run_array(std::string const& source, std::function<void(v8::Isolate*, v8::Local<v8::Value>)> callback);
 
+  inline void enter_object(std::string const& source, std::function<void(v8::Isolate*, v8::Local<v8::Value>)> callback);
+  inline void loop_object(std::string const& source, std::function<void(v8::Isolate*, v8::Local<v8::Value>)> callback);
+
   inline void call_array(std::string const& function_name,
                          std::function<void(v8::Isolate*, v8::Local<v8::Value>)> callback);
 
@@ -194,6 +197,57 @@ inline void v8_wrapper::run_array(std::string const& source,
     rethrow_as_runtime_error(isolate, try_catch);
   }
   callback(isolate, result);
+  if (try_catch.HasCaught()) {
+    rethrow_as_runtime_error(isolate, try_catch);
+  }
+}
+inline void v8_wrapper::enter_object(std::string const& source,
+                                     std::function<void(v8::Isolate*, v8::Local<v8::Value>)> callback) {
+  v8::Isolate* isolate = context->isolate();
+  v8::HandleScope scope(isolate);
+  v8::TryCatch try_catch(isolate);
+  try_catch.SetVerbose(true);
+  try_catch.SetCaptureMessage(true);
+  v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
+  auto result = global->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, source)).ToLocalChecked();
+  if (try_catch.HasCaught()) {
+    rethrow_as_runtime_error(isolate, try_catch);
+  }
+  callback(isolate, result);
+  if (try_catch.HasCaught()) {
+    rethrow_as_runtime_error(isolate, try_catch);
+  }
+}
+
+inline void v8_wrapper::loop_object(std::string const& source,
+                                    std::function<void(v8::Isolate*, v8::Local<v8::Value>)> callback) {
+  v8::Isolate* isolate = context->isolate();
+  v8::HandleScope scope(isolate);
+  v8::TryCatch try_catch(isolate);
+  try_catch.SetVerbose(true);
+  try_catch.SetCaptureMessage(true);
+  v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
+  auto result = global->Get(isolate->GetCurrentContext(), v8pp::to_v8(isolate, source)).ToLocalChecked();
+  if (try_catch.HasCaught()) {
+    rethrow_as_runtime_error(isolate, try_catch);
+  }
+  if (result->IsObject()) {
+    auto obj = result.As<v8::Object>();
+    auto fields = obj->GetOwnPropertyNames(isolate->GetCurrentContext()).ToLocalChecked();
+    logger(INFO) << "Looping over obj elements: " << fields->Length() << std::endl;
+    for (size_t k = 0; k < fields->Length(); k++) {
+      auto field = fields->Get(isolate->GetCurrentContext(), k).ToLocalChecked();
+      auto element = obj->Get(isolate->GetCurrentContext(), field).ToLocalChecked();
+      auto str = v8pp::from_v8<std::string>(isolate, field);
+      callback(isolate, element);
+    }
+  } else if (result->IsArray()) {
+    auto array = result.As<v8::Array>();
+    for (auto i = 0; i < array->Length(); i++) {
+      auto element = array->Get(isolate->GetCurrentContext(), i).ToLocalChecked();
+      callback(isolate, element);
+    }
+  }
   if (try_catch.HasCaught()) {
     rethrow_as_runtime_error(isolate, try_catch);
   }

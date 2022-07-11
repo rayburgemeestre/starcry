@@ -78,6 +78,7 @@ private:
   // TODO: Can we do without copies, please?
   std::unordered_map<int64_t, data_staging::shape_t> next_instance_map;
   std::unordered_map<int64_t, data_staging::shape_t> intermediate_map;
+  std::unordered_map<std::string, v8::Persistent<v8::Object>> object_definitions_map;
   data::settings settings_;
 
   int min_intermediates = 1.;
@@ -90,7 +91,7 @@ private:
 
   std::string filename_;
 
-  native_generator_context genctx;
+  std::shared_ptr<native_generator_context> genctx;
 
 public:
   struct time_settings {
@@ -112,8 +113,9 @@ public:
   void init_textures();
   void init_toroidals();
   void init_object_instances();
+  void init_object_definitions();
 
-  void instantiate_additional_objects_from_new_scene(v8::Local<v8::Array>& scene_objects,
+  void instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
                                                      v8::Local<v8::Object>* parent_object = nullptr);
   void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance);
   void set_scene(size_t scene);
@@ -138,7 +140,10 @@ public:
                       v8::Local<v8::Object> instance,
                       v8::Local<v8::Object> instance2,
                       vector2d& acceleration);
-  void update_time(v8_interact& i, v8::Local<v8::Object>& instance, scene_settings& scenesettings);
+  void update_time(v8_interact& i,
+                   data_staging::shape_t& instance,
+                   const std::string& instance_id,
+                   scene_settings& scenesettings);
   int update_steps(double dist);
   double get_max_travel_of_object(v8_interact& i,
                                   v8::Local<v8::Array>& next_instances,
@@ -190,4 +195,16 @@ private:
 
   std::map<int64_t, std::pair<double, double>> cached_xy;
   void fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t uid, double& x, double& y);
+
+  v8::Local<v8::Object> _instantiate_object_from_scene(
+      v8_interact& i,
+      v8::Local<v8::Object>& scene_object,  // object description from scene to be instantiated
+      v8::Local<v8::Object>* parent_object  // it's optional parent
+  );
+  void _instantiate_object(v8_interact& i,
+                           std::optional<v8::Local<v8::Object>> scene_obj,
+                           v8::Local<v8::Object> object_prototype,
+                           v8::Local<v8::Object> new_instance,
+                           int64_t level,
+                           const std::string& namespace_);
 };
