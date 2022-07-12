@@ -365,6 +365,7 @@ inline void v8_wrapper::add_fun(const std::string& name, T func) {
 template <typename T>
 inline void v8_wrapper::add_class(T func) {
   v8::HandleScope scope(context->isolate());
+  // caller is required to add the class to the context
   func(*context);
 }
 

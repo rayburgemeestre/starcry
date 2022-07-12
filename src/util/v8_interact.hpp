@@ -135,6 +135,10 @@ public:
     return v8_index_object(ctx, obj, index).As<v8::String>();
   }
 
+  double double_number(v8::Persistent<v8::Object>& obj, const std::string& field) {
+    return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext()).ToChecked();
+  }
+
   double double_number(v8::Local<v8::Object>& obj, const std::string& field) {
     return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext()).ToChecked();
   }
@@ -262,7 +266,77 @@ public:
   void set_fun(v8::Local<v8::Object> object, const std::string& field, v8::Local<v8::Function> fun) {
     handle_error(object->Set(ctx, v8_str(ctx, field), fun));
   }
+  template <class... Args>
+  void call_fun(v8::Persistent<v8::Object>& object,
+                v8::Persistent<v8::Object>& self,
+                const std::string& field,
+                Args... args) {
+    auto v8_field = v8_str(ctx, field);
+    auto a = isolate->GetCurrentContext();
+    auto b = object.Get(isolate).As<v8::Object>();
+    if (!b->IsObject()) {
+      return;
+    }
+    auto c = b->Has(a, v8_field);
+    auto has_field = c.ToChecked();
+    if (!has_field) return;
+    auto funref = object.Get(isolate).As<v8::Object>()->Get(isolate->GetCurrentContext(), v8_field);
+    if (funref.IsEmpty()) {
+      return;
+    }
+    auto fundef = funref.ToLocalChecked();
+    if (!fundef->IsFunction()) {
+      return;
+    }
+    auto fun = fundef.As<v8::Function>();
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wzero-length-array"
+#endif
+    v8::Handle<v8::Value> argz[sizeof...(Args)];
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+    size_t index = 0;
+    (void(argz[index++] = v8pp::to_v8(isolate, args)), ...);
+    fun->Call(isolate->GetCurrentContext(), self.Get(isolate), sizeof...(Args), argz).ToLocalChecked();
+  }
 
+  template <class... Args>
+  void call_fun(v8::Local<v8::Object>& object,
+                v8::Persistent<v8::Object>& self,
+                const std::string& field,
+                Args... args) {
+    auto v8_field = v8_str(ctx, field);
+    auto a = isolate->GetCurrentContext();
+    auto b = object.As<v8::Object>();
+    if (!b->IsObject()) {
+      return;
+    }
+    auto c = b->Has(a, v8_field);
+    auto has_field = c.ToChecked();
+    if (!has_field) return;
+    auto funref = object.As<v8::Object>()->Get(isolate->GetCurrentContext(), v8_field);
+    if (funref.IsEmpty()) {
+      return;
+    }
+    auto fundef = funref.ToLocalChecked();
+    if (!fundef->IsFunction()) {
+      return;
+    }
+    auto fun = fundef.As<v8::Function>();
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wzero-length-array"
+#endif
+    v8::Handle<v8::Value> argz[sizeof...(Args)];
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+    size_t index = 0;
+    (void(argz[index++] = v8pp::to_v8(isolate, args)), ...);
+    fun->Call(isolate->GetCurrentContext(), self.Get(isolate), sizeof...(Args), argz).ToLocalChecked();
+  }
   template <class... Args>
   void call_fun(v8::Local<v8::Object> object, const std::string& field, Args... args) {
     return call_fun(object, object, field, std::forward<Args>(args)...);

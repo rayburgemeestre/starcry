@@ -15,6 +15,7 @@
 
 #include "v8pp/module.hpp"
 
+#include "generator/object_bridge.h"
 #include "scripting.h"
 #include "starcry/metrics.h"
 #include "util/generator.h"
@@ -36,21 +37,15 @@ native_generator::native_generator(std::shared_ptr<metrics>& metrics, std::share
 
 native_generator* global_native_generator = nullptr;
 
-v8::Local<v8::Object> spawn_object_native(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  auto ctx = global_native_generator->get_context();
-  v8::Isolate* isolate = ctx->isolate;
-  v8::HandleScope scope(isolate);
-  v8::Local<v8::Object> obj = args[0]->ToObject(ctx->context->impl()).ToLocalChecked();
-  v8_interact i(obj->GetIsolate());
-  auto spawner = args.Holder();
-  return global_native_generator->spawn_object_native(spawner, obj);
-}
-
 void native_generator::reset_context() {
   // reset context
   context->reset();
 
   // add context global functions
+  context->add_class([&](v8pp::context& context) {
+    object_bridge::add_to_context(context);
+  });
+
   context->add_fun("output", &output_fun);
   context->add_fun("rand", &rand_fun);
   context->add_fun("random_velocity", &random_velocity);
@@ -65,7 +60,6 @@ void native_generator::reset_context() {
   context->add_fun("blending_type_str", &data::blending_type::to_str);
 
   global_native_generator = this;
-  context->add_fun("__spawn__", &::spawn_object_native);
   context->add_include_fun();
 
   // add blending constants
@@ -157,6 +151,16 @@ void native_generator::init_user_script() {
   context->run("cache = typeof cache == 'undefined' ? {} : cache;");
   context->run("script = {\"video\": {}};");
   context->run(source);
+
+  // TODO: there might be a more elegant way to do this..
+  // create instance of object_bridge in javascript land
+  context->run("bridged_object = new object_bridge(-1);");
+  // create a persistent pointer to the object
+  context->enter_object("bridged_object", [this](v8::Isolate* isolate, v8::Local<v8::Value> obj) {
+    persistent_bridged_obj.Reset(isolate, obj.As<v8::Object>());
+  });
+  // give the object bridge the ability to callback to us (for spawning)
+  object_bridge_ptr->set_generator(this);
 }
 
 void native_generator::init_job() {
@@ -496,7 +500,8 @@ void native_generator::create_bookkeeping_for_script_objects(v8::Local<v8::Objec
     // execution.
     v8::Persistent<v8::Array> tmp;
     tmp.Reset(i.get_isolate(), scene_objects);
-    instantiate_additional_objects_from_new_scene(tmp, &created_instance);
+    // TODO: fix this mess
+    // instantiate_additional_objects_from_new_scene(tmp, &created_instance);
   }
 
   // clean-up temporary variable that referenced the entire imported script
@@ -504,30 +509,29 @@ void native_generator::create_bookkeeping_for_script_objects(v8::Local<v8::Objec
 }
 
 void native_generator::instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
-                                                                     v8::Local<v8::Object>* parent_object) {
+                                                                     data_staging::shape_t* parent_object) {
   auto& i = genctx->i();
 
   // instantiate all the additional objects from the new scene
   for (size_t j = 0; j < scene_objects.Get(i.get_isolate())->Length(); j++) {
     auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
-    if (false) {
-      // below can recursively add new objects as init() invocations spawn new objects, and so on
-      static util::random_generator rng;
-      static int64_t unique_id = 1;
-      logger(INFO) << "Instantiating 10.000 objects.." << std::endl;
-      for (int j = 0; j < 10000; j++) {
-        data_staging::circle c("ball", unique_id++, vector2d(rng.get() * 1000 - 500, rng.get() * 1000 - 500), 0, 5);
-        c.set_velocity(rng.get(), rng.get(), 10.);
-        c.set_gradient("blue");
-        scene_shapes_next[scenesettings.current_scene_next].push_back(c);
-        auto find = object_definitions_map.find("ball");
-        if (find != object_definitions_map.end()) {
-          // TODO: is there something more performant than below??
-          auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
-          i.call_fun(object_definition, "init");
-        }
-      }
-    }
+    //    if (false) {
+    //      // below can recursively add new objects as init() invocations spawn new objects, and so on
+    //      static util::random_generator rng;
+    //      static int64_t unique_id = 1;
+    //      logger(INFO) << "Instantiating 10.000 objects.." << std::endl;
+    //      for (int j = 0; j < 10000; j++) {
+    //        data_staging::circle c("ball", unique_id++, vector2d(rng.get() * 1000 - 500, rng.get() * 1000 - 500), 0,
+    //        5); c.set_velocity(rng.get(), rng.get(), 10.); c.set_gradient("blue");
+    //        scene_shapes_next[scenesettings.current_scene_next].push_back(c);
+    //        auto find = object_definitions_map.find("ball");
+    //        if (find != object_definitions_map.end()) {
+    //          // TODO: is there something more performant than below??
+    //          auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
+    //          i.call_fun(object_definition, "init");
+    //        }
+    //      }
+    //    }
 
     v8::Local<v8::Object> created_instance = _instantiate_object_from_scene(i, scene_obj, parent_object);
     // create_bookkeeping_for_script_objects(created_instance);
@@ -1296,13 +1300,45 @@ void native_generator::update_time(v8_interact& i,
 
     auto find = object_definitions_map.find(instance_id);
     if (find != object_definitions_map.end()) {
+      auto& c = std::get<data_staging::circle>(instance);
+      // i.set_field(find->second, "x", v8::Number::New(i.get_isolate(), c.position_ref().x));
+      // i.set_field(find->second, "y", v8::Number::New(i.get_isolate(), c.position_ref().y));
+      i.set_field(find->second, "radius", v8::Number::New(i.get_isolate(), c.radius()));
+      i.set_field(find->second, "radiussize", v8::Number::New(i.get_isolate(), c.radius_size()));
+
       auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
-      i.call_fun(object_definition,
-                 "time",
-                 scene_time,
-                 time_settings.elapsed,
-                 scenesettings.current_scene_next,
-                 time_settings.time);
+
+      if (object_bridge_ptr) {
+        // TODO: check if the object has an "init" function, or we can just skip this entire thing
+        object_bridge_ptr->push_object(c);
+        i.call_fun(object_definition,
+                   persistent_bridged_obj,
+                   "time",
+                   scene_time,
+                   time_settings.elapsed,
+                   scenesettings.current_scene_next,
+                   time_settings.time);
+        object_bridge_ptr->pop_object();
+      }
+
+      auto object_id = c.id();
+      auto namespace_name = c.namespace_name();
+      // c.position_ref().x = i.double_number(find->second, "x");
+      // c.position_ref().y = i.double_number(find->second, "y");
+      c.set_radius(i.double_number(find->second, "radius"));
+      c.set_radius_size(i.double_number(find->second, "radiussize"));
+      // TODO: broken
+      auto gradient_array = i.v8_array(object_definitions_map[object_id], "gradients");
+      c.gradients_ref().clear();
+      for (size_t k = 0; k < gradient_array->Length(); k++) {
+        auto gradient_data = i.get_index(gradient_array, k).As<v8::Array>();
+        if (!gradient_data->IsArray()) {
+          continue;
+        }
+        auto opacity = i.double_number(gradient_data, size_t(0));
+        auto gradient_id = namespace_name + i.str(gradient_data, size_t(1));
+        c.gradients_ref().emplace_back(opacity, gradients[gradient_id]);
+      }
     }
   };
 
@@ -1797,13 +1833,23 @@ std::shared_ptr<data::job> native_generator::get_job() const {
   return job;
 }
 
+// deprecated
 v8::Local<v8::Object> native_generator::spawn_object_native(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj) {
+  //  auto& i = genctx->i();
+  //  auto created_instance = _instantiate_object_from_scene(i, obj, &spawner);
+  //  // TODO:
+  //  // next_instance_map[i.integer_number(created_instance, "unique_id")] = created_instance;
+  //  create_bookkeeping_for_script_objects(created_instance);
+  //  return created_instance;
+}
+
+void native_generator::spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj) {
   auto& i = genctx->i();
   auto created_instance = _instantiate_object_from_scene(i, obj, &spawner);
   // TODO:
   // next_instance_map[i.integer_number(created_instance, "unique_id")] = created_instance;
-  create_bookkeeping_for_script_objects(created_instance);
-  return created_instance;
+  // TODO:
+  // create_bookkeeping_for_script_objects(created_instance);
 }
 
 // TODO: will refactor soon
@@ -1835,12 +1881,30 @@ void native_generator::fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, i
 v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
     v8_interact& i,
     v8::Local<v8::Object>& scene_object,  // object description from scene to be instantiated
-    v8::Local<v8::Object>* parent_object  // it's optional parent
+    data_staging::shape_t* parent_object  // it's optional parent
 ) {
   v8::Isolate* isolate = i.get_isolate();
 
-  int64_t current_level = (parent_object == nullptr) ? 0 : i.integer_number(*parent_object, "level") + 1;
-  auto parent_object_ns = (parent_object == nullptr) ? "" : i.str(*parent_object, "namespace", "");
+  int64_t current_level = 0;
+  auto parent_object_ns = std::string("");
+  int64_t parent_uid = -1;
+
+  if (parent_object) {
+    std::visit(overloaded{
+                   [](std::monostate) {},
+                   [&](data_staging::circle& cc) {
+                     current_level = cc.level();
+                     parent_object_ns = cc.namespace_name();
+                     parent_uid = cc.unique_id();
+                   },
+                   [&](data_staging::line& cc) {
+                     current_level = cc.level();
+                     parent_object_ns = cc.namespace_name();
+                     parent_uid = cc.unique_id();
+                   },
+               },
+               *parent_object);
+  }
 
   // lookup the object prototype to be instantiated
   auto object_id = parent_object_ns + i.str(scene_object, "id", "");
@@ -1859,8 +1923,7 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
   // give it a unique id (it already has been assigned a __random_hash__ for debugging purposes
   static int64_t counter = 0;
   i.set_field(instance, "unique_id", v8::Number::New(i.get_isolate(), ++counter));
-  i.set_field(
-      instance, "parent_uid", parent_object ? i.v8_number(*parent_object, "unique_id") : v8::Number::New(isolate, -1));
+  i.set_field(instance, "parent_uid", v8::Number::New(i.get_isolate(), parent_uid));
 
   // TODO: in the future we will simply instantiate this directly, for now, to save some refactoring time
   // we will map, to see if the proof of concept works
@@ -1870,11 +1933,10 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
                          vector2d(i.double_number(instance, "x"), i.double_number(instance, "y")),
                          i.double_number(instance, "radius"),
                          i.double_number(instance, "radiussize"));
-  c.set_velocity(
-      i.double_number(instance, "vel_x"), i.double_number(instance, "vel_y"), i.double_number(instance, "velocity"));
+  c.set_velocity(i.double_number(instance, "vel_x", 0),
+                 i.double_number(instance, "vel_y", 0),
+                 i.double_number(instance, "velocity", 0));
   c.set_gradient(i.str(instance, "gradient"));
-
-  scene_shapes_next[scenesettings.current_scene_next].emplace_back(c);
 
   // TODO: Update this to work with the new vectors
   //  if (!parent_object) {
@@ -1930,8 +1992,48 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
   auto the_fun = i.get_fun("__spawn__");
   i.set_fun(object_definitions_map[object_id], "spawn", the_fun);
 
+  // POC v 2, handled by object bridge.
+  // i.set_field(object_definitions_map[object_id], "x", i.get(instance, "x"));
+  // i.set_field(object_definitions_map[object_id], "y", i.get(instance, "y"));
+  // POC v 1
+  i.set_field(object_definitions_map[object_id], "radius", i.get(instance, "radius"));
+  i.set_field(object_definitions_map[object_id], "radiussize", i.get(instance, "radiussize"));
+
   // now invoke init() on the object, which in turn can lead to new objects
-  i.call_fun(v8::Local<v8::Object>::New(isolate, object_definitions_map[object_id]), "init");
+  // i.call_fun(v8::Local<v8::Object>::New(isolate, object_definitions_map[object_id]), "init");
+
+  // Experimental, this is the future!
+  if (object_bridge_ptr) {
+    // TODO: check if the object has an "init" function, or we can just skip this entire thing
+    object_bridge_ptr->push_object(c);
+    i.call_fun(object_definitions_map[object_id],  // object definition
+               persistent_bridged_obj,             // bridged object is "this"
+               "init");
+    object_bridge_ptr->pop_object();
+  }
+
+  // POC v1
+  // c.position_ref().x = i.double_number(object_definitions_map[object_id], "x");
+  // c.position_ref().y = i.double_number(object_definitions_map[object_id], "y");
+  // POC v2 does not need ^ anymore, due to the object bridge handling x, y.
+  c.set_radius(i.double_number(object_definitions_map[object_id], "radius"));
+  c.set_radius_size(i.double_number(object_definitions_map[object_id], "radiussize"));
+
+  // TODO: broken
+  auto gradient_array = i.v8_array(object_definitions_map[object_id], "gradients");
+  if (c.gradients_ref().empty()) {
+    for (size_t k = 0; k < gradient_array->Length(); k++) {
+      auto gradient_data = i.get_index(gradient_array, k).As<v8::Array>();
+      if (!gradient_data->IsArray()) {
+        continue;
+      }
+      auto opacity = i.double_number(gradient_data, size_t(0));
+      auto gradient_id = parent_object_ns + i.str(gradient_data, size_t(1));
+      c.gradients_ref().emplace_back(opacity, gradients[gradient_id]);
+    }
+  }
+
+  scene_shapes_next[scenesettings.current_scene_next].emplace_back(c);
 
   return instance;
 }

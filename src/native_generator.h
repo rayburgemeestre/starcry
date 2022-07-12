@@ -93,6 +93,8 @@ private:
 
   std::shared_ptr<native_generator_context> genctx;
 
+  v8::Persistent<v8::Object> persistent_bridged_obj;
+
 public:
   struct time_settings {
     double time;
@@ -116,7 +118,7 @@ public:
   void init_object_definitions();
 
   void instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
-                                                     v8::Local<v8::Object>* parent_object = nullptr);
+                                                     data_staging::shape_t* parent_object = nullptr);
   void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance);
   void set_scene(size_t scene);
   void set_scene_sub_object(scene_settings& scenesettings, size_t scene);
@@ -189,6 +191,7 @@ public:
   std::shared_ptr<v8_wrapper> get_context() const;
 
   v8::Local<v8::Object> spawn_object_native(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj);
+  void spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
 
 private:
   bool _generate_frame();
@@ -199,7 +202,7 @@ private:
   v8::Local<v8::Object> _instantiate_object_from_scene(
       v8_interact& i,
       v8::Local<v8::Object>& scene_object,  // object description from scene to be instantiated
-      v8::Local<v8::Object>* parent_object  // it's optional parent
+      data_staging::shape_t* parent_object  // it's optional parent
   );
   void _instantiate_object(v8_interact& i,
                            std::optional<v8::Local<v8::Object>> scene_obj,

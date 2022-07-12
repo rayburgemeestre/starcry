@@ -124,5 +124,17 @@ public:
   void set_gradient(std::string_view gradient) {
     gradient_ = gradient;
   }
+
+  std::vector<std::pair<double, data::gradient>>& gradients_ref() {
+    return gradients_;
+  }
+
+  void set_radius(double radius) {
+    radius_ = radius;
+  }
+
+  void set_radius_size(double radius_size) {
+    radius_size_ = radius_size;
+  }
 };
 }  // namespace data_staging

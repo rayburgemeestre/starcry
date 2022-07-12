@@ -19,6 +19,7 @@ _ = {
   },
   'objects': {
     'balls': {
+      'id': 'balls_tpl',
       'x': 0,
       'y': 0,
       'init': function() {
@@ -36,6 +37,7 @@ _ = {
       }
     },
     'ball': {
+      'id': 'ball_tpl',
       'type': 'circle',
       //'collision_group': 'group1',
       //'gravity_group': 'group1',
@@ -48,7 +50,8 @@ _ = {
         //  output("in init function for object id ball");
       },
       'time': function(t, e, s, tt) {
-        //  output("in time function for object id ball with: " + t + " / " + e + " / " + s + " / " + tt);
+        // output("in time function for object id ball with: " + t + " / " + e + " / " + s + " / " + tt);
+        // this.x += 1;
       }
     },
   },
