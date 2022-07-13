@@ -44,6 +44,7 @@ void native_generator::reset_context() {
   // add context global functions
   context->add_class([&](v8pp::context& context) {
     object_bridge<data_staging::circle>::add_to_context(context);
+    object_bridge<data_staging::line>::add_to_context(context);
   });
 
   context->add_fun("output", &output_fun);
@@ -152,15 +153,17 @@ void native_generator::init_user_script() {
   context->run("script = {\"video\": {}};");
   context->run(source);
 
-  // TODO: there might be a more elegant way to do this..
-  // create instance of object_bridge in javascript land
-  context->run("bridged_object = new object_bridge(-1);");
-  // create a persistent pointer to the object
-  context->enter_object("bridged_object", [this](v8::Isolate* isolate, v8::Local<v8::Value> obj) {
-    persistent_bridged_obj.Reset(isolate, obj.As<v8::Object>());
-  });
-  // give the object bridge the ability to callback to us (for spawning)
-  object_bridge_ptr->set_generator(this);
+  const auto init =
+      [&](auto object_bridge_name, auto*& object_bridge_ptr, v8::Persistent<v8::Object>& persisted_obj_ref) {
+        context->run(fmt::format("{}_instance = new {}(-1);", object_bridge_name, object_bridge_name));
+        context->enter_object(fmt::format("{}_instance", object_bridge_name),
+                              [&](v8::Isolate* isolate, v8::Local<v8::Value> obj) {
+                                persisted_obj_ref.Reset(isolate, obj.As<v8::Object>());
+                              });
+        object_bridge_ptr->set_generator(this);
+      };
+  init("object_bridge_circle", object_bridge_circle, persisted_object_bridge_circle);
+  init("object_bridge_line", object_bridge_line, persisted_object_bridge_line);
 }
 
 void native_generator::init_job() {
@@ -1300,36 +1303,54 @@ void native_generator::update_time(v8_interact& i,
 
     auto find = object_definitions_map.find(instance_id);
     if (find != object_definitions_map.end()) {
-      auto& c = std::get<data_staging::circle>(instance);
       auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
+      std::visit(overloaded{
+                     [](std::monostate) {
 
-      if (object_bridge_ptr) {
-        // TODO: check if the object has an "init" function, or we can just skip this entire thing
-        object_bridge_ptr->push_object(c);
-        i.call_fun(object_definition,
-                   persistent_bridged_obj,
-                   "time",
-                   scene_time,
-                   time_settings.elapsed,
-                   scenesettings.current_scene_next,
-                   time_settings.time);
-        object_bridge_ptr->pop_object();
-      }
+                     },
+                     [&](data_staging::circle& c) {
+                       if (object_bridge_circle) {
+                         // TODO: check if the object has an "init" function, or we can just skip this entire thing
+                         object_bridge_circle->push_object(c);
+                         i.call_fun(object_definition,
+                                    persisted_object_bridge_circle,
+                                    "time",
+                                    scene_time,
+                                    time_settings.elapsed,
+                                    scenesettings.current_scene_next,
+                                    time_settings.time);
+                         object_bridge_circle->pop_object();
+                       }
+                     },
+                     [&](data_staging::line& l) {
+                       // TODO: check if the object has an "init" function, or we can just skip this entire thing
+                       object_bridge_line->push_object(l);
+                       i.call_fun(object_definition,
+                                  persisted_object_bridge_line,
+                                  "time",
+                                  scene_time,
+                                  time_settings.elapsed,
+                                  scenesettings.current_scene_next,
+                                  time_settings.time);
+                       object_bridge_line->pop_object();
+                     },
+                 },
+                 instance);
 
-      auto object_id = c.meta().id();
-      auto namespace_name = c.meta().namespace_name();
-      // TODO: broken
-      auto gradient_array = i.v8_array(object_definitions_map[object_id], "gradients");
-      c.styling_ref().gradients_ref().clear();
-      for (size_t k = 0; k < gradient_array->Length(); k++) {
-        auto gradient_data = i.get_index(gradient_array, k).As<v8::Array>();
-        if (!gradient_data->IsArray()) {
-          continue;
-        }
-        auto opacity = i.double_number(gradient_data, size_t(0));
-        auto gradient_id = namespace_name + i.str(gradient_data, size_t(1));
-        c.styling_ref().gradients_ref().emplace_back(opacity, gradients[gradient_id]);
-      }
+      //      auto object_id = c.meta().id();
+      //      auto namespace_name = c.meta().namespace_name();
+      //      // TODO: broken
+      //      auto gradient_array = i.v8_array(object_definitions_map[object_id], "gradients");
+      //      c.styling_ref().gradients_ref().clear();
+      //      for (size_t k = 0; k < gradient_array->Length(); k++) {
+      //        auto gradient_data = i.get_index(gradient_array, k).As<v8::Array>();
+      //        if (!gradient_data->IsArray()) {
+      //          continue;
+      //        }
+      //        auto opacity = i.double_number(gradient_data, size_t(0));
+      //        auto gradient_id = namespace_name + i.str(gradient_data, size_t(1));
+      //        c.styling_ref().gradients_ref().emplace_back(opacity, gradients[gradient_id]);
+      //      }
     }
   };
 
@@ -1827,14 +1848,15 @@ std::shared_ptr<data::job> native_generator::get_job() const {
 }
 
 // deprecated
-v8::Local<v8::Object> native_generator::spawn_object_native(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj) {
-  //  auto& i = genctx->i();
-  //  auto created_instance = _instantiate_object_from_scene(i, obj, &spawner);
-  //  // TODO:
-  //  // next_instance_map[i.integer_number(created_instance, "unique_id")] = created_instance;
-  //  create_bookkeeping_for_script_objects(created_instance);
-  //  return created_instance;
-}
+// v8::Local<v8::Object> native_generator::spawn_object_native(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj)
+// {
+//  auto& i = genctx->i();
+//  auto created_instance = _instantiate_object_from_scene(i, obj, &spawner);
+//  // TODO:
+//  // next_instance_map[i.integer_number(created_instance, "unique_id")] = created_instance;
+//  create_bookkeeping_for_script_objects(created_instance);
+//  return created_instance;
+//}
 
 void native_generator::spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj) {
   auto& i = genctx->i();
@@ -1939,8 +1961,8 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
     scene_shapes_next[scenesettings.current_scene_next].emplace_back(c);
   };
 
-  const auto type = i.str(instance, "type", "");
-  if (type == "circle") {
+  const auto type = i.str(object_definitions_map[object_id], "type", "");
+  if (type == "circle" || type.empty() /* treat every "non-type" as circles too */) {
     data_staging::circle c(object_id,
                            counter,
                            vector2d(i.double_number(instance, "x"), i.double_number(instance, "y")),
@@ -1951,14 +1973,13 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
                                   i.double_number(instance, "velocity", 0));
     c.styling_ref().set_gradient(i.str(instance, "gradient"));
 
-    if (object_bridge_ptr) {
+    if (object_bridge_circle) {
       // TODO: check if the object has an "init" function, or we can just skip this entire thing
-      object_bridge_ptr->push_object(c);
+      object_bridge_circle->push_object(c);
       i.call_fun(object_definitions_map[object_id],  // object definition
-                 persistent_bridged_obj,             // bridged object is "this"
+                 persisted_object_bridge_circle,     // bridged object is "this"
                  "init");
-      object_bridge_ptr->pop_object();
-      // TODO: make a version for lines
+      object_bridge_circle->pop_object();
     }
 
     handle(c);
@@ -1972,6 +1993,14 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
                                              i.double_number(instance, "vel_y", 0),
                                              i.double_number(instance, "velocity", 0));
     c.styling_ref().set_gradient(i.str(instance, "gradient"));
+
+    // TODO: check if the object has an "init" function, or we can just skip this entire thing
+    object_bridge_line->push_object(c);
+    i.call_fun(object_definitions_map[object_id],  // object definition
+               persisted_object_bridge_line,       // bridged object is "this"
+               "init");
+    object_bridge_line->pop_object();
+
     handle(c);
   }
 

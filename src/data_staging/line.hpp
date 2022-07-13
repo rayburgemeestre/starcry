@@ -89,5 +89,11 @@ public:
   data_staging::behavior& behavior_ref() {
     return behavior_;
   }
+  double line_width() const {
+    return line_width_;
+  }
+  void set_line_width(double line_width) {
+    line_width_ = line_width;
+  }
 };
 }  // namespace data_staging

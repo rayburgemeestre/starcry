@@ -192,6 +192,13 @@ public:
     return v8_str(isolate, v8_string(obj, field));
   }
 
+  std::string str(v8::Persistent<v8::Object>& obj, const std::string& field, const std::string& default_val) {
+    if (has_field(obj, field)) {
+      return v8_str(isolate, v8_string(obj, field));
+    }
+    return default_val;
+  }
+
   std::string str(v8::Local<v8::Object>& obj, const std::string& field, const std::string& default_val) {
     if (has_field(obj, field)) {
       return v8_str(isolate, v8_string(obj, field));

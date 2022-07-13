@@ -93,7 +93,8 @@ private:
 
   std::shared_ptr<native_generator_context> genctx;
 
-  v8::Persistent<v8::Object> persistent_bridged_obj;
+  v8::Persistent<v8::Object> persisted_object_bridge_circle;
+  v8::Persistent<v8::Object> persisted_object_bridge_line;
 
 public:
   struct time_settings {
@@ -190,7 +191,7 @@ public:
 
   std::shared_ptr<v8_wrapper> get_context() const;
 
-  v8::Local<v8::Object> spawn_object_native(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj);
+  // v8::Local<v8::Object> spawn_object_native(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj);
   void spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
 
 private:
