@@ -10,6 +10,13 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include "data/texture.hpp"
 #include "util/vector_logic.hpp"
 
+#include "data_staging/behavior.hpp"
+#include "data_staging/generic.hpp"
+#include "data_staging/location.hpp"
+#include "data_staging/meta.hpp"
+#include "data_staging/movement.hpp"
+#include "data_staging/styling.hpp"
+
 #include <string>
 #include <vector>
 
@@ -18,74 +25,56 @@ namespace data_staging {
 
 class circle {
 private:
-  std::string namespace_;
-  std::string id_;
-  int64_t unique_id_;
-  int64_t level_;
-
-  vector2d position_ = {0, 0};
-  double z_ = 0;
-  vector2d velocity_ = {0, 0};
-  double velocity_speed_ = 0;
+  meta meta_;
+  location location_;
+  movement movement_;
 
   double radius_ = 100.;
   double radius_size_ = 1.;
 
-  double angle_ = 0;
-  double scale_ = 1.;
-  double opacity_ = 1.;
-
-  std::string gradient_;
-  std::vector<std::pair<double, data::gradient>> gradients_;
-  std::vector<std::pair<double, data::texture>> textures_;
-
-  data::blending_type blending_type_ = data::blending_type::normal;
-
-  std::string collision_group_;
-  std::string gravity_group_;
-  std::string toroidal_group_;
+  generic generic_;
+  styling styling_;
+  behavior behavior_;
 
 public:
   circle(std::string id, int64_t unique_id, vector2d position, double radius, double radiussize)
-      : id_(std::move(id)), unique_id_(unique_id), position_(position), radius_(radius), radius_size_(radiussize) {}
+      : meta_(std::move(id), unique_id), location_(position), radius_(radius), radius_size_(radiussize) {}
 
-  const std::string& namespace_name() const {
-    return namespace_;
+  const meta& meta() const {
+    return meta_;
   }
-
-  const std::string& id() const {
-    return id_;
+  data_staging::meta& meta_ref() {
+    return meta_;
   }
-
-  int64_t unique_id() const {
-    return unique_id_;
+  const location& location() const {
+    return location_;
   }
-
-  int64_t level() const {
-    return level_;
+  data_staging::location& location_ref() {
+    return location_;
   }
-
-  vector2d position() {
-    return position_;
+  const movement& movement() const {
+    return movement_;
   }
-
-  vector2d& position_ref() {
-    return position_;
+  data_staging::movement& movement_ref() {
+    return movement_;
   }
-  const vector2d& position_cref() const {
-    return position_;
+  const generic& generic() const {
+    return generic_;
   }
-
-  double z() const {
-    return z_;
+  data_staging::generic& generic_ref() {
+    return generic_;
   }
-
-  vector2d velocity() const {
-    return velocity_;
+  const styling& styling() const {
+    return styling_;
   }
-
-  double velocity_speed() const {
-    return velocity_speed_;
+  data_staging::styling& styling_ref() {
+    return styling_;
+  }
+  const behavior& behavior() const {
+    return behavior_;
+  }
+  data_staging::behavior& behavior_ref() {
+    return behavior_;
   }
 
   double radius() const {
@@ -94,53 +83,9 @@ public:
   double radius_size() const {
     return radius_size_;
   }
-  double angle() const {
-    return angle_;
-  }
-  double scale() const {
-    return scale_;
-  }
-  double opacity() const {
-    return opacity_;
-  }
-  std::string gradient() const {
-    return gradient_;
-  }
-  data::blending_type blending_type() const {
-    return blending_type_;
-  }
-  std::string collision_group() const {
-    return collision_group_;
-  }
-  std::string gravity_group() const {
-    return gravity_group_;
-  }
-  std::string toroidal_group() const {
-    return toroidal_group_;
-  }
-
-  void set_z(double z) {
-    z_ = z;
-  }
-
-  void set_velocity(double x, double y, double velocity = 1.) {
-    velocity_.x = x;
-    velocity_.y = y;
-    velocity_speed_ = velocity;
-  }
-
-  void set_gradient(std::string_view gradient) {
-    gradient_ = gradient;
-  }
-
-  std::vector<std::pair<double, data::gradient>>& gradients_ref() {
-    return gradients_;
-  }
-
   void set_radius(double radius) {
     radius_ = radius;
   }
-
   void set_radius_size(double radius_size) {
     radius_size_ = radius_size;
   }

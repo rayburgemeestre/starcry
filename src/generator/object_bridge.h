@@ -16,9 +16,10 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 class native_generator;
 
+template <typename shape_class = data_staging::circle>
 class object_bridge {
 private:
-  std::vector<data_staging::circle*> circle;
+  std::vector<shape_class*> shape_stack;
   native_generator* generator_ = nullptr;
 
 public:
@@ -46,4 +47,4 @@ public:
   static void add_to_context(v8pp::context& context);
 };
 
-extern object_bridge* object_bridge_ptr;
+extern object_bridge<data_staging::circle>* object_bridge_ptr;

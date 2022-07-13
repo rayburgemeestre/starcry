@@ -13,58 +13,81 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include <string>
 #include <vector>
 
+#include "data_staging/behavior.hpp"
+#include "data_staging/generic.hpp"
+#include "data_staging/location.hpp"
+#include "data_staging/meta.hpp"
+#include "data_staging/movement.hpp"
+#include "data_staging/styling.hpp"
+
 // merged into data namespace when ready
 namespace data_staging {
 
 class line {
 private:
-  std::string namespace_;
-  std::string id_;
-  int64_t unique_id_;
-  int64_t level_;
+  meta meta_;
+  location line_start_;
+  location line_end_;
+  movement movement_line_start_;
+  movement movement_line_end_;
 
-  //  vector2d line_start_;
-  //  vector2d line_end_;
-  // double z_ = 0;
-  // double z2_ = 0;
+  double line_width_ = 1.;
 
-  //  double line_width_ = 1.;
-
-  // double scale_ = 1.;
-  // double opacity_ = 1.;
-
-  std::string gradient_;
-  std::vector<std::pair<double, data::gradient>> gradients_;
-  std::vector<std::pair<double, data::texture>> textures_;
-
-  data::blending_type blending_type_ = data::blending_type::normal;
-
-  std::string collision_group_;
-  std::string gravity_group_;
-  std::string toroidal_group_;
+  generic generic_;
+  styling styling_;
+  behavior behavior_;
 
 public:
-  //  line(vector2d line_start, vector2d line_end, double line_width)
-  //      : line_start_(line_start), line_end_(line_end), line_width_(line_width) {}
+  line(std::string id, int64_t unique_id, vector2d line_start, vector2d line_end, double line_width)
+      : meta_(std::move(id), unique_id), line_start_(line_start), line_end_(line_end), line_width_(line_width) {}
 
-  const std::string& namespace_name() const {
-    return namespace_;
+  const meta& meta() const {
+    return meta_;
   }
-
-  const std::string& id() const {
-    return id_;
+  data_staging::meta& meta_ref() {
+    return meta_;
   }
-
-  int64_t unique_id() const {
-    return unique_id_;
+  const location& line_start() const {
+    return line_start_;
   }
-
-  int64_t level() const {
-    return level_;
+  data_staging::location& line_start_ref() {
+    return line_start_;
   }
-
-  void set_gradient(std::string_view gradient) {
-    gradient_ = gradient;
+  const location& line_end() const {
+    return line_end_;
+  }
+  data_staging::location& line_end_ref() {
+    return line_end_;
+  }
+  const movement& movement_line_start() const {
+    return movement_line_start_;
+  }
+  data_staging::movement& movement_line_start_ref() {
+    return movement_line_start_;
+  }
+  const movement& movement_line_end() const {
+    return movement_line_end_;
+  }
+  data_staging::movement& movement_line_end_ref() {
+    return movement_line_end_;
+  }
+  const generic& generic() const {
+    return generic_;
+  }
+  data_staging::generic& generic_ref() {
+    return generic_;
+  }
+  const styling& styling() const {
+    return styling_;
+  }
+  data_staging::styling& styling_ref() {
+    return styling_;
+  }
+  const behavior& behavior() const {
+    return behavior_;
+  }
+  data_staging::behavior& behavior_ref() {
+    return behavior_;
   }
 };
 }  // namespace data_staging
