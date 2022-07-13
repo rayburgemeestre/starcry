@@ -18,8 +18,6 @@ class native_generator;
 
 class object_bridge {
 private:
-  double x = 0;
-  double y = 0;
   std::vector<data_staging::circle*> circle;
   native_generator* generator_ = nullptr;
 
@@ -33,8 +31,16 @@ public:
 
   double get_x() const;
   double get_y() const;
+  double get_z() const;
+  double get_radius() const;
+  double get_radius_size() const;
+
   void set_x(double x);
   void set_y(double y);
+  void set_z(double z);
+  void set_radius(double radius);
+  void set_radius_size(double radiussize);
+
   void spawn(v8::Local<v8::Object> obj);
 
   static void add_to_context(v8pp::context& context);

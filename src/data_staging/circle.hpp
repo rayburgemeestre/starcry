@@ -24,7 +24,7 @@ private:
   int64_t level_;
 
   vector2d position_ = {0, 0};
-  // double z_ = 0;
+  double z_ = 0;
   vector2d velocity_ = {0, 0};
   double velocity_speed_ = 0;
 
@@ -76,6 +76,10 @@ public:
     return position_;
   }
 
+  double z() const {
+    return z_;
+  }
+
   vector2d velocity() const {
     return velocity_;
   }
@@ -113,6 +117,10 @@ public:
   }
   std::string toroidal_group() const {
     return toroidal_group_;
+  }
+
+  void set_z(double z) {
+    z_ = z;
   }
 
   void set_velocity(double x, double y, double velocity = 1.) {

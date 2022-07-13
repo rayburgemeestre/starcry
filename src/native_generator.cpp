@@ -1301,11 +1301,6 @@ void native_generator::update_time(v8_interact& i,
     auto find = object_definitions_map.find(instance_id);
     if (find != object_definitions_map.end()) {
       auto& c = std::get<data_staging::circle>(instance);
-      // i.set_field(find->second, "x", v8::Number::New(i.get_isolate(), c.position_ref().x));
-      // i.set_field(find->second, "y", v8::Number::New(i.get_isolate(), c.position_ref().y));
-      i.set_field(find->second, "radius", v8::Number::New(i.get_isolate(), c.radius()));
-      i.set_field(find->second, "radiussize", v8::Number::New(i.get_isolate(), c.radius_size()));
-
       auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
 
       if (object_bridge_ptr) {
@@ -1323,10 +1318,6 @@ void native_generator::update_time(v8_interact& i,
 
       auto object_id = c.id();
       auto namespace_name = c.namespace_name();
-      // c.position_ref().x = i.double_number(find->second, "x");
-      // c.position_ref().y = i.double_number(find->second, "y");
-      c.set_radius(i.double_number(find->second, "radius"));
-      c.set_radius_size(i.double_number(find->second, "radiussize"));
       // TODO: broken
       auto gradient_array = i.v8_array(object_definitions_map[object_id], "gradients");
       c.gradients_ref().clear();
@@ -1988,21 +1979,10 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
 
   // TODO: _instantiate object should just take care of this?
 
-  // temporary configure spawn for this object definition for during the function execution of init
-  auto the_fun = i.get_fun("__spawn__");
-  i.set_fun(object_definitions_map[object_id], "spawn", the_fun);
+  //  // temporary configure spawn for this object definition for during the function execution of init
+  //  auto the_fun = i.get_fun("__spawn__");
+  //  i.set_fun(object_definitions_map[object_id], "spawn", the_fun);
 
-  // POC v 2, handled by object bridge.
-  // i.set_field(object_definitions_map[object_id], "x", i.get(instance, "x"));
-  // i.set_field(object_definitions_map[object_id], "y", i.get(instance, "y"));
-  // POC v 1
-  i.set_field(object_definitions_map[object_id], "radius", i.get(instance, "radius"));
-  i.set_field(object_definitions_map[object_id], "radiussize", i.get(instance, "radiussize"));
-
-  // now invoke init() on the object, which in turn can lead to new objects
-  // i.call_fun(v8::Local<v8::Object>::New(isolate, object_definitions_map[object_id]), "init");
-
-  // Experimental, this is the future!
   if (object_bridge_ptr) {
     // TODO: check if the object has an "init" function, or we can just skip this entire thing
     object_bridge_ptr->push_object(c);
@@ -2011,13 +1991,6 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
                "init");
     object_bridge_ptr->pop_object();
   }
-
-  // POC v1
-  // c.position_ref().x = i.double_number(object_definitions_map[object_id], "x");
-  // c.position_ref().y = i.double_number(object_definitions_map[object_id], "y");
-  // POC v2 does not need ^ anymore, due to the object bridge handling x, y.
-  c.set_radius(i.double_number(object_definitions_map[object_id], "radius"));
-  c.set_radius_size(i.double_number(object_definitions_map[object_id], "radiussize"));
 
   // TODO: broken
   auto gradient_array = i.v8_array(object_definitions_map[object_id], "gradients");

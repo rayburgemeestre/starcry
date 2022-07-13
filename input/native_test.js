@@ -52,6 +52,7 @@ _ = {
       'time': function(t, e, s, tt) {
         // output("in time function for object id ball with: " + t + " / " + e + " / " + s + " / " + tt);
         // this.x += 1;
+        this.radius += e * 5;
       }
     },
   },
