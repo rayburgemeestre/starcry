@@ -18,6 +18,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include "data_staging/location.hpp"
 #include "data_staging/meta.hpp"
 #include "data_staging/movement.hpp"
+#include "data_staging/properties.hpp"
 #include "data_staging/styling.hpp"
 
 // merged into data namespace when ready
@@ -36,6 +37,7 @@ private:
   generic generic_;
   styling styling_;
   behavior behavior_;
+  properties properties_;
 
 public:
   line(std::string id, int64_t unique_id, vector2d line_start, vector2d line_end, double line_width)
@@ -88,6 +90,12 @@ public:
   }
   data_staging::behavior& behavior_ref() {
     return behavior_;
+  }
+  const properties& properties() const {
+    return properties_;
+  }
+  data_staging::properties& properties_ref() {
+    return properties_;
   }
   double line_width() const {
     return line_width_;

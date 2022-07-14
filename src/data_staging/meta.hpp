@@ -14,6 +14,7 @@ private:
   std::string namespace_;
   std::string id_;
   int64_t unique_id_;
+  int64_t parent_uid_id_;
   int64_t level_;
 
 public:
@@ -31,8 +32,20 @@ public:
     return unique_id_;
   }
 
+  int64_t parent_uid() const {
+    return parent_uid_id_;
+  }
+
   int64_t level() const {
     return level_;
+  }
+
+  void set_level(int64_t level) {
+    level_ = level;
+  }
+
+  void set_parent_uid(int64_t parent_uid) {
+    parent_uid_id_ = parent_uid;
   }
 };
 

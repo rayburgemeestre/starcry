@@ -21,6 +21,7 @@ class object_bridge {
 private:
   std::vector<shape_class*> shape_stack;
   native_generator* generator_ = nullptr;
+  mutable bool properties_accessed_ = false;
 
 public:
   object_bridge(int);
@@ -30,6 +31,7 @@ public:
 
   void set_generator(native_generator* ptr);
 
+  int64_t get_level() const;
   double get_x() const;
   double get_y() const;
   double get_z() const;
@@ -47,6 +49,8 @@ public:
   void set_z2(double z);
   void set_radius(double radius);
   void set_radius_size(double radiussize);
+
+  v8::Local<v8::Object> get_properties_ref() const;
 
   void spawn(v8::Local<v8::Object> obj);
 

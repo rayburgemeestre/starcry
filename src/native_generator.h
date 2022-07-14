@@ -211,4 +211,6 @@ private:
                            v8::Local<v8::Object> new_instance,
                            int64_t level,
                            const std::string& namespace_);
+
+  void debug_print_next(const std::string& desc);
 };

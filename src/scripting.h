@@ -15,3 +15,5 @@ double rand_fun();
 
 double expf_fun(double v, double factor);
 double logn_fun(double v, double factor);
+
+void my_exit(int code);

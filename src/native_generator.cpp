@@ -59,6 +59,7 @@ void native_generator::reset_context() {
   context->add_fun("get_angle", &get_angle);
   context->add_fun("triangular_wave", &triangular_wave);
   context->add_fun("blending_type_str", &data::blending_type::to_str);
+  context->add_fun("exit", &my_exit);
 
   global_native_generator = this;
   context->add_include_fun();
@@ -664,7 +665,7 @@ bool native_generator::_generate_frame() {
         stepper.rewind();
         bool detected_too_many_steps = false;
         while (stepper.has_next_step() && !detected_too_many_steps) {
-          logger(DEBUG) << "Stepper at step " << stepper.current_step << " out of " << stepper.max_step << std::endl;
+          // logger(DEBUG) << "Stepper at step " << stepper.current_step << " out of " << stepper.max_step << std::endl;
           qts.clear();
           qts_gravity.clear();
 
@@ -1310,7 +1311,7 @@ void native_generator::update_time(v8_interact& i,
                      },
                      [&](data_staging::circle& c) {
                        if (object_bridge_circle) {
-                         // TODO: check if the object has an "init" function, or we can just skip this entire thing
+                         // TODO: check if the object has an "time" function, or we can just skip this entire thing
                          object_bridge_circle->push_object(c);
                          i.call_fun(object_definition,
                                     persisted_object_bridge_circle,
@@ -1323,7 +1324,7 @@ void native_generator::update_time(v8_interact& i,
                        }
                      },
                      [&](data_staging::line& l) {
-                       // TODO: check if the object has an "init" function, or we can just skip this entire thing
+                       // TODO: check if the object has an "time" function, or we can just skip this entire thing
                        object_bridge_line->push_object(l);
                        i.call_fun(object_definition,
                                   persisted_object_bridge_line,
@@ -1958,7 +1959,56 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
       }
     }
 
+    // simplified test.
     scene_shapes_next[scenesettings.current_scene_next].emplace_back(c);
+
+    // TODO: Update this to work with the new vectors
+    //  if (!parent_object) {
+    //    // push instance at the end of destination array
+    //    // i.call_fun(instances_dest, "push", instance);
+    //    scene_shapes_next[scenesettings.current_scene_next].emplace_back(instance);
+    //  } else {
+    //    // calculate first where to insert instance in destination array
+    //    const auto parent_uid = i.integer_number(*parent_object, "unique_id");
+    //    size_t insert_offset = instances_dest->Length();
+    //    int64_t found_level = 0;
+    //    bool searching = false;
+    //    for (size_t j = 0; j < instances_dest->Length(); j++) {
+    //      auto elem = i.get_index(instances_dest, j).As<v8::Object>();
+    //      const auto uid = i.integer_number(elem, "unique_id");
+    //      const auto level = i.integer_number(elem, "level");
+    //      if (searching && level <= found_level) {
+    //        insert_offset = j;
+    //        break;
+    //      } else if (uid == parent_uid) {
+    //        found_level = level;
+    //        // assume at this point it's the element after this one
+    //        insert_offset = j + 1;
+    //        searching = true;
+    //        // NOTE: we can early exit here to spawn new objects on top within their parent
+    //        // We can make that feature configurable, or even add some z-index-like support
+    //        // break;
+    //      }
+    //    }
+    //
+    //    // create extra space at the end of the array
+    //    i.call_fun(instances_dest, "push", v8::Object::New(isolate));
+    //
+    //    // reverse iterate over the destination array
+    //    for (size_t rev_index = instances_dest->Length() - 1; rev_index; rev_index--) {
+    //      // insert element where we calculated it should be
+    //      if (rev_index == insert_offset) {
+    //        i.set_field(instances_dest, insert_offset, instance);
+    //        // no need to process the rest of the array at this point
+    //        break;
+    //      }
+    //      // for all elements move them down so that we create space for the new element
+    //      if (rev_index > 0) {
+    //        auto element_above = i.get_index(instances_dest, rev_index - 1).As<v8::Object>();
+    //        i.set_field(instances_dest, rev_index, element_above);
+    //      }
+    //    }
+    //  }
   };
 
   const auto type = i.str(object_definitions_map[object_id], "type", "");
@@ -1968,10 +2018,14 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
                            vector2d(i.double_number(instance, "x"), i.double_number(instance, "y")),
                            i.double_number(instance, "radius"),
                            i.double_number(instance, "radiussize"));
+    c.meta_ref().set_level(current_level + 1);
+    c.meta_ref().set_parent_uid(parent_uid);
     c.movement_ref().set_velocity(i.double_number(instance, "vel_x", 0),
                                   i.double_number(instance, "vel_y", 0),
                                   i.double_number(instance, "velocity", 0));
     c.styling_ref().set_gradient(i.str(instance, "gradient"));
+
+    handle(c);
 
     if (object_bridge_circle) {
       // TODO: check if the object has an "init" function, or we can just skip this entire thing
@@ -1979,20 +2033,33 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
       i.call_fun(object_definitions_map[object_id],  // object definition
                  persisted_object_bridge_circle,     // bridged object is "this"
                  "init");
+      // bool check_props = object_bridge_circle->properties_accessed();
       object_bridge_circle->pop_object();
+      //      logger(INFO) << "Let's see if it worked..., accessed was: " << std::boolalpha << check_props  <<
+      //      std::endl; auto obj = c.properties_ref().properties_ref(); auto obj_fields = i.prop_names(obj); for
+      //      (size_t k = 0; k < obj_fields->Length(); k++) {
+      //        auto field_name = i.get_index(obj_fields, k);
+      //        auto field_name_str = i.str(obj_fields, k);
+      //        auto field_value = i.get(obj, field_name);
+      //        // i.set_field(props, field_name, field_value);
+      //        logger(INFO) << "Field: " << field_name_str << std::endl;
+      //      }
+      //      std::exit(0);
     }
-
-    handle(c);
   } else if (type == "line") {
     data_staging::line c(object_id,
                          counter,
                          vector2d(i.double_number(instance, "x"), i.double_number(instance, "y")),
                          vector2d(i.double_number(instance, "x2"), i.double_number(instance, "y2")),
                          i.double_number(instance, "radiussize"));
+    c.meta_ref().set_level(current_level + 1);
+    c.meta_ref().set_parent_uid(parent_uid);
     c.movement_line_start_ref().set_velocity(i.double_number(instance, "vel_x", 0),
                                              i.double_number(instance, "vel_y", 0),
                                              i.double_number(instance, "velocity", 0));
     c.styling_ref().set_gradient(i.str(instance, "gradient"));
+
+    handle(c);
 
     // TODO: check if the object has an "init" function, or we can just skip this entire thing
     object_bridge_line->push_object(c);
@@ -2000,57 +2067,7 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
                persisted_object_bridge_line,       // bridged object is "this"
                "init");
     object_bridge_line->pop_object();
-
-    handle(c);
   }
-
-  // TODO: Update this to work with the new vectors
-  //  if (!parent_object) {
-  //    // push instance at the end of destination array
-  //    // i.call_fun(instances_dest, "push", instance);
-  //    scene_shapes_next[scenesettings.current_scene_next].emplace_back(instance);
-  //  } else {
-  //    // calculate first where to insert instance in destination array
-  //    const auto parent_uid = i.integer_number(*parent_object, "unique_id");
-  //    size_t insert_offset = instances_dest->Length();
-  //    int64_t found_level = 0;
-  //    bool searching = false;
-  //    for (size_t j = 0; j < instances_dest->Length(); j++) {
-  //      auto elem = i.get_index(instances_dest, j).As<v8::Object>();
-  //      const auto uid = i.integer_number(elem, "unique_id");
-  //      const auto level = i.integer_number(elem, "level");
-  //      if (searching && level <= found_level) {
-  //        insert_offset = j;
-  //        break;
-  //      } else if (uid == parent_uid) {
-  //        found_level = level;
-  //        // assume at this point it's the element after this one
-  //        insert_offset = j + 1;
-  //        searching = true;
-  //        // NOTE: we can early exit here to spawn new objects on top within their parent
-  //        // We can make that feature configurable, or even add some z-index-like support
-  //        // break;
-  //      }
-  //    }
-  //
-  //    // create extra space at the end of the array
-  //    i.call_fun(instances_dest, "push", v8::Object::New(isolate));
-  //
-  //    // reverse iterate over the destination array
-  //    for (size_t rev_index = instances_dest->Length() - 1; rev_index; rev_index--) {
-  //      // insert element where we calculated it should be
-  //      if (rev_index == insert_offset) {
-  //        i.set_field(instances_dest, insert_offset, instance);
-  //        // no need to process the rest of the array at this point
-  //        break;
-  //      }
-  //      // for all elements move them down so that we create space for the new element
-  //      if (rev_index > 0) {
-  //        auto element_above = i.get_index(instances_dest, rev_index - 1).As<v8::Object>();
-  //        i.set_field(instances_dest, rev_index, element_above);
-  //      }
-  //    }
-  //  }
 
   // TODO: _instantiate object should just take care of this?
 
@@ -2153,4 +2170,22 @@ void native_generator::_instantiate_object(v8_interact& i,
 
   auto the_fun = i.get_fun("__spawn__");
   i.set_fun(new_instance, "spawn", the_fun);
+}
+
+void native_generator::debug_print_next(const std::string& desc) {
+  logger(INFO) << "desc = " << desc << std::endl;
+  const auto print_meta = [](data_staging::meta& meta) {
+    logger(INFO) << "uid=" << meta.unique_id() << ", puid=UNK, id=" << meta.id() << ", level=" << meta.level()
+                 << ", namespace=" << meta.namespace_name() << std::endl;
+  };
+  for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
+    std::visit(overloaded{[](std::monostate) {},
+                          [&](data_staging::circle& shape) {
+                            print_meta(shape.meta_ref());
+                          },
+                          [&](data_staging::line& shape) {
+                            print_meta(shape.meta_ref());
+                          }},
+               shape);
+  }
 }

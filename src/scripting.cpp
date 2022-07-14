@@ -63,3 +63,7 @@ double logn_fun(double v, double factor) {
   auto logn = (maxpow - (pow(2.0, (1.0 - linear) * maxexp))) / max;
   return logn;
 }
+
+void my_exit(int code) {
+  std::exit(code);
+}

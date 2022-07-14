@@ -71,11 +71,13 @@ template <>
 void object_bridge<data_staging::circle>::add_to_context(v8pp::context& context) {
   v8pp::class_<object_bridge> object_bridge_class(context.isolate());
   object_bridge_class.template ctor<int>()
+      .set("level", v8pp::property(&object_bridge::get_level))
       .set("x", v8pp::property(&object_bridge::get_x, &object_bridge::set_x))
       .set("y", v8pp::property(&object_bridge::get_y, &object_bridge::set_y))
       .set("z", v8pp::property(&object_bridge::get_z, &object_bridge::set_z))
       .set("radius", v8pp::property(&object_bridge::get_radius, &object_bridge::set_radius))
       .set("radiussize", v8pp::property(&object_bridge::get_radius_size, &object_bridge::set_radius_size))
+      .set("props", v8pp::property(&object_bridge::get_properties_ref))
       .set("spawn", &object_bridge::spawn);
   context.set("object_bridge_circle", object_bridge_class);
 }

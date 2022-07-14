@@ -15,6 +15,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include "data_staging/location.hpp"
 #include "data_staging/meta.hpp"
 #include "data_staging/movement.hpp"
+#include "data_staging/properties.hpp"
 #include "data_staging/styling.hpp"
 
 #include <string>
@@ -35,6 +36,7 @@ private:
   generic generic_;
   styling styling_;
   behavior behavior_;
+  properties properties_;
 
 public:
   circle(std::string id, int64_t unique_id, vector2d position, double radius, double radiussize)
@@ -75,6 +77,12 @@ public:
   }
   data_staging::behavior& behavior_ref() {
     return behavior_;
+  }
+  const properties& properties() const {
+    return properties_;
+  }
+  data_staging::properties& properties_ref() {
+    return properties_;
   }
 
   double radius() const {
