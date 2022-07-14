@@ -17,7 +17,11 @@
 
 #include "data/frame_request.hpp"
 #include "data/video_request.hpp"
+#ifndef DEVELOP
 #include "generator.h"
+#else
+#include "util/v8_wrapper.hpp"
+#endif
 #include "starcry.h"
 #include "util/logger.h"
 #include "util/standard_output_to_logger.hpp"

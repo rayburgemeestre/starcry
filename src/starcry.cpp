@@ -24,8 +24,11 @@
 #include "data/frame_request.hpp"
 #include "data/video_request.hpp"
 #include "framer.hpp"
+#ifndef DEVELOP
 #include "generator.h"
+#else
 #include "native_generator.h"
+#endif
 #include "network/render_client.h"
 #include "network/render_server.h"
 #include "rendering_engine.h"
@@ -41,7 +44,6 @@
 
 // TODO: re-organize this somehow
 #include <sys/prctl.h>
-#include <random>
 
 #include <inotify-cpp/FileSystemAdapter.h>
 #include <inotify-cpp/NotifierBuilder.h>

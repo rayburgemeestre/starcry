@@ -3,6 +3,7 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+#ifndef DEVELOP
 #include "generator.h"
 
 #include <fmt/core.h>
@@ -1813,3 +1814,4 @@ void generator::fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t 
   x += xx;
   y += yy;
 }
+#endif

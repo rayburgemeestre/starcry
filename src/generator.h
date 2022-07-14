@@ -4,6 +4,7 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #pragma once
+#ifndef DEVELOP
 
 #include <memory>
 #include <string>
@@ -216,3 +217,4 @@ private:
   std::map<int64_t, std::pair<double, double>> cached_xy;
   void fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t uid, double& x, double& y);
 };
+#endif
