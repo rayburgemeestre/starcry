@@ -130,6 +130,13 @@ void native_generator::init(const std::string& filename, std::optional<double> r
 
   // set_scene requires generator_context to be set
   set_scene(0);
+
+  // all objects added at this point can be blindly appended
+  scene_shapes_next[scenesettings.current_scene_next].insert(
+      std::end(scene_shapes_next[scenesettings.current_scene_next]),
+      std::begin(instantiated_objects[scenesettings.current_scene_next]),
+      std::end(instantiated_objects[scenesettings.current_scene_next]));
+  instantiated_objects[scenesettings.current_scene_next].clear();
 }
 
 void native_generator::init_context() {
@@ -226,6 +233,7 @@ void native_generator::init_video_meta_info(std::optional<double> rand_seed, boo
       scene_shapes.emplace_back();
       scene_shapes_next.emplace_back();
       scene_shapes_intermediate.emplace_back();
+      instantiated_objects.emplace_back();
       auto current_scene = i.get_index(scenes, I);
       if (!current_scene->IsObject()) continue;
       auto sceneobj = current_scene.As<v8::Object>();
@@ -672,6 +680,12 @@ bool native_generator::_generate_frame() {
           // initialize scene
           if (scenesettings.update(get_time(scenesettings).time)) {
             set_scene(scenesettings.current_scene_next + 1);
+            // all objects added at this point can be blindly appended
+            scene_shapes_next[scenesettings.current_scene_next].insert(
+                std::end(scene_shapes_next[scenesettings.current_scene_next]),
+                std::begin(instantiated_objects[scenesettings.current_scene_next]),
+                std::end(instantiated_objects[scenesettings.current_scene_next]));
+            instantiated_objects[scenesettings.current_scene_next].clear();
           }
 
           // initialize scenes for script objects
@@ -692,8 +706,10 @@ bool native_generator::_generate_frame() {
           // handle object movement (velocity added to position)
           update_object_positions(i, video);
 
+          insert_newly_created_objects();
+
           // handle collisions, gravity and "inherited" objects
-          // update_object_interactions(i, next_instances, intermediates, instances, video);
+          update_object_interactions(i, video);
 
           // convert javascript to renderable objects
           convert_objects_to_render_job(i, sc, video);
@@ -910,6 +926,90 @@ void native_generator::update_object_positions(v8_interact& i, v8::Local<v8::Obj
   }
 }
 
+void native_generator::insert_newly_created_objects() {
+  auto& dest = scene_shapes_next[scenesettings.current_scene_next];
+  auto& source = instantiated_objects[scenesettings.current_scene_next];
+  dest.reserve(dest.size() + source.size());
+
+  const auto get_meta = [](auto& shape) {
+    data_staging::meta ret;
+    std::visit(overloaded{[](std::monostate) {},
+                          [&](data_staging::circle& shape) {
+                            ret = shape.meta();
+                          },
+                          [&](data_staging::line& shape) {
+                            ret = shape.meta();
+                          }},
+               shape);
+    return ret;
+  };
+
+  auto handle = [&](auto& shape, const data_staging::meta& meta) {
+    if (meta.parent_uid() == -1 /* no parent */) {
+      dest.emplace_back(std::move(shape));
+    } else {
+      // calculate first where to insert instance in destination array
+      const auto parent_uid = meta.parent_uid();
+      size_t insert_offset = dest.size();
+      int64_t found_level = 0;
+      bool searching = false;
+      for (size_t j = 0; j < dest.size(); j++) {
+        auto& elem = dest[j];
+        auto elem_meta = get_meta(elem);  // this is pretty inefficient, perhaps precalculate for all once
+        const auto uid = elem_meta.unique_id();
+        const auto level = elem_meta.level();
+        if (searching && level <= found_level) {
+          insert_offset = j;
+          break;
+        } else if (uid == parent_uid) {
+          found_level = level;
+          // assume at this point it's the element after this one
+          insert_offset = j + 1;
+          searching = true;
+          // NOTE: we can early exit here to spawn new objects on top within their parent
+          // We can make that feature configurable, or even add some z-index-like support
+          // break;
+        }
+      }
+
+      // reverse iterate over the destination array
+      // note that we iterate from one beyond the size of the array, if size() = 3, [3] will potentially be out of
+      // bounds
+      for (size_t rev_index = dest.size(); rev_index; rev_index--) {
+        // insert element where we calculated it should be
+        if (rev_index == insert_offset) {
+          if (insert_offset == dest.size()) {
+            dest.emplace_back(std::move(shape));
+          } else {
+            dest[insert_offset] = std::move(shape);
+          }
+          // no need to process the rest of the array at this point
+          break;
+        }
+        // for all elements move them down so that we create space for the new element
+        if (rev_index > 0) {
+          if (rev_index == dest.size()) {
+            dest.emplace_back(std::move(dest[rev_index - 1]) /* element above */);
+          } else {
+            dest[rev_index] = std::move(dest[rev_index - 1]) /* element above */;
+          }
+        }
+      }
+    }
+  };
+  for (auto& abstract_shape : source) {
+    std::visit(overloaded{[](std::monostate) {},
+                          [&](data_staging::circle& shape) {
+                            handle(abstract_shape, shape.meta());
+                          },
+                          [&](data_staging::line& shape) {
+                            handle(abstract_shape, shape.meta());
+                          }},
+               abstract_shape);
+  }
+  source.clear();
+}
+
 void native_generator::update_object_toroidal(v8_interact& i, v8::Local<v8::Object>& instance, double& x, double& y) {
   auto toroidal = i.has_field(instance, "toroidal") ? i.str(instance, "toroidal") : "";
   if (!toroidal.empty()) {
@@ -943,9 +1043,6 @@ void native_generator::update_object_toroidal(v8_interact& i, v8::Local<v8::Obje
 }
 
 void native_generator::update_object_interactions(v8_interact& i,
-                                                  v8::Local<v8::Array>& next_instances,
-                                                  v8::Local<v8::Array>& intermediates,
-                                                  v8::Local<v8::Array>& previous_instances,
                                                   v8::Local<v8::Object>& video) {
   //  stepper.reset_current();
   //  const auto isolate = i.get_isolate();
@@ -1958,57 +2055,8 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
         c.styling_ref().gradients_ref().emplace_back(opacity, gradients[gradient_id]);
       }
     }
-
-    // simplified test.
-    scene_shapes_next[scenesettings.current_scene_next].emplace_back(c);
-
-    // TODO: Update this to work with the new vectors
-    //  if (!parent_object) {
-    //    // push instance at the end of destination array
-    //    // i.call_fun(instances_dest, "push", instance);
-    //    scene_shapes_next[scenesettings.current_scene_next].emplace_back(instance);
-    //  } else {
-    //    // calculate first where to insert instance in destination array
-    //    const auto parent_uid = i.integer_number(*parent_object, "unique_id");
-    //    size_t insert_offset = instances_dest->Length();
-    //    int64_t found_level = 0;
-    //    bool searching = false;
-    //    for (size_t j = 0; j < instances_dest->Length(); j++) {
-    //      auto elem = i.get_index(instances_dest, j).As<v8::Object>();
-    //      const auto uid = i.integer_number(elem, "unique_id");
-    //      const auto level = i.integer_number(elem, "level");
-    //      if (searching && level <= found_level) {
-    //        insert_offset = j;
-    //        break;
-    //      } else if (uid == parent_uid) {
-    //        found_level = level;
-    //        // assume at this point it's the element after this one
-    //        insert_offset = j + 1;
-    //        searching = true;
-    //        // NOTE: we can early exit here to spawn new objects on top within their parent
-    //        // We can make that feature configurable, or even add some z-index-like support
-    //        // break;
-    //      }
-    //    }
-    //
-    //    // create extra space at the end of the array
-    //    i.call_fun(instances_dest, "push", v8::Object::New(isolate));
-    //
-    //    // reverse iterate over the destination array
-    //    for (size_t rev_index = instances_dest->Length() - 1; rev_index; rev_index--) {
-    //      // insert element where we calculated it should be
-    //      if (rev_index == insert_offset) {
-    //        i.set_field(instances_dest, insert_offset, instance);
-    //        // no need to process the rest of the array at this point
-    //        break;
-    //      }
-    //      // for all elements move them down so that we create space for the new element
-    //      if (rev_index > 0) {
-    //        auto element_above = i.get_index(instances_dest, rev_index - 1).As<v8::Object>();
-    //        i.set_field(instances_dest, rev_index, element_above);
-    //      }
-    //    }
-    //  }
+    // we buffer instantiated objects, and will insert in the array later.
+    instantiated_objects[scenesettings.current_scene_next].emplace_back(c);
   };
 
   const auto type = i.str(object_definitions_map[object_id], "type", "");
@@ -2175,8 +2223,8 @@ void native_generator::_instantiate_object(v8_interact& i,
 void native_generator::debug_print_next(const std::string& desc) {
   logger(INFO) << "desc = " << desc << std::endl;
   const auto print_meta = [](data_staging::meta& meta) {
-    logger(INFO) << "uid=" << meta.unique_id() << ", puid=UNK, id=" << meta.id() << ", level=" << meta.level()
-                 << ", namespace=" << meta.namespace_name() << std::endl;
+    logger(INFO) << "uid=" << meta.unique_id() << ", puid=" << meta.parent_uid() << ", id=" << meta.id()
+                 << ", level=" << meta.level() << ", namespace=" << meta.namespace_name() << std::endl;
   };
   for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
     std::visit(overloaded{[](std::monostate) {},

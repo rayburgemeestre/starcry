@@ -14,10 +14,12 @@ private:
   std::string namespace_;
   std::string id_;
   int64_t unique_id_;
-  int64_t parent_uid_id_;
+  int64_t parent_uid_id_ = -1;
   int64_t level_;
 
 public:
+  meta() = default;
+
   meta(std::string id, int64_t unique_id) : id_(std::move(id)), unique_id_(unique_id) {}
 
   const std::string& namespace_name() const {

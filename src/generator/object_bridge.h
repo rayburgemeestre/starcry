@@ -50,7 +50,8 @@ public:
   void set_radius(double radius);
   void set_radius_size(double radiussize);
 
-  v8::Local<v8::Object> get_properties_ref() const;
+  v8::Persistent<v8::Object>& get_properties_ref() const;
+  v8::Local<v8::Object> get_properties_local_ref() const;
 
   void spawn(v8::Local<v8::Object> obj);
 

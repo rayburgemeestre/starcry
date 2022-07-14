@@ -49,6 +49,7 @@ private:
   std::shared_ptr<data::job> job;
   std::vector<std::vector<data_staging::shape_t>> scene_shapes;
   std::vector<std::vector<data_staging::shape_t>> scene_shapes_next;
+  std::vector<std::vector<data_staging::shape_t>> instantiated_objects;
   std::vector<std::vector<data_staging::shape_t>> scene_shapes_intermediate;
   uint32_t frame_number = 0;
 
@@ -130,11 +131,9 @@ public:
   void call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances);
   void create_new_mappings(v8_interact& i);
   void update_object_positions(v8_interact& i, v8::Local<v8::Object>& video);
+  void insert_newly_created_objects();
   void update_object_toroidal(v8_interact& i, v8::Local<v8::Object>& instance, double& x, double& y);
   void update_object_interactions(v8_interact& i,
-                                  v8::Local<v8::Array>& next_instances,
-                                  v8::Local<v8::Array>& intermediates,
-                                  v8::Local<v8::Array>& previous_instances,
                                   v8::Local<v8::Object>& video);
   void handle_collisions(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Array> next_instances);
   void handle_gravity(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Array> next_instances);

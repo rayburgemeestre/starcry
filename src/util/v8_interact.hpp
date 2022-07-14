@@ -419,12 +419,22 @@ public:
   v8::Local<v8::Value> get_index(v8::Local<v8::Array> array, v8::Local<v8::Value> index) {
     return array->Get(ctx, index).ToLocalChecked();
   }
+  v8::Local<v8::Value> get(v8::Persistent<v8::Object>& object, v8::Local<v8::Value> index) {
+    return object.Get(isolate)->Get(ctx, index).ToLocalChecked();
+  }
   v8::Local<v8::Value> get(v8::Local<v8::Object> object, v8::Local<v8::Value> index) {
     return object->Get(ctx, index).ToLocalChecked();
   }
   v8::Local<v8::Value> get(v8::Local<v8::Object> array, const std::string& index) {
     return array->Get(ctx, v8_str(ctx, index)).ToLocalChecked();
   }
+  v8::Local<v8::Array> prop_names(v8::Persistent<v8::Object>& obj) {
+    v8::Local<v8::Array> out;
+    if (!obj.Get(isolate)->IsObject() || !obj.Get(isolate)->GetOwnPropertyNames(ctx).ToLocal(&out)) {
+      out = v8::Array::New(get_isolate());
+    }
+    return out;
+  };
   v8::Local<v8::Array> prop_names(v8::Local<v8::Object> obj) {
     v8::Local<v8::Array> out;
     if (!obj->IsObject() || !obj->GetOwnPropertyNames(ctx).ToLocal(&out)) {
