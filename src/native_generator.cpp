@@ -701,15 +701,16 @@ bool native_generator::_generate_frame() {
           }
 
           // create mappings
-          create_new_mappings(i);
+          create_new_mappings();
 
           // handle object movement (velocity added to position)
           update_object_positions(i, video);
 
-          insert_newly_created_objects();
-
           // handle collisions, gravity and "inherited" objects
           update_object_interactions(i, video);
+
+          // above update functions could have triggered spawning of new objects
+          insert_newly_created_objects();
 
           // convert javascript to renderable objects
           convert_objects_to_render_job(i, sc, video);
@@ -803,7 +804,7 @@ void native_generator::call_next_frame_event(v8_interact& i, v8::Local<v8::Array
   }
 }
 
-void native_generator::create_new_mappings(v8_interact& i) {
+void native_generator::create_new_mappings() {
   next_instance_map.clear();
   intermediate_map.clear();
   for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
@@ -929,6 +930,8 @@ void native_generator::update_object_positions(v8_interact& i, v8::Local<v8::Obj
 void native_generator::insert_newly_created_objects() {
   auto& dest = scene_shapes_next[scenesettings.current_scene_next];
   auto& source = instantiated_objects[scenesettings.current_scene_next];
+  if (source.empty()) return;
+
   dest.reserve(dest.size() + source.size());
 
   const auto get_meta = [](auto& shape) {
@@ -1008,6 +1011,7 @@ void native_generator::insert_newly_created_objects() {
                abstract_shape);
   }
   source.clear();
+  create_new_mappings();
 }
 
 void native_generator::update_object_toroidal(v8_interact& i, v8::Local<v8::Object>& instance, double& x, double& y) {
@@ -1042,192 +1046,209 @@ void native_generator::update_object_toroidal(v8_interact& i, v8::Local<v8::Obje
   }
 }
 
-void native_generator::update_object_interactions(v8_interact& i,
-                                                  v8::Local<v8::Object>& video) {
-  //  stepper.reset_current();
-  //  const auto isolate = i.get_isolate();
-  //
-  //  // we cannot simply iterate over the next_instances array, since the array might mutate
-  //  // during looping (since objects can trigger spawned objects, etc.) for this reason, create
-  //  // a copy of the array and iterate over that
-  //
-  //  std::vector<v8::Local<v8::Object>> instances;
-  //  for (size_t index = 0; index < next_instances->Length(); index++) {
-  //    auto next_instance = i.get_index(next_instances, index).As<v8::Object>();
-  //    instances.push_back(next_instance);
-  //  }
-  //
-  //  for (auto& next_instance : instances) {
-  //    auto instance_uid = i.integer_number(next_instance, "unique_id");
-  //    auto find = intermediate_map.find(instance_uid);
-  //    if (find == intermediate_map.end()) {
-  //      continue;
-  //    }
-  //    auto intermediate_instance = find->second;
-  //
-  //    auto motion_blur = !i.has_field(next_instance, "motion_blur") || i.boolean(next_instance, "motion_blur");
-  //
-  //    if (!motion_blur) {
-  //      i.set_field(next_instance, "steps", v8::Number::New(isolate, 1));
-  //    } else {
-  //      double dist = get_max_travel_of_object(i, next_instances, intermediate_instance, next_instance);
-  //      if (dist > max_dist_found) {
-  //        max_dist_found = dist;
-  //      }
-  //      auto steps = update_steps(dist);
-  //
-  //      // TODO: why is this recorded_steps static
-  //      // experimentally put this here for now
-  //      static std::unordered_map<int64_t, int> recorded_steps;
-  //
-  //      // below code is ugly and should be refactored soon anyway
-  //      auto inherit = i.get(next_instance, "inherited");
-  //      if (inherit->IsBoolean() && inherit.As<v8::Boolean>()->Value()) {
-  //        // inherited, do not set our own dist etc.
-  //        // EDIT: we need to read from cache as well, in case stuff got reverted..
-  //        i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[instance_uid]));
-  //      } else {
-  //        if (attempt == 1) {
-  //          i.set_field(next_instance, "__dist__", v8::Number::New(isolate, dist));
-  //          i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
-  //          recorded_steps[instance_uid] = steps;
-  //        } else if (attempt > 1) {
-  //          i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[instance_uid]));
-  //        }
-  //        // cascade to left and right props, temp
-  //        if (i.has_field(next_instance, "props")) {
-  //          auto p = i.get(next_instance, "props");
-  //          if (p->IsObject()) {
-  //            auto props = p.As<v8::Object>();
-  //            for (const auto& left_or_right_str : {"left", "right"})
-  //              if (i.has_field(props, left_or_right_str)) {
-  //                auto l = i.get(props, left_or_right_str);
-  //                if (l->IsArray()) {
-  //                  auto a = l.As<v8::Array>();
-  //                  for (size_t m = 0; m < a->Length(); m++) {
-  //                    auto left_or_right = i.get_index(a, m).As<v8::Object>();
-  //                    // TODO: lambdafy: below is copied from block above.
-  //                    if (attempt == 1) {
-  //                      auto use_dist = dist;
-  //                      auto use_steps = steps;
-  //                      if (i.has_field(left_or_right, "__dist__")) {
-  //                        use_dist = std::max(use_dist, i.double_number(left_or_right, "__dist__"));
-  //                      }
-  //                      if (i.has_field(left_or_right, "steps")) {
-  //                        use_steps = std::max(use_steps, (int)i.integer_number(left_or_right, "steps"));
-  //                      }
-  //                      auto a = i.integer_number(left_or_right, "unique_id");
-  //                      recorded_steps[a] = use_steps;
-  //                      i.set_field(left_or_right, "__dist__", v8::Number::New(isolate, dist));
-  //                      i.set_field(left_or_right, "steps", v8::Number::New(isolate, use_steps));
-  //                    } else if (attempt > 1) {
-  //                      auto a = i.integer_number(left_or_right, "unique_id");
-  //                      i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
-  //                    }
-  //                    i.set_field(left_or_right, "inherited", v8::Boolean::New(isolate, true));
-  //                  }
-  //                } else if (l->IsObject()) {
-  //                  auto left_or_right = l.As<v8::Object>();
-  //                  if (attempt == 1) {
-  //                    auto use_dist = dist;
-  //                    auto use_steps = steps;
-  //                    if (i.has_field(left_or_right, "__dist__")) {
-  //                      use_dist = std::max(use_dist, i.double_number(left_or_right, "__dist__"));
-  //                    }
-  //                    if (i.has_field(left_or_right, "steps")) {
-  //                      use_steps = std::max(use_steps, (int)i.integer_number(left_or_right, "steps"));
-  //                    }
-  //                    auto a = i.integer_number(left_or_right, "unique_id");
-  //                    recorded_steps[a] = use_steps;
-  //                    i.set_field(left_or_right, "__dist__", v8::Number::New(isolate, use_dist));
-  //                    i.set_field(left_or_right, "steps", v8::Number::New(isolate, use_steps));
-  //                  } else if (attempt > 1) {
-  //                    auto a = i.integer_number(left_or_right, "unique_id");
-  //                    i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
-  //                  }
-  //                  i.set_field(left_or_right, "inherited", v8::Boolean::New(isolate, true));
-  //                }
-  //              }
-  //          }
-  //        }
-  //      }
-  //    }
-  //    handle_collisions(i, next_instance, next_instances);
-  //    handle_gravity(i, next_instance, next_instances);
-  //  }
+void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video) {
+  stepper.reset_current();
+  const auto isolate = i.get_isolate();
+
+  // we cannot simply iterate over the next_instances array, since the array might mutate
+  // during looping (since objects can trigger spawned objects, etc.) for this reason, create
+  // a copy of the array and iterate over that
+
+  const auto handle = [&](data_staging::shape_t& abstract_shape, data_staging::meta& meta) {
+    auto instance_uid = meta.unique_id();
+    // MARK
+    auto find = intermediate_map.find(instance_uid);
+    if (find == intermediate_map.end()) {
+      return;
+    }
+    auto intermediate_instance = find->second;
+
+    // auto motion_blur = !i.has_field(next_instance, "motion_blur") || i.boolean(next_instance, "motion_blur");
+
+    // if (!motion_blur) {
+    // i.set_field(next_instance, "steps", v8::Number::New(isolate, 1));
+    // } else {
+    double dist = 1;  // TODO: implement new version of: get_max_travel_of_object(i, next_instances,
+                      // intermediate_instance, next_instance);
+    if (dist > max_dist_found) {
+      max_dist_found = dist;
+    }
+    auto steps = update_steps(dist);
+
+    // TODO: why is this recorded_steps static
+    // experimentally put this here for now
+    static std::unordered_map<int64_t, int> recorded_steps;
+
+    // below code is ugly and should be refactored soon anyway
+    // auto inherit = i.get(next_instance, "inherited");
+    // if (inherit->IsBoolean() && inherit.As<v8::Boolean>()->Value()) {
+    //  // inherited, do not set our own dist etc.
+    //  // EDIT: we need to read from cache as well, in case stuff got reverted..
+    //  i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[instance_uid]));
+    //} else {
+    if (attempt == 1) {
+      meta.set_distance(dist);
+      meta.set_steps(steps);
+      recorded_steps[instance_uid] = steps;
+    } else if (attempt > 1) {
+      meta.set_steps(recorded_steps[instance_uid]);
+    }
+    // cascade to left and right props, temp
+    // drop support for this?
+    //    if (i.has_field(next_instance, "props")) {
+    //      auto p = i.get(next_instance, "props");
+    //      if (p->IsObject()) {
+    //        auto props = p.As<v8::Object>();
+    //        for (const auto& left_or_right_str : {"left", "right"})
+    //          if (i.has_field(props, left_or_right_str)) {
+    //            auto l = i.get(props, left_or_right_str);
+    //            if (l->IsArray()) {
+    //              auto a = l.As<v8::Array>();
+    //              for (size_t m = 0; m < a->Length(); m++) {
+    //                auto left_or_right = i.get_index(a, m).As<v8::Object>();
+    //                // TODO: lambdafy: below is copied from block above.
+    //                if (attempt == 1) {
+    //                  auto use_dist = dist;
+    //                  auto use_steps = steps;
+    //                  if (i.has_field(left_or_right, "__dist__")) {
+    //                    use_dist = std::max(use_dist, i.double_number(left_or_right, "__dist__"));
+    //                  }
+    //                  if (i.has_field(left_or_right, "steps")) {
+    //                    use_steps = std::max(use_steps, (int)i.integer_number(left_or_right, "steps"));
+    //                  }
+    //                  auto a = i.integer_number(left_or_right, "unique_id");
+    //                  recorded_steps[a] = use_steps;
+    //                  i.set_field(left_or_right, "__dist__", v8::Number::New(isolate, dist));
+    //                  i.set_field(left_or_right, "steps", v8::Number::New(isolate, use_steps));
+    //                } else if (attempt > 1) {
+    //                  auto a = i.integer_number(left_or_right, "unique_id");
+    //                  i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
+    //                }
+    //                i.set_field(left_or_right, "inherited", v8::Boolean::New(isolate, true));
+    //              }
+    //            } else if (l->IsObject()) {
+    //              auto left_or_right = l.As<v8::Object>();
+    //              if (attempt == 1) {
+    //                auto use_dist = dist;
+    //                auto use_steps = steps;
+    //                if (i.has_field(left_or_right, "__dist__")) {
+    //                  use_dist = std::max(use_dist, i.double_number(left_or_right, "__dist__"));
+    //                }
+    //                if (i.has_field(left_or_right, "steps")) {
+    //                  use_steps = std::max(use_steps, (int)i.integer_number(left_or_right, "steps"));
+    //                }
+    //                auto a = i.integer_number(left_or_right, "unique_id");
+    //                recorded_steps[a] = use_steps;
+    //                i.set_field(left_or_right, "__dist__", v8::Number::New(isolate, use_dist));
+    //                i.set_field(left_or_right, "steps", v8::Number::New(isolate, use_steps));
+    //              } else if (attempt > 1) {
+    //                auto a = i.integer_number(left_or_right, "unique_id");
+    //                i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
+    //              }
+    //              i.set_field(left_or_right, "inherited", v8::Boolean::New(isolate, true));
+    //            }
+    //          }
+    //      }
+    //    }
+    // }
+    // }
+    handle_collisions(i, abstract_shape, scene_shapes_next[scenesettings.current_scene_next]);
+    //    handle_gravity(i, next_instance, next_instances);
+  };
+  for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
+    std::visit(overloaded{[](std::monostate) {},
+                          [&](data_staging::circle& c) {
+                            handle(abstract_shape, c.meta_ref());
+                          },
+                          [&](data_staging::line& l) {
+                            handle(abstract_shape, l.meta_ref());
+                          }},
+               abstract_shape);
+  }
 }
 
 void native_generator::handle_collisions(v8_interact& i,
-                                         v8::Local<v8::Object> instance,
-                                         v8::Local<v8::Array> next_instances) {
-  //  // Now do the collision detection part
-  //  // NOTE: we multiple radius/size * 2.0 since we're not looking up a point, and querying the quadtree does
-  //  // not check for overlap, but only whether the x,y is inside the specified range. If we don't want to miss
-  //  // points on the edge of our circle, we need to widen the matching range.
-  //  // TODO: for different sizes of circle collision detection, we need to somehow adjust the interface to this
-  //  // lookup somehow.
-  //  std::vector<point_type> found;
-  //  auto type = i.str(instance, "type");
-  //  auto collision_group = i.str(instance, "collision_group");
-  //  if (collision_group == "undefined") {
-  //    return;
-  //  }
-  //  auto x = i.double_number(instance, "x");
-  //  auto y = i.double_number(instance, "y");
-  //  auto unique_id = i.integer_number(instance, "unique_id");
-  //  fix_xy(i, instance, unique_id, x, y);
-  //
-  //  auto radius = i.double_number(instance, "radius");
-  //  auto radiussize = i.double_number(instance, "radiussize");
-  //
-  //  qts[collision_group].query(unique_id, circle(position(x, y), radius * 2.0, radiussize * 2.0), found);
-  //  if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
-  //    for (const auto& collide : found) {
-  //      const auto unique_id2 = collide.userdata;
-  //      auto instance2 = next_instance_map.at(unique_id2);
-  //      handle_collision(i, instance, instance2);
-  //    }
-  //  }
+                                         data_staging::shape_t& shape,
+                                         std::vector<data_staging::shape_t>& shapes) {
+  // Now do the collision detection part
+  // NOTE: we multiple radius/size * 2.0 since we're not looking up a point, and querying the quadtree does
+  // not check for overlap, but only whether the x,y is inside the specified range. If we don't want to miss
+  // points on the edge of our circle, we need to widen the matching range.
+  // TODO: for different sizes of circle collision detection, we need to somehow adjust the interface to this
+  // lookup somehow.
+  std::vector<point_type> found;
+  try {
+    data_staging::circle& c = std::get<data_staging::circle>(shape);
+    const auto& collision_group = c.behavior_ref().collision_group_ref();
+    if (collision_group == "undefined") {
+      return;
+    }
+    auto x = c.location_ref().position_ref().x;
+    auto y = c.location_ref().position_ref().y;
+    auto unique_id = c.meta().unique_id();
+    // TODO: fix_xy(i, instance, unique_id, x, y);
+
+    auto radius = c.radius();
+    auto radiussize = c.radius_size();
+
+    qts[collision_group].query(unique_id, circle(position(x, y), radius * 2.0, radiussize * 2.0), found);
+    if (radiussize < 1000 /* todo create property of course */) {
+      for (const auto& collide : found) {
+        const auto unique_id2 = collide.userdata;
+        auto shape2 = next_instance_map.at(unique_id2);
+        try {
+          data_staging::circle& c2 = std::get<data_staging::circle>(shape2);
+          if (c.meta().unique_id() != c2.meta().unique_id()) {
+            handle_collision(i, c, c2);
+          }
+        } catch (std::bad_variant_access const& ex) {
+          // only supporting circles for now
+          return;
+        }
+      }
+    }
+  } catch (std::bad_variant_access const& ex) {
+    // only supporting circles for now
+    return;
+  }
 }
 
 void native_generator::handle_collision(v8_interact& i,
-                                        v8::Local<v8::Object> instance,
-                                        v8::Local<v8::Object> instance2) {
+                                        data_staging::circle& instance,
+                                        data_staging::circle& instance2) {
   const auto isolate = i.get_isolate();
-  auto unique_id = i.integer_number(instance, "unique_id");
-  auto unique_id2 = i.integer_number(instance2, "unique_id");
-  auto last_collide = i.double_number(instance, "last_collide");
+  auto unique_id = instance.meta().unique_id();
+  auto unique_id2 = instance2.meta().unique_id();
+  auto last_collide = instance.behavior_ref().last_collide();
 
-  auto x = i.double_number(instance, "x");
-  auto y = i.double_number(instance, "y");
-  fix_xy(i, instance, unique_id, x, y);
+  auto x = instance.location_ref().position_cref().x;
+  auto y = instance.location_ref().position_cref().y;
+  // TODO: fix_xy(i, instance, unique_id, x, y);
 
-  auto x2 = i.double_number(instance2, "x");
-  auto y2 = i.double_number(instance2, "y");
-  fix_xy(i, instance2, unique_id2, x2, y2);
+  auto x2 = instance2.location_ref().position_cref().x;
+  auto y2 = instance2.location_ref().position_cref().y;
+  // TODO: fix_xy(i, instance2, unique_id2, x2, y2);
 
-  auto radius = i.double_number(instance, "radius");
-  auto radiussize = i.double_number(instance, "radiussize");
-  auto radius2 = i.double_number(instance2, "radius");
-  auto radiussize2 = i.double_number(instance2, "radiussize");
-  auto mass = i.double_number(instance, "mass", 1.);
-  auto mass2 = i.double_number(instance2, "mass", 1.);
+  auto radius = instance.radius();
+  auto radiussize = instance.radius_size();
+  auto radius2 = instance2.radius();
+  auto radiussize2 = instance2.radius_size();
+  auto mass = instance.generic().mass();
+  auto mass2 = instance2.generic().mass();
 
   // If the quadtree reported a match, it doesn't mean the objects fully collide
   circle a(position(x, y), radius, radiussize);
   circle b(position(x2, y2), radius2, radiussize2);
   if (!a.overlaps(b)) return;
 
-  if (!instance2->IsObject()) return;
-
   // they already collided, no need to let them collide again
   if (last_collide == unique_id2) return;
 
   // handle collision
-  auto vel_x = i.double_number(instance, "vel_x");
-  auto vel_y = i.double_number(instance, "vel_y");
-  auto vel_x2 = i.double_number(instance2, "vel_x");
-  auto vel_y2 = i.double_number(instance2, "vel_y");
+  auto vel_x = instance.movement_ref().velocity().x;
+  auto vel_y = instance.movement_ref().velocity().y;
+  auto vel_x2 = instance2.movement_ref().velocity().x;
+  auto vel_y2 = instance2.movement_ref().velocity().y;
 
   const auto normal = unit_vector(subtract_vector(vector2d(x, y), vector2d(x2, y2)));
   const auto ta = dot_product(vector2d(vel_x, vel_y), normal);
@@ -1237,21 +1258,20 @@ void native_generator::handle_collision(v8_interact& i,
   // save velocities
   const auto multiplied_vector = multiply_vector(normal, optimized_p);
   auto updated_vel1 = subtract_vector(vector2d(vel_x, vel_y), multiply_vector(multiplied_vector, mass2));
-  i.set_field(instance, "vel_x", v8::Number::New(isolate, updated_vel1.x));
-  i.set_field(instance, "vel_y", v8::Number::New(isolate, updated_vel1.y));
+  instance.movement_ref().set_velocity(updated_vel1);
   auto updated_vel2 = add_vector(vector2d(vel_x2, vel_y2), multiply_vector(multiplied_vector, mass));
-  i.set_field(instance2, "vel_x", v8::Number::New(isolate, updated_vel2.x));
-  i.set_field(instance2, "vel_y", v8::Number::New(isolate, updated_vel2.y));
+  instance2.movement_ref().set_velocity(updated_vel2);
 
   // save collision
-  i.set_field(instance, "last_collide", v8::Number::New(isolate, unique_id2));
-  i.set_field(instance2, "last_collide", v8::Number::New(isolate, unique_id));
+  instance.behavior_ref().set_last_collide(unique_id2);
+  instance2.behavior_ref().set_last_collide(unique_id);
 
-  // call 'on collision' event
-  auto on = i.get(instance, "on").As<v8::Object>();
-  i.call_fun(on, instance, "collide", instance2);
-  auto on2 = i.get(instance2, "on").As<v8::Object>();
-  i.call_fun(on2, instance2, "collide", instance);
+  // TODO:
+  //  // call 'on collision' event
+  //  auto on = i.get(instance, "on").As<v8::Object>();
+  //  i.call_fun(on, instance, "collide", instance2);
+  //  auto on2 = i.get(instance2, "on").As<v8::Object>();
+  //  i.call_fun(on2, instance2, "collide", instance);
 }
 
 void native_generator::handle_gravity(v8_interact& i,
@@ -2071,6 +2091,8 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
     c.movement_ref().set_velocity(i.double_number(instance, "vel_x", 0),
                                   i.double_number(instance, "vel_y", 0),
                                   i.double_number(instance, "velocity", 0));
+    c.behavior_ref().set_collision_group(i.str(instance, "collision_group", ""));
+    c.behavior_ref().set_gravity_group(i.str(instance, "gravity_group", ""));
     c.styling_ref().set_gradient(i.str(instance, "gradient"));
 
     handle(c);

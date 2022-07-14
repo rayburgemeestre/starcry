@@ -129,15 +129,14 @@ public:
   void revert_all_changes(v8_interact& i);
   static void revert_position_updates(v8_interact& i);
   void call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances);
-  void create_new_mappings(v8_interact& i);
+  void create_new_mappings();
   void update_object_positions(v8_interact& i, v8::Local<v8::Object>& video);
   void insert_newly_created_objects();
   void update_object_toroidal(v8_interact& i, v8::Local<v8::Object>& instance, double& x, double& y);
-  void update_object_interactions(v8_interact& i,
-                                  v8::Local<v8::Object>& video);
-  void handle_collisions(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Array> next_instances);
+  void update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video);
+  void handle_collisions(v8_interact& i, data_staging::shape_t& instance, std::vector<data_staging::shape_t>& shapes);
+  void handle_collision(v8_interact& i, data_staging::circle& instance, data_staging::circle& instance2);
   void handle_gravity(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Array> next_instances);
-  void handle_collision(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2);
   void handle_gravity(v8_interact& i,
                       v8::Local<v8::Object> instance,
                       v8::Local<v8::Object> instance2,

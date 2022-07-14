@@ -14,6 +14,8 @@ private:
   std::string gravity_group_;
   std::string toroidal_group_;
 
+  int64_t last_collide_ = -1;
+
 public:
   std::string collision_group() const {
     return collision_group_;
@@ -23,6 +25,30 @@ public:
   }
   std::string toroidal_group() const {
     return toroidal_group_;
+  }
+  const std::string& collision_group_ref() const {
+    return collision_group_;
+  }
+  const std::string& gravity_group_ref() const {
+    return gravity_group_;
+  }
+  const std::string& toroidal_group_ref() const {
+    return toroidal_group_;
+  }
+  int64_t last_collide() const {
+    return last_collide_;
+  }
+  void set_last_collide(int64_t last_collide) {
+    last_collide_ = last_collide;
+  }
+  void set_collision_group(std::string collision_group) {
+    collision_group_ = collision_group;
+  }
+  void set_gravity_group(std::string gravity_group) {
+    gravity_group_ = gravity_group;
+  }
+  void set_toroidal_group(std::string toroidal_group) {
+    toroidal_group_ = toroidal_group;
   }
 };
 }  // namespace data_staging

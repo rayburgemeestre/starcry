@@ -34,26 +34,18 @@ _ = {
             'vel_y': Math.random(),
           });
         }
-      }
+      },
     },
     'ball': {
       'id': 'ball_tpl',
       'type': 'circle',
-      //'collision_group': 'group1',
+      'collision_group': 'group1',
       //'gravity_group': 'group1',
       //'toroidal': 't1',
       'blending_type': blending_type.normal,
       'gradient': 'blue',
       'radius': 0,
       'radiussize': 5.0,
-      'init': function() {
-        //  output("in init function for object id ball");
-      },
-      'time': function(t, e, s, tt) {
-        // output("in time function for object id ball with: " + t + " / " + e + " / " + s + " / " + tt);
-        // this.x += 1;
-        this.radius += e * 5;
-      }
     },
   },
   'video': {

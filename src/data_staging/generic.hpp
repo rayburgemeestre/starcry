@@ -11,7 +11,7 @@ private:
   double angle_ = 0;
   double scale_ = 1.;
   double opacity_ = 1.;
-  // TODO: add mass
+  double mass_ = 1;
 
 public:
   double angle() const {
@@ -22,6 +22,21 @@ public:
   }
   double opacity() const {
     return opacity_;
+  }
+  double mass() const {
+    return mass_;
+  }
+  void set_angle(double angle) {
+    angle_ = angle;
+  }
+  void set_scale(double scale) {
+    scale_ = scale;
+  }
+  void set_opacity(double opacity) {
+    opacity_ = opacity;
+  }
+  void set_mass(double mass) {
+    mass_ = mass;
   }
 };
 }  // namespace data_staging

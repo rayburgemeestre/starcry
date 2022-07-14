@@ -17,6 +17,10 @@ private:
   int64_t parent_uid_id_ = -1;
   int64_t level_;
 
+  // used for rendering purposes
+  double dist_ = 0;
+  int64_t steps_ = 0;
+
 public:
   meta() = default;
 
@@ -48,6 +52,21 @@ public:
 
   void set_parent_uid(int64_t parent_uid) {
     parent_uid_id_ = parent_uid;
+  }
+
+  double distance() const {
+    return dist_;
+  }
+
+  void set_distance(double dist) {
+    dist_ = dist;
+  }
+
+  int64_t steps() const {
+    return steps_;
+  }
+  void set_steps(int64_t steps) {
+    steps_ = steps;
   }
 };
 
