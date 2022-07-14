@@ -1153,7 +1153,7 @@ void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::
     // }
     // }
     handle_collisions(i, abstract_shape, scene_shapes_next[scenesettings.current_scene_next]);
-    //    handle_gravity(i, next_instance, next_instances);
+    handle_gravity(i, abstract_shape, scene_shapes_next[scenesettings.current_scene_next]);
   };
   for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
     std::visit(overloaded{[](std::monostate) {},
@@ -1275,80 +1275,92 @@ void native_generator::handle_collision(v8_interact& i,
 }
 
 void native_generator::handle_gravity(v8_interact& i,
-                                      v8::Local<v8::Object> instance,
-                                      v8::Local<v8::Array> next_instances) {
-  //  std::vector<point_type> found;
-  //
-  //  auto type = i.str(instance, "type");
-  //  auto unique_id = i.integer_number(instance, "unique_id");
-  //  auto gravity_group = i.str(instance, "gravity_group");
-  //  if (gravity_group == "undefined") {
-  //    return;
-  //  }
-  //
-  //  if (i.double_number(instance, "velocity", 0) == 0) return;  // skip this one.
-  //
-  //  auto& video = genctx->video_obj;
-  //  auto x = i.double_number(instance, "x");
-  //  auto y = i.double_number(instance, "y");
-  //  fix_xy(i, instance, unique_id, x, y);
-  //
-  //  auto radius = i.double_number(instance, "radius");
-  //  auto radiussize = i.double_number(instance, "radiussize");
-  //  auto range = i.double_number(video, "gravity_range", 1000);
-  //
-  //  qts_gravity[gravity_group].query(
-  //      unique_id, circle(position(x, y), range + (radius * 2.0), range + (radiussize * 2.0)), found);
-  //
-  //  if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
-  //    vector2d acceleration(0, 0);
-  //    for (const auto& in_range : found) {
-  //      const auto unique_id2 = in_range.userdata;
-  //      auto instance2 = next_instance_map.at(unique_id2);
-  //      handle_gravity(i, instance, instance2, acceleration);
-  //    }
-  //    vector2d vel(i.double_number(instance, "vel_x", 0.), i.double_number(instance, "vel_y", 0.));
-  //    vel = add_vector(vel, acceleration);
-  //    i.set_field(instance, "vel_x", v8::Number::New(i.get_isolate(), vel.x));
-  //    i.set_field(instance, "vel_y", v8::Number::New(i.get_isolate(), vel.y));
-  //  }
+                                      data_staging::shape_t& shape,
+                                      std::vector<data_staging::shape_t>& shapes) {
+  try {
+    std::vector<point_type> found;
+    data_staging::circle& c = std::get<data_staging::circle>(shape);
+
+    auto unique_id = c.meta().unique_id();
+    auto gravity_group = c.behavior_ref().gravity_group();
+    if (gravity_group.empty()) {
+      return;
+    }
+
+    if (c.movement_ref().velocity_speed() == 0) return;  // skip this one.
+
+    auto x = c.location_ref().position_cref().x;
+    auto y = c.location_ref().position_cref().y;
+    // TODO: fix_xy(i, instance, unique_id, x, y);
+
+    auto radius = c.radius();
+    auto radiussize = c.radius_size();
+
+    auto& video = genctx->video_obj;
+    auto G = i.double_number(video, "gravity_G", 1);
+    auto range = i.double_number(video, "gravity_range", 1000);
+    const auto constrain_dist_min = i.double_number(video, "gravity_constrain_dist_min", 5.);
+    const auto constrain_dist_max = i.double_number(video, "gravity_constrain_dist_max", 25.);
+
+    qts_gravity[gravity_group].query(
+        unique_id, circle(position(x, y), range + (radius * 2.0), range + (radiussize * 2.0)), found);
+
+    if (c.radius_size() < 1000 /* todo create property of course */) {
+      vector2d acceleration(0, 0);
+      for (const auto& in_range : found) {
+        const auto unique_id2 = in_range.userdata;
+        auto shape2 = next_instance_map.at(unique_id2);
+        try {
+          data_staging::circle& c2 = std::get<data_staging::circle>(shape2);
+          if (c.meta().unique_id() != c2.meta().unique_id()) {
+            handle_gravity(i, c, c2, acceleration, G, range, constrain_dist_min, constrain_dist_max);
+          }
+        } catch (std::bad_variant_access const& ex) {
+          // only supporting circles for now
+          return;
+        }
+      }
+      auto vel = add_vector(c.movement_ref().velocity(), acceleration);
+      c.movement_ref().set_velocity(vel);
+    }
+  } catch (std::bad_variant_access const& ex) {
+    // only supporting circles for now
+    return;
+  }
+  //---
 }
 
 void native_generator::handle_gravity(v8_interact& i,
-                                      v8::Local<v8::Object> instance,
-                                      v8::Local<v8::Object> instance2,
-                                      vector2d& acceleration) {
-  auto& video = genctx->video_obj;
+                                      data_staging::circle& instance,
+                                      data_staging::circle& instance2,
+                                      vector2d& acceleration,
+                                      double G,
+                                      double range,
+                                      double constrain_dist_min,
+                                      double constrain_dist_max) {
+  auto unique_id = instance.meta().unique_id();
+  auto x = instance.location_ref().position_cref().x;
+  auto y = instance.location_ref().position_cref().y;
+  // TODO: fix_xy(i, instance, unique_id, x, y);
 
-  auto unique_id = i.integer_number(instance, "unique_id");
-  auto x = i.double_number(instance, "x");
-  auto y = i.double_number(instance, "y");
-  fix_xy(i, instance, unique_id, x, y);
+  auto unique_id2 = instance.meta().unique_id();
+  auto x2 = instance2.location_ref().position_cref().x;
+  auto y2 = instance2.location_ref().position_cref().y;
+  // TODO: fix_xy(i, instance2, unique_id2, x2, y2);
 
-  auto unique_id2 = i.integer_number(instance2, "unique_id");
-  auto x2 = i.double_number(instance2, "x");
-  auto y2 = i.double_number(instance2, "y");
-  fix_xy(i, instance2, unique_id2, x2, y2);
-
-  auto radius = i.double_number(instance, "radius");
-  auto radiussize = i.double_number(instance, "radiussize");
-  auto radius2 = i.double_number(instance2, "radius");
-  auto radiussize2 = i.double_number(instance2, "radiussize");
-  auto mass = i.double_number(instance, "mass", 1.);
-  auto mass2 = i.double_number(instance2, "mass", 1.);
-
-  auto G = i.double_number(video, "gravity_G", 1);
-  auto range = i.double_number(video, "gravity_range", 1000);
+  auto radius = instance.radius();
+  auto radiussize = instance.radius_size();
+  auto radius2 = instance2.radius();
+  auto radiussize2 = instance2.radius_size();
+  auto mass = instance.generic_ref().mass();
+  auto mass2 = instance2.generic_ref().mass();
 
   // If the quadtree reported a match, it doesn't mean the objects fully collide
   circle a(position(x, y), radius + range, radiussize);
   circle b(position(x2, y2), radius2 + range, radiussize2);
   double dist = 0;
   if (!a.overlaps(b, dist)) return;
-  if (!instance2->IsObject()) return;
 
-  const auto constrain_dist_min = i.double_number(video, "gravity_constrain_dist_min", 5.);
-  const auto constrain_dist_max = i.double_number(video, "gravity_constrain_dist_max", 25.);
   const auto constrained_distance = std::clamp(dist, constrain_dist_min, constrain_dist_max);
 
   vector2d vec_a(x, y);
@@ -2093,6 +2105,7 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
                                   i.double_number(instance, "velocity", 0));
     c.behavior_ref().set_collision_group(i.str(instance, "collision_group", ""));
     c.behavior_ref().set_gravity_group(i.str(instance, "gravity_group", ""));
+    c.generic_ref().set_mass(i.double_number(instance, "mass", 1));
     c.styling_ref().set_gradient(i.str(instance, "gradient"));
 
     handle(c);

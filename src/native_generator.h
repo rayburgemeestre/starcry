@@ -136,11 +136,15 @@ public:
   void update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video);
   void handle_collisions(v8_interact& i, data_staging::shape_t& instance, std::vector<data_staging::shape_t>& shapes);
   void handle_collision(v8_interact& i, data_staging::circle& instance, data_staging::circle& instance2);
-  void handle_gravity(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Array> next_instances);
+  void handle_gravity(v8_interact& i, data_staging::shape_t& instance, std::vector<data_staging::shape_t>& shapes);
   void handle_gravity(v8_interact& i,
-                      v8::Local<v8::Object> instance,
-                      v8::Local<v8::Object> instance2,
-                      vector2d& acceleration);
+                      data_staging::circle& instance,
+                      data_staging::circle& instance2,
+                      vector2d& acceleration,
+                      double G,
+                      double range,
+                      double constrain_dist_min,
+                      double constrain_dist_max);
   void update_time(v8_interact& i,
                    data_staging::shape_t& instance,
                    const std::string& instance_id,
