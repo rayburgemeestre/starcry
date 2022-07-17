@@ -21,10 +21,13 @@ private:
   double dist_ = 0;
   int64_t steps_ = 0;
 
+  // cumulative
+  vector2d parent_location_ = vector2d{0, 0};
+
 public:
   meta() = default;
 
-  meta(std::string id, int64_t unique_id) : id_(std::move(id)), unique_id_(unique_id) {}
+  meta(std::string id, int64_t unique_id) : id_(std::move(id)), unique_id_(unique_id), parent_location_(0, 0) {}
 
   const std::string& namespace_name() const {
     return namespace_;
@@ -52,6 +55,14 @@ public:
 
   void set_parent_uid(int64_t parent_uid) {
     parent_uid_id_ = parent_uid;
+  }
+
+  const vector2d& parent_location_cref() const {
+    return parent_location_;
+  }
+
+  void set_parent_location(const vector2d& parent_location) {
+    parent_location_ = parent_location;
   }
 
   double distance() const {

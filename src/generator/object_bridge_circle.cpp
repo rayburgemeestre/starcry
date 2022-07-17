@@ -71,7 +71,7 @@ object_bridge<data_staging::circle>::object_bridge(native_generator *generator) 
       .set("radius", v8pp::property(&object_bridge::get_radius, &object_bridge::set_radius))
       .set("radiussize", v8pp::property(&object_bridge::get_radius_size, &object_bridge::set_radius_size))
       .set("props", v8pp::property(&object_bridge::get_properties_local_ref))
-      .set("gradients", v8pp::property(&object_bridge::get_gradients_ref))
+      .set("gradients", v8pp::property(&object_bridge::get_gradients_local_ref))
       .set("spawn", &object_bridge::spawn);
   instance_ = std::make_shared<v8::Persistent<v8::Object>>();
   (*instance_)

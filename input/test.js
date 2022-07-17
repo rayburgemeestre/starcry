@@ -20,13 +20,13 @@ _ = {
       'props': {},
       'subobj': [],
       'radius': 0,
-      'radiussize': 5.0,
+      'radiussize': 0.0,
       'angle': 0.,
       'init': function() {
-        this.subobj.push(this.spawn({'id': 'obj1', 'x': -300, 'y': 0, 'z': 0, 'props': {}}));
-        this.subobj.push(this.spawn({'id': 'obj1', 'x': 300, 'y': 0, 'z': 0, 'props': {}}));
-        this.subobj.push(this.spawn({'id': 'obj1', 'x': 0, 'y': -300, 'z': 0, 'props': {}}));
-        this.subobj.push(this.spawn({'id': 'obj1', 'x': 0, 'y': +300, 'z': 0, 'props': {}}));
+        this.spawn({'id': 'obj1', 'x': -300, 'y': 0, 'z': 0, 'props': {}});
+        this.spawn({'id': 'obj1', 'x': 300, 'y': 0, 'z': 0, 'props': {}});
+        this.spawn({'id': 'obj1', 'x': 0, 'y': -300, 'z': 0, 'props': {}});
+        this.spawn({'id': 'obj1', 'x': 0, 'y': +300, 'z': 0, 'props': {}});
       },
       'time': function(t, e, scene) {
         switch (scene) {
@@ -41,40 +41,21 @@ _ = {
     'obj1': {
       'x': 0,
       'y': 0,
-      'props': {
-        'maxradius': 250.0,
-      },
-      'gradients': [
-        [1.0, 'ce475a6c-2427-420c-85de-6316f3027313'],
-        [0.0, 'cd35b59b-bae9-4bef-b689-dcc8720e6be9'],
-        [0.0, '64f1da9f-07b2-46bd-8f62-30f9534f0cfd'],
-      ],
-      'subobj': [],
-      'radius': 0,
-      'radiussize': 5.0,
       'init': function() {
-        this.subobj.push(this.spawn({'id': 'obj2', 'x': -100, 'y': 0, 'z': 0, 'props': {'maxradius': 100}}));
-        this.subobj.push(this.spawn({'id': 'obj2', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 200}}));
-        this.subobj.push(this.spawn({'id': 'obj2', 'x': 100, 'y': 0, 'z': 0, 'props': {'maxradius': 300}}));
+        this.spawn({'id': 'obj2', 'x': -100, 'y': 0, 'z': 0, 'props': {'maxradius': 100}});
+        this.spawn({'id': 'obj2', 'x': 0, 'y': 0, 'z': 0, 'props': {'maxradius': 200}});
+        this.spawn({'id': 'obj2', 'x': 100, 'y': 0, 'z': 0, 'props': {'maxradius': 300}});
       },
-      'time': function(t, e, s) {
-        switch (s) {
-          case 0:
-            this.radius = t * this.props.maxradius;
-            break;
-          case 1:
-            this.radius = t * this.props.maxradius * 2.0;
-            break;
-        }
-        this.gradients[0][0] = 1.0 - t;
-        this.gradients[2][0] = t;
-      },
-      'proximity': function(t) {}
     },
     'obj2': {
       'type': 'circle',
       'radius': 100,
       'radiussize': 10.0,
+      'gradients': [
+        [1.0, 'ce475a6c-2427-420c-85de-6316f3027313'],
+        [0.0, 'cd35b59b-bae9-4bef-b689-dcc8720e6be9'],
+        [0.0, '64f1da9f-07b2-46bd-8f62-30f9534f0cfd'],
+      ],
       'props': {
         'maxradius': 250.0,
       },
@@ -83,6 +64,8 @@ _ = {
         this.radius = 0;
       },
       'time': function(t, elapsed, s) {
+        this.gradients[0][0] = 1.0 - t;
+        this.gradients[2][0] = t;
         switch (s) {
           case 0:
           case 1:
@@ -121,7 +104,5 @@ _ = {
     },
     {'name': 'scene2', 'duration': 1.0, 'objects': []},
     {'name': 'scene3', 'duration': 1.0, 'objects': []},
-    // {'name': 'scene4', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': -100, 'y': 0, 'z': 0, 'props': {}}]},
-    // {'name': 'scene5', 'duration': 1.0, 'objects': [{'id': 'obj0', 'x': -100, 'y': 0, 'z': 0, 'props': {}}]},
   ]
 };

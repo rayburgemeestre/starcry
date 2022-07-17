@@ -13,6 +13,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 template <typename T>
 void object_bridge<T>::push_object(T& c) {
   properties_accessed_ = false;
+  gradients_accessed_ = false;
   shape_stack.push_back(&c);
 }
 
@@ -23,9 +24,19 @@ void object_bridge<T>::pop_object() {
       // do something with the properties
     });
     // commit gradients data
-    // shape_stack.back()->styling_ref().commit();
+  }
+  if (gradients_accessed_) {
+    // shape_stack.back()->styling_ref().set_gradients_dirty();
+    auto& defs = this->generator_->get_object_definitions_ref();
+    auto obj_id = shape_stack.back()->meta().id();
+    auto find = defs.find(obj_id);
+    if (find != defs.end()) {
+      auto& def = find->second;
+      shape_stack.back()->styling_ref().commit(def);
+    }
   }
   properties_accessed_ = false;
+  gradients_accessed_ = false;
   shape_stack.pop_back();
 }
 
@@ -54,7 +65,14 @@ v8::Local<v8::Object> object_bridge<T>::get_properties_local_ref() const {
 }
 
 template <typename T>
+v8::Local<v8::Array> object_bridge<T>::get_gradients_local_ref() const {
+  gradients_accessed_ = true;
+  return shape_stack.back()->styling_ref().get_gradients_obj();
+}
+
+template <typename T>
 std::vector<std::tuple<double, std::string>>& object_bridge<T>::get_gradients_ref() const {
+  gradients_accessed_ = true;
   return shape_stack.back()->styling_ref().get_gradients_ref();
 }
 

@@ -22,6 +22,7 @@ private:
   std::vector<shape_class*> shape_stack;
   native_generator* generator_ = nullptr;
   mutable bool properties_accessed_ = false;
+  mutable bool gradients_accessed_ = false;
   std::shared_ptr<v8::Persistent<v8::Object>> instance_ = nullptr;
 
 public:
@@ -29,8 +30,6 @@ public:
 
   void push_object(shape_class& c);
   void pop_object();
-
-  void set_generator(native_generator* ptr);
 
   int64_t get_level() const;
   double get_x() const;
@@ -53,6 +52,7 @@ public:
 
   v8::Persistent<v8::Object>& get_properties_ref() const;
   v8::Local<v8::Object> get_properties_local_ref() const;
+  v8::Local<v8::Array> get_gradients_local_ref() const;
 
   std::vector<std::tuple<double, std::string>>& get_gradients_ref() const;
   // void set_gradients(std::vector<std::tuple<double, std::string>> gradients);

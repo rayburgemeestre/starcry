@@ -40,6 +40,10 @@ inline vector2d multiply_vector(vector2d v, double s) {
   return vector2d(v.x * s, v.y * s);
 }
 
+inline vector2d middle_of_vectors(const vector2d& a, const vector2d& b) {
+  return vector2d(((a.x - b.x) / 2) + b.x, ((a.y - b.y) / 2) + b.y);
+}
+
 inline double dot_product(vector2d a, vector2d b) {
   return a.x * b.x + a.y * b.y;
 }

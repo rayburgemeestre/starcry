@@ -512,23 +512,6 @@ void native_generator::instantiate_additional_objects_from_new_scene(v8::Persist
   // instantiate all the additional objects from the new scene
   for (size_t j = 0; j < scene_objects.Get(i.get_isolate())->Length(); j++) {
     auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
-    //    if (false) {
-    //      // below can recursively add new objects as init() invocations spawn new objects, and so on
-    //      static util::random_generator rng;
-    //      static int64_t unique_id = 1;
-    //      logger(INFO) << "Instantiating 10.000 objects.." << std::endl;
-    //      for (int j = 0; j < 10000; j++) {
-    //        data_staging::circle c("ball", unique_id++, vector2d(rng.get() * 1000 - 500, rng.get() * 1000 - 500), 0,
-    //        5); c.set_velocity(rng.get(), rng.get(), 10.); c.set_gradient("blue");
-    //        scene_shapes_next[scenesettings.current_scene_next].push_back(c);
-    //        auto find = object_definitions_map.find("ball");
-    //        if (find != object_definitions_map.end()) {
-    //          // TODO: is there something more performant than below??
-    //          auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
-    //          i.call_fun(object_definition, "init");
-    //        }
-    //      }
-    //    }
 
     /* v8::Local<v8::Object> created_instance = */ _instantiate_object_from_scene(i, scene_obj, parent_object);
     // create_bookkeeping_for_script_objects(created_instance);
@@ -1432,10 +1415,6 @@ void native_generator::update_time(v8_interact& i,
                                     time_settings.elapsed,
                                     scenesettings.current_scene_next,
                                     time_settings.time);
-                         // logger(INFO) << "Debug object gradients:" << std::endl;
-                         // for (const auto& gradient : object_bridge_circle->get_gradients_ref()) {
-                         //   logger(INFO) << std::get<0>(gradient) << ": " << std::get<1>(gradient) << std::endl;
-                         // }
                          object_bridge_circle->pop_object();
                        }
                      },
@@ -1826,32 +1805,28 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
 #endif
 
                    // temp
-                   double transitive_x = shape.location().position_cref().x;
-                   double transitive_y = shape.location().position_cref().y;
+                   auto loc = add_vector(shape.meta().parent_location_cref(), shape.location_ref().position_cref());
+                   // double transitive_x = shape.location().position_cref().x;
+                   // double transitive_y = shape.location().position_cref().y;
 
                    data::shape new_shape;
                    // new_shape.time = time;
-                   new_shape.x = transitive_x;
-                   new_shape.y = transitive_y;
+                   new_shape.x = loc.x;
+                   new_shape.y = loc.y;
                    new_shape.level = level;
                    // new_shape.dist = dist;
 
                    new_shape.gradients_.clear();
                    new_shape.textures.clear();
                    std::string gradient_id_str;
-                   // util::generator::copy_gradient_from_object_to_shape(i, instance, new_shape, gradients,
-                   // &gradient_id_str); util::generator::copy_texture_from_object_to_shape(i, instance, new_shape,
-                   // textures);
+
+                   copy_gradient_from_object_to_shape(shape, new_shape, gradients);
 
                    // temp hack
-                   std::string namespace_ = "";  // i.str(source_object, "namespace", "");
-                   std::string gradient_id =
-                       shape.styling().gradient();  // namespace_ + i.str(source_object, "gradient");
+                   std::string namespace_ = "";
+                   std::string gradient_id = shape.styling().gradient();
 
                    if (!gradient_id.empty()) {
-                     // if (gradient_id_str) {
-                     //   *gradient_id_str += gradient_id;
-                     // }
                      if (new_shape.gradients_.empty()) {
                        auto& known_gradients_map = gradients;
                        if (known_gradients_map.find(gradient_id) != known_gradients_map.end()) {
@@ -1859,23 +1834,6 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
                        }
                      }
                    }
-                   // auto gradient_array = i.v8_array(source_object, "gradients");
-                   // if (destination_shape.gradients_.empty()) {
-                   //   for (size_t k = 0; k < gradient_array->Length(); k++) {
-                   //     auto gradient_data = i.get_index(gradient_array, k).As<v8::Array>();
-                   //     if (!gradient_data->IsArray()) {
-                   //       continue;
-                   //     }
-                   //     auto opacity = i.double_number(gradient_data, size_t(0));
-                   //     auto gradient_id = namespace_ + i.str(gradient_data, size_t(1));
-                   //     if (gradient_id_str) {
-                   //       if (!gradient_id_str->empty()) *gradient_id_str += ",";
-                   //       *gradient_id_str += gradient_id;
-                   //     }
-                   //     destination_shape.gradients_.emplace_back(opacity,
-                   //     known_gradients_map[gradient_id]);
-                   //   }
-                   // }
 
                    // while (level > 0) {
                    //   level--;
@@ -1984,6 +1942,10 @@ void native_generator::spawn_object(data_staging::shape_t& spawner, v8::Local<v8
   // create_bookkeeping_for_script_objects(created_instance);
 }
 
+std::unordered_map<std::string, v8::Persistent<v8::Object>>& native_generator::get_object_definitions_ref() {
+  return object_definitions_map;
+}
+
 // TODO: will refactor soon
 void native_generator::fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t uid, double& x, double& y) {
   //  // experimental function caching
@@ -2020,6 +1982,7 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
   int64_t current_level = 0;
   auto parent_object_ns = std::string("");
   int64_t parent_uid = -1;
+  vector2d parent_location(0, 0);
 
   if (parent_object) {
     std::visit(overloaded{
@@ -2028,11 +1991,16 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
                      current_level = cc.meta().level();
                      parent_object_ns = cc.meta().namespace_name();
                      parent_uid = cc.meta().unique_id();
+                     parent_location = cc.location_ref().position_cref();
+                     parent_location = add_vector(parent_location, cc.meta_ref().parent_location_cref());
                    },
                    [&](data_staging::line& cc) {
                      current_level = cc.meta().level();
                      parent_object_ns = cc.meta().namespace_name();
                      parent_uid = cc.meta().unique_id();
+                     parent_location =
+                         middle_of_vectors(cc.line_start_ref().position_cref(), cc.line_end_ref().position_cref());
+                     parent_location = add_vector(parent_location, cc.meta_ref().parent_location_cref());
                    },
                },
                *parent_object);
@@ -2087,6 +2055,7 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
                            i.double_number(instance, "radiussize"));
     c.meta_ref().set_level(current_level + 1);
     c.meta_ref().set_parent_uid(parent_uid);
+    c.meta_ref().set_parent_location(parent_location);
     c.movement_ref().set_velocity(i.double_number(instance, "vel_x", 0),
                                   i.double_number(instance, "vel_y", 0),
                                   i.double_number(instance, "velocity", 0));
@@ -2095,16 +2064,25 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
     c.generic_ref().set_mass(i.double_number(instance, "mass", 1));
     if (i.has_field(instance, "gradient")) c.styling_ref().set_gradient(i.str(instance, "gradient"));
     if (i.has_field(instance, "gradients")) {
-      std::vector<std::tuple<double, std::string>> gradients;
       auto gradient_array = i.v8_array(instance, "gradients");
       for (size_t k = 0; k < gradient_array->Length(); k++) {
         auto gradient_data = i.get_index(gradient_array, k).As<v8::Array>();
         if (!gradient_data->IsArray()) continue;
         auto opacity = i.double_number(gradient_data, size_t(0));
         auto gradient_id = parent_object_ns + i.str(gradient_data, size_t(1));
-        gradients.emplace_back(opacity, gradient_id);
+        c.styling_ref().add_gradient(opacity, gradient_id);
       }
-      c.styling_ref().set_gradients(gradients);
+    }
+    if (i.has_field(instance, "props")) {
+      auto props_object = i.v8_obj(instance, "props");
+      auto obj_fields = i.prop_names(props_object);
+      for (size_t k = 0; k < obj_fields->Length(); k++) {
+        auto field_name = i.get_index(obj_fields, k);
+        auto field_name_str = i.str(obj_fields, k);
+        auto field_value = i.get(props_object, field_name);
+        i.set_field(c.properties_ref().properties_ref(), field_name, field_value);
+        logger(INFO) << "Setting Field: " << field_name_str << std::endl;
+      }
     }
 
     handle(c);
@@ -2269,5 +2247,25 @@ void native_generator::debug_print_next(const std::string& desc) {
                             print_meta(shape.meta_ref());
                           }},
                shape);
+  }
+}
+
+template <typename T>
+void native_generator::copy_gradient_from_object_to_shape(
+    T& source_object,
+    data::shape& destination_shape,
+    std::unordered_map<std::string, data::gradient>& known_gradients_map) {
+  std::string namespace_ = source_object.meta().namespace_name();
+  std::string gradient_id = namespace_ + source_object.styling_ref().gradient();
+
+  if (!gradient_id.empty()) {
+    if (destination_shape.gradients_.empty()) {
+      if (known_gradients_map.find(gradient_id) != known_gradients_map.end()) {
+        destination_shape.gradients_.emplace_back(1.0, known_gradients_map[gradient_id]);
+      }
+    }
+  }
+  for (const auto& [opacity, gradient_id] : source_object.styling_ref().get_gradients_cref()) {
+    destination_shape.gradients_.emplace_back(opacity, known_gradients_map[gradient_id]);
   }
 }

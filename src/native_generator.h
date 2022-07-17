@@ -198,6 +198,8 @@ public:
   // v8::Local<v8::Object> spawn_object_native(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj);
   void spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
 
+  std::unordered_map<std::string, v8::Persistent<v8::Object>>& get_object_definitions_ref();
+
 private:
   bool _generate_frame();
 
@@ -217,4 +219,9 @@ private:
                            const std::string& namespace_);
 
   void debug_print_next(const std::string& desc);
+
+  template <typename T>
+  void copy_gradient_from_object_to_shape(T& source_object,
+                                          data::shape& destination_shape,
+                                          std::unordered_map<std::string, data::gradient>& known_gradients_map);
 };

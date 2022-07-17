@@ -260,6 +260,9 @@ public:
   void set_field(v8::Local<v8::Object> object, const std::string& field, v8::Local<v8::Value> value) {
     handle_error(object->Set(get_context(), v8_str(get_context(), field), value));
   }
+  void set_field(v8::Local<v8::Array> object, size_t field_index, v8::Local<v8::Value> value) {
+    handle_error(object->Set(get_context(), field_index, value));
+  }
   void set_field(v8::Local<v8::Object> object, size_t field_index, v8::Local<v8::Value> value) {
     handle_error(object->Set(get_context(), field_index, value));
   }
