@@ -31,7 +31,7 @@ public:
   }
 
   void for_each(std::function<void(const std::string, v8::Local<v8::Value> value)> callback) {
-    v8_interact i(v8::Isolate::GetCurrent());
+    v8_interact i;
     auto obj_fields = i.prop_names(*properties_);
     for (size_t k = 0; k < obj_fields->Length(); k++) {
       auto field_name = i.get_index(obj_fields, k);

@@ -67,8 +67,6 @@ inline v8::Local<v8::Value> v8_index_object(v8::Local<v8::Context> context, v8::
 class v8_interact {
 private:
 public:
-  v8_interact(v8::Isolate* isolate /* TODO: get rid of it */) {}
-
   v8::Isolate* get_isolate() {
     return v8::Isolate::GetCurrent();
   }

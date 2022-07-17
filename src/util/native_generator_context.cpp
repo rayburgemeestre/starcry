@@ -1,12 +1,10 @@
 #include "util/native_generator_context.h"
 #include "util/logger.h"
 
-native_generator_context::native_generator_context() : v8_interact_instance(nullptr) {}
+native_generator_context::native_generator_context() : v8_interact_instance() {}
 
-native_generator_context::native_generator_context(v8::Isolate* isolate,
-                                                   v8::Local<v8::Value> script_value,
-                                                   size_t current_scene_idx)
-    : v8_interact_instance(std::make_unique<v8_interact>(isolate)) {
+native_generator_context::native_generator_context(v8::Local<v8::Value> script_value, size_t current_scene_idx)
+    : v8_interact_instance(std::make_unique<v8_interact>()) {
   auto& i = this->i();
   script_obj.Reset(i.get_isolate(), script_value.As<v8::Object>());
   video_obj.Reset(i.get_isolate(), i.v8_array(script_obj, "video"));
@@ -19,7 +17,7 @@ native_generator_context::native_generator_context(v8::Isolate* isolate,
 
 void native_generator_context::set_scene(size_t current_scene_idx) {
   auto& i = this->i();
-  auto isolate = i.get_isolate();
+  // auto isolate = i.get_isolate();
 
   current_scene_val.Reset(i.get_isolate(), i.get_index(scenes, current_scene_idx));
   current_scene_obj.Reset(i.get_isolate(), current_scene_val.As<v8::Object>());

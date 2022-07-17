@@ -42,7 +42,6 @@ v8::Local<v8::Object> spawn_object(const v8::FunctionCallbackInfo<v8::Value>& ar
   v8::Isolate* isolate = ctx->isolate;
   v8::HandleScope scope(isolate);
   v8::Local<v8::Object> obj = args[0]->ToObject(ctx->context->impl()).ToLocalChecked();
-  v8_interact i(obj->GetIsolate());
   auto spawner = args.Holder();
   return global_generator->spawn_object(spawner, obj);
 }
@@ -128,7 +127,7 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
 
   // set_scene requires generator_context to be set
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    genctx = generator_context(isolate, val, 0);
+    genctx = generator_context(val, 0);
 
     // refresh the scene object to get rid of left-over state
     scene_settings tmp;
@@ -204,7 +203,7 @@ v8::Local<v8::Context> current_context(std::shared_ptr<v8_wrapper>& wrapper_cont
 void generator::init_video_meta_info(std::optional<double> rand_seed, bool preview) {
   // "run_array" is a bit of a misnomer, this only invokes the callback once
   context->run_array("script", [this, &preview, &rand_seed](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i(isolate);
+    v8_interact i;
     auto video = v8_index_object(current_context(context), val, "video").As<v8::Object>();
     if (preview) {
       v8::Local<v8::Object> preview_obj;
@@ -290,7 +289,7 @@ void generator::init_video_meta_info(std::optional<double> rand_seed, bool previ
 void generator::init_gradients() {
   gradients.clear();
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i(isolate);
+    v8_interact i;
     auto obj = val.As<v8::Object>();
     auto gradient_objects = i.v8_obj(obj, "gradients");
     auto gradient_fields = gradient_objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
@@ -314,7 +313,7 @@ void generator::init_gradients() {
 void generator::init_textures() {
   textures.clear();
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i(isolate);
+    v8_interact i;
     auto obj = val.As<v8::Object>();
     if (!i.has_field(obj, "textures")) return;
     auto texture_objects = i.v8_obj(obj, "textures");
@@ -351,7 +350,7 @@ void generator::init_textures() {
 
 void generator::init_toroidals() {
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i(isolate);
+    v8_interact i;
     auto obj = val.As<v8::Object>();
     if (!i.has_field(obj, "toroidal")) return;
     auto toroidal_objects = i.v8_obj(obj, "toroidal");
@@ -614,7 +613,7 @@ bool generator::_generate_frame() {
     }
 
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-      genctx = generator_context(isolate, val, scenesettings.current_scene_next);
+      genctx = generator_context(val, scenesettings.current_scene_next);
       auto& i = genctx.i();
 
       v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();

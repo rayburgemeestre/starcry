@@ -103,7 +103,7 @@ void native_generator::init(const std::string& filename, std::optional<double> r
   init_toroidals();
 
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    genctx = std::make_shared<native_generator_context>(isolate, val, 0);
+    genctx = std::make_shared<native_generator_context>(val, 0);
   });
 
   init_object_definitions();
@@ -188,7 +188,7 @@ v8::Local<v8::Context> current_context_native(std::shared_ptr<v8_wrapper>& wrapp
 void native_generator::init_video_meta_info(std::optional<double> rand_seed, bool preview) {
   // "run_array" is a bit of a misnomer, this only invokes the callback once
   context->run_array("script", [this, &preview, &rand_seed](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i(isolate);
+    v8_interact i;
     auto video = v8_index_object(current_context_native(context), val, "video").As<v8::Object>();
     if (preview) {
       v8::Local<v8::Object> preview_obj;
@@ -278,7 +278,7 @@ void native_generator::init_video_meta_info(std::optional<double> rand_seed, boo
 void native_generator::init_gradients() {
   gradients.clear();
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i(isolate);
+    v8_interact i;
     auto obj = val.As<v8::Object>();
     auto gradient_objects = i.v8_obj(obj, "gradients");
     auto gradient_fields = gradient_objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
@@ -302,7 +302,7 @@ void native_generator::init_gradients() {
 void native_generator::init_textures() {
   textures.clear();
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i(isolate);
+    v8_interact i;
     auto obj = val.As<v8::Object>();
     if (!i.has_field(obj, "textures")) return;
     auto texture_objects = i.v8_obj(obj, "textures");
@@ -339,7 +339,7 @@ void native_generator::init_textures() {
 
 void native_generator::init_toroidals() {
   context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i(isolate);
+    v8_interact i;
     auto obj = val.As<v8::Object>();
     if (!i.has_field(obj, "toroidal")) return;
     auto toroidal_objects = i.v8_obj(obj, "toroidal");
@@ -359,7 +359,7 @@ void native_generator::init_object_instances() {
   // This function is called whenever a scene is set. (once per scene)
   context->enter_object("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     // enter_objects creates a new isolate, using the old gives issues, so we'll recreate
-    genctx = std::make_shared<native_generator_context>(isolate, val, scenesettings.current_scene_next);
+    genctx = std::make_shared<native_generator_context>(val, scenesettings.current_scene_next);
 
     genctx->set_scene(scenesettings.current_scene_next);
     // auto& i = genctx->i();
@@ -398,7 +398,7 @@ void native_generator::init_object_definitions() {
     // but it's a one-time overhead, so doesn't matter too much.
     auto defs_storage = object_definitions.As<v8::Object>();
     context->enter_object("script", [&, this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-      v8_interact i(isolate);
+      v8_interact i;
       auto obj = val.As<v8::Object>();
       auto object_definitions = i.v8_obj(obj, "objects");
       auto object_definitions_fields = object_definitions->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
@@ -530,7 +530,7 @@ void native_generator::instantiate_additional_objects_from_new_scene(v8::Persist
     //      }
     //    }
 
-    v8::Local<v8::Object> created_instance = _instantiate_object_from_scene(i, scene_obj, parent_object);
+    /* v8::Local<v8::Object> created_instance = */ _instantiate_object_from_scene(i, scene_obj, parent_object);
     // create_bookkeeping_for_script_objects(created_instance);
   }
 }
@@ -617,7 +617,7 @@ bool native_generator::_generate_frame() {
     metrics_->register_job(job->job_number + 1, job->frame_number, job->chunk, job->num_chunks);
 
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-      genctx = std::make_shared<native_generator_context>(isolate, val, scenesettings.current_scene_next);
+      genctx = std::make_shared<native_generator_context>(val, scenesettings.current_scene_next);
       auto& i = genctx->i();
 
       auto obj = val.As<v8::Object>();
@@ -1033,7 +1033,6 @@ void native_generator::update_object_toroidal(v8_interact& i, v8::Local<v8::Obje
 
 void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video) {
   stepper.reset_current();
-  const auto isolate = i.get_isolate();
 
   // we cannot simply iterate over the next_instances array, since the array might mutate
   // during looping (since objects can trigger spawned objects, etc.) for this reason, create
@@ -1201,7 +1200,6 @@ void native_generator::handle_collisions(v8_interact& i,
 void native_generator::handle_collision(v8_interact& i,
                                         data_staging::circle& instance,
                                         data_staging::circle& instance2) {
-  const auto isolate = i.get_isolate();
   auto unique_id = instance.meta().unique_id();
   auto unique_id2 = instance2.meta().unique_id();
   auto last_collide = instance.behavior_ref().last_collide();
@@ -1323,12 +1321,12 @@ void native_generator::handle_gravity(v8_interact& i,
                                       double range,
                                       double constrain_dist_min,
                                       double constrain_dist_max) {
-  auto unique_id = instance.meta().unique_id();
+  // auto unique_id = instance.meta().unique_id();
   auto x = instance.location_ref().position_cref().x;
   auto y = instance.location_ref().position_cref().y;
   // TODO: fix_xy(i, instance, unique_id, x, y);
 
-  auto unique_id2 = instance.meta().unique_id();
+  // auto unique_id2 = instance.meta().unique_id();
   auto x2 = instance2.location_ref().position_cref().x;
   auto y2 = instance2.location_ref().position_cref().y;
   // TODO: fix_xy(i, instance2, unique_id2, x2, y2);
@@ -1979,7 +1977,7 @@ std::shared_ptr<data::job> native_generator::get_job() const {
 
 void native_generator::spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj) {
   auto& i = genctx->i();
-  auto created_instance = _instantiate_object_from_scene(i, obj, &spawner);
+  /* auto created_instance = */ _instantiate_object_from_scene(i, obj, &spawner);
   // TODO:
   // next_instance_map[i.integer_number(created_instance, "unique_id")] = created_instance;
   // TODO:

@@ -3,8 +3,8 @@
 
 generator_context::generator_context() : v8_interact_instance(nullptr) {}
 
-generator_context::generator_context(v8::Isolate* isolate, v8::Local<v8::Value> script_value, size_t current_scene_idx)
-    : v8_interact_instance(std::make_unique<v8_interact>(isolate)) {
+generator_context::generator_context(v8::Local<v8::Value> script_value, size_t current_scene_idx)
+    : v8_interact_instance(std::make_unique<v8_interact>()) {
   auto& i = this->i();
   script_obj = script_value.As<v8::Object>();
   video_obj = i.v8_array(script_obj, "video");
