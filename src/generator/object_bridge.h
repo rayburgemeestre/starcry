@@ -22,9 +22,10 @@ private:
   std::vector<shape_class*> shape_stack;
   native_generator* generator_ = nullptr;
   mutable bool properties_accessed_ = false;
+  std::shared_ptr<v8::Persistent<v8::Object>> instance_ = nullptr;
 
 public:
-  object_bridge(int);
+  object_bridge(native_generator* generator);
 
   void push_object(shape_class& c);
   void pop_object();
@@ -53,10 +54,10 @@ public:
   v8::Persistent<v8::Object>& get_properties_ref() const;
   v8::Local<v8::Object> get_properties_local_ref() const;
 
+  std::vector<std::tuple<double, std::string>>& get_gradients_ref() const;
+  // void set_gradients(std::vector<std::tuple<double, std::string>> gradients);
+
   void spawn(v8::Local<v8::Object> obj);
 
-  static void add_to_context(v8pp::context& context);
+  v8::Persistent<v8::Object>& instance();
 };
-
-extern object_bridge<data_staging::circle>* object_bridge_circle;
-extern object_bridge<data_staging::line>* object_bridge_line;

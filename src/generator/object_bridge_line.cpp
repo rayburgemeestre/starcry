@@ -10,13 +10,6 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "native_generator.h"
 
-object_bridge<data_staging::line>* object_bridge_line = nullptr;
-
-template <>
-object_bridge<data_staging::line>::object_bridge(int) {
-  object_bridge_line = this;
-}
-
 template <>
 double object_bridge<data_staging::line>::get_x() const {
   return shape_stack.back()->line_start_ref().position_ref().x;
@@ -88,9 +81,9 @@ void object_bridge<data_staging::line>::set_radius_size(double line_width) {
 }
 
 template <>
-void object_bridge<data_staging::line>::add_to_context(v8pp::context& context) {
-  v8pp::class_<object_bridge> object_bridge_class(context.isolate());
-  object_bridge_class.template ctor<int>()
+object_bridge<data_staging::line>::object_bridge(native_generator *generator) : generator_(generator) {
+  v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
+  object_bridge_class  // .template ctor<int>()
       .set("level", v8pp::property(&object_bridge::get_level))
       .set("x", v8pp::property(&object_bridge::get_x, &object_bridge::set_x))
       .set("y", v8pp::property(&object_bridge::get_y, &object_bridge::set_y))
@@ -100,7 +93,9 @@ void object_bridge<data_staging::line>::add_to_context(v8pp::context& context) {
       .set("z2", v8pp::property(&object_bridge::get_z2, &object_bridge::set_z2))
       .set("radiussize", v8pp::property(&object_bridge::get_radius_size, &object_bridge::set_radius_size))
       .set("spawn", &object_bridge::spawn);
-  context.set("object_bridge_line", object_bridge_class);
+  instance_ = std::make_shared<v8::Persistent<v8::Object>>();
+  (*instance_)
+      .Reset(v8::Isolate::GetCurrent(), object_bridge_class.reference_external(v8::Isolate::GetCurrent(), this));
 }
 
 template class object_bridge<data_staging::line>;

@@ -22,14 +22,11 @@ void object_bridge<T>::pop_object() {
     shape_stack.back()->properties_ref().for_each([](const std::string, v8::Local<v8::Value> value) {
       // do something with the properties
     });
+    // commit gradients data
+    // shape_stack.back()->styling_ref().commit();
   }
   properties_accessed_ = false;
   shape_stack.pop_back();
-}
-
-template <typename shape_class>
-void object_bridge<shape_class>::set_generator(native_generator* ptr) {
-  generator_ = ptr;
 }
 
 template <typename T>
@@ -54,6 +51,21 @@ template <typename T>
 v8::Local<v8::Object> object_bridge<T>::get_properties_local_ref() const {
   properties_accessed_ = true;
   return shape_stack.back()->properties_ref().properties_ref().Get(v8::Isolate::GetCurrent());
+}
+
+template <typename T>
+std::vector<std::tuple<double, std::string>>& object_bridge<T>::get_gradients_ref() const {
+  return shape_stack.back()->styling_ref().get_gradients_ref();
+}
+
+// template <typename T>
+// void object_bridge<T>::set_gradients(std::vector<std::tuple<double, std::string>> gradients) {
+//  shape_stack.back()->styling_ref().set_gradients(gradients);
+//}
+
+template <typename T>
+v8::Persistent<v8::Object>& object_bridge<T>::instance() {
+  return *instance_;
 }
 
 template class object_bridge<data_staging::circle>;

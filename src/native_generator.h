@@ -15,6 +15,8 @@
 #include "scalesettings.h"
 #include "scenesettings.h"
 
+#include "generator/object_bridge.h"
+
 #include "data/job.hpp"
 #include "data/settings.hpp"
 #include "data/texture.hpp"
@@ -51,6 +53,9 @@ private:
   std::vector<std::vector<data_staging::shape_t>> scene_shapes_next;
   std::vector<std::vector<data_staging::shape_t>> instantiated_objects;
   std::vector<std::vector<data_staging::shape_t>> scene_shapes_intermediate;
+  std::shared_ptr<object_bridge<data_staging::circle>> object_bridge_circle = nullptr;
+  std::shared_ptr<object_bridge<data_staging::line>> object_bridge_line = nullptr;
+
   uint32_t frame_number = 0;
 
   size_t max_frames = 0;
@@ -93,9 +98,6 @@ private:
   std::string filename_;
 
   std::shared_ptr<native_generator_context> genctx;
-
-  v8::Persistent<v8::Object> persisted_object_bridge_circle;
-  v8::Persistent<v8::Object> persisted_object_bridge_line;
 
 public:
   struct time_settings {

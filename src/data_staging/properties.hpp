@@ -17,7 +17,6 @@ namespace data_staging {
 class properties {
 private:
   std::shared_ptr<v8::Persistent<v8::Object>> properties_ = nullptr;
-  double z_ = 0;
 
 public:
   properties() {

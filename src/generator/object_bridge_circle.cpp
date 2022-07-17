@@ -10,13 +10,6 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "native_generator.h"
 
-object_bridge<data_staging::circle>* object_bridge_circle = nullptr;
-
-template <>
-object_bridge<data_staging::circle>::object_bridge(int) {
-  object_bridge_circle = this;
-}
-
 template <>
 double object_bridge<data_staging::circle>::get_x() const {
   return shape_stack.back()->location_ref().position_ref().x;
@@ -68,9 +61,9 @@ void object_bridge<data_staging::circle>::set_radius_size(double radius_size) {
 }
 
 template <>
-void object_bridge<data_staging::circle>::add_to_context(v8pp::context& context) {
-  v8pp::class_<object_bridge> object_bridge_class(context.isolate());
-  object_bridge_class.template ctor<int>()
+object_bridge<data_staging::circle>::object_bridge(native_generator *generator) : generator_(generator) {
+  v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
+  object_bridge_class  // .template ctor<int>()
       .set("level", v8pp::property(&object_bridge::get_level))
       .set("x", v8pp::property(&object_bridge::get_x, &object_bridge::set_x))
       .set("y", v8pp::property(&object_bridge::get_y, &object_bridge::set_y))
@@ -78,8 +71,11 @@ void object_bridge<data_staging::circle>::add_to_context(v8pp::context& context)
       .set("radius", v8pp::property(&object_bridge::get_radius, &object_bridge::set_radius))
       .set("radiussize", v8pp::property(&object_bridge::get_radius_size, &object_bridge::set_radius_size))
       .set("props", v8pp::property(&object_bridge::get_properties_local_ref))
+      .set("gradients", v8pp::property(&object_bridge::get_gradients_ref))
       .set("spawn", &object_bridge::spawn);
-  context.set("object_bridge_circle", object_bridge_class);
+  instance_ = std::make_shared<v8::Persistent<v8::Object>>();
+  (*instance_)
+      .Reset(v8::Isolate::GetCurrent(), object_bridge_class.reference_external(v8::Isolate::GetCurrent(), this));
 }
 
 template class object_bridge<data_staging::circle>;

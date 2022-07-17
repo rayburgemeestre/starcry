@@ -15,7 +15,6 @@
 
 #include "v8pp/module.hpp"
 
-#include "generator/object_bridge.h"
 #include "scripting.h"
 #include "starcry/metrics.h"
 #include "util/generator.h"
@@ -40,12 +39,6 @@ native_generator* global_native_generator = nullptr;
 void native_generator::reset_context() {
   // reset context
   context->reset();
-
-  // add context global functions
-  context->add_class([&](v8pp::context& context) {
-    object_bridge<data_staging::circle>::add_to_context(context);
-    object_bridge<data_staging::line>::add_to_context(context);
-  });
 
   context->add_fun("output", &output_fun);
   context->add_fun("rand", &rand_fun);
@@ -161,17 +154,9 @@ void native_generator::init_user_script() {
   context->run("script = {\"video\": {}};");
   context->run(source);
 
-  const auto init =
-      [&](auto object_bridge_name, auto*& object_bridge_ptr, v8::Persistent<v8::Object>& persisted_obj_ref) {
-        context->run(fmt::format("{}_instance = new {}(-1);", object_bridge_name, object_bridge_name));
-        context->enter_object(fmt::format("{}_instance", object_bridge_name),
-                              [&](v8::Isolate* isolate, v8::Local<v8::Value> obj) {
-                                persisted_obj_ref.Reset(isolate, obj.As<v8::Object>());
-                              });
-        object_bridge_ptr->set_generator(this);
-      };
-  init("object_bridge_circle", object_bridge_circle, persisted_object_bridge_circle);
-  init("object_bridge_line", object_bridge_line, persisted_object_bridge_line);
+  v8::HandleScope hs(context->context->isolate());
+  object_bridge_circle = std::make_shared<object_bridge<data_staging::circle>>(this);
+  object_bridge_line = std::make_shared<object_bridge<data_staging::line>>(this);
 }
 
 void native_generator::init_job() {
@@ -1443,12 +1428,16 @@ void native_generator::update_time(v8_interact& i,
                          // TODO: check if the object has an "time" function, or we can just skip this entire thing
                          object_bridge_circle->push_object(c);
                          i.call_fun(object_definition,
-                                    persisted_object_bridge_circle,
+                                    object_bridge_circle->instance(),
                                     "time",
                                     scene_time,
                                     time_settings.elapsed,
                                     scenesettings.current_scene_next,
                                     time_settings.time);
+                         // logger(INFO) << "Debug object gradients:" << std::endl;
+                         // for (const auto& gradient : object_bridge_circle->get_gradients_ref()) {
+                         //   logger(INFO) << std::get<0>(gradient) << ": " << std::get<1>(gradient) << std::endl;
+                         // }
                          object_bridge_circle->pop_object();
                        }
                      },
@@ -1456,7 +1445,7 @@ void native_generator::update_time(v8_interact& i,
                        // TODO: check if the object has an "time" function, or we can just skip this entire thing
                        object_bridge_line->push_object(l);
                        i.call_fun(object_definition,
-                                  persisted_object_bridge_line,
+                                  object_bridge_line->instance(),
                                   "time",
                                   scene_time,
                                   time_settings.elapsed,
@@ -2074,19 +2063,19 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
   // we will map, to see if the proof of concept works
 
   const auto handle = [&]<typename T>(T& c) {
-    // TODO: broken
-    auto gradient_array = i.v8_array(object_definitions_map[object_id], "gradients");
-    if (c.styling_ref().gradients_ref().empty()) {
-      for (size_t k = 0; k < gradient_array->Length(); k++) {
-        auto gradient_data = i.get_index(gradient_array, k).As<v8::Array>();
-        if (!gradient_data->IsArray()) {
-          continue;
-        }
-        auto opacity = i.double_number(gradient_data, size_t(0));
-        auto gradient_id = parent_object_ns + i.str(gradient_data, size_t(1));
-        c.styling_ref().gradients_ref().emplace_back(opacity, gradients[gradient_id]);
-      }
-    }
+    //    // TODO: broken
+    //    auto gradient_array = i.v8_array(object_definitions_map[object_id], "gradients");
+    //    if (c.styling_ref().gradients_ref().empty()) {
+    //      for (size_t k = 0; k < gradient_array->Length(); k++) {
+    //        auto gradient_data = i.get_index(gradient_array, k).As<v8::Array>();
+    //        if (!gradient_data->IsArray()) {
+    //          continue;
+    //        }
+    //        auto opacity = i.double_number(gradient_data, size_t(0));
+    //        auto gradient_id = parent_object_ns + i.str(gradient_data, size_t(1));
+    //        c.styling_ref().gradients_ref().emplace_back(opacity, gradients[gradient_id]);
+    //      }
+    //    }
     // we buffer instantiated objects, and will insert in the array later.
     instantiated_objects[scenesettings.current_scene_next].emplace_back(c);
   };
@@ -2106,7 +2095,19 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
     c.behavior_ref().set_collision_group(i.str(instance, "collision_group", ""));
     c.behavior_ref().set_gravity_group(i.str(instance, "gravity_group", ""));
     c.generic_ref().set_mass(i.double_number(instance, "mass", 1));
-    c.styling_ref().set_gradient(i.str(instance, "gradient"));
+    if (i.has_field(instance, "gradient")) c.styling_ref().set_gradient(i.str(instance, "gradient"));
+    if (i.has_field(instance, "gradients")) {
+      std::vector<std::tuple<double, std::string>> gradients;
+      auto gradient_array = i.v8_array(instance, "gradients");
+      for (size_t k = 0; k < gradient_array->Length(); k++) {
+        auto gradient_data = i.get_index(gradient_array, k).As<v8::Array>();
+        if (!gradient_data->IsArray()) continue;
+        auto opacity = i.double_number(gradient_data, size_t(0));
+        auto gradient_id = parent_object_ns + i.str(gradient_data, size_t(1));
+        gradients.emplace_back(opacity, gradient_id);
+      }
+      c.styling_ref().set_gradients(gradients);
+    }
 
     handle(c);
 
@@ -2114,7 +2115,7 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
       // TODO: check if the object has an "init" function, or we can just skip this entire thing
       object_bridge_circle->push_object(c);
       i.call_fun(object_definitions_map[object_id],  // object definition
-                 persisted_object_bridge_circle,     // bridged object is "this"
+                 object_bridge_circle->instance(),   // bridged object is "this"
                  "init");
       // bool check_props = object_bridge_circle->properties_accessed();
       object_bridge_circle->pop_object();
@@ -2147,7 +2148,7 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
     // TODO: check if the object has an "init" function, or we can just skip this entire thing
     object_bridge_line->push_object(c);
     i.call_fun(object_definitions_map[object_id],  // object definition
-               persisted_object_bridge_line,       // bridged object is "this"
+               object_bridge_line->instance(),     // bridged object is "this"
                "init");
     object_bridge_line->pop_object();
   }
