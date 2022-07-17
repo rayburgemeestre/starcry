@@ -11,7 +11,7 @@
 #include "starcry.h"
 #include "util/v8_wrapper.hpp"
 
-std::shared_ptr<v8_wrapper> context;
+std::shared_ptr<v8_wrapper> context_wrapper;
 
 class sut {
 public:
@@ -26,7 +26,7 @@ sut::sut() {
   static std::once_flag flag;
   options.script_file = "input/snowflakes.js";
   std::call_once(flag, [&]() {
-    context = std::make_shared<v8_wrapper>(options.script_file);
+    context_wrapper = std::make_shared<v8_wrapper>(options.script_file);
   });
   options.frame_of_interest = 10;
   options.num_chunks = 1;
@@ -42,7 +42,7 @@ double sut::test_create_image(const std::string& image_name) {
   std::filesystem::create_directories("test/integration/reference");
   options.output_file = fmt::format("test/integration/last-run/{}", image_name);
   std::remove(image_name.c_str());
-  starcry sc(options, context);
+  starcry sc(options, context_wrapper);
   auto vp = sc.get_viewpoint();
   vp.canvas_w = 320;
   vp.canvas_h = 240;
@@ -75,9 +75,9 @@ double sut::test_create_video(const std::string& video_name, int frames, int fps
   std::filesystem::create_directories("test/integration/last-run");
   std::filesystem::create_directories("test/integration/reference");
   options.output_file = fmt::format("test/integration/last-run/{}", video_name);
-  context->set_filename(options.script_file);
+  context_wrapper->set_filename(options.script_file);
   std::remove(video_name.c_str());
-  starcry sc(options, context);
+  starcry sc(options, context_wrapper);
   auto vp = sc.get_viewpoint();
   vp.canvas_w = 320;
   vp.canvas_h = 240;
@@ -146,22 +146,22 @@ double sut::compare(const std::string& file1, const std::string& file2) {
   return rmse;
 }
 
-TEST_CASE("Test simple image") {
-  sut sc;
-  sc.options.script_file = "input/snowflakes.js";
-  sc.options.frame_of_interest = 10;
-  REQUIRE(sc.test_create_image("unittest_001_snowflakes_frame10") == double(0));
-  sc.options.frame_of_interest = 11;
-  REQUIRE(sc.test_create_image("unittest_001_snowflakes_frame11") == double(0));
-  REQUIRE(sc.compare("unittest_001_snowflakes_frame10.png", "unittest_001_snowflakes_frame11.png") != double(0));
-}
-
-TEST_CASE("Test image with noise") {
-  sut sc;
-  sc.options.script_file = "input/perlin3.js";
-  sc.options.frame_of_interest = 10;
-  REQUIRE(sc.test_create_image("unittest_002_perlin3_frame10") < double(0.05));
-}
+// TEST_CASE("Test simple image") {
+//  sut sc;
+//  sc.options.script_file = "input/snowflakes.js";
+//  sc.options.frame_of_interest = 10;
+//  REQUIRE(sc.test_create_image("unittest_001_snowflakes_frame10") == double(0));
+//  sc.options.frame_of_interest = 11;
+//  REQUIRE(sc.test_create_image("unittest_001_snowflakes_frame11") == double(0));
+//  REQUIRE(sc.compare("unittest_001_snowflakes_frame10.png", "unittest_001_snowflakes_frame11.png") != double(0));
+//}
+//
+// TEST_CASE("Test image with noise") {
+//  sut sc;
+//  sc.options.script_file = "input/perlin3.js";
+//  sc.options.frame_of_interest = 10;
+//  REQUIRE(sc.test_create_image("unittest_002_perlin3_frame10") < double(0.05));
+//}
 
 TEST_CASE("Test simple test video") {
   sut sc;

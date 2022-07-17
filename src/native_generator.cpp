@@ -1165,7 +1165,7 @@ void native_generator::handle_collisions(v8_interact& i,
   try {
     data_staging::circle& c = std::get<data_staging::circle>(shape);
     const auto& collision_group = c.behavior_ref().collision_group_ref();
-    if (collision_group == "undefined") {
+    if (collision_group.empty() || collision_group == "undefined") {
       return;
     }
     auto x = c.location_ref().position_ref().x;

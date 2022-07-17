@@ -66,86 +66,83 @@ inline v8::Local<v8::Value> v8_index_object(v8::Local<v8::Context> context, v8::
  */
 class v8_interact {
 private:
-  v8::Isolate* isolate;
-  v8::Local<v8::Context> ctx;
-
 public:
-  v8_interact(v8::Isolate* isolate) : isolate(isolate), ctx(isolate->GetCurrentContext()) {}
+  v8_interact(v8::Isolate* isolate /* TODO: get rid of it */) {}
 
   v8::Isolate* get_isolate() {
-    return isolate;
+    return v8::Isolate::GetCurrent();
   }
 
   v8::Local<v8::Context> get_context() {
-    return ctx;
+    return get_isolate()->GetCurrentContext();
   }
 
   v8::Local<v8::Object> v8_obj(v8::Persistent<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(ctx, obj, field).As<v8::Object>();
+    return v8_index_object(get_context(), obj, field).As<v8::Object>();
   }
 
   v8::Local<v8::Object> v8_obj(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(ctx, obj, field).As<v8::Object>();
+    return v8_index_object(get_context(), obj, field).As<v8::Object>();
   }
 
   v8::Local<v8::Array> v8_array(v8::Persistent<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(ctx, obj, field).As<v8::Array>();
+    return v8_index_object(get_context(), obj, field).As<v8::Array>();
   }
 
   v8::Local<v8::Array> v8_array(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(ctx, obj, field).As<v8::Array>();
+    return v8_index_object(get_context(), obj, field).As<v8::Array>();
   }
 
   v8::Local<v8::Array> v8_array(v8::Local<v8::Object>& obj,
                                 const std::string& field,
                                 v8::Local<v8::Array> default_val) {
-    auto tmp = v8_index_object(ctx, obj, field).As<v8::Array>();
+    auto tmp = v8_index_object(get_context(), obj, field).As<v8::Array>();
     if (!tmp->IsArray()) {
       set_field(obj, field, default_val);
-      tmp = v8_index_object(ctx, obj, field).As<v8::Array>();
+      tmp = v8_index_object(get_context(), obj, field).As<v8::Array>();
     }
     return tmp;
   }
 
   v8::Local<v8::Number> v8_number(v8::Persistent<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(ctx, obj, field).As<v8::Number>();
+    return v8_index_object(get_context(), obj, field).As<v8::Number>();
   }
 
   v8::Local<v8::Number> v8_number(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(ctx, obj, field).As<v8::Number>();
+    return v8_index_object(get_context(), obj, field).As<v8::Number>();
   }
 
   v8::Local<v8::Number> v8_number(v8::Persistent<v8::Array>& obj, size_t index) {
-    return v8_index_object(ctx, obj, index).As<v8::Number>();
+    return v8_index_object(get_context(), obj, index).As<v8::Number>();
   }
 
   v8::Local<v8::Number> v8_number(v8::Local<v8::Array>& obj, size_t index) {
-    return v8_index_object(ctx, obj, index).As<v8::Number>();
+    return v8_index_object(get_context(), obj, index).As<v8::Number>();
   }
 
   v8::Local<v8::String> v8_string(v8::Persistent<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(ctx, obj, field).As<v8::String>();
+    return v8_index_object(get_context(), obj, field).As<v8::String>();
   }
 
   v8::Local<v8::String> v8_string(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_index_object(ctx, obj, field).As<v8::String>();
+    return v8_index_object(get_context(), obj, field).As<v8::String>();
   }
 
   v8::Local<v8::String> v8_string(v8::Local<v8::Array>& obj, size_t index) {
-    return v8_index_object(ctx, obj, index).As<v8::String>();
+    return v8_index_object(get_context(), obj, index).As<v8::String>();
   }
 
   double double_number(v8::Persistent<v8::Object>& obj, const std::string& field) {
-    return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext()).ToChecked();
+    return v8_number(obj, field)->NumberValue(get_isolate()->GetCurrentContext()).ToChecked();
   }
 
   double double_number(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext()).ToChecked();
+    return v8_number(obj, field)->NumberValue(get_isolate()->GetCurrentContext()).ToChecked();
   }
 
   double double_number(v8::Persistent<v8::Object>& obj, const std::string& field, double default_value) {
     if (has_field(obj, field)) {
-      return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext()).ToChecked();
+      return v8_number(obj, field)->NumberValue(get_isolate()->GetCurrentContext()).ToChecked();
     } else {
       return default_value;
     }
@@ -153,69 +150,69 @@ public:
 
   double double_number(v8::Local<v8::Object>& obj, const std::string& field, double default_value) {
     if (has_field(obj, field)) {
-      return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext()).ToChecked();
+      return v8_number(obj, field)->NumberValue(get_isolate()->GetCurrentContext()).ToChecked();
     } else {
       return default_value;
     }
   }
 
   double double_number(v8::Local<v8::Array>& obj, size_t index) {
-    return v8_number(obj, index)->NumberValue(isolate->GetCurrentContext()).ToChecked();
+    return v8_number(obj, index)->NumberValue(get_isolate()->GetCurrentContext()).ToChecked();
   }
 
   bool boolean(const v8::Local<v8::Object>& obj, const std::string& field) {
-    auto tmp = obj->Get(get_context(), v8_str(ctx, field)).ToLocalChecked();
+    auto tmp = obj->Get(get_context(), v8_str(get_context(), field)).ToLocalChecked();
     if (!tmp->IsBoolean()) return false;
-    return tmp->BooleanValue(isolate);
+    return tmp->BooleanValue(get_isolate());
   }
 
   //  v8::Maybe<double> maybe_double_number(v8::Local<v8::Object>& obj, const std::string& field) {
-  //    return v8_number(obj, field)->NumberValue(isolate->GetCurrentContext());
+  //    return v8_number(obj, field)->NumberValue(get_isolate()->GetCurrentContext());
   //  }
 
   int64_t integer_number(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_number(obj, field)->IntegerValue(isolate->GetCurrentContext()).ToChecked();
+    return v8_number(obj, field)->IntegerValue(get_isolate()->GetCurrentContext()).ToChecked();
   }
 
   int64_t integer_number(v8::Local<v8::Object>& obj, const std::string& field, int64_t default_val) {
     if (has_field(obj, field)) {
-      return v8_number(obj, field)->IntegerValue(isolate->GetCurrentContext()).ToChecked();
+      return v8_number(obj, field)->IntegerValue(get_isolate()->GetCurrentContext()).ToChecked();
     }
     return default_val;
   }
 
   std::string str(v8::Persistent<v8::Object>& obj, const std::string& field) {
-    return v8_str(isolate, v8_string(obj, field));
+    return v8_str(get_isolate(), v8_string(obj, field));
   }
 
   std::string str(v8::Local<v8::Object>& obj, const std::string& field) {
-    return v8_str(isolate, v8_string(obj, field));
+    return v8_str(get_isolate(), v8_string(obj, field));
   }
 
   std::string str(v8::Persistent<v8::Object>& obj, const std::string& field, const std::string& default_val) {
     if (has_field(obj, field)) {
-      return v8_str(isolate, v8_string(obj, field));
+      return v8_str(get_isolate(), v8_string(obj, field));
     }
     return default_val;
   }
 
   std::string str(v8::Local<v8::Object>& obj, const std::string& field, const std::string& default_val) {
     if (has_field(obj, field)) {
-      return v8_str(isolate, v8_string(obj, field));
+      return v8_str(get_isolate(), v8_string(obj, field));
     }
     return default_val;
   }
 
   std::string str(v8::Local<v8::Array>& obj, size_t index) {
-    return v8_str(isolate, v8_string(obj, index));
+    return v8_str(get_isolate(), v8_string(obj, index));
   }
 
   bool has_field(v8::Persistent<v8::Object>& source, const std::string& source_field) {
-    return source.Get(isolate)->Has(ctx, v8_str(ctx, source_field)).ToChecked();
+    return source.Get(get_isolate())->Has(get_context(), v8_str(get_context(), source_field)).ToChecked();
   }
 
   bool has_field(v8::Local<v8::Object> source, const std::string& source_field) {
-    return source->Has(ctx, v8_str(ctx, source_field)).ToChecked();
+    return source->Has(get_context(), v8_str(get_context(), source_field)).ToChecked();
   }
 
   void copy_field(v8::Local<v8::Object> dest,
@@ -223,11 +220,14 @@ public:
                   v8::Local<v8::Object> source,
                   const std::optional<std::string>& source_field = {}) {
     if (source_field) {
-      handle_error(
-          dest->Set(ctx, v8_str(ctx, dest_field), source->Get(ctx, v8_str(ctx, *source_field)).ToLocalChecked()));
+      handle_error(dest->Set(get_context(),
+                             v8_str(get_context(), dest_field),
+                             source->Get(get_context(), v8_str(get_context(), *source_field)).ToLocalChecked()));
     }
     // assume field is same as dest field if left unspecified
-    handle_error(dest->Set(ctx, v8_str(ctx, dest_field), source->Get(ctx, v8_str(ctx, dest_field)).ToLocalChecked()));
+    handle_error(dest->Set(get_context(),
+                           v8_str(get_context(), dest_field),
+                           source->Get(get_context(), v8_str(get_context(), dest_field)).ToLocalChecked()));
   }
 
   void copy_field_if_exists(v8::Local<v8::Object> dest,
@@ -236,58 +236,61 @@ public:
                             const std::optional<std::string>& source_field = {}) {
     if (source_field) {
       if (!has_field(source, *source_field)) return;
-      handle_error(
-          dest->Set(ctx, v8_str(ctx, dest_field), source->Get(ctx, v8_str(ctx, *source_field)).ToLocalChecked()));
+      handle_error(dest->Set(get_context(),
+                             v8_str(get_context(), dest_field),
+                             source->Get(get_context(), v8_str(get_context(), *source_field)).ToLocalChecked()));
     }
     // assume field is same as dest field if left unspecified
     if (!has_field(source, dest_field)) return;
-    handle_error(dest->Set(ctx, v8_str(ctx, dest_field), source->Get(ctx, v8_str(ctx, dest_field)).ToLocalChecked()));
+    handle_error(dest->Set(get_context(),
+                           v8_str(get_context(), dest_field),
+                           source->Get(get_context(), v8_str(get_context(), dest_field)).ToLocalChecked()));
   }
 
   void set_field(v8::Persistent<v8::Object>& object, v8::Local<v8::Value> field, v8::Local<v8::Value> value) {
-    handle_error(object.Get(isolate)->Set(ctx, field, value));
+    handle_error(object.Get(get_isolate())->Set(get_context(), field, value));
   }
 
   void set_field(v8::Local<v8::Object> object, v8::Local<v8::Value> field, v8::Local<v8::Value> value) {
-    handle_error(object->Set(ctx, field, value));
+    handle_error(object->Set(get_context(), field, value));
   }
 
   void set_field(v8::Persistent<v8::Object>& object, const std::string& field, v8::Local<v8::Value> value) {
-    handle_error(object.Get(isolate)->Set(ctx, v8_str(ctx, field), value));
+    handle_error(object.Get(get_isolate())->Set(get_context(), v8_str(get_context(), field), value));
   }
 
   void set_field(v8::Local<v8::Object> object, const std::string& field, v8::Local<v8::Value> value) {
-    handle_error(object->Set(ctx, v8_str(ctx, field), value));
+    handle_error(object->Set(get_context(), v8_str(get_context(), field), value));
   }
   void set_field(v8::Local<v8::Object> object, size_t field_index, v8::Local<v8::Value> value) {
-    handle_error(object->Set(ctx, field_index, value));
+    handle_error(object->Set(get_context(), field_index, value));
   }
   void remove_field(v8::Local<v8::Object> object, const std::string& field) {
-    handle_error(object->Delete(ctx, v8_str(ctx, field)));
+    handle_error(object->Delete(get_context(), v8_str(get_context(), field)));
   }
 
   void set_fun(v8::Persistent<v8::Object>& object, const std::string& field, v8::Local<v8::Function> fun) {
-    handle_error(object.Get(isolate)->Set(ctx, v8_str(ctx, field), fun));
+    handle_error(object.Get(get_isolate())->Set(get_context(), v8_str(get_context(), field), fun));
   }
 
   void set_fun(v8::Local<v8::Object> object, const std::string& field, v8::Local<v8::Function> fun) {
-    handle_error(object->Set(ctx, v8_str(ctx, field), fun));
+    handle_error(object->Set(get_context(), v8_str(get_context(), field), fun));
   }
   template <class... Args>
   void call_fun(v8::Persistent<v8::Object>& object,
                 v8::Persistent<v8::Object>& self,
                 const std::string& field,
                 Args... args) {
-    auto v8_field = v8_str(ctx, field);
-    auto a = isolate->GetCurrentContext();
-    auto b = object.Get(isolate).As<v8::Object>();
+    auto v8_field = v8_str(get_context(), field);
+    auto a = get_isolate()->GetCurrentContext();
+    auto b = object.Get(get_isolate()).As<v8::Object>();
     if (!b->IsObject()) {
       return;
     }
     auto c = b->Has(a, v8_field);
     auto has_field = c.ToChecked();
     if (!has_field) return;
-    auto funref = object.Get(isolate).As<v8::Object>()->Get(isolate->GetCurrentContext(), v8_field);
+    auto funref = object.Get(get_isolate()).As<v8::Object>()->Get(get_isolate()->GetCurrentContext(), v8_field);
     if (funref.IsEmpty()) {
       return;
     }
@@ -305,8 +308,8 @@ public:
 #pragma clang diagnostic pop
 #endif
     size_t index = 0;
-    (void(argz[index++] = v8pp::to_v8(isolate, args)), ...);
-    fun->Call(isolate->GetCurrentContext(), self.Get(isolate), sizeof...(Args), argz).ToLocalChecked();
+    (void(argz[index++] = v8pp::to_v8(get_isolate(), args)), ...);
+    fun->Call(get_isolate()->GetCurrentContext(), self.Get(get_isolate()), sizeof...(Args), argz).ToLocalChecked();
   }
 
   template <class... Args>
@@ -314,8 +317,8 @@ public:
                 v8::Persistent<v8::Object>& self,
                 const std::string& field,
                 Args... args) {
-    auto v8_field = v8_str(ctx, field);
-    auto a = isolate->GetCurrentContext();
+    auto v8_field = v8_str(get_context(), field);
+    auto a = get_isolate()->GetCurrentContext();
     auto b = object.As<v8::Object>();
     if (!b->IsObject()) {
       return;
@@ -323,7 +326,7 @@ public:
     auto c = b->Has(a, v8_field);
     auto has_field = c.ToChecked();
     if (!has_field) return;
-    auto funref = object.As<v8::Object>()->Get(isolate->GetCurrentContext(), v8_field);
+    auto funref = object.As<v8::Object>()->Get(get_isolate()->GetCurrentContext(), v8_field);
     if (funref.IsEmpty()) {
       return;
     }
@@ -341,8 +344,8 @@ public:
 #pragma clang diagnostic pop
 #endif
     size_t index = 0;
-    (void(argz[index++] = v8pp::to_v8(isolate, args)), ...);
-    fun->Call(isolate->GetCurrentContext(), self.Get(isolate), sizeof...(Args), argz).ToLocalChecked();
+    (void(argz[index++] = v8pp::to_v8(get_isolate(), args)), ...);
+    fun->Call(get_isolate()->GetCurrentContext(), self.Get(get_isolate()), sizeof...(Args), argz).ToLocalChecked();
   }
   template <class... Args>
   void call_fun(v8::Local<v8::Object> object, const std::string& field, Args... args) {
@@ -351,8 +354,8 @@ public:
 
   template <class... Args>
   void call_fun(v8::Local<v8::Object> object, v8::Local<v8::Object> self, const std::string& field, Args... args) {
-    auto v8_field = v8_str(ctx, field);
-    auto a = isolate->GetCurrentContext();
+    auto v8_field = v8_str(get_context(), field);
+    auto a = get_isolate()->GetCurrentContext();
     auto b = object.As<v8::Object>();
     if (!b->IsObject()) {
       return;
@@ -360,7 +363,7 @@ public:
     auto c = b->Has(a, v8_field);
     auto has_field = c.ToChecked();
     if (!has_field) return;
-    auto funref = object.As<v8::Object>()->Get(isolate->GetCurrentContext(), v8_field);
+    auto funref = object.As<v8::Object>()->Get(get_isolate()->GetCurrentContext(), v8_field);
     if (funref.IsEmpty()) {
       // std::cout << "exit 1" << std::endl;
       return;
@@ -381,14 +384,14 @@ public:
 #pragma clang diagnostic pop
 #endif
     size_t index = 0;
-    (void(argz[index++] = v8pp::to_v8(isolate, args)), ...);
-    fun->Call(isolate->GetCurrentContext(), self, sizeof...(Args), argz).ToLocalChecked();
+    (void(argz[index++] = v8pp::to_v8(get_isolate(), args)), ...);
+    fun->Call(get_isolate()->GetCurrentContext(), self, sizeof...(Args), argz).ToLocalChecked();
   }
 
   v8::Local<v8::Function> get_fun(const std::string& field) {
-    auto v8_field = v8_str(ctx, field);
-    auto global = isolate->GetCurrentContext()->Global();
-    auto funref = global->Get(isolate->GetCurrentContext(), v8_field);
+    auto v8_field = v8_str(get_context(), field);
+    auto global = get_isolate()->GetCurrentContext()->Global();
+    auto funref = global->Get(get_isolate()->GetCurrentContext(), v8_field);
     if (funref.IsEmpty()) {
       // std::cout << "exit 1" << std::endl;
       // std::exit(1);
@@ -403,47 +406,48 @@ public:
   }
 
   v8::Local<v8::Value> get_global(const std::string& field) {
-    auto v8_field = v8_str(ctx, field);
-    auto global = isolate->GetCurrentContext()->Global();
-    auto maybelocal = global->Get(isolate->GetCurrentContext(), v8_field);
+    auto v8_field = v8_str(get_context(), field);
+    auto global = get_isolate()->GetCurrentContext()->Global();
+    auto maybelocal = global->Get(get_isolate()->GetCurrentContext(), v8_field);
     return maybelocal.ToLocalChecked();
   }
 
   v8::Local<v8::Value> get_index(v8::Persistent<v8::Array>& array, size_t index) {
-    return array.Get(isolate)->Get(ctx, index).ToLocalChecked();
+    return array.Get(get_isolate())->Get(get_context(), index).ToLocalChecked();
   }
 
   v8::Local<v8::Value> get_index(v8::Local<v8::Array> array, size_t index) {
-    return array->Get(ctx, index).ToLocalChecked();
+    return array->Get(get_context(), index).ToLocalChecked();
   }
   v8::Local<v8::Value> get_index(v8::Local<v8::Array> array, v8::Local<v8::Value> index) {
-    return array->Get(ctx, index).ToLocalChecked();
+    return array->Get(get_context(), index).ToLocalChecked();
   }
   v8::Local<v8::Value> get(v8::Persistent<v8::Object>& object, v8::Local<v8::Value> index) {
-    return object.Get(isolate)->Get(ctx, index).ToLocalChecked();
+    return object.Get(get_isolate())->Get(get_context(), index).ToLocalChecked();
   }
   v8::Local<v8::Value> get(v8::Local<v8::Object> object, v8::Local<v8::Value> index) {
-    return object->Get(ctx, index).ToLocalChecked();
+    return object->Get(get_context(), index).ToLocalChecked();
   }
   v8::Local<v8::Value> get(v8::Local<v8::Object> array, const std::string& index) {
-    return array->Get(ctx, v8_str(ctx, index)).ToLocalChecked();
+    return array->Get(get_context(), v8_str(get_context(), index)).ToLocalChecked();
   }
   v8::Local<v8::Array> prop_names(v8::Persistent<v8::Object>& obj) {
     v8::Local<v8::Array> out;
-    if (!obj.Get(isolate)->IsObject() || !obj.Get(isolate)->GetOwnPropertyNames(ctx).ToLocal(&out)) {
+    if (!obj.Get(get_isolate())->IsObject() ||
+        !obj.Get(get_isolate())->GetOwnPropertyNames(get_context()).ToLocal(&out)) {
       out = v8::Array::New(get_isolate());
     }
     return out;
   };
   v8::Local<v8::Array> prop_names(v8::Local<v8::Object> obj) {
     v8::Local<v8::Array> out;
-    if (!obj->IsObject() || !obj->GetOwnPropertyNames(ctx).ToLocal(&out)) {
+    if (!obj->IsObject() || !obj->GetOwnPropertyNames(get_context()).ToLocal(&out)) {
       out = v8::Array::New(get_isolate());
     }
     return out;
   };
   void set_prototype(v8::Local<v8::Object> dest, v8::Local<v8::Object> source) {
-    handle_error(dest->SetPrototype(isolate->GetCurrentContext(), source));
+    handle_error(dest->SetPrototype(get_isolate()->GetCurrentContext(), source));
   }
 
   // utils
