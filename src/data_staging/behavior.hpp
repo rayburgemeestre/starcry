@@ -6,6 +6,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace data_staging {
 class behavior {
@@ -15,6 +16,7 @@ private:
   std::string toroidal_group_;
 
   int64_t last_collide_ = -1;
+  // std::vector<int64_t> last_collide_history_;
 
 public:
   std::string collision_group() const {
@@ -38,8 +40,14 @@ public:
   int64_t last_collide() const {
     return last_collide_;
   }
+
+  // std::vector<int64_t> last_collide_history() const {
+  //  return last_collide_history_;
+  //}
+
   void set_last_collide(int64_t last_collide) {
     last_collide_ = last_collide;
+    // last_collide_history_.push_back(last_collide);
   }
   void set_collision_group(std::string collision_group) {
     collision_group_ = collision_group;

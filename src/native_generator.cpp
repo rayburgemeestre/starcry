@@ -775,27 +775,27 @@ void native_generator::call_next_frame_event(v8_interact& i, v8::Local<v8::Array
 void native_generator::create_new_mappings() {
   next_instance_map.clear();
   intermediate_map.clear();
-  for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
+  for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
     // Will we just put copies here now??
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& shape) {
-                            next_instance_map[shape.meta().unique_id()] = shape;
+                            next_instance_map.insert_or_assign(shape.meta().unique_id(), std::ref(abstract_shape));
                           },
                           [&](data_staging::line& shape) {
-                            next_instance_map[shape.meta().unique_id()] = shape;
+                            next_instance_map.insert_or_assign(shape.meta().unique_id(), std::ref(abstract_shape));
                           }},
-               shape);
+               abstract_shape);
   }
-  for (auto& shape : scene_shapes_intermediate[scenesettings.current_scene_next]) {
+  for (auto& abstract_shape : scene_shapes_intermediate[scenesettings.current_scene_next]) {
     // Will we just put copies here now??
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& shape) {
-                            intermediate_map[shape.meta().unique_id()] = shape;
+                            intermediate_map.insert_or_assign(shape.meta().unique_id(), std::ref(abstract_shape));
                           },
                           [&](data_staging::line& shape) {
-                            intermediate_map[shape.meta().unique_id()] = shape;
+                            intermediate_map.insert_or_assign(shape.meta().unique_id(), std::ref(abstract_shape));
                           }},
-               shape);
+               abstract_shape);
   }
 }
 
@@ -1028,7 +1028,7 @@ void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::
     if (find == intermediate_map.end()) {
       return;
     }
-    auto intermediate_instance = find->second;
+    // auto intermediate_instance = find->second;
 
     // auto motion_blur = !i.has_field(next_instance, "motion_blur") || i.boolean(next_instance, "motion_blur");
 
@@ -1155,6 +1155,8 @@ void native_generator::handle_collisions(v8_interact& i,
     auto unique_id = c.meta().unique_id();
     // TODO: fix_xy(i, instance, unique_id, x, y);
 
+    if (c.meta().id() == "balls") return;
+
     auto radius = c.radius();
     auto radiussize = c.radius_size();
 
@@ -1162,10 +1164,10 @@ void native_generator::handle_collisions(v8_interact& i,
     if (radiussize < 1000 /* todo create property of course */) {
       for (const auto& collide : found) {
         const auto unique_id2 = collide.userdata;
-        auto shape2 = next_instance_map.at(unique_id2);
+        auto& shape2 = next_instance_map.at(unique_id2);
         try {
-          data_staging::circle& c2 = std::get<data_staging::circle>(shape2);
-          if (c.meta().unique_id() != c2.meta().unique_id()) {
+          data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
+          if (c2.meta().id() != "balls" && c.meta().unique_id() != c2.meta().unique_id()) {
             handle_collision(i, c, c2);
           }
         } catch (std::bad_variant_access const& ex) {
@@ -1206,6 +1208,9 @@ void native_generator::handle_collision(v8_interact& i,
   circle a(position(x, y), radius, radiussize);
   circle b(position(x2, y2), radius2, radiussize2);
   if (!a.overlaps(b)) return;
+
+  // if not obj?
+  if (instance.meta().id() == "balls") return;  // experimental
 
   // they already collided, no need to let them collide again
   if (last_collide == unique_id2) return;
@@ -1277,7 +1282,7 @@ void native_generator::handle_gravity(v8_interact& i,
         const auto unique_id2 = in_range.userdata;
         auto shape2 = next_instance_map.at(unique_id2);
         try {
-          data_staging::circle& c2 = std::get<data_staging::circle>(shape2);
+          data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
           if (c.meta().unique_id() != c2.meta().unique_id()) {
             handle_gravity(i, c, c2, acceleration, G, range, constrain_dist_min, constrain_dist_max);
           }
@@ -2085,8 +2090,6 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
       }
     }
 
-    handle(c);
-
     if (object_bridge_circle) {
       // TODO: check if the object has an "init" function, or we can just skip this entire thing
       object_bridge_circle->push_object(c);
@@ -2106,6 +2109,9 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
       //      }
       //      std::exit(0);
     }
+
+    handle(c);
+
   } else if (type == "line") {
     data_staging::line c(object_id,
                          counter,
@@ -2119,14 +2125,14 @@ v8::Local<v8::Object> native_generator::_instantiate_object_from_scene(
                                              i.double_number(instance, "velocity", 0));
     c.styling_ref().set_gradient(i.str(instance, "gradient"));
 
-    handle(c);
-
     // TODO: check if the object has an "init" function, or we can just skip this entire thing
     object_bridge_line->push_object(c);
     i.call_fun(object_definitions_map[object_id],  // object definition
                object_bridge_line->instance(),     // bridged object is "this"
                "init");
     object_bridge_line->pop_object();
+
+    handle(c);
   }
 
   // TODO: _instantiate object should just take care of this?
@@ -2234,17 +2240,31 @@ void native_generator::_instantiate_object(v8_interact& i,
 
 void native_generator::debug_print_next(const std::string& desc) {
   logger(INFO) << "desc = " << desc << std::endl;
-  const auto print_meta = [](data_staging::meta& meta) {
+  const auto print_meta = [](data_staging::meta& meta,
+                             data_staging::location& loc,
+                             data_staging::movement& mov,
+                             data_staging::behavior& beh,
+                             data_staging::generic& gen) {
     logger(INFO) << "uid=" << meta.unique_id() << ", puid=" << meta.parent_uid() << ", id=" << meta.id()
-                 << ", level=" << meta.level() << ", namespace=" << meta.namespace_name() << std::endl;
+                 << ", level=" << meta.level() << ", namespace=" << meta.namespace_name() << " @ "
+                 << loc.position_cref().x << "," << loc.position_cref().y << " +" << mov.velocity().x << ","
+                 << mov.velocity().y << ", last_collide=" << beh.last_collide() << ", mass=" << gen.mass() << std::endl;
   };
   for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& shape) {
-                            print_meta(shape.meta_ref());
+                            print_meta(shape.meta_ref(),
+                                       shape.location_ref(),
+                                       shape.movement_ref(),
+                                       shape.behavior_ref(),
+                                       shape.generic_ref());
                           },
                           [&](data_staging::line& shape) {
-                            print_meta(shape.meta_ref());
+                            print_meta(shape.meta_ref(),
+                                       shape.line_start_ref(),
+                                       shape.movement_line_start_ref(),
+                                       shape.behavior_ref(),
+                                       shape.generic_ref());
                           }},
                shape);
   }

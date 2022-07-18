@@ -35,6 +35,9 @@ public:
   double get_x() const;
   double get_y() const;
   double get_z() const;
+  double get_vel_x() const;
+  double get_vel_y() const;
+  double get_velocity() const;
   double get_x2() const;
   double get_y2() const;
   double get_z2() const;
@@ -47,6 +50,9 @@ public:
   void set_x2(double x);
   void set_y2(double y);
   void set_z2(double z);
+  void set_vel_x(double x);
+  void set_vel_y(double y);
+  void set_velocity(double vel);
   void set_radius(double radius);
   void set_radius_size(double radiussize);
 

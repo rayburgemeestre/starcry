@@ -84,70 +84,18 @@ _ = {
           }
           this.props.step++;
 
-          this.subobj.push(this.spawn({
-            'id': i < 25 ? 'red_ball' : 'ball',
+          this.spawn({
+            'id': 'ball',  // i < 25 ? 'red_ball' : 'ball',
             'x': x,
             'y': y,
             'z': 0,
             'vel_x': 0,
             'vel_y': 0,
             'props': {'grad': i === 0 || i === 3 ? 'red' : 'black'}
-          }));
+          });
         }
       },
-      'time': function(t, e) {
-        // script.video.scale += 0.1 * e;
-        if (!this.props.start && t > 0.1) {
-          this.props.start = true;
-
-          class vector2d {
-            constructor(x = 0, y = 0) {
-              this.x = x;
-              this.y = y;
-            }
-            rotate(degrees) {
-              const radian = this.degrees_to_radian(degrees);
-              const sine = Math.sin(radian);
-              const cosine = Math.cos(radian);
-              this.x = this.x * cosine - this.y * sine;
-              this.y = this.x * sine + this.y * cosine;
-            }
-            degrees_to_radian(degrees) {
-              const pi = 3.14159265358979323846;
-              return degrees * pi / 180.0;
-            }
-          }
-
-          for (let obj of this.subobj) {
-            let angle = get_angle(obj.x, obj.y, 0, 0);
-            var rads = angle * Math.PI / 180.;
-            var move = 0.5;
-            var new_x = (Math.cos(rads) * move);
-            var new_y = (Math.sin(rads) * move);
-            obj.velocity = obj.x === 0 && obj.y === 0 ? 0 : 0.5;
-            obj.vel_x = new_x;
-            obj.vel_y = new_y;
-          }
-        }
-        if (t > 0.75) {
-          /*
-          var ss = 0.25 / 25.0;
-          for (let obj of this.subobj) {
-            if (obj.vel_x > ss) obj.vel_x -= ss;
-            if (obj.vel_x < -ss) obj.vel_x += ss;
-            if (obj.vel_y > ss) obj.vel_y -= ss;
-            if (obj.vel_y < -ss) obj.vel_y += ss;
-          }
-          */
-        }
-        if (t > 0 && t < 0.7) {
-          for (let obj of this.subobj) {
-            if (obj.radiussize < 20) obj.radiussize += 5 * e;
-          }
-        }
-        // TODO: manipulating sub object gradients does not propagate
-        // either via gradients or props
-      },
+      'time': function(t, e) {},
     },
     'ball': {
       'type': 'circle',
@@ -155,21 +103,52 @@ _ = {
       'toroidal': 't1',
       'blending_type': blending_type.normal,
       'gradients': [
-        [1.0, 'black'],
+        // swapped these
+        [1.0, 'red'],
         [0.0, 'black_2'],
       ],
       'radius': 0,
       'radiussize': 0.0,
       'props': {'grad': 'black', 'grad1': 1.0, 'grad2': 0.0},
       'init': function() {
-        this.gradients[0][1] = this.props.grad;
+        // this.gradients[0][1] = this.props.grad;
+        class vector2d {
+          constructor(x = 0, y = 0) {
+            this.x = x;
+            this.y = y;
+          }
+          rotate(degrees) {
+            const radian = this.degrees_to_radian(degrees);
+            const sine = Math.sin(radian);
+            const cosine = Math.cos(radian);
+            this.x = this.x * cosine - this.y * sine;
+            this.y = this.x * sine + this.y * cosine;
+          }
+          degrees_to_radian(degrees) {
+            const pi = 3.14159265358979323846;
+            return degrees * pi / 180.0;
+          }
+        }
+
+        let angle = get_angle(this.x, this.y, 0, 0);
+        var rads = angle * Math.PI / 180.;
+        var move = 0.5;
+        var new_x = (Math.cos(rads) * move);
+        var new_y = (Math.sin(rads) * move);
+        this.velocity = this.x === 0 && this.y === 0 ? 0 : 0.5;
+        this.vel_x = new_x;
+        this.vel_y = new_y;
       },
-      'time': function(t) {
+      'time': function(t, e) {
+        if (t > 0 && t < 0.7) {
+          if (this.radiussize < 20) this.radiussize += 5 * e;
+        }
+
         if (t > 0.5) {
           let q = (t - 0.5) / 0.1;
           if (q > 1.0) q = 1.0;
-          this.gradients[0][0] = 1.0 - q;
-          this.gradients[1][0] = q;
+          // this.gradients[0][0] = 1.0 - q;
+          // this.gradients[1][0] = q;
         }
         this.velocity = t * 100;
         if (t >= 0.7) this.velocity = (1.0 - (t - 0.6 /*to stop earlier*/) / 0.3) * 100;
@@ -187,8 +166,39 @@ _ = {
       'radius': 0,
       'radiussize': 5.0,
       'props': {'grad': 'black', 'grad1': 1.0, 'grad2': 0.0},
-      'init': function() {},
-      'time': function(t, elapsed) {
+      'init': function() {
+        class vector2d {
+          constructor(x = 0, y = 0) {
+            this.x = x;
+            this.y = y;
+          }
+          rotate(degrees) {
+            const radian = this.degrees_to_radian(degrees);
+            const sine = Math.sin(radian);
+            const cosine = Math.cos(radian);
+            this.x = this.x * cosine - this.y * sine;
+            this.y = this.x * sine + this.y * cosine;
+          }
+          degrees_to_radian(degrees) {
+            const pi = 3.14159265358979323846;
+            return degrees * pi / 180.0;
+          }
+        }
+
+        let angle = get_angle(this.x, this.y, 0, 0);
+        var rads = angle * Math.PI / 180.;
+        var move = 0.5;
+        var new_x = (Math.cos(rads) * move);
+        var new_y = (Math.sin(rads) * move);
+        this.velocity = this.x === 0 && this.y === 0 ? 0 : 0.5;
+        this.vel_x = new_x;
+        this.vel_y = new_y;
+      },
+      'time': function(t, e) {
+        if (t > 0 && t < 0.7) {
+          if (this.radiussize < 20) this.radiussize += 5 * e;
+        }
+
         this.velocity = t * 100;
         if (t >= 0.7) this.velocity = (1.0 - (t - 0.6 /*to stop earlier*/) / 0.3) * 100;
         if (this.velocity < 0) this.velocity = 0;
@@ -207,8 +217,8 @@ _ = {
       'radiussize': 2500,
       'init': function() {},
       'time': function(t, elapsed) {
-        this.gradients[0][0] = 1.0 - t;
-        this.gradients[1][0] = t;
+        // this.gradients[0][0] = 1.0 - t;
+        // this.gradients[1][0] = t;
       },
     },
     'bg2': {
@@ -222,8 +232,8 @@ _ = {
       'init': function() {},
       'time': function(t, elapsed) {
         // this.x = (-1920/2.0) - (1920 * t);
-        this.gradients[0][0] = 1.0 - t;
-        this.gradients[1][0] = t;
+        // this.gradients[0][0] = 1.0 - t;
+        // this.gradients[1][0] = t;
       },
     },
   },

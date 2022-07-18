@@ -82,8 +82,8 @@ private:
   std::map<std::string, quadtree> qts;
   std::map<std::string, quadtree> qts_gravity;
   // TODO: Can we do without copies, please?
-  std::unordered_map<int64_t, data_staging::shape_t> next_instance_map;
-  std::unordered_map<int64_t, data_staging::shape_t> intermediate_map;
+  std::unordered_map<int64_t, std::reference_wrapper<data_staging::shape_t>> next_instance_map;
+  std::unordered_map<int64_t, std::reference_wrapper<data_staging::shape_t>> intermediate_map;
   std::unordered_map<std::string, v8::Persistent<v8::Object>> object_definitions_map;
   data::settings settings_;
 

@@ -25,8 +25,8 @@ _ = {
         let step = 100;
         for (let i = 0; i < 5; i++) {
           for (let j = 0; j < 5; j++) {
-            let mass = Math.random() * 20;
-            this.subobj.push(this.spawn({
+            let mass = rand() * 20;
+            this.spawn({
               'id': 'ball',
               'x': i * step - (2.5 * step),
               'y': j * step - (2.5 * step),
@@ -34,9 +34,9 @@ _ = {
               'velocity': 10.,
               'radiussize': 10. + mass,
               'mass': 1. + mass,
-              'vel_x': Math.random() * 2. - 1.,
-              'vel_y': Math.random() * 2. - 1.,
-            }));
+              'vel_x': rand() * 2. - 1.,
+              'vel_y': rand() * 2. - 1.,
+            });
           }
         }
       },

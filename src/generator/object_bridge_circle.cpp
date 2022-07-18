@@ -61,6 +61,36 @@ void object_bridge<data_staging::circle>::set_radius_size(double radius_size) {
 }
 
 template <>
+double object_bridge<data_staging::circle>::get_vel_x() const {
+  return shape_stack.back()->movement_ref().velocity_ref().x;
+}
+
+template <>
+double object_bridge<data_staging::circle>::get_vel_y() const {
+  return shape_stack.back()->movement_ref().velocity_ref().y;
+}
+
+template <>
+double object_bridge<data_staging::circle>::get_velocity() const {
+  return shape_stack.back()->movement_ref().velocity_speed();
+}
+
+template <>
+void object_bridge<data_staging::circle>::set_vel_x(double x) {
+  shape_stack.back()->movement_ref().velocity_ref().x = x;
+}
+
+template <>
+void object_bridge<data_staging::circle>::set_vel_y(double y) {
+  shape_stack.back()->movement_ref().velocity_ref().y = y;
+}
+
+template <>
+void object_bridge<data_staging::circle>::set_velocity(double vel) {
+  shape_stack.back()->movement_ref().set_velocity_speed(vel);
+}
+
+template <>
 object_bridge<data_staging::circle>::object_bridge(native_generator *generator) : generator_(generator) {
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
   object_bridge_class  // .template ctor<int>()
@@ -68,6 +98,9 @@ object_bridge<data_staging::circle>::object_bridge(native_generator *generator) 
       .set("x", v8pp::property(&object_bridge::get_x, &object_bridge::set_x))
       .set("y", v8pp::property(&object_bridge::get_y, &object_bridge::set_y))
       .set("z", v8pp::property(&object_bridge::get_z, &object_bridge::set_z))
+      .set("vel_x", v8pp::property(&object_bridge::get_vel_x, &object_bridge::set_vel_x))
+      .set("vel_y", v8pp::property(&object_bridge::get_vel_y, &object_bridge::set_vel_y))
+      .set("velocity", v8pp::property(&object_bridge::get_velocity, &object_bridge::set_velocity))
       .set("radius", v8pp::property(&object_bridge::get_radius, &object_bridge::set_radius))
       .set("radiussize", v8pp::property(&object_bridge::get_radius_size, &object_bridge::set_radius_size))
       .set("props", v8pp::property(&object_bridge::get_properties_local_ref))

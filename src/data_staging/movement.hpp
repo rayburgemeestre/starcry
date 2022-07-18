@@ -27,9 +27,17 @@ public:
     std::swap(velocity_, new_value);
   }
 
+  vector2d& velocity_ref() {
+    return velocity_;
+  }
+
   void set_velocity(double x, double y, double velocity = 1.) {
     velocity_.x = x;
     velocity_.y = y;
+    velocity_speed_ = velocity;
+  }
+
+  void set_velocity_speed(double velocity) {
     velocity_speed_ = velocity;
   }
 };
