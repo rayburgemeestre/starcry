@@ -39,12 +39,15 @@ _ = {
           'vel_y': ((rand() * 2.) - 1.)
         });
 
-        let line = this.spawn({'id': 'line', 'x': -50, 'y': 0, 'x2': 50, 'y2': 0, 'z': 0});
+        // let's have it return unique_id's perhaps.. maybe better idea
+        let line = this.spawn3({'id': 'line', 'x': -50, 'y': 0, 'x2': 50, 'y2': 0, 'z': 0}, obj1, obj2);
+        /*
         obj1.props.left.push(line);
         obj2.props.right.push(line);
         this.subobj.push(obj1);
         this.subobj.push(obj2);
         this.subobj.push(line);
+         */
       },
       'time': function(t) {}
     },
@@ -92,6 +95,7 @@ _ = {
     'dithering': true,
     'minimize_steps_per_object': true,  // this guy is interesting to debug!!
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
+    'min_intermediates': 30,
   },
   'preview': {
     'motion_blur': false,

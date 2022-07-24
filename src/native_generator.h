@@ -196,7 +196,8 @@ public:
   std::shared_ptr<v8_wrapper> get_context() const;
 
   // v8::Local<v8::Object> spawn_object_native(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj);
-  void spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
+  int64_t spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
+  int64_t spawn_object3(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1, int64_t obj2);
 
   std::unordered_map<std::string, v8::Persistent<v8::Object>>& get_object_definitions_ref();
 
@@ -206,7 +207,7 @@ private:
   std::map<int64_t, std::pair<double, double>> cached_xy;
   void fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t uid, double& x, double& y);
 
-  v8::Local<v8::Object> _instantiate_object_from_scene(
+  std::pair<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>> _instantiate_object_from_scene(
       v8_interact& i,
       v8::Local<v8::Object>& scene_object,  // object description from scene to be instantiated
       data_staging::shape_t* parent_object  // it's optional parent

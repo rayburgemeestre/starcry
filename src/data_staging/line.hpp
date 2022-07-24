@@ -14,6 +14,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include <vector>
 
 #include "data_staging/behavior.hpp"
+#include "data_staging/cascade.hpp"
 #include "data_staging/generic.hpp"
 #include "data_staging/location.hpp"
 #include "data_staging/meta.hpp"
@@ -38,6 +39,8 @@ private:
   styling styling_;
   behavior behavior_;
   properties properties_;
+  std::vector<cascade> cascades_in_;
+  std::vector<cascade> cascades_out_;
 
 public:
   line(std::string id, int64_t unique_id, vector2d line_start, vector2d line_end, double line_width)
@@ -102,6 +105,12 @@ public:
   }
   void set_line_width(double line_width) {
     line_width_ = line_width;
+  }
+  void add_cascade_in(cascade_type cascade_type, int64_t unique_id) {
+    cascades_in_.emplace_back(cascade_type, unique_id);
+  }
+  void add_cascade_out(cascade_type cascade_type, int64_t unique_id) {
+    cascades_out_.emplace_back(cascade_type, unique_id);
   }
 };
 }  // namespace data_staging

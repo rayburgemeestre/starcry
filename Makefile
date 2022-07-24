@@ -225,7 +225,7 @@ webstorm:
 
 profile:  ## run starcry with valgrind's callgrind for profiling
 	#valgrind --tool=callgrind ./build/starcry input/script.js
-	valgrind --tool=callgrind ./build/starcry --no-render --stdout input/native_test.js
+	valgrind --tool=callgrind ./build/starcry --no-render --stdout input/test.js
 	ls -althrst | tail -n 1
 
 debug-last:

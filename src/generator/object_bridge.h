@@ -63,7 +63,8 @@ public:
   std::vector<std::tuple<double, std::string>>& get_gradients_ref() const;
   // void set_gradients(std::vector<std::tuple<double, std::string>> gradients);
 
-  void spawn(v8::Local<v8::Object> obj);
+  int64_t spawn(v8::Local<v8::Object> obj);
+  int64_t spawn3(v8::Local<v8::Object> line_obj, int64_t obj1, int64_t obj2);
 
   v8::Persistent<v8::Object>& instance();
 };

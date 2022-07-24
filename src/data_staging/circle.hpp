@@ -11,6 +11,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include "util/vector_logic.hpp"
 
 #include "data_staging/behavior.hpp"
+#include "data_staging/cascade.hpp"
 #include "data_staging/generic.hpp"
 #include "data_staging/location.hpp"
 #include "data_staging/meta.hpp"
@@ -37,6 +38,8 @@ private:
   styling styling_;
   behavior behavior_;
   properties properties_;
+  std::vector<cascade> cascades_in_;
+  std::vector<cascade> cascades_out_;
 
 public:
   circle(std::string id, int64_t unique_id, vector2d position, double radius, double radiussize)
@@ -96,6 +99,18 @@ public:
   }
   void set_radius_size(double radius_size) {
     radius_size_ = radius_size;
+  }
+
+  const std::vector<cascade>& cascade_out_cref() const {
+    return cascades_out_;
+  }
+
+  void add_cascade_in(cascade_type cascade_type, int64_t unique_id) {
+    cascades_in_.emplace_back(cascade_type, unique_id);
+  }
+
+  void add_cascade_out(cascade_type cascade_type, int64_t unique_id) {
+    cascades_out_.emplace_back(cascade_type, unique_id);
   }
 };
 }  // namespace data_staging
