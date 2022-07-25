@@ -1801,7 +1801,7 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
     auto scale = shape.generic().scale();  // i.has_field(instance, "scale") ? i.double_number(instance, "scale")
                                            // : 1.0; auto unique_id = i.integer_number(instance, "unique_id");
 
-    // auto shape_opacity = i.double_number(instance, "opacity");
+    auto shape_opacity = shape.generic().opacity();
     // auto motion_blur = i.boolean(instance, "motion_blur");
     // auto warp_width = i.has_field(instance, "__warp_width__") ? i.integer_number(instance, "__warp_width__") : 0;
     // auto warp_height = i.has_field(instance, "__warp_height__") ? i.integer_number(instance, "__warp_height__") : 0;
@@ -1863,8 +1863,8 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
     // new_shape.vel_y = vel_y;
     new_shape.blending_ = blending_type;
     new_shape.scale = scale;
-    new_shape.opacity = 1.0;  // std::isnan(shape_opacity) ? 1.0 : shape_opacity;
-                              // new_shape.unique_id = unique_id;
+    new_shape.opacity = std::isnan(shape_opacity) ? 1.0 : shape_opacity;
+    // new_shape.unique_id = unique_id;
 #ifdef DEBUG_NUM_SHAPES
     // new_shape.random_hash = random_hash;
 #endif
@@ -2180,6 +2180,8 @@ native_generator::_instantiate_object_from_scene(
                            vector2d(i.double_number(instance, "x"), i.double_number(instance, "y")),
                            i.double_number(instance, "radius"),
                            i.double_number(instance, "radiussize"));
+
+    if (type.empty()) c.generic_ref().set_opacity(0);
 
     c.movement_ref().set_velocity(i.double_number(instance, "vel_x", 0),
                                   i.double_number(instance, "vel_y", 0),
