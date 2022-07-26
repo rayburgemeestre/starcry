@@ -350,6 +350,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   job.job_number = std::numeric_limits<uint32_t>::max();
 
   if (f.raw_image() || get_viewpoint().raw || get_viewpoint().save) {
+    // NOTE that currently bmp is kind of 'moved' into the msg..
     msg->set_raw(bmp.pixels());
   }
 
@@ -361,7 +362,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   if (job_msg->original_instruction->frame_ptr() && !job_msg->original_instruction->frame_ptr()->client() &&
       f.compressed_image()) {
     png::image<png::rgba_pixel> image(job.width, job.height);
-    copy_to_png(bmp.pixels(), job.width, job.height, image, gen->settings().dithering);
+    copy_to_png(msg->pixels_raw, job.width, job.height, image, gen->settings().dithering);
     std::ostringstream ss;
     image.write_stream(ss);
     auto img = ss.str();

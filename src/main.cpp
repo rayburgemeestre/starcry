@@ -133,11 +133,9 @@ public:
         if (options.frame_of_interest != std::numeric_limits<size_t>::max()) {
           auto req =
               std::make_shared<data::frame_request>(options.script_file, options.frame_of_interest, options.num_chunks);
-          if (is_raw) {
-            req->enable_raw_image();
-          } else {
-            req->enable_compressed_image();
-          }
+          req->enable_raw_image();
+          req->enable_raw_bitmap();
+          req->enable_compressed_image();
           if (options.preview) {
             req->set_preview_mode();
           }

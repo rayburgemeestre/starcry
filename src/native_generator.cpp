@@ -2159,7 +2159,6 @@ native_generator::_instantiate_object_from_scene(
         auto field_name_str = i.str(obj_fields, k);
         auto field_value = i.get(props_object, field_name);
         i.set_field(c.properties_ref().properties_ref(), field_name, field_value);
-        logger(INFO) << "Setting Field: " << field_name_str << std::endl;
       }
     }
 
