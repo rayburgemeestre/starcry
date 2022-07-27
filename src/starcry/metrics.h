@@ -129,9 +129,10 @@ private:
   double hack_last_render_time = 0.;
 
   std::string script_ = "input/test.js";
+  std::function<void()> toggle_preview_callback_;
 
 public:
-  explicit metrics(bool notty);
+  explicit metrics(bool notty, std::function<void()> toggle_preview_callback);
   ~metrics();
 
   void set_script(const std::string& script);

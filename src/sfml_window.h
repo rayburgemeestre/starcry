@@ -20,6 +20,7 @@ public:
 
   void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels);
   void finalize();
+  void toggle_window();
 
 private:
   void update_window();

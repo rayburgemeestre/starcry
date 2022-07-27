@@ -31,7 +31,8 @@
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
 
-metrics::metrics(bool notty) : notty(notty) {
+metrics::metrics(bool notty, std::function<void()> toggle_preview_callback)
+    : notty(notty), toggle_preview_callback_(toggle_preview_callback) {
   // caller needs to call init, so we can use shared_from_this()
 }
 
@@ -51,7 +52,7 @@ void metrics::init() {
         return ready;
       });
     } else {
-      program = std::make_shared<TStarcry>(this);
+      program = std::make_shared<TStarcry>(this, toggle_preview_callback_);
       program->setScript(script_);
       initialized = true;
       program->run();

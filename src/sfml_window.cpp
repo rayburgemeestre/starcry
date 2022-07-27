@@ -7,6 +7,7 @@
 #include "sfml_window.h"
 #include <stdexcept>
 #include "rendering_engine.h"
+#include "util/logger.h"
 
 const int window_width = 100;
 const int window_height = 100;
@@ -58,6 +59,15 @@ void sfml_window::finalize() {
   runner_flag = false;
   runner.join();
   window.close();
+}
+
+void sfml_window::toggle_window() {
+  std::unique_lock<std::mutex> lock(mut);
+  if (window.isOpen()) {
+    window.close();
+  } else {
+    window.create(sf::VideoMode(window_width, window_height, bpp), "Preview");
+  }
 }
 
 void sfml_window::update_window() {

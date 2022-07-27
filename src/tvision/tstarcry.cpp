@@ -29,10 +29,12 @@
 const int hcFDosShell = 16, hcFExit = 17, hcFOFileOpenDBox = 31, hcFOpen = 14, hcFile = 13, hcWCascade = 22,
           hcWClose = 25, hcWNext = 23, hcWSizeMove = 19, hcWTile = 21, hcWZoom = 20, hcWindows = 18;
 
-const int cmOpenCmd = 105, cmMetaViewCmd = 112, cmStdoutViewCmd = 113, cmFFmpegViewCmd = 114;
+const int cmOpenCmd = 105, cmMetaViewCmd = 112, cmStdoutViewCmd = 113, cmFFmpegViewCmd = 114, cmTogglePreview = 115;
 
-TStarcry::TStarcry(metrics *metrics)
-    : TProgInit(&TStarcry::initStatusLine, &TStarcry::initMenuBar, &TStarcry::initDeskTop), metrics_(metrics) {
+TStarcry::TStarcry(metrics *metrics, std::function<void()> toggle_preview_callback)
+    : TProgInit(&TStarcry::initStatusLine, &TStarcry::initMenuBar, &TStarcry::initDeskTop),
+      metrics_(metrics),
+      toggle_preview_callback_(toggle_preview_callback) {
   TRect r = getExtent();  // Create the clock view.
   r.a.x = r.b.x - 9;
   r.b.y = r.a.y + 1;
@@ -114,6 +116,9 @@ void TStarcry::handleEvent(TEvent &event) {
         break;
       case cmFFmpegViewCmd:
         startLoggerViewer(&ffmpeg_viewer, "ffmpeg");
+        break;
+      case cmTogglePreview:
+        toggle_preview_callback_();
         break;
       case cmOpenCmd:  //  View a file
         openFile("*.js");
@@ -232,6 +237,7 @@ TMenuBar *TStarcry::initMenuBar(TRect r) {
                    *new TMenuItem("~S~tdout Viewer", cmStdoutViewCmd, kbAlt1, hcNoContext, "Alt-1") +
                    *new TMenuItem("~F~Fmpeg Viewer", cmFFmpegViewCmd, kbAlt2, hcNoContext, "Alt-2") + newLine() +
                    *new TMenuItem("~D~OS Shell", cmDosShell, kbNoKey, hcFDosShell) +
+                   *new TMenuItem("~T~oggle Preview window", cmTogglePreview, kbCtrlT, hcNoContext, "Ctrl+T") +
                    *new TMenuItem("E~x~it", cmQuit, kbAltX, hcFExit, "Alt-X");
 
   TSubMenu &sub3 =

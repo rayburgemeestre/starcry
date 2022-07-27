@@ -29,7 +29,7 @@ class metrics;
 
 class TStarcry : public TApplication {
 public:
-  explicit TStarcry(metrics *metrics);
+  explicit TStarcry(metrics *metrics, std::function<void()> toggle_preview_callback);
   static TStatusLine *initStatusLine(TRect r);
   static TMenuBar *initMenuBar(TRect r);
   virtual void handleEvent(TEvent &Event);
@@ -56,6 +56,8 @@ private:
   metrics *metrics_;
 
   TView *script_filename_view = nullptr;
+
+  std::function<void()> toggle_preview_callback_;
 
 public:
   std::atomic<bool> exited = false;
