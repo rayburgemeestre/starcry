@@ -1046,13 +1046,6 @@ void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::
     // experimentally put this here for now
     static std::unordered_map<int64_t, int> recorded_steps;
 
-    // below code is ugly and should be refactored soon anyway
-    // auto inherit = i.get(next_instance, "inherited");
-    // if (inherit->IsBoolean() && inherit.As<v8::Boolean>()->Value()) {
-    //  // inherited, do not set our own dist etc.
-    //  // EDIT: we need to read from cache as well, in case stuff got reverted..
-    //  i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[instance_uid]));
-    //} else {
     if (attempt == 1) {
       meta.set_distance(dist);
       meta.set_steps(steps);
@@ -1060,65 +1053,6 @@ void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::
     } else if (attempt > 1) {
       meta.set_steps(recorded_steps[instance_uid]);
     }
-    // cascade to left and right props, temp
-    // drop support for this?
-    //    if (i.has_field(next_instance, "props")) {
-    //      auto p = i.get(next_instance, "props");
-    //      if (p->IsObject()) {
-    //        auto props = p.As<v8::Object>();
-    //        for (const auto& left_or_right_str : {"left", "right"})
-    //          if (i.has_field(props, left_or_right_str)) {
-    //            auto l = i.get(props, left_or_right_str);
-    //            if (l->IsArray()) {
-    //              auto a = l.As<v8::Array>();
-    //              for (size_t m = 0; m < a->Length(); m++) {
-    //                auto left_or_right = i.get_index(a, m).As<v8::Object>();
-    //                // TODO: lambdafy: below is copied from block above.
-    //                if (attempt == 1) {
-    //                  auto use_dist = dist;
-    //                  auto use_steps = steps;
-    //                  if (i.has_field(left_or_right, "__dist__")) {
-    //                    use_dist = std::max(use_dist, i.double_number(left_or_right, "__dist__"));
-    //                  }
-    //                  if (i.has_field(left_or_right, "steps")) {
-    //                    use_steps = std::max(use_steps, (int)i.integer_number(left_or_right, "steps"));
-    //                  }
-    //                  auto a = i.integer_number(left_or_right, "unique_id");
-    //                  recorded_steps[a] = use_steps;
-    //                  i.set_field(left_or_right, "__dist__", v8::Number::New(isolate, dist));
-    //                  i.set_field(left_or_right, "steps", v8::Number::New(isolate, use_steps));
-    //                } else if (attempt > 1) {
-    //                  auto a = i.integer_number(left_or_right, "unique_id");
-    //                  i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
-    //                }
-    //                i.set_field(left_or_right, "inherited", v8::Boolean::New(isolate, true));
-    //              }
-    //            } else if (l->IsObject()) {
-    //              auto left_or_right = l.As<v8::Object>();
-    //              if (attempt == 1) {
-    //                auto use_dist = dist;
-    //                auto use_steps = steps;
-    //                if (i.has_field(left_or_right, "__dist__")) {
-    //                  use_dist = std::max(use_dist, i.double_number(left_or_right, "__dist__"));
-    //                }
-    //                if (i.has_field(left_or_right, "steps")) {
-    //                  use_steps = std::max(use_steps, (int)i.integer_number(left_or_right, "steps"));
-    //                }
-    //                auto a = i.integer_number(left_or_right, "unique_id");
-    //                recorded_steps[a] = use_steps;
-    //                i.set_field(left_or_right, "__dist__", v8::Number::New(isolate, use_dist));
-    //                i.set_field(left_or_right, "steps", v8::Number::New(isolate, use_steps));
-    //              } else if (attempt > 1) {
-    //                auto a = i.integer_number(left_or_right, "unique_id");
-    //                i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
-    //              }
-    //              i.set_field(left_or_right, "inherited", v8::Boolean::New(isolate, true));
-    //            }
-    //          }
-    //      }
-    //    }
-    // }
-    // }
     handle_collisions(i, abstract_shape, scene_shapes_next[scenesettings.current_scene_next]);
     handle_gravity(i, abstract_shape, scene_shapes_next[scenesettings.current_scene_next]);
   };
