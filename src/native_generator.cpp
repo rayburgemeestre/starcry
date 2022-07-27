@@ -861,7 +861,7 @@ void native_generator::update_object_positions(v8_interact& i, v8::Local<v8::Obj
               // property of course */) {
               if (shape.radius_size() < 1000 /* todo create property of course */) {
                 // TODO:
-                //  update_object_toroidal(i, instance, x, y);
+                update_object_toroidal(i, shape.toroidal_ref(), x, y);
                 const auto collision_group = shape.behavior().collision_group();
                 const auto gravity_group = shape.behavior().gravity_group();
                 if (!collision_group.empty()) {
@@ -982,36 +982,37 @@ void native_generator::insert_newly_created_objects() {
   create_new_mappings();
 }
 
-void native_generator::update_object_toroidal(v8_interact& i, v8::Local<v8::Object>& instance, double& x, double& y) {
-  auto toroidal = i.has_field(instance, "toroidal") ? i.str(instance, "toroidal") : "";
-  if (!toroidal.empty()) {
-    auto the_width = toroidals[toroidal].width;
-    auto the_height = toroidals[toroidal].height;
-    auto diff_x = 0;
-    auto diff_y = 0;
+void native_generator::update_object_toroidal(v8_interact& i,
+                                              data_staging::toroidal& toroidal_data,
+                                              double& x,
+                                              double& y) {
+  if (toroidal_data.group().empty()) return;
 
-    while (x + (the_width / 2) < 0) {
-      x += the_width;
-      diff_x += the_width;
-    }
-    while (y + (the_height / 2) < 0) {
-      y += the_height;
-      diff_y += the_height;
-    }
-    while (x + (the_width / 2) > the_width) {
-      x -= the_width;
-      diff_x -= the_width;
-    }
-    while (y + (the_height / 2) > the_height) {
-      y -= the_height;
-      diff_y -= the_height;
-    }
-    const auto warped_dist = get_distance(0, 0, diff_x, diff_y);
-    auto isolate = i.get_isolate();
-    i.set_field(instance, "__warp_width__", v8::Number::New(isolate, the_width));
-    i.set_field(instance, "__warp_height__", v8::Number::New(isolate, the_height));
-    i.set_field(instance, "__warped_dist__", v8::Number::New(isolate, warped_dist));
+  auto the_width = toroidals[toroidal_data.group()].width;
+  auto the_height = toroidals[toroidal_data.group()].height;
+  auto diff_x = 0;
+  auto diff_y = 0;
+
+  while (x + (the_width / 2) < 0) {
+    x += the_width;
+    diff_x += the_width;
   }
+  while (y + (the_height / 2) < 0) {
+    y += the_height;
+    diff_y += the_height;
+  }
+  while (x + (the_width / 2) > the_width) {
+    x -= the_width;
+    diff_x -= the_width;
+  }
+  while (y + (the_height / 2) > the_height) {
+    y -= the_height;
+    diff_y -= the_height;
+  }
+  const auto warped_dist = get_distance(0, 0, diff_x, diff_y);
+  toroidal_data.set_warp_width(the_width);
+  toroidal_data.set_warp_height(the_height);
+  toroidal_data.set_warp_dist(warped_dist);
 }
 
 void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video) {
@@ -1654,6 +1655,7 @@ double native_generator::get_max_travel_of_object(v8_interact& i,
   //  dist = std::max(dist, fabs(prev_rad - rad));
   //
   //  // Make sure that we do not include any warped distance
+  // This is now in toroidal_ref()
   //  if (i.has_field(instance, "__warped_dist__")) {
   //    dist -= i.double_number(instance, "__warped_dist__");
   //    // If object moves two pixels to the right, is then warped 500 px to the left
@@ -2071,6 +2073,7 @@ native_generator::_instantiate_object_from_scene(
     c.meta_ref().set_parent_location(parent_location);
     c.behavior_ref().set_collision_group(i.str(instance, "collision_group", ""));
     c.behavior_ref().set_gravity_group(i.str(instance, "gravity_group", ""));
+    c.toroidal_ref().set_group(i.str(instance, "toroidal", ""));
     c.generic_ref().set_mass(i.double_number(instance, "mass", 1));
     if (i.has_field(instance, "gradient")) {
       c.styling_ref().set_gradient(i.str(instance, "gradient"));

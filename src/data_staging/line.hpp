@@ -21,6 +21,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include "data_staging/movement.hpp"
 #include "data_staging/properties.hpp"
 #include "data_staging/styling.hpp"
+#include "data_staging/toroidal.hpp"
 
 // merged into data namespace when ready
 namespace data_staging {
@@ -38,6 +39,7 @@ private:
   generic generic_;
   styling styling_;
   behavior behavior_;
+  toroidal toroidal_;
   properties properties_;
   std::vector<cascade> cascades_in_;
   std::vector<cascade> cascades_out_;
@@ -93,6 +95,12 @@ public:
   }
   data_staging::behavior& behavior_ref() {
     return behavior_;
+  }
+  const data_staging::toroidal& toroidal_cref() {
+    return toroidal_;
+  }
+  data_staging::toroidal& toroidal_ref() {
+    return toroidal_;
   }
   const properties& properties() const {
     return properties_;
