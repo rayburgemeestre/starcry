@@ -27,7 +27,7 @@ SDL_Renderer *renderer = nullptr;
 int x = 0, y = 0;
 bool pointer_state = true;
 
-struct context {
+struct client_context {
   SDL_Renderer *renderer;
   int iteration;
 };
@@ -36,7 +36,7 @@ void render_shapes_to_texture();
 
 void mainloop(void *arg) {
 #ifdef EMSCRIPTEN
-  context *ctx = static_cast<context *>(arg);
+  client_context *ctx = static_cast<client_context *>(arg);
   renderer = ctx->renderer;
 #else
   renderer = static_cast<SDL_Renderer *>(arg);
@@ -215,7 +215,7 @@ void start(uint32_t width, uint32_t height, uint32_t canvas_w, uint32_t canvas_h
 
   SDL_Renderer *renderer;
   SDL_CreateWindowAndRenderer(canvas_w, canvas_h, 0, &window, &renderer);
-  context ctx;
+  client_context ctx;
   ctx.renderer = renderer;
   ctx.iteration = 0;
 #else

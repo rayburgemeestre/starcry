@@ -8,10 +8,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include <memory>
 
 #include "util/logger.h"
-#include "util/v8_interact.hpp"
 #include "util/vector_logic.hpp"
-
-#include "v8.h"
 
 enum class cascade_type {
   disabled,
