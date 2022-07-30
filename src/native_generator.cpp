@@ -121,6 +121,12 @@ void native_generator::init(const std::string& filename, std::optional<double> r
   // throw away all the scene information for script objects
   scenesettings_objs.clear();
 
+  // throw away any existing instances from array
+  scene_shapes_next.clear();
+
+  // reset random number generator
+  set_rand_seed(rand_seed ? *rand_seed : 0);
+
   // set_scene requires generator_context to be set
   set_scene(0);
 
