@@ -42,6 +42,7 @@ private:
 
   void initialize() {
     std::scoped_lock lock(mut);
+    reset();
     numbers.resize(n);
     for (size_t i = 0; i < n; i++) {
       numbers[i] = (mt() / (double)mt.max());
