@@ -256,3 +256,8 @@ builddev:
 	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEVELOP=on -GNinja -B build && \
 	                    cmake --build build --target starcry && \
 	                    strip --strip-debug build/starcry)
+
+builddevgcc:
+	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEVELOP=on -GNinja -B build && \
+	              cmake --build build --target starcry && \
+	              strip --strip-debug build/starcry)

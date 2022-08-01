@@ -14,7 +14,7 @@ private:
   double z_ = 0;
 
 public:
-  location() {};
+  location(){};
 
   location(vector2d position, double z = 0) : position_(std::move(position)), z_(z) {}
 

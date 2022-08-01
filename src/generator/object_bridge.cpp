@@ -28,7 +28,7 @@ void object_bridge<T>::pop_object() {
   if (gradients_accessed_) {
     // shape_stack.back()->styling_ref().set_gradients_dirty();
     auto& defs = this->generator_->get_object_definitions_ref();
-    auto obj_id = shape_stack.back()->meta().id();
+    auto obj_id = shape_stack.back()->meta_cref().id();
     auto find = defs.find(obj_id);
     if (find != defs.end()) {
       auto& def = find->second;
@@ -55,7 +55,7 @@ int64_t object_bridge<T>::spawn3(v8::Local<v8::Object> line_obj, int64_t obj1, i
 template <typename T>
 int64_t object_bridge<T>::get_level() const {
   data_staging::shape_t var = *shape_stack.back();
-  return shape_stack.back()->meta().level();
+  return shape_stack.back()->meta_cref().level();
 }
 
 template <typename T>

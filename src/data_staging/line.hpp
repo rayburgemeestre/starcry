@@ -50,7 +50,7 @@ public:
   line(std::string id, int64_t unique_id, vector2d line_start, vector2d line_end, double line_width)
       : meta_(std::move(id), unique_id), line_start_(line_start), line_end_(line_end), line_width_(line_width) {}
 
-  const meta& meta() const {
+  const meta& meta_cref() const {
     return meta_;
   }
   data_staging::meta& meta_ref() {
@@ -86,19 +86,19 @@ public:
   data_staging::movement& movement_line_end_ref() {
     return movement_line_end_;
   }
-  const generic& generic() const {
+  const generic& generic_cref() const {
     return generic_;
   }
   data_staging::generic& generic_ref() {
     return generic_;
   }
-  const styling& styling() const {
+  const styling& styling_cref() const {
     return styling_;
   }
   data_staging::styling& styling_ref() {
     return styling_;
   }
-  const behavior& behavior() const {
+  const behavior& behavior_cref() const {
     return behavior_;
   }
   data_staging::behavior& behavior_ref() {
@@ -110,7 +110,7 @@ public:
   data_staging::toroidal& toroidal_ref() {
     return toroidal_;
   }
-  const properties& properties() const {
+  const properties& properties_cref() const {
     return properties_;
   }
   data_staging::properties& properties_ref() {

@@ -48,13 +48,13 @@ public:
   circle(std::string id, int64_t unique_id, vector2d position, double radius, double radiussize)
       : meta_(std::move(id), unique_id), location_(position), radius_(radius), radius_size_(radiussize) {}
 
-  const meta& meta() const {
+  const meta& meta_cref() const {
     return meta_;
   }
   data_staging::meta& meta_ref() {
     return meta_;
   }
-  const location& location() const {
+  const location& location_cref() const {
     return location_;
   }
   data_staging::location& location_ref() {
@@ -63,25 +63,25 @@ public:
   data_staging::location& transitive_location_ref() {
     return transitive_location_;
   }
-  const movement& movement() const {
+  const movement& movement_cref() const {
     return movement_;
   }
   data_staging::movement& movement_ref() {
     return movement_;
   }
-  const generic& generic() const {
+  const generic& generic_cref() const {
     return generic_;
   }
   data_staging::generic& generic_ref() {
     return generic_;
   }
-  const styling& styling() const {
+  const styling& styling_cref() const {
     return styling_;
   }
   data_staging::styling& styling_ref() {
     return styling_;
   }
-  const behavior& behavior() const {
+  const behavior& behavior_cref() const {
     return behavior_;
   }
   data_staging::behavior& behavior_ref() {
@@ -93,7 +93,7 @@ public:
   data_staging::toroidal& toroidal_ref() {
     return toroidal_;
   }
-  const properties& properties() const {
+  const properties& properties_cref() const {
     return properties_;
   }
   data_staging::properties& properties_ref() {

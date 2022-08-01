@@ -788,10 +788,10 @@ void native_generator::create_new_mappings() {
     // Will we just put copies here now??
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& shape) {
-                            next_instance_map.insert_or_assign(shape.meta().unique_id(), std::ref(abstract_shape));
+                            next_instance_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
                           },
                           [&](data_staging::line& shape) {
-                            next_instance_map.insert_or_assign(shape.meta().unique_id(), std::ref(abstract_shape));
+                            next_instance_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
                           }},
                abstract_shape);
   }
@@ -799,10 +799,10 @@ void native_generator::create_new_mappings() {
     // Will we just put copies here now??
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& shape) {
-                            intermediate_map.insert_or_assign(shape.meta().unique_id(), std::ref(abstract_shape));
+                            intermediate_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
                           },
                           [&](data_staging::line& shape) {
-                            intermediate_map.insert_or_assign(shape.meta().unique_id(), std::ref(abstract_shape));
+                            intermediate_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
                           }},
                abstract_shape);
   }
@@ -833,31 +833,32 @@ void native_generator::update_object_positions(v8_interact& i, v8::Local<v8::Obj
               //   scenesettings_from_object_id_level = level;
               // } else if (scenesettings_from_object_id_level == level) {
 
-              if (scenesettings_from_object_id_level == shape.meta().level()) {
+              if (scenesettings_from_object_id_level == shape.meta_cref().level()) {
                 scenesettings_from_object_id = -1;
                 scenesettings_from_object_id_level = -1;
               }
 
               if (scenesettings_from_object_id == -1) {
-                update_time(i, abstract_shape, shape.meta().id(), scenesettings);
+                update_time(i, abstract_shape, shape.meta_cref().id(), scenesettings);
               } else {
                 // TODO:
-                update_time(i, abstract_shape, shape.meta().id(), scenesettings_objs[scenesettings_from_object_id]);
+                update_time(
+                    i, abstract_shape, shape.meta_cref().id(), scenesettings_objs[scenesettings_from_object_id]);
               }
 
               scalesettings.video_scale_next = i.double_number(video, "scale");
 
-              auto angle = shape.generic().angle();
+              auto angle = shape.generic_cref().angle();
               if (std::isnan(angle)) {
                 angle = 0.;
               }
-              auto x = shape.location().position_cref().x;
-              auto y = shape.location().position_cref().y;
+              auto x = shape.location_cref().position_cref().x;
+              auto y = shape.location_cref().position_cref().y;
               // auto x2 = i.double_number(instance, "x2");
               // auto y2 = i.double_number(instance, "y2");
-              auto velocity = shape.movement().velocity_speed();
-              auto vel_x = shape.movement().velocity().x;
-              auto vel_y = shape.movement().velocity().y;
+              auto velocity = shape.movement_cref().velocity_speed();
+              auto vel_x = shape.movement_cref().velocity().x;
+              auto vel_y = shape.movement_cref().velocity().y;
               // // auto vel_x2 = is_line ? i.double_number(instance, "vel_x2") : 0.0;
               // // auto vel_y2 = is_line ? i.double_number(instance, "vel_y2") : 0.0;
 
@@ -871,8 +872,8 @@ void native_generator::update_object_positions(v8_interact& i, v8::Local<v8::Obj
               if (shape.radius_size() < 1000 /* todo create property of course */) {
                 // TODO:
                 update_object_toroidal(i, shape.toroidal_ref(), x, y);
-                const auto collision_group = shape.behavior().collision_group();
-                const auto gravity_group = shape.behavior().gravity_group();
+                const auto collision_group = shape.behavior_cref().collision_group();
+                const auto gravity_group = shape.behavior_cref().gravity_group();
                 if (!collision_group.empty()) {
                   qts.try_emplace(collision_group,
                                   quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
@@ -880,12 +881,12 @@ void native_generator::update_object_positions(v8_interact& i, v8::Local<v8::Obj
                   auto y_copy = y;
                   // TODO: fix
                   //  fix_xy(i, instance, unique_id, x_copy, y_copy);
-                  qts[collision_group].insert(point_type(position(x_copy, y_copy), shape.meta().unique_id()));
+                  qts[collision_group].insert(point_type(position(x_copy, y_copy), shape.meta_cref().unique_id()));
                 }
                 if (!gravity_group.empty()) {
                   qts_gravity.try_emplace(
                       gravity_group, quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
-                  qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta().unique_id()));
+                  qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
                 }
               }
               shape.location_ref().position_ref().x = x;
@@ -915,10 +916,10 @@ void native_generator::insert_newly_created_objects() {
     data_staging::meta ret;
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& shape) {
-                            ret = shape.meta();
+                            ret = shape.meta_cref();
                           },
                           [&](data_staging::line& shape) {
-                            ret = shape.meta();
+                            ret = shape.meta_cref();
                           }},
                shape);
     return ret;
@@ -980,10 +981,10 @@ void native_generator::insert_newly_created_objects() {
   for (auto& abstract_shape : source) {
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& shape) {
-                            handle(abstract_shape, shape.meta());
+                            handle(abstract_shape, shape.meta_cref());
                           },
                           [&](data_staging::line& shape) {
-                            handle(abstract_shape, shape.meta());
+                            handle(abstract_shape, shape.meta_cref());
                           }},
                abstract_shape);
   }
@@ -1265,10 +1266,10 @@ void native_generator::handle_collisions(v8_interact& i,
     }
     auto x = c.location_ref().position_ref().x;
     auto y = c.location_ref().position_ref().y;
-    auto unique_id = c.meta().unique_id();
+    auto unique_id = c.meta_cref().unique_id();
     // TODO: fix_xy(i, instance, unique_id, x, y);
 
-    if (c.meta().id() == "balls") return;
+    if (c.meta_cref().id() == "balls") return;
 
     auto radius = c.radius();
     auto radiussize = c.radius_size();
@@ -1280,7 +1281,7 @@ void native_generator::handle_collisions(v8_interact& i,
         auto& shape2 = next_instance_map.at(unique_id2);
         try {
           data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
-          if (c2.meta().id() != "balls" && c.meta().unique_id() != c2.meta().unique_id()) {
+          if (c2.meta_cref().id() != "balls" && c.meta_cref().unique_id() != c2.meta_cref().unique_id()) {
             handle_collision(i, c, c2);
           }
         } catch (std::bad_variant_access const& ex) {
@@ -1298,8 +1299,8 @@ void native_generator::handle_collisions(v8_interact& i,
 void native_generator::handle_collision(v8_interact& i,
                                         data_staging::circle& instance,
                                         data_staging::circle& instance2) {
-  auto unique_id = instance.meta().unique_id();
-  auto unique_id2 = instance2.meta().unique_id();
+  auto unique_id = instance.meta_cref().unique_id();
+  auto unique_id2 = instance2.meta_cref().unique_id();
   auto last_collide = instance.behavior_ref().last_collide();
 
   auto x = instance.location_ref().position_cref().x;
@@ -1314,8 +1315,8 @@ void native_generator::handle_collision(v8_interact& i,
   auto radiussize = instance.radius_size();
   auto radius2 = instance2.radius();
   auto radiussize2 = instance2.radius_size();
-  auto mass = instance.generic().mass();
-  auto mass2 = instance2.generic().mass();
+  auto mass = instance.generic_cref().mass();
+  auto mass2 = instance2.generic_cref().mass();
 
   // If the quadtree reported a match, it doesn't mean the objects fully collide
   circle a(position(x, y), radius, radiussize);
@@ -1323,7 +1324,7 @@ void native_generator::handle_collision(v8_interact& i,
   if (!a.overlaps(b)) return;
 
   // if not obj?
-  if (instance.meta().id() == "balls") return;  // experimental
+  if (instance.meta_cref().id() == "balls") return;  // experimental
 
   // they already collided, no need to let them collide again
   if (last_collide == unique_id2) return;
@@ -1365,7 +1366,7 @@ void native_generator::handle_gravity(v8_interact& i,
     std::vector<point_type> found;
     data_staging::circle& c = std::get<data_staging::circle>(shape);
 
-    auto unique_id = c.meta().unique_id();
+    auto unique_id = c.meta_cref().unique_id();
     auto gravity_group = c.behavior_ref().gravity_group();
     if (gravity_group.empty()) {
       return;
@@ -1396,7 +1397,7 @@ void native_generator::handle_gravity(v8_interact& i,
         auto shape2 = next_instance_map.at(unique_id2);
         try {
           data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
-          if (c.meta().unique_id() != c2.meta().unique_id()) {
+          if (c.meta_cref().unique_id() != c2.meta_cref().unique_id()) {
             handle_gravity(i, c, c2, acceleration, G, range, constrain_dist_min, constrain_dist_max);
           }
         } catch (std::bad_variant_access const& ex) {
@@ -1422,12 +1423,12 @@ void native_generator::handle_gravity(v8_interact& i,
                                       double range,
                                       double constrain_dist_min,
                                       double constrain_dist_max) {
-  // auto unique_id = instance.meta().unique_id();
+  // auto unique_id = instance.meta_cref().unique_id();
   auto x = instance.location_ref().position_cref().x;
   auto y = instance.location_ref().position_cref().y;
   // TODO: fix_xy(i, instance, unique_id, x, y);
 
-  // auto unique_id2 = instance.meta().unique_id();
+  // auto unique_id2 = instance.meta_cref().unique_id();
   auto x2 = instance2.location_ref().position_cref().x;
   auto y2 = instance2.location_ref().position_cref().y;
   // TODO: fix_xy(i, instance2, unique_id2, x2, y2);
@@ -1551,8 +1552,8 @@ void native_generator::update_time(v8_interact& i,
                  },
                  instance);
 
-      //      auto object_id = c.meta().id();
-      //      auto namespace_name = c.meta().namespace_name();
+      //      auto object_id = c.meta_cref().id();
+      //      auto namespace_name = c.meta_cref().namespace_name();
       //      // TODO: broken
       //      auto gradient_array = i.v8_array(object_definitions_map[object_id], "gradients");
       //      c.styling_ref().gradients_ref().clear();
@@ -1897,13 +1898,13 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
     // auto radius = shape.radius();           // i.double_number(instance, "radius");
     // auto radiussize = shape.radius_size();  // i.double_number(instance, "radiussize");
     // auto seed = i.double_number(instance, "seed");
-    auto blending_type = shape.styling().blending_type();  // i.has_field(instance, "blending_type") ?
+    auto blending_type = shape.styling_cref().blending_type();  // i.has_field(instance, "blending_type") ?
     // i.integer_number(instance, "blending_type")
     //              : data::blending_type::normal;
-    auto scale = shape.generic().scale();  // i.has_field(instance, "scale") ? i.double_number(instance, "scale")
+    auto scale = shape.generic_cref().scale();  // i.has_field(instance, "scale") ? i.double_number(instance, "scale")
                                            // : 1.0; auto unique_id = i.integer_number(instance, "unique_id");
 
-    auto shape_opacity = shape.generic().opacity();
+    auto shape_opacity = shape.generic_cref().opacity();
     // auto motion_blur = i.boolean(instance, "motion_blur");
     // auto warp_width = i.has_field(instance, "__warp_width__") ? i.integer_number(instance, "__warp_width__") : 0;
     // auto warp_height = i.has_field(instance, "__warp_height__") ? i.integer_number(instance, "__warp_height__") : 0;
@@ -1933,7 +1934,7 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
 
     // temp hack
     std::string namespace_ = "";
-    std::string gradient_id = shape.styling().gradient();
+    std::string gradient_id = shape.styling_cref().gradient();
 
     if (!gradient_id.empty()) {
       if (new_shape.gradients_.empty()) {
@@ -1996,9 +1997,9 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
     // }
     // wrap this in a proper add method
     if (stepper.next_step != stepper.max_step) {
-      indexes[shape.meta().unique_id()][stepper.current_step] = job->shapes[stepper.current_step].size();
+      indexes[shape.meta_cref().unique_id()][stepper.current_step] = job->shapes[stepper.current_step].size();
     } else {
-      new_shape.indexes = indexes[shape.meta().unique_id()];
+      new_shape.indexes = indexes[shape.meta_cref().unique_id()];
     }
     // logger(INFO) << "sizeof shape: " << sizeof(new_shape) << " circle was size: " << sizeof(shape) <<
     // std::endl;
@@ -2084,7 +2085,7 @@ int64_t native_generator::spawn_object3(data_staging::shape_t& spawner,
     // todo; we need a mapping for this...
     for (auto& newo : instantiated_objects[scenesettings.current_scene_next]) {
       if (auto c = std::get_if<data_staging::circle>(&newo)) {
-        if (c->meta().unique_id() == obj1) {
+        if (c->meta_cref().unique_id() == obj1) {
           obj1o = &newo;
         }
       }
@@ -2097,7 +2098,7 @@ int64_t native_generator::spawn_object3(data_staging::shape_t& spawner,
     // todo; we need a mapping for this...
     for (auto& newo : instantiated_objects[scenesettings.current_scene_next]) {
       if (auto c = std::get_if<data_staging::circle>(&newo)) {
-        if (c->meta().unique_id() == obj2) {
+        if (c->meta_cref().unique_id() == obj2) {
           obj2o = &newo;
         }
       }
@@ -2109,10 +2110,10 @@ int64_t native_generator::spawn_object3(data_staging::shape_t& spawner,
       auto& line_obj = std::get<data_staging::line>(line_o);
       auto& circle_obj1 = std::get<data_staging::circle>(side_a);
       auto& circle_obj2 = std::get<data_staging::circle>(side_b);
-      circle_obj1.add_cascade_out(cascade_type::start, line_obj.meta().unique_id());
-      circle_obj2.add_cascade_out(cascade_type::end, line_obj.meta().unique_id());
-      line_obj.add_cascade_in(cascade_type::start, circle_obj1.meta().unique_id());
-      line_obj.add_cascade_in(cascade_type::end, circle_obj2.meta().unique_id());
+      circle_obj1.add_cascade_out(cascade_type::start, line_obj.meta_cref().unique_id());
+      circle_obj2.add_cascade_out(cascade_type::end, line_obj.meta_cref().unique_id());
+      line_obj.add_cascade_in(cascade_type::start, circle_obj1.meta_cref().unique_id());
+      line_obj.add_cascade_in(cascade_type::end, circle_obj2.meta_cref().unique_id());
     } catch (std::bad_variant_access const& ex) {
       return;
     }
@@ -2172,14 +2173,14 @@ native_generator::_instantiate_object_from_scene(
     std::visit(overloaded{
                    [](std::monostate) {},
                    [&](data_staging::circle& cc) {
-                     current_level = cc.meta().level() + 1;
-                     parent_object_ns = cc.meta().namespace_name();
-                     parent_uid = cc.meta().unique_id();
+                     current_level = cc.meta_cref().level() + 1;
+                     parent_object_ns = cc.meta_cref().namespace_name();
+                     parent_uid = cc.meta_cref().unique_id();
                    },
                    [&](data_staging::line& cc) {
-                     current_level = cc.meta().level() + 1;
-                     parent_object_ns = cc.meta().namespace_name();
-                     parent_uid = cc.meta().unique_id();
+                     current_level = cc.meta_cref().level() + 1;
+                     parent_object_ns = cc.meta_cref().namespace_name();
+                     parent_uid = cc.meta_cref().unique_id();
                    },
                },
                *parent_object);
@@ -2438,7 +2439,7 @@ void native_generator::copy_gradient_from_object_to_shape(
     T& source_object,
     data::shape& destination_shape,
     std::unordered_map<std::string, data::gradient>& known_gradients_map) {
-  std::string namespace_ = source_object.meta().namespace_name();
+  std::string namespace_ = source_object.meta_cref().namespace_name();
   std::string gradient_id = namespace_ + source_object.styling_ref().gradient();
 
   if (!gradient_id.empty()) {
