@@ -31,6 +31,8 @@ private:
   meta meta_;
   location line_start_;
   location line_end_;
+  location transitive_line_start_;
+  location transitive_line_end_;
   movement movement_line_start_;
   movement movement_line_end_;
 
@@ -65,6 +67,12 @@ public:
   }
   data_staging::location& line_end_ref() {
     return line_end_;
+  }
+  data_staging::location& transitive_line_start_ref() {
+    return transitive_line_start_;
+  }
+  data_staging::location& transitive_line_end_ref() {
+    return transitive_line_end_;
   }
   const movement& movement_line_start() const {
     return movement_line_start_;
@@ -119,6 +127,9 @@ public:
   }
   void add_cascade_out(cascade_type cascade_type, int64_t unique_id) {
     cascades_out_.emplace_back(cascade_type, unique_id);
+  }
+  const std::vector<cascade>& cascades_in() const {
+    return cascades_in_;
   }
 };
 }  // namespace data_staging

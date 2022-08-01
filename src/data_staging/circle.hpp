@@ -30,6 +30,7 @@ class circle {
 private:
   meta meta_;
   location location_;
+  location transitive_location_;
   movement movement_;
 
   double radius_ = 100.;
@@ -58,6 +59,9 @@ public:
   }
   data_staging::location& location_ref() {
     return location_;
+  }
+  data_staging::location& transitive_location_ref() {
+    return transitive_location_;
   }
   const movement& movement() const {
     return movement_;

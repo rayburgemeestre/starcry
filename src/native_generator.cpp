@@ -683,6 +683,9 @@ bool native_generator::_generate_frame() {
           // handle collisions, gravity and "inherited" objects
           update_object_interactions(i, video);
 
+          // calculate distance and steps
+          update_object_distances();
+
           // above update functions could have triggered spawning of new objects
           insert_newly_created_objects();
 
@@ -1022,47 +1025,19 @@ void native_generator::update_object_toroidal(v8_interact& i,
 }
 
 void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video) {
-  stepper.reset_current();
-
-  // we cannot simply iterate over the next_instances array, since the array might mutate
-  // during looping (since objects can trigger spawned objects, etc.) for this reason, create
-  // a copy of the array and iterate over that
-
   const auto handle = [&](data_staging::shape_t& abstract_shape, data_staging::meta& meta) {
-    auto instance_uid = meta.unique_id();
-    // MARK
-    auto find = intermediate_map.find(instance_uid);
-    if (find == intermediate_map.end()) {
-      return;
+    if (meta.level() >= 0) {
+      if (stack.size() <= meta.level()) {
+        stack.emplace_back(abstract_shape);
+      } else {
+        stack[meta.level()] = std::ref(abstract_shape);
+      }
     }
-    // auto intermediate_instance = find->second;
-
-    // auto motion_blur = !i.has_field(next_instance, "motion_blur") || i.boolean(next_instance, "motion_blur");
-
-    // if (!motion_blur) {
-    // i.set_field(next_instance, "steps", v8::Number::New(isolate, 1));
-    // } else {
-    double dist = 1;  // TODO: implement new version of: get_max_travel_of_object(i, next_instances,
-                      // intermediate_instance, next_instance);
-    if (dist > max_dist_found) {
-      max_dist_found = dist;
-    }
-    auto steps = update_steps(dist);
-
-    // TODO: why is this recorded_steps static
-    // experimentally put this here for now
-    static std::unordered_map<int64_t, int> recorded_steps;
-
-    if (attempt == 1) {
-      meta.set_distance(dist);
-      meta.set_steps(steps);
-      recorded_steps[instance_uid] = steps;
-    } else if (attempt > 1) {
-      meta.set_steps(recorded_steps[instance_uid]);
-    }
+    handle_rotations(i, abstract_shape, scene_shapes_next[scenesettings.current_scene_next]);
     handle_collisions(i, abstract_shape, scene_shapes_next[scenesettings.current_scene_next]);
     handle_gravity(i, abstract_shape, scene_shapes_next[scenesettings.current_scene_next]);
   };
+  stack.clear();
   for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& c) {
@@ -1073,9 +1048,17 @@ void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::
                                 if (cascade_out.type() == cascade_type::start) {
                                   other_line->line_start_ref().position_ref().x = c.location_ref().position_cref().x;
                                   other_line->line_start_ref().position_ref().y = c.location_ref().position_cref().y;
+                                  other_line->transitive_line_start_ref().position_ref().x =
+                                      c.transitive_location_ref().position_cref().x;
+                                  other_line->transitive_line_start_ref().position_ref().y =
+                                      c.transitive_location_ref().position_cref().y;
                                 } else if (cascade_out.type() == cascade_type::end) {
                                   other_line->line_end_ref().position_ref().x = c.location_ref().position_cref().x;
                                   other_line->line_end_ref().position_ref().y = c.location_ref().position_cref().y;
+                                  other_line->transitive_line_end_ref().position_ref().x =
+                                      c.transitive_location_ref().position_cref().x;
+                                  other_line->transitive_line_end_ref().position_ref().y =
+                                      c.transitive_location_ref().position_cref().y;
                                 }
                               }
                             }
@@ -1085,6 +1068,183 @@ void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::
                           }},
                abstract_shape);
   }
+}
+
+void native_generator::update_object_distances() {
+  stepper.reset_current();
+  const auto handle = [&](data_staging::shape_t& abstract_shape, data_staging::meta& meta) {
+    auto instance_uid = meta.unique_id();
+    // MARK
+    auto find = intermediate_map.find(instance_uid);
+    if (find == intermediate_map.end()) {
+      return;
+    }
+    double dist = 1;  // TODO: implement new version of: get_max_travel_of_object
+    if (dist > max_dist_found) {
+      max_dist_found = dist;
+    }
+    auto steps = update_steps(dist);
+
+    static std::unordered_map<int64_t, int> recorded_steps;
+
+    if (attempt == 1) {
+      meta.set_distance(dist);
+      meta.set_steps(steps);
+      recorded_steps[instance_uid] = steps;
+    } else if (attempt > 1) {
+      meta.set_steps(recorded_steps[instance_uid]);
+    }
+  };
+  for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
+    std::visit(overloaded{[](std::monostate) {},
+                          [&](data_staging::circle& c) {
+                            handle(abstract_shape, c.meta_ref());
+                          },
+                          [&](data_staging::line& l) {
+                            handle(abstract_shape, l.meta_ref());
+                          }},
+               abstract_shape);
+  }
+}
+
+void native_generator::handle_rotations(v8_interact& i,
+                                        data_staging::shape_t& shape,
+                                        std::vector<data_staging::shape_t>& shapes) {
+  auto meta_callback = [&]<typename T>(T& shape, auto callback) {
+    std::visit(overloaded{[](std::monostate) {},
+                          [&](data_staging::circle& c) {
+                            callback(c);
+                          },
+                          [&](data_staging::line& l) {
+                            callback(l);
+                          }},
+               shape);
+  };
+
+  data::coord pos;   // X, Y
+  data::coord pos2;  // X2, Y2.
+  data::coord parent;
+  data::coord pos_for_parent;  // X, Y of circles or middle point of lines
+
+  const auto handle = [&]<typename T>(data_staging::shape_t abstract_shape,
+                                      T concrete_shape,
+                                      data_staging::meta& meta,
+                                      data_staging::generic& gen) {
+    double angle = gen.angle();
+    for (size_t i = 0; i <= meta.level(); i++) {
+      auto& parent_shape = stack[i];
+      meta_callback(parent_shape.get(), [&]<typename TP>(TP& parent_shape) {
+        data::coord current;
+        if constexpr (std::is_same_v<TP, data_staging::circle>) {
+          current = {parent_shape.location_ref().position_ref().x, parent_shape.location_ref().position_ref().y};
+        } else if constexpr (std::is_same_v<TP, data_staging::line>) {
+          current = {parent_shape.line_start_ref().position_ref().x, parent_shape.line_start_ref().position_ref().y};
+        }
+
+        // X2, Y2, and centerX, centerY, for lines
+        data::coord current2;
+        data::coord current_center;
+        if constexpr (std::is_same_v<TP, data_staging::line>) {
+          current2 =
+              data::coord{parent_shape.line_end_ref().position_ref().x, parent_shape.line_end_ref().position_ref().y};
+          // for lines current is middle of the line
+          current_center.x = ((current.x - current2.x) / 2) + current2.x;
+          current_center.y = ((current.y - current2.y) / 2) + current2.y;
+        }
+
+        // for now, let's go for the most intuitive choice
+        pos.add(current);
+
+        if constexpr (std::is_same_v<TP, data_staging::line>) {
+          pos_for_parent.add(current_center);
+          pos2.add(current2);
+        } else {
+          pos_for_parent.add(current);
+        }
+
+        // was this correct?
+        double current_angle = parent_shape.generic_ref().angle();
+
+        // total angle, cumulative no matter what
+        // why would this shit be cumulative?
+        if (!std::isnan(current_angle)) angle /*+*/ = current_angle;
+
+        if (angle != 0.) {
+          if constexpr (std::is_same_v<T, data_staging::line>) {
+            // current angle + angle with parent
+            auto angle1 = angle + get_angle(parent.x, parent.y, pos2.x, pos2.y);
+            while (angle1 > 360.) angle1 -= 360.;
+            auto rads = angle1 * M_PI / 180.0;
+            auto ratio = 1.0;
+            // rotates around its center
+            auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
+            auto move = dist * ratio * -1;
+            if (false) {
+              // auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
+              // auto move = dist * ratio * -1;
+              pos.x = parent.x + (cos(rads) * move) + current_center.x;
+              pos.y = parent.y + (sin(rads) * move) + current_center.y;
+              pos2.x = parent.x - (cos(rads) * move) + current_center.x;
+              pos2.y = parent.y - (sin(rads) * move) + current_center.y;
+            }
+            // rotates in length
+            if (true) {
+              dist = get_distance(current.x, current.y, current2.x, current2.y);
+              move = dist * ratio * -1;
+              // pos.x = parent.x + (cos(rads) * move);
+              // pos.y = parent.y + (sin(rads) * move);
+              pos2.x = parent.x + (cos(rads) * move);
+              pos2.y = parent.y + (sin(rads) * move);
+            }
+            // unsure
+            pos_for_parent.x = parent.x + (cos(rads) * move);
+            pos_for_parent.y = parent.y + (sin(rads) * move);
+          } else {
+            // current angle + angle with parent
+            auto angle1 = angle + get_angle(parent.x, parent.y, pos.x, pos.y);
+            while (angle1 > 360.) angle1 -= 360.;
+            auto rads = angle1 * M_PI / 180.0;
+            auto ratio = 1.0;
+            // auto dist = get_distance(0, 0, current.x, current.y);
+            auto dist = get_distance(pos.x, pos.y, parent.x, parent.y);
+            auto move = dist * ratio * -1;
+            pos.x = parent.x + (cos(rads) * move);
+            pos.y = parent.y + (sin(rads) * move);
+            pos_for_parent = pos;
+          }
+        }
+        // now we can update the parent for the next level we're about to handle
+        parent = pos_for_parent;
+      });
+    }
+  };
+  std::visit(overloaded{[](std::monostate) {},
+                        [&](data_staging::circle& c) {
+                          handle(shape, c, c.meta_ref(), c.generic_ref());
+                          c.transitive_location_ref().position_ref().x = pos.x;
+                          c.transitive_location_ref().position_ref().y = pos.y;
+                        },
+                        [&](data_staging::line& l) {
+                          handle(shape, l, l.meta_ref(), l.generic_ref());
+                          bool skip_start = false, skip_end = false;
+                          for (const auto& cascade_in : l.cascades_in()) {
+                            if (cascade_in.type() == cascade_type::start) {
+                              skip_start = true;
+                            }
+                            if (cascade_in.type() == cascade_type::end) {
+                              skip_end = true;
+                            }
+                          }
+                          if (!skip_start) {
+                            l.transitive_line_start_ref().position_ref().x = pos.x;
+                            l.transitive_line_start_ref().position_ref().y = pos.y;
+                          }
+                          if (!skip_end) {
+                            l.transitive_line_end_ref().position_ref().x = pos2.x;
+                            l.transitive_line_end_ref().position_ref().y = pos2.y;
+                          }
+                        }},
+             shape);
 }
 
 void native_generator::handle_collisions(v8_interact& i,
@@ -1865,28 +2025,18 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
                    new_shape.type = data::shape_type::circle;
                    new_shape.radius = shape.radius();
                    new_shape.radius_size = shape.radius_size();
-
-                   auto loc = add_vector(shape.meta().parent_location_cref(), shape.location_ref().position_cref());
-                   // double transitive_x = shape.location().position_cref().x;
-                   // double transitive_y = shape.location().position_cref().y;
-                   // new_shape.time = time;
-                   new_shape.x = loc.x;
-                   new_shape.y = loc.y;
-
+                   new_shape.x = shape.transitive_location_ref().position_cref().x;
+                   new_shape.y = shape.transitive_location_ref().position_cref().y;
                    initialize(shape);
                  },
                  [&](data_staging::line& shape) {
                    new_shape.type = data::shape_type::line;
                    new_shape.radius = 0;
                    new_shape.radius_size = shape.line_width();
-
-                   auto loc = add_vector(shape.meta().parent_location_cref(), shape.line_start_ref().position_cref());
-                   auto loc2 = add_vector(shape.meta().parent_location_cref(), shape.line_end_ref().position_cref());
-                   new_shape.x = loc.x;
-                   new_shape.y = loc.y;
-                   new_shape.x2 = loc2.x;
-                   new_shape.y2 = loc2.y;
-
+                   new_shape.x = shape.transitive_line_start_ref().position_cref().x;
+                   new_shape.y = shape.transitive_line_start_ref().position_cref().y;
+                   new_shape.x2 = shape.transitive_line_end_ref().position_cref().x;
+                   new_shape.y2 = shape.transitive_line_end_ref().position_cref().y;
                    initialize(shape);
                  },
              },
@@ -2017,25 +2167,19 @@ native_generator::_instantiate_object_from_scene(
   int64_t current_level = 0;
   auto parent_object_ns = std::string("");
   int64_t parent_uid = -1;
-  vector2d parent_location(0, 0);
 
   if (parent_object) {
     std::visit(overloaded{
                    [](std::monostate) {},
                    [&](data_staging::circle& cc) {
-                     current_level = cc.meta().level();
+                     current_level = cc.meta().level() + 1;
                      parent_object_ns = cc.meta().namespace_name();
                      parent_uid = cc.meta().unique_id();
-                     parent_location = cc.location_ref().position_cref();
-                     parent_location = add_vector(parent_location, cc.meta_ref().parent_location_cref());
                    },
                    [&](data_staging::line& cc) {
-                     current_level = cc.meta().level();
+                     current_level = cc.meta().level() + 1;
                      parent_object_ns = cc.meta().namespace_name();
                      parent_uid = cc.meta().unique_id();
-                     parent_location =
-                         middle_of_vectors(cc.line_start_ref().position_cref(), cc.line_end_ref().position_cref());
-                     parent_location = add_vector(parent_location, cc.meta_ref().parent_location_cref());
                    },
                },
                *parent_object);
@@ -2063,7 +2207,9 @@ native_generator::_instantiate_object_from_scene(
   // TODO: in the future we will simply instantiate this directly, for now, to save some refactoring time
   // we will map, to see if the proof of concept works
 
+  // TODO: try to use a raw pointer, see if it improves performance
   std::optional<std::reference_wrapper<data_staging::shape_t>> shape_ref;
+  // data_staging::shape_t* shape_ref = nullptr;
 
   const auto handle = [&]<typename T>(T& c) -> data_staging::shape_t& {
     // we buffer instantiated objects, and will insert in the array later.
@@ -2073,14 +2219,16 @@ native_generator::_instantiate_object_from_scene(
 
   const auto type = i.str(object_definitions_map[object_id], "type", "");
 
-  const auto initialize = [&](auto& c, auto& bridge) {
-    c.meta_ref().set_level(current_level + 1);
+  const auto initialize = [&]<typename T>(T& c, auto& bridge) {
+    c.meta_ref().set_level(current_level);
     c.meta_ref().set_parent_uid(parent_uid);
-    c.meta_ref().set_parent_location(parent_location);
     c.behavior_ref().set_collision_group(i.str(instance, "collision_group", ""));
     c.behavior_ref().set_gravity_group(i.str(instance, "gravity_group", ""));
     c.toroidal_ref().set_group(i.str(instance, "toroidal", ""));
+    c.generic_ref().set_angle(i.double_number(instance, "angle", 0));
+    c.generic_ref().set_opacity(i.double_number(instance, "opacity", 1));
     c.generic_ref().set_mass(i.double_number(instance, "mass", 1));
+    c.generic_ref().set_scale(i.double_number(instance, "scale", 1));
     if (i.has_field(instance, "gradient")) {
       c.styling_ref().set_gradient(i.str(instance, "gradient"));
     }
@@ -2105,15 +2253,21 @@ native_generator::_instantiate_object_from_scene(
       }
     }
 
+    // the handle function returns a ref, which is all fine, but recursively init
+    // may actually invalidate this ref with other inserts.
+    shape_ref = std::ref(handle(c));
+
+    // call init last, so that objects exist when using 'this' inside init()
     if (bridge) {
-      bridge->push_object(c);
+      // take a copy as the reference might point to a non-existant instance at some point,
+      // for example when other cascading 'init's insert new objects.
+      auto copy = std::get<T>((*shape_ref).get());
+      bridge->push_object(copy);
       i.call_fun(object_definitions_map[object_id],  // object definition
                  bridge->instance(),                 // bridged object is "this"
                  "init");
       bridge->pop_object();
     }
-
-    shape_ref = std::ref(handle(c));
   };
 
   if (type == "circle" || type.empty() /* treat every "non-type" as circles too */) {

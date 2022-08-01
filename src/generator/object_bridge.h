@@ -32,6 +32,11 @@ public:
   void pop_object();
 
   int64_t get_level() const;
+  int64_t get_unique_id() const;
+  double get_angle() const;
+  double get_opacity() const;
+  double get_mass() const;
+  double get_scale() const;
   double get_x() const;
   double get_y() const;
   double get_z() const;
@@ -44,6 +49,11 @@ public:
   double get_radius() const;
   double get_radius_size() const;
 
+  void set_unique_id(int64_t unique_id);
+  void set_angle(double angle);
+  void set_opacity(double opacity);
+  void set_mass(double mass);
+  void set_scale(double scale);
   void set_x(double x);
   void set_y(double y);
   void set_z(double z);
