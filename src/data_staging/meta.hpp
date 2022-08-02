@@ -16,6 +16,7 @@ private:
   int64_t unique_id_;
   int64_t parent_uid_id_ = -1;
   int64_t level_;
+  double time_;
 
   // used for rendering purposes
   double dist_ = 0;
@@ -25,6 +26,14 @@ public:
   meta() = default;
 
   meta(std::string id, int64_t unique_id) : id_(std::move(id)), unique_id_(unique_id) {}
+
+  double get_time() const {
+    return time_;
+  }
+
+  void set_time(double time) {
+    time_ = time;
+  }
 
   const std::string& namespace_name() const {
     return namespace_;

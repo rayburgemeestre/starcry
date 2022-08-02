@@ -228,4 +228,8 @@ private:
   void copy_gradient_from_object_to_shape(T& source_object,
                                           data::shape& destination_shape,
                                           std::unordered_map<std::string, data::gradient>& known_gradients_map);
+  template <typename T>
+  void copy_texture_from_object_to_shape(T& source_object,
+                                         data::shape& destination_shape,
+                                         std::unordered_map<std::string, data::texture>& known_textures_map);
 };

@@ -17,9 +17,10 @@ namespace data_staging {
 class styling {
 private:
   std::string gradient_;
+  std::string texture_;
   std::vector<std::tuple<double, std::string>> gradients_;
   std::shared_ptr<v8::Persistent<v8::Array>> gradients_obj_ = nullptr;
-  std::vector<std::pair<double, data::texture>> textures_;
+  std::vector<std::tuple<double, std::string>> textures_;
   data::blending_type blending_type_ = data::blending_type::normal;
 
 public:
@@ -59,6 +60,18 @@ public:
     i.set_field(keyvalue, size_t(1), v8pp::to_v8(i.get_isolate(), color));
     i.call_fun(gradients_obj_->Get(i.get_isolate()), "push", keyvalue);
     gradients_.emplace_back(value, color);
+  }
+
+  std::string texture() const {
+    return texture_;
+  }
+
+  void set_texture(std::string_view texture) {
+    texture_ = texture;
+  }
+
+  const decltype(textures_)& get_textures_cref() const {
+    return textures_;
   }
 
   void commit(v8::Persistent<v8::Object>& instance) {

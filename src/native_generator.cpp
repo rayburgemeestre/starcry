@@ -1512,6 +1512,7 @@ void native_generator::update_time(v8_interact& i,
   const auto time_settings = get_time(scenesettings);
   const auto execute = [&](double scene_time) {
     // Are these still needed?? (EDIT: I don't think it's used)
+    // EDIT: during texture rendering we query the shape for the time
     // i.set_field(instance, "__time__", v8::Number::New(i.get_isolate(), scene_time));
     // i.set_field(instance, "__global_time__", v8::Number::New(i.get_isolate(), time_settings.time));
     // i.set_field(instance, "__elapsed__", v8::Number::New(i.get_isolate(), time_settings.elapsed));
@@ -1526,6 +1527,7 @@ void native_generator::update_time(v8_interact& i,
                      [&](data_staging::circle& c) {
                        if (object_bridge_circle) {
                          // TODO: check if the object has an "time" function, or we can just skip this entire thing
+                         c.meta_ref().set_time(scene_time);
                          object_bridge_circle->push_object(c);
                          i.call_fun(object_definition,
                                     object_bridge_circle->instance(),
@@ -1539,6 +1541,7 @@ void native_generator::update_time(v8_interact& i,
                      },
                      [&](data_staging::line& l) {
                        // TODO: check if the object has an "time" function, or we can just skip this entire thing
+                       l.meta_ref().set_time(scene_time);
                        object_bridge_line->push_object(l);
                        i.call_fun(object_definition,
                                   object_bridge_line->instance(),
@@ -1902,7 +1905,7 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
     // i.integer_number(instance, "blending_type")
     //              : data::blending_type::normal;
     auto scale = shape.generic_cref().scale();  // i.has_field(instance, "scale") ? i.double_number(instance, "scale")
-                                           // : 1.0; auto unique_id = i.integer_number(instance, "unique_id");
+                                                // : 1.0; auto unique_id = i.integer_number(instance, "unique_id");
 
     auto shape_opacity = shape.generic_cref().opacity();
     // auto motion_blur = i.boolean(instance, "motion_blur");
@@ -1924,6 +1927,7 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
 
     // temp
     new_shape.level = level;
+    new_shape.time = shape.meta_cref().get_time();
     // new_shape.dist = dist;
 
     new_shape.gradients_.clear();
@@ -1931,6 +1935,7 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
     std::string gradient_id_str;
 
     copy_gradient_from_object_to_shape(shape, new_shape, gradients);
+    copy_texture_from_object_to_shape(shape, new_shape, textures);
 
     // temp hack
     std::string namespace_ = "";
@@ -2230,6 +2235,9 @@ native_generator::_instantiate_object_from_scene(
     c.generic_ref().set_opacity(i.double_number(instance, "opacity", 1));
     c.generic_ref().set_mass(i.double_number(instance, "mass", 1));
     c.generic_ref().set_scale(i.double_number(instance, "scale", 1));
+    if (i.has_field(instance, "texture")) {
+      c.styling_ref().set_texture(i.str(instance, "texture"));
+    }
     if (i.has_field(instance, "gradient")) {
       c.styling_ref().set_gradient(i.str(instance, "gradient"));
     }
@@ -2451,5 +2459,26 @@ void native_generator::copy_gradient_from_object_to_shape(
   }
   for (const auto& [opacity, gradient_id] : source_object.styling_ref().get_gradients_cref()) {
     destination_shape.gradients_.emplace_back(opacity, known_gradients_map[gradient_id]);
+  }
+}
+
+template <typename T>
+void native_generator::copy_texture_from_object_to_shape(
+    T& source_object,
+    data::shape& destination_shape,
+    std::unordered_map<std::string, data::texture>& known_textures_map) {
+  std::string namespace_ = source_object.meta_cref().namespace_name();
+  std::string texture_id = namespace_ + source_object.styling_ref().texture();
+
+  if (!texture_id.empty()) {
+    if (destination_shape.textures.empty()) {
+      if (known_textures_map.find(texture_id) != known_textures_map.end()) {
+        destination_shape.textures.emplace_back(1.0, known_textures_map[texture_id]);
+      }
+    }
+  }
+
+  for (const auto& [opacity, texture_id] : source_object.styling_ref().get_textures_cref()) {
+    destination_shape.textures.emplace_back(opacity, known_textures_map[texture_id]);
   }
 }

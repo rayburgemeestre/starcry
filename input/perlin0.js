@@ -33,7 +33,7 @@ _ = {
     'obj': {
       'type': 'circle',
       'gradient': 'white1',
-      //'texture': 'clouds1',
+      'texture': 'clouds1',
       'radius': 0,
       'radiussize': 100,
       'props': {},
@@ -84,12 +84,13 @@ _ = {
   },
   'video': {
     'fps': 25,
-    'width': 1920 / 4,
-    'height': 1920 / 4,
+    'width': 1920,
+    'height': 1920,
     'scale': 1.,
     'rand_seed': 1,
     'granularity': 100,
     'update_positions': false,
+    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
   },
   'scenes': [{
     'name': 'scene1',
