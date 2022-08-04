@@ -25,14 +25,16 @@ void object_bridge<T>::pop_object() {
     });
     // commit gradients data
   }
-  if (gradients_accessed_) {
-    // shape_stack.back()->styling_ref().set_gradients_dirty();
-    auto& defs = this->generator_->get_object_definitions_ref();
-    auto obj_id = shape_stack.back()->meta_cref().id();
-    auto find = defs.find(obj_id);
-    if (find != defs.end()) {
-      auto& def = find->second;
-      shape_stack.back()->styling_ref().commit(def);
+  if constexpr (!std::is_same_v<T, data_staging::script>) {
+    if (gradients_accessed_) {
+      // shape_stack.back()->styling_ref().set_gradients_dirty();
+      auto& defs = this->generator_->get_object_definitions_ref();
+      auto obj_id = shape_stack.back()->meta_cref().id();
+      auto find = defs.find(obj_id);
+      if (find != defs.end()) {
+        auto& def = find->second;
+        shape_stack.back()->styling_ref().commit(def);
+      }
     }
   }
   properties_accessed_ = false;
@@ -72,14 +74,23 @@ v8::Local<v8::Object> object_bridge<T>::get_properties_local_ref() const {
 
 template <typename T>
 v8::Local<v8::Array> object_bridge<T>::get_gradients_local_ref() const {
-  gradients_accessed_ = true;
-  return shape_stack.back()->styling_ref().get_gradients_obj();
+  if constexpr (std::is_same_v<T, data_staging::script>) {
+    return v8::Array::New(v8::Isolate::GetCurrent(), 0);
+  } else {
+    gradients_accessed_ = true;
+    return shape_stack.back()->styling_ref().get_gradients_obj();
+  }
 }
 
 template <typename T>
 std::vector<std::tuple<double, std::string>>& object_bridge<T>::get_gradients_ref() const {
-  gradients_accessed_ = true;
-  return shape_stack.back()->styling_ref().get_gradients_ref();
+  if constexpr (std::is_same_v<T, data_staging::script>) {
+    static std::vector<std::tuple<double, std::string>> empty;
+    return empty;
+  } else {
+    gradients_accessed_ = true;
+    return shape_stack.back()->styling_ref().get_gradients_ref();
+  }
 }
 
 // template <typename T>
@@ -94,3 +105,4 @@ v8::Persistent<v8::Object>& object_bridge<T>::instance() {
 
 template class object_bridge<data_staging::circle>;
 template class object_bridge<data_staging::line>;
+template class object_bridge<data_staging::script>;

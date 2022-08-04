@@ -43,6 +43,10 @@ public:
     return id_;
   }
 
+  void set_id(const std::string& id) {
+    id_ = id;
+  }
+
   int64_t unique_id() const {
     return unique_id_;
   }
@@ -80,6 +84,10 @@ public:
 
   void set_unique_id(int64_t unique_id) {
     unique_id_ = unique_id;
+  }
+
+  void set_namespace(std::string namespace_name) {
+    this->namespace_ = namespace_name;
   }
 };
 

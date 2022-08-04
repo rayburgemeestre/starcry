@@ -55,6 +55,7 @@ private:
   std::vector<std::vector<data_staging::shape_t>> scene_shapes_intermediate;
   std::shared_ptr<object_bridge<data_staging::circle>> object_bridge_circle = nullptr;
   std::shared_ptr<object_bridge<data_staging::line>> object_bridge_line = nullptr;
+  std::shared_ptr<object_bridge<data_staging::script>> object_bridge_script = nullptr;
   std::vector<std::reference_wrapper<data_staging::shape_t>> stack;
 
   uint32_t frame_number = 0;
@@ -123,8 +124,9 @@ public:
   void init_object_definitions();
 
   void instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
-                                                     data_staging::shape_t* parent_object = nullptr);
-  void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance);
+                                                     const data_staging::shape_t* parent_object = nullptr);
+  void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance,
+                                             const data_staging::shape_t& created_shape);
   void set_scene(size_t scene);
   void set_scene_sub_object(scene_settings& scenesettings, size_t scene);
   void fast_forward(int frame_of_interest);
@@ -138,7 +140,7 @@ public:
   void update_object_toroidal(v8_interact& i, data_staging::toroidal& toroidal_data, double& x, double& y);
   void update_object_distances();
   void update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video);
-  void handle_rotations(v8_interact& i, data_staging::shape_t& instance, std::vector<data_staging::shape_t>& shapes);
+  void handle_rotations(v8_interact& s, data_staging::shape_t& instance, std::vector<data_staging::shape_t>& shapes);
   void handle_collisions(v8_interact& i, data_staging::shape_t& instance, std::vector<data_staging::shape_t>& shapes);
   void handle_collision(v8_interact& i, data_staging::circle& instance, data_staging::circle& instance2);
   void handle_gravity(v8_interact& i, data_staging::shape_t& instance, std::vector<data_staging::shape_t>& shapes);
@@ -210,10 +212,11 @@ private:
   std::map<int64_t, std::pair<double, double>> cached_xy;
   void fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t uid, double& x, double& y);
 
-  std::pair<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>> _instantiate_object_from_scene(
+  std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>
+  _instantiate_object_from_scene(
       v8_interact& i,
-      v8::Local<v8::Object>& scene_object,  // object description from scene to be instantiated
-      data_staging::shape_t* parent_object  // it's optional parent
+      v8::Local<v8::Object>& scene_object,        // object description from scene to be instantiated
+      const data_staging::shape_t* parent_object  // it's optional parent
   );
   void _instantiate_object(v8_interact& i,
                            std::optional<v8::Local<v8::Object>> scene_obj,
