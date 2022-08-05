@@ -56,6 +56,7 @@ private:
   std::shared_ptr<object_bridge<data_staging::circle>> object_bridge_circle = nullptr;
   std::shared_ptr<object_bridge<data_staging::line>> object_bridge_line = nullptr;
   std::shared_ptr<object_bridge<data_staging::script>> object_bridge_script = nullptr;
+  std::shared_ptr<object_bridge<data_staging::text>> object_bridge_text = nullptr;
   std::vector<std::reference_wrapper<data_staging::shape_t>> stack;
 
   uint32_t frame_number = 0;
@@ -157,7 +158,7 @@ public:
                       double constrain_dist_min,
                       double constrain_dist_max);
   void update_time(v8_interact& i,
-                   data_staging::shape_t& instance,
+                   data_staging::shape_t& object_bridge,
                    const std::string& instance_id,
                    scene_settings& scenesettings);
   int update_steps(double dist);

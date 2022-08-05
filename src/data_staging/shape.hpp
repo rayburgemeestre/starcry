@@ -11,6 +11,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include "data_staging/circle.hpp"
 #include "data_staging/line.hpp"
 #include "data_staging/script.hpp"
+#include "data_staging/text.hpp"
 
 template <class... Ts>
 struct overloaded : Ts... {
@@ -20,5 +21,6 @@ template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace data_staging {
-using shape_t = std::variant<std::monostate, data_staging::circle, data_staging::line, data_staging::script>;
+using shape_t =
+    std::variant<std::monostate, data_staging::circle, data_staging::line, data_staging::text, data_staging::script>;
 }

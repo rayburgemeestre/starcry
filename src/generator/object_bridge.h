@@ -48,6 +48,10 @@ public:
   double get_z2() const;
   double get_radius() const;
   double get_radius_size() const;
+  const std::string& get_text() const;
+  double get_text_size() const;
+  const std::string& get_text_align() const;
+  bool get_text_fixed() const;
 
   void set_unique_id(int64_t unique_id);
   void set_angle(double angle);
@@ -65,6 +69,10 @@ public:
   void set_velocity(double vel);
   void set_radius(double radius);
   void set_radius_size(double radiussize);
+  void set_text(const std::string& text);
+  void set_text_size(double size);
+  void set_text_align(const std::string& align);
+  void set_text_fixed(bool fixed);
 
   v8::Persistent<v8::Object>& get_properties_ref() const;
   v8::Local<v8::Object> get_properties_local_ref() const;

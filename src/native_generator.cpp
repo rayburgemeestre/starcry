@@ -31,8 +31,8 @@
 #include "shapes/position.h"
 #include "shapes/rectangle.h"
 
-void meta_visit(auto& shape, auto&& handle_circle, auto&& handle_line, auto&& handle_script) {
-  std::visit(overloaded{[](std::monostate) {}, handle_circle, handle_line, handle_script}, shape);
+void meta_visit(auto& shape, auto&& handle_circle, auto&& handle_line, auto&& handle_text, auto&& handle_script) {
+  std::visit(overloaded{[](std::monostate) {}, handle_circle, handle_line, handle_text, handle_script}, shape);
 }
 
 template <typename T>
@@ -45,7 +45,28 @@ void meta_callback(T& shape, auto&& callback) {
       [&](data_staging::line& l) {
         callback(l);
       },
+      [&](data_staging::text& t) {
+        callback(t);
+      },
       [&](data_staging::script& s) {
+        callback(s);
+      });
+}
+
+template <typename T>
+void meta_callback(const T& shape, auto&& callback) {
+  meta_visit(
+      shape,
+      [&](const data_staging::circle& c) {
+        callback(c);
+      },
+      [&](const data_staging::line& l) {
+        callback(l);
+      },
+      [&](const data_staging::text& t) {
+        callback(t);
+      },
+      [&](const data_staging::script& s) {
         callback(s);
       });
 }
@@ -182,6 +203,7 @@ void native_generator::init_user_script() {
   v8::HandleScope hs(context->context->isolate());
   object_bridge_circle = std::make_shared<object_bridge<data_staging::circle>>(this);
   object_bridge_line = std::make_shared<object_bridge<data_staging::line>>(this);
+  object_bridge_text = std::make_shared<object_bridge<data_staging::text>>(this);
   object_bridge_script = std::make_shared<object_bridge<data_staging::script>>(this);
 }
 
@@ -828,7 +850,7 @@ void native_generator::update_object_positions(v8_interact& i, v8::Local<v8::Obj
 
   for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
     meta_callback(abstract_shape, [&]<typename T>(T& shape) {
-      if constexpr (std::is_same_v<T, data_staging::circle>) {
+      if constexpr (std::is_same_v<T, data_staging::circle> || std::is_same_v<T, data_staging::text>) {
         // if (is_script) {
         //   // TODO: this strategy does not support nested script objects
         //   // TODO: we need to use stack for that
@@ -871,24 +893,26 @@ void native_generator::update_object_positions(v8_interact& i, v8::Local<v8::Obj
         // For now we only care about circles
         // if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create
         // property of course */) {
-        if (shape.radius_size() < 1000 /* todo create property of course */) {
-          // TODO:
-          update_object_toroidal(i, shape.toroidal_ref(), x, y);
-          const auto collision_group = shape.behavior_cref().collision_group();
-          const auto gravity_group = shape.behavior_cref().gravity_group();
-          if (!collision_group.empty()) {
-            qts.try_emplace(collision_group,
-                            quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
-            auto x_copy = x;
-            auto y_copy = y;
-            // TODO: fix
-            //  fix_xy(i, instance, unique_id, x_copy, y_copy);
-            qts[collision_group].insert(point_type(position(x_copy, y_copy), shape.meta_cref().unique_id()));
-          }
-          if (!gravity_group.empty()) {
-            qts_gravity.try_emplace(gravity_group,
-                                    quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
-            qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
+        if constexpr (std::is_same_v<T, data_staging::circle>) {
+          if (shape.radius_size() < 1000 /* todo create property of course */) {
+            // TODO:
+            update_object_toroidal(i, shape.toroidal_ref(), x, y);
+            const auto collision_group = shape.behavior_cref().collision_group();
+            const auto gravity_group = shape.behavior_cref().gravity_group();
+            if (!collision_group.empty()) {
+              qts.try_emplace(collision_group,
+                              quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
+              auto x_copy = x;
+              auto y_copy = y;
+              // TODO: fix
+              //  fix_xy(i, instance, unique_id, x_copy, y_copy);
+              qts[collision_group].insert(point_type(position(x_copy, y_copy), shape.meta_cref().unique_id()));
+            }
+            if (!gravity_group.empty()) {
+              qts_gravity.try_emplace(
+                  gravity_group, quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
+              qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
+            }
           }
         }
         shape.location_ref().position_ref().x = x;
@@ -913,22 +937,6 @@ void native_generator::insert_newly_created_objects() {
 
   dest.reserve(dest.size() + source.size());
 
-  const auto get_meta = [](auto& shape) {
-    data_staging::meta ret;
-    std::visit(overloaded{[](std::monostate) {},
-                          [&](data_staging::circle& shape) {
-                            ret = shape.meta_cref();
-                          },
-                          [&](data_staging::line& shape) {
-                            ret = shape.meta_cref();
-                          },
-                          [&](data_staging::script& shape) {
-                            ret = shape.meta_cref();
-                          }},
-               shape);
-    return ret;
-  };
-
   auto handle = [&](auto& shape, const data_staging::meta& meta) {
     if (meta.parent_uid() == -1 /* no parent */) {
       dest.emplace_back(std::move(shape));
@@ -940,9 +948,12 @@ void native_generator::insert_newly_created_objects() {
       bool searching = false;
       for (size_t j = 0; j < dest.size(); j++) {
         auto& elem = dest[j];
-        auto elem_meta = get_meta(elem);  // this is pretty inefficient, perhaps precalculate for all once
-        const auto uid = elem_meta.unique_id();
-        const auto level = elem_meta.level();
+        std::optional<std::reference_wrapper<const data_staging::meta>> elem_meta;
+        meta_callback(elem, [&]<typename TP>(TP& shape) {
+          elem_meta = shape.meta_cref();
+        });
+        const auto uid = elem_meta->get().unique_id();
+        const auto level = elem_meta->get().level();
         if (searching && level <= found_level) {
           insert_offset = j;
           break;
@@ -983,17 +994,9 @@ void native_generator::insert_newly_created_objects() {
     }
   };
   for (auto& abstract_shape : source) {
-    std::visit(overloaded{[](std::monostate) {},
-                          [&](data_staging::circle& shape) {
-                            handle(abstract_shape, shape.meta_cref());
-                          },
-                          [&](data_staging::line& shape) {
-                            handle(abstract_shape, shape.meta_cref());
-                          },
-                          [&](data_staging::script& shape) {
-                            handle(abstract_shape, shape.meta_cref());
-                          }},
-               abstract_shape);
+    meta_callback(abstract_shape, [&]<typename TP>(TP& shape) {
+      handle(abstract_shape, shape.meta_cref());
+    });
   }
   source.clear();
   create_new_mappings();
@@ -1074,6 +1077,9 @@ void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::
                           [&](data_staging::line& l) {
                             handle(abstract_shape, l.meta_ref());
                           },
+                          [&](data_staging::text& t) {
+                            handle(abstract_shape, t.meta_ref());
+                          },
                           [&](data_staging::script& s) {
                             handle(abstract_shape, s.meta_ref());
                           }},
@@ -1107,17 +1113,9 @@ void native_generator::update_object_distances() {
     }
   };
   for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
-    std::visit(overloaded{[](std::monostate) {},
-                          [&](data_staging::circle& c) {
-                            handle(abstract_shape, c.meta_ref());
-                          },
-                          [&](data_staging::line& l) {
-                            handle(abstract_shape, l.meta_ref());
-                          },
-                          [&](data_staging::script& l) {
-                            handle(abstract_shape, l.meta_ref());
-                          }},
-               abstract_shape);
+    meta_callback(abstract_shape, [&]<typename TP>(TP& shape) {
+      handle(abstract_shape, shape.meta_ref());
+    });
   }
 }
 
@@ -1250,6 +1248,11 @@ void native_generator::handle_rotations(v8_interact& i,
           l.transitive_line_end_ref().position_ref().y = pos2.y;
         }
       },
+      [&](data_staging::text& t) {
+        handle(shape, t, t.meta_ref(), t.generic_ref());
+        t.transitive_location_ref().position_ref().x = pos.x;
+        t.transitive_location_ref().position_ref().y = pos.y;
+      },
       [&](data_staging::script& s) {
         handle(shape, s, s.meta_ref(), s.generic_ref());
         s.transitive_location_ref().position_ref().x = pos.x;
@@ -1379,6 +1382,9 @@ void native_generator::handle_collision(v8_interact& i,
         [&](data_staging::line& l) {
           handle_time_for_shape(l, object_bridge_line, unique_id2);
         },
+        [&](data_staging::text& t) {
+          handle_time_for_shape(t, object_bridge_text, unique_id2);
+        },
         [&](data_staging::script& s) {
           handle_time_for_shape(s, object_bridge_script, unique_id2);
         });
@@ -1389,6 +1395,9 @@ void native_generator::handle_collision(v8_interact& i,
         },
         [&](data_staging::line& l) {
           handle_time_for_shape(l, object_bridge_line, unique_id);
+        },
+        [&](data_staging::text& t) {
+          handle_time_for_shape(t, object_bridge_text, unique_id);
         },
         [&](data_staging::script& s) {
           handle_time_for_shape(s, object_bridge_script, unique_id);
@@ -1557,18 +1566,18 @@ void native_generator::update_time(v8_interact& i,
     auto find = object_definitions_map.find(instance_id);
     if (find != object_definitions_map.end()) {
       auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
-      auto handle_time_for_shape = [&](auto& c, auto& object_bridge_circle) {
+      auto handle_time_for_shape = [&](auto& c, auto& object_bridge) {
         // TODO: check if the object has an "time" function, or we can just skip this entire thing
         c.meta_ref().set_time(scene_time);
-        object_bridge_circle->push_object(c);
+        object_bridge->push_object(c);
         i.call_fun(object_definition,
-                   object_bridge_circle->instance(),
+                   object_bridge->instance(),
                    "time",
                    scene_time,
                    time_settings.elapsed,
                    scenesettings.current_scene_next,
                    time_settings.time);
-        object_bridge_circle->pop_object();
+        object_bridge->pop_object();
       };
       meta_visit(
           instance,
@@ -1577,6 +1586,9 @@ void native_generator::update_time(v8_interact& i,
           },
           [&](data_staging::line& l) {
             handle_time_for_shape(l, object_bridge_line);
+          },
+          [&](data_staging::text& t) {
+            handle_time_for_shape(t, object_bridge_text);
           },
           [&](data_staging::script& s) {
             handle_time_for_shape(s, object_bridge_script);
@@ -2063,6 +2075,16 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
         new_shape.y2 = shape.transitive_line_end_ref().position_cref().y;
         initialize(shape);
       },
+      [&](data_staging::text& shape) {
+        new_shape.type = data::shape_type::text;
+        new_shape.text = shape.text_cref();
+        new_shape.text_size = shape.text_size();
+        new_shape.align = shape.text_align();
+        new_shape.text_fixed = shape.text_fixed();
+        new_shape.x = shape.transitive_location_ref().position_cref().x;
+        new_shape.y = shape.transitive_location_ref().position_cref().y;
+        initialize(shape);
+      },
       [&](data_staging::script& shape) {
         new_shape.type = data::shape_type::script;
         new_shape.x = shape.transitive_location_ref().position_cref().x;
@@ -2179,23 +2201,11 @@ native_generator::_instantiate_object_from_scene(
   int64_t parent_uid = -1;
 
   if (parent_object) {
-    meta_visit(
-        *parent_object,
-        [&](const data_staging::circle& cc) {
-          current_level = cc.meta_cref().level() + 1;
-          parent_object_ns = cc.meta_cref().namespace_name();
-          parent_uid = cc.meta_cref().unique_id();
-        },
-        [&](const data_staging::line& cc) {
-          current_level = cc.meta_cref().level() + 1;
-          parent_object_ns = cc.meta_cref().namespace_name();
-          parent_uid = cc.meta_cref().unique_id();
-        },
-        [&](const data_staging::script& cc) {
-          current_level = cc.meta_cref().level() + 1;
-          parent_object_ns = cc.meta_cref().namespace_name();
-          parent_uid = cc.meta_cref().unique_id();
-        });
+    meta_callback(*parent_object, [&]<typename T>(const T& cc) {
+      current_level = cc.meta_cref().level() + 1;
+      parent_object_ns = cc.meta_cref().namespace_name();
+      parent_uid = cc.meta_cref().unique_id();
+    });
   }
 
   // lookup the object prototype to be instantiated
@@ -2329,6 +2339,23 @@ native_generator::_instantiate_object_from_scene(
     c.meta_ref().set_namespace(parent_object_ns);
 
     initialize(c, object_bridge_line);
+  } else if (type == "text") {
+    data_staging::text t(object_id,
+                         counter,
+                         vector2d(i.double_number(instance, "x"), i.double_number(instance, "y")),
+                         i.str(instance, "text"),
+                         i.double_number(instance, "text_size"),
+                         i.str(instance, "text_align"),
+                         i.boolean(instance, "text_fixed"));
+
+    t.movement_ref().set_velocity(i.double_number(instance, "vel_x", 0),
+                                  i.double_number(instance, "vel_y", 0),
+                                  i.double_number(instance, "velocity", 0));
+
+    t.meta_ref().set_namespace(parent_object_ns);
+
+    initialize(t, object_bridge_text);
+
   } else if (type == "script") {
     data_staging::script s(
         object_id, counter, vector2d(i.double_number(instance, "x"), i.double_number(instance, "y")));
@@ -2466,6 +2493,10 @@ void native_generator::debug_print_next(const std::string& desc) {
                      shape.movement_line_start_ref(),
                      shape.behavior_ref(),
                      shape.generic_ref());
+        },
+        [&](data_staging::text& shape) {
+          print_meta(
+              shape.meta_ref(), shape.location_ref(), shape.movement_ref(), shape.behavior_ref(), shape.generic_ref());
         },
         [&](data_staging::script& shape) {
           print_meta(
