@@ -1291,7 +1291,7 @@ void native_generator::handle_collisions(v8_interact& i,
         try {
           data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
           if (c2.meta_cref().id() != "balls" && c.meta_cref().unique_id() != c2.meta_cref().unique_id()) {
-            handle_collision(i, c, c2);
+            handle_collision(i, c, c2, shape, shape2.get());
           }
         } catch (std::bad_variant_access const& ex) {
           // only supporting circles for now
@@ -1307,7 +1307,9 @@ void native_generator::handle_collisions(v8_interact& i,
 
 void native_generator::handle_collision(v8_interact& i,
                                         data_staging::circle& instance,
-                                        data_staging::circle& instance2) {
+                                        data_staging::circle& instance2,
+                                        data_staging::shape_t& shape,
+                                        data_staging::shape_t& shape2) {
   auto unique_id = instance.meta_cref().unique_id();
   auto unique_id2 = instance2.meta_cref().unique_id();
   auto last_collide = instance.behavior_ref().last_collide();
@@ -1360,12 +1362,38 @@ void native_generator::handle_collision(v8_interact& i,
   instance.behavior_ref().set_last_collide(unique_id2);
   instance2.behavior_ref().set_last_collide(unique_id);
 
-  // TODO:
-  //  // call 'on collision' event
-  //  auto on = i.get(instance, "on").As<v8::Object>();
-  //  i.call_fun(on, instance, "collide", instance2);
-  //  auto on2 = i.get(instance2, "on").As<v8::Object>();
-  //  i.call_fun(on2, instance2, "collide", instance);
+  // collide callback
+  auto find = object_definitions_map.find(instance.meta_cref().id());
+  if (find != object_definitions_map.end()) {
+    auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
+    auto handle_time_for_shape = [&](auto& c, auto& object_bridge_circle, auto other_unique_id) {
+      object_bridge_circle->push_object(c);
+      i.call_fun(object_definition, object_bridge_circle->instance(), "collide", other_unique_id);
+      object_bridge_circle->pop_object();
+    };
+    meta_visit(
+        shape,
+        [&](data_staging::circle& c) {
+          handle_time_for_shape(c, object_bridge_circle, unique_id2);
+        },
+        [&](data_staging::line& l) {
+          handle_time_for_shape(l, object_bridge_line, unique_id2);
+        },
+        [&](data_staging::script& s) {
+          handle_time_for_shape(s, object_bridge_script, unique_id2);
+        });
+    meta_visit(
+        shape2,
+        [&](data_staging::circle& c) {
+          handle_time_for_shape(c, object_bridge_circle, unique_id);
+        },
+        [&](data_staging::line& l) {
+          handle_time_for_shape(l, object_bridge_line, unique_id);
+        },
+        [&](data_staging::script& s) {
+          handle_time_for_shape(s, object_bridge_script, unique_id);
+        });
+  }
 }
 
 void native_generator::handle_gravity(v8_interact& i,
@@ -2308,6 +2336,8 @@ native_generator::_instantiate_object_from_scene(
     s.meta_ref().set_namespace(object_id + "_");
 
     initialize(s, object_bridge_script);
+  } else {
+    throw std::logic_error(fmt::format("unknown type: {}", type));
   }
 
   if (!shape_ref) {
