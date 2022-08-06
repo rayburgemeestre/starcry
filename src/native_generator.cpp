@@ -844,88 +844,105 @@ void native_generator::create_new_mappings() {
 void native_generator::update_object_positions(v8_interact& i, v8::Local<v8::Object>& video) {
   // clear function caching
   cached_xy.clear();
-  // auto isolate = i.get_isolate();
   int64_t scenesettings_from_object_id = -1;
   int64_t scenesettings_from_object_id_level = -1;
 
   for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
     meta_callback(abstract_shape, [&]<typename T>(T& shape) {
-      if constexpr (std::is_same_v<T, data_staging::circle> || std::is_same_v<T, data_staging::text>) {
-        // if (is_script) {
-        //   // TODO: this strategy does not support nested script objects
-        //   // TODO: we need to use stack for that
-        //   scenesettings_from_object_id = unique_id;
-        //   scenesettings_from_object_id_level = level;
-        // } else if (scenesettings_from_object_id_level == level) {
+      if constexpr (std::is_same_v<T, data_staging::script>) {
+        // TODO: this strategy does not support nested script objects
+        // TODO: we need to use stack for that
+        scenesettings_from_object_id = shape.meta_cref().unique_id();
+        scenesettings_from_object_id_level = shape.meta_cref().level();
+      } else if (scenesettings_from_object_id_level == shape.meta_cref().level()) {
+        scenesettings_from_object_id = -1;
+        scenesettings_from_object_id_level = -1;
+      }
 
-        if (scenesettings_from_object_id_level == shape.meta_cref().level()) {
-          scenesettings_from_object_id = -1;
-          scenesettings_from_object_id_level = -1;
-        }
+      if (scenesettings_from_object_id == -1) {
+        update_time(i, abstract_shape, shape.meta_cref().id(), scenesettings);
+      } else {
+        // TODO:
+        update_time(i, abstract_shape, shape.meta_cref().id(), scenesettings_objs[scenesettings_from_object_id]);
+      }
 
-        if (scenesettings_from_object_id == -1) {
-          update_time(i, abstract_shape, shape.meta_cref().id(), scenesettings);
-        } else {
+      scalesettings.video_scale_next = i.double_number(video, "scale");
+
+      auto angle = shape.generic_cref().angle();
+      if (std::isnan(angle)) {
+        angle = 0.;
+      }
+      double x = 0;
+      double y = 0;
+      double x2 = 0;
+      double y2 = 0;
+      double velocity = 0;
+      double vel_x = 0;
+      double vel_y = 0;
+      double vel_x2 = 0;
+      double vel_y2 = 0;
+      if constexpr (std::is_same_v<T, data_staging::line>) {
+        x = shape.line_start_ref().position_cref().x;
+        y = shape.line_start_ref().position_cref().y;
+        x2 = shape.line_end_ref().position_cref().x;
+        y2 = shape.line_end_ref().position_cref().y;
+        velocity = shape.movement_line_start_ref().velocity_speed();
+        vel_x = shape.movement_line_start_ref().velocity().x;
+        vel_y = shape.movement_line_start_ref().velocity().y;
+        vel_x2 = shape.movement_line_end_ref().velocity().x;
+        vel_y2 = shape.movement_line_end_ref().velocity().y;
+      } else {
+        x = shape.location_cref().position_cref().x;
+        y = shape.location_cref().position_cref().y;
+        velocity = shape.movement_cref().velocity_speed();
+        vel_x = shape.movement_cref().velocity().x;
+        vel_y = shape.movement_cref().velocity().y;
+      }
+
+      velocity /= static_cast<double>(stepper.max_step);
+      x += (vel_x * velocity);
+      y += (vel_y * velocity);
+      x2 += (vel_x2 * velocity);
+      y2 += (vel_y2 * velocity);
+
+      // For now we only care about circles
+      // if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create
+      // property of course */) {
+      if constexpr (std::is_same_v<T, data_staging::circle>) {
+        if (shape.radius_size() < 1000 /* todo create property of course */) {
           // TODO:
-          update_time(i, abstract_shape, shape.meta_cref().id(), scenesettings_objs[scenesettings_from_object_id]);
-        }
-
-        scalesettings.video_scale_next = i.double_number(video, "scale");
-
-        auto angle = shape.generic_cref().angle();
-        if (std::isnan(angle)) {
-          angle = 0.;
-        }
-        auto x = shape.location_cref().position_cref().x;
-        auto y = shape.location_cref().position_cref().y;
-        // auto x2 = i.double_number(instance, "x2");
-        // auto y2 = i.double_number(instance, "y2");
-        auto velocity = shape.movement_cref().velocity_speed();
-        auto vel_x = shape.movement_cref().velocity().x;
-        auto vel_y = shape.movement_cref().velocity().y;
-        // // auto vel_x2 = is_line ? i.double_number(instance, "vel_x2") : 0.0;
-        // // auto vel_y2 = is_line ? i.double_number(instance, "vel_y2") : 0.0;
-
-        velocity /= static_cast<double>(stepper.max_step);
-        x += (vel_x * velocity);
-        y += (vel_y * velocity);
-
-        // For now we only care about circles
-        // if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create
-        // property of course */) {
-        if constexpr (std::is_same_v<T, data_staging::circle>) {
-          if (shape.radius_size() < 1000 /* todo create property of course */) {
-            // TODO:
-            update_object_toroidal(i, shape.toroidal_ref(), x, y);
-            const auto collision_group = shape.behavior_cref().collision_group();
-            const auto gravity_group = shape.behavior_cref().gravity_group();
-            if (!collision_group.empty()) {
-              qts.try_emplace(collision_group,
-                              quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
-              auto x_copy = x;
-              auto y_copy = y;
-              // TODO: fix
-              //  fix_xy(i, instance, unique_id, x_copy, y_copy);
-              qts[collision_group].insert(point_type(position(x_copy, y_copy), shape.meta_cref().unique_id()));
-            }
-            if (!gravity_group.empty()) {
-              qts_gravity.try_emplace(
-                  gravity_group, quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
-              qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
-            }
+          update_object_toroidal(i, shape.toroidal_ref(), x, y);
+          const auto collision_group = shape.behavior_cref().collision_group();
+          const auto gravity_group = shape.behavior_cref().gravity_group();
+          if (!collision_group.empty()) {
+            qts.try_emplace(collision_group,
+                            quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
+            auto x_copy = x;
+            auto y_copy = y;
+            // TODO: fix
+            //  fix_xy(i, instance, unique_id, x_copy, y_copy);
+            qts[collision_group].insert(point_type(position(x_copy, y_copy), shape.meta_cref().unique_id()));
+          }
+          if (!gravity_group.empty()) {
+            qts_gravity.try_emplace(gravity_group,
+                                    quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
+            qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
           }
         }
+      }
+      if constexpr (std::is_same_v<T, data_staging::line>) {
+        shape.line_start_ref().position_ref().x = x;
+        shape.line_start_ref().position_ref().y = y;
+        shape.line_end_ref().position_ref().x = x2;
+        shape.line_end_ref().position_ref().y = y2;
+      } else {
         shape.location_ref().position_ref().x = x;
         shape.location_ref().position_ref().y = y;
-        // if (is_line) {
-        //   i.set_field(instance, "x2", v8::Number::New(isolate, x2));
-        //   i.set_field(instance, "y2", v8::Number::New(isolate, y2));
-        //                            }
-        // Needed?
-        // if (attempt == 1) {
-        //   i.set_field(instance, "steps", v8::Number::New(isolate, 1));
-        // }
       }
+      // Needed?
+      // if (attempt == 1) {
+      //   i.set_field(instance, "steps", v8::Number::New(isolate, 1));
+      // }
     });
   }
 }
