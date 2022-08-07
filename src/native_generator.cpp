@@ -471,8 +471,14 @@ void native_generator::create_bookkeeping_for_script_objects(v8::Local<v8::Objec
     return;
   }
 
+  // created shape namespace
+  std::string created_shape_namespace;
+  meta_callback(created_shape, [&]<typename T>(T& shape) {
+    created_shape_namespace = shape.meta_cref().namespace_name();
+  });
+
   const auto unique_id = i.integer_number(created_instance, "unique_id");
-  const auto namespace_ = i.str(created_instance, "id") + "_";
+  const auto namespace_ = created_shape_namespace;
   i.set_field(created_instance, "namespace", v8_str(i.get_context(), namespace_));
   const auto file = i.str(created_instance, "file");
   const auto specified_duration =
