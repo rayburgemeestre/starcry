@@ -21,6 +21,7 @@ private:
   // used for rendering purposes
   double dist_ = 0;
   int64_t steps_ = 0;
+  bool is_pivot_ = false;
 
 public:
   meta() = default;
@@ -88,6 +89,14 @@ public:
 
   void set_namespace(std::string namespace_name) {
     this->namespace_ = namespace_name;
+  }
+
+  bool is_pivot() const {
+    return is_pivot_;
+  }
+
+  void set_pivot(bool is_pivot) {
+    is_pivot_ = is_pivot;
   }
 };
 

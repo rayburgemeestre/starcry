@@ -1149,6 +1149,7 @@ void native_generator::handle_rotations(v8_interact& i,
   data::coord pos2;  // X2, Y2.
   data::coord parent;
   data::coord pos_for_parent;  // X, Y of circles or middle point of lines
+  bool pivot_found = false;
 
   const auto handle = [&]<typename T>(data_staging::shape_t abstract_shape,
                                       T concrete_shape,
@@ -1186,6 +1187,11 @@ void native_generator::handle_rotations(v8_interact& i,
           pos2.add(current2);
         } else {
           pos_for_parent.add(current);
+        }
+
+        if (parent_shape.meta_ref().is_pivot()) {
+          pivot_found = true;
+          parent = current;
         }
 
         // was this correct?
@@ -1240,7 +1246,7 @@ void native_generator::handle_rotations(v8_interact& i,
           }
         }
         // now we can update the parent for the next level we're about to handle
-        parent = pos_for_parent;
+        if (!pivot_found) parent = pos_for_parent;
       });
     }
   };
@@ -2274,6 +2280,7 @@ native_generator::_instantiate_object_from_scene(
   const auto initialize = [&]<typename T>(T& c, auto& bridge) {
     c.meta_ref().set_level(current_level);
     c.meta_ref().set_parent_uid(parent_uid);
+    c.meta_ref().set_pivot(i.boolean(instance, "pivot"));
     c.behavior_ref().set_collision_group(i.str(instance, "collision_group", ""));
     c.behavior_ref().set_gravity_group(i.str(instance, "gravity_group", ""));
     c.toroidal_ref().set_group(i.str(instance, "toroidal", ""));
