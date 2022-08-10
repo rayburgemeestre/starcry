@@ -19,7 +19,7 @@ _ = {
       'subobj': [],
       'init': function() {
         for (let i = 0; i < 500; i++) {
-          this.subobj.push(this.spawn({'id': 'vlokje', 'props': {}}));
+          this.spawn({'id': 'vlokje', 'props': {}});
         }
       },
       'time': function(t, e, scene) {},
@@ -38,6 +38,7 @@ _ = {
       'init': function() {
         this.x = (-1920 / 2) + rand() * 1920;
         this.y = (-1080 / 2) + rand() * 1080;
+        // this.props.size = expf(rand(), 1000);
         this.props.size = expf(rand(), 1000);
         this.radiussize = 2. + (3. * this.props.size);
         this.props.x = this.x;

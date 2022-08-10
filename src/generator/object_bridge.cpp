@@ -5,10 +5,8 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 
 #include "generator/object_bridge.h"
-
-#include "util/v8_interact.hpp"
-
 #include "native_generator.h"
+#include "util/v8_interact.hpp"
 
 template <typename T>
 void object_bridge<T>::push_object(T& c) {
@@ -92,11 +90,6 @@ std::vector<std::tuple<double, std::string>>& object_bridge<T>::get_gradients_re
     return shape_stack.back()->styling_ref().get_gradients_ref();
   }
 }
-
-// template <typename T>
-// void object_bridge<T>::set_gradients(std::vector<std::tuple<double, std::string>> gradients) {
-//  shape_stack.back()->styling_ref().set_gradients(gradients);
-//}
 
 template <typename T>
 v8::Persistent<v8::Object>& object_bridge<T>::instance() {

@@ -6,10 +6,6 @@
 
 #include "util/socketbuffer.h"
 
-socketbuffer::socketbuffer() : index_(0) {}
-
-socketbuffer::~socketbuffer() {}
-
 void socketbuffer::append(const char *buffer) {
   buffer_.append(buffer);
 }
@@ -18,11 +14,11 @@ void socketbuffer::append(const char *buffer, size_t buflen) {
   buffer_.append(buffer, buflen);
 }
 
-const std::string &socketbuffer::get() {
+const std::string &socketbuffer::get() const {
   return buffer_;
 }
 
-size_t socketbuffer::length() {
+size_t socketbuffer::length() const {
   return buffer_.length();
 }
 
@@ -30,12 +26,12 @@ void socketbuffer::erase_front(size_t len) {
   buffer_ = buffer_.substr(len);
 }
 
-bool socketbuffer::has_line() {
-  return buffer_.find("\n", index_) != std::string::npos;
+bool socketbuffer::has_line() const {
+  return buffer_.find('\n', index_) != std::string::npos;
 }
 
 std::string socketbuffer::get_line() {
-  size_t pos = buffer_.find("\n", index_);
+  size_t pos = buffer_.find('\n', index_);
 
   std::string line = buffer_.substr(index_, pos + 1 - index_);
 

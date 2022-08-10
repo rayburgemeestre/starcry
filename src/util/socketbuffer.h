@@ -9,18 +9,18 @@
 
 class socketbuffer {
 public:
-  socketbuffer();
-  ~socketbuffer();
+  socketbuffer() = default;
+  virtual ~socketbuffer() = default;
 
   virtual void append(const char *);
   virtual void append(const char *, size_t);
 
-  const std::string &get();
-  size_t length();
+  [[nodiscard]] const std::string &get() const;
+  [[nodiscard]] size_t length() const;
 
   void erase_front(size_t);
 
-  bool has_line();
+  [[nodiscard]] bool has_line() const;
   std::string get_line();
   std::string get_raw();
 
@@ -28,7 +28,7 @@ public:
 
 protected:
   std::string buffer_;
-  size_t index_;
+  size_t index_ = 0;
 
   size_t gc_line_num_;
   size_t gc_every_;

@@ -1252,12 +1252,12 @@ void native_generator::handle_rotations(v8_interact& i,
   };
   meta_visit(
       shape,
-      [&](data_staging::circle& c) {
+      [&handle, &shape, &pos](data_staging::circle& c) {
         handle(shape, c, c.meta_ref(), c.generic_ref());
         c.transitive_location_ref().position_ref().x = pos.x;
         c.transitive_location_ref().position_ref().y = pos.y;
       },
-      [&](data_staging::line& l) {
+      [&handle, &shape, &pos, &pos2](data_staging::line& l) {
         handle(shape, l, l.meta_ref(), l.generic_ref());
         bool skip_start = false, skip_end = false;
         for (const auto& cascade_in : l.cascades_in()) {
@@ -1277,12 +1277,12 @@ void native_generator::handle_rotations(v8_interact& i,
           l.transitive_line_end_ref().position_ref().y = pos2.y;
         }
       },
-      [&](data_staging::text& t) {
+      [&handle, &shape, &pos](data_staging::text& t) {
         handle(shape, t, t.meta_ref(), t.generic_ref());
         t.transitive_location_ref().position_ref().x = pos.x;
         t.transitive_location_ref().position_ref().y = pos.y;
       },
-      [&](data_staging::script& s) {
+      [&handle, &shape, &pos](data_staging::script& s) {
         handle(shape, s, s.meta_ref(), s.generic_ref());
         s.transitive_location_ref().position_ref().x = pos.x;
         s.transitive_location_ref().position_ref().y = pos.y;
@@ -1918,10 +1918,6 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
     auto level = 0;      // shape.level;
     auto exists = true;  // !i.has_field(instance, "exists") || i.boolean(instance, "exists");
     if (!exists) return;
-    // auto type = i.str(instance, "type");
-    // auto is_line = type == "line";
-    // parents_stack[level] = instance;
-
     // See if we require this step for this object
     // auto steps = i.integer_number(instance, "steps");
     // if (minimize_steps_per_object && !sc.do_step(steps, stepper.next_step)) {
@@ -1931,45 +1927,16 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
     // auto id = i.str(instance, "id");
     // auto label = i.str(instance, "label");
     // auto time = i.double_number(instance, "__time__");
-    // auto transitive_x = i.double_number(instance, "transitive_x");
-    // auto transitive_y = i.double_number(instance, "transitive_y");
-    // auto transitive_x2 = is_line ? i.double_number(instance, "transitive_x2") : 0.0;
-    // auto transitive_y2 = is_line ? i.double_number(instance, "transitive_y2") : 0.0;
-    // auto vel_x = i.double_number(instance, "vel_x");
-    // auto vel_y = i.double_number(instance, "vel_y");
-
-    // auto inherited_x = i.has_field(instance, "inherited_x") ?
-    // i.double_number(instance, "inherited_x") : 0.; auto inherited_y =
-    // i.has_field(instance, "inherited_y") ? i.double_number(instance, "inherited_y")
-    // : 0.; auto inherited_x2 = i.has_field(instance, "inherited_x2") ?
-    // i.double_number(instance, "inherited_x2") : 0.; auto inherited_y2 =
-    // i.has_field(instance, "inherited_y2") ? i.double_number(instance,
-    // "inherited_y2") : 0.;
-    //
-    // if (inherited_x) transitive_x = inherited_x;
-    // if (inherited_y) transitive_y = inherited_y;
-    // if (inherited_x2) transitive_x2 = inherited_x2;
-    // if (inherited_y2) transitive_y2 = inherited_y2;
 
     // auto radius = shape.radius();           // i.double_number(instance, "radius");
     // auto radiussize = shape.radius_size();  // i.double_number(instance, "radiussize");
     // auto seed = i.double_number(instance, "seed");
-    // i.integer_number(instance, "blending_type")
-    //              : data::blending_type::normal;
-    auto scale = shape.generic_cref().scale();  // i.has_field(instance, "scale") ? i.double_number(instance, "scale")
-                                                // : 1.0; auto unique_id = i.integer_number(instance, "unique_id");
+    auto scale = shape.generic_cref().scale();
 
     auto shape_opacity = shape.generic_cref().opacity();
-    // auto motion_blur = i.boolean(instance, "motion_blur");
-    // auto warp_width = i.has_field(instance, "__warp_width__") ? i.integer_number(instance, "__warp_width__") : 0;
-    // auto warp_height = i.has_field(instance, "__warp_height__") ? i.integer_number(instance, "__warp_height__") : 0;
     auto warp_width = shape.toroidal_ref().warp_width();
     auto warp_height = shape.toroidal_ref().warp_height();
 
-    // auto text = i.str(instance, "text");
-    // auto text_align = i.str(instance, "text_align");
-    // auto text_size = i.integer_number(instance, "text_size");
-    // auto text_fixed = i.boolean(instance, "text_fixed");
     // auto text_font = i.has_field(instance, "text_font") ? i.str(instance, "text_font") : "";
 
     // TODO: might not need this param after all
@@ -2001,22 +1968,12 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
     if (!gradient_id.empty()) {
       if (new_shape.gradients_.empty()) {
         auto& known_gradients_map = gradients;
-        if (known_gradients_map.find(gradient_id) != known_gradients_map.end()) {
+        if (known_gradients_map.contains(gradient_id)) {
           new_shape.gradients_.emplace_back(1.0, known_gradients_map[gradient_id]);
         }
       }
     }
 
-    // while (level > 0) {
-    //   level--;
-    //   util::generator::copy_gradient_from_object_to_shape(
-    //       i, parents_stack[level], new_shape, gradients, &gradient_id_str);
-    //   util::generator::copy_texture_from_object_to_shape(i, parents_stack[level], new_shape,
-    //   textures); auto s = i.double_number(parents_stack[level], "scale"); if (!std::isnan(s)) {
-    //     scale *= s;
-    //   }
-    // }
-    // new_shape.gradient_id_str = gradient_id_str;
     if (new_shape.gradients_.empty()) {
       new_shape.gradients_.emplace_back(1.0, data::gradient{});
       new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
@@ -2042,22 +1999,6 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
     new_shape.warp_width = warp_width;
     new_shape.warp_height = warp_height;
 
-    // if (type == "circle") {
-    // } else if (type == "line") {
-    //   new_shape.type = data::shape_type::line;
-    //   new_shape.x2 = transitive_x2;
-    //   new_shape.y2 = transitive_y2;
-    // } else if (type == "text") {
-    //   new_shape.type = data::shape_type::text;
-    //   new_shape.text = text;
-    //   new_shape.text_size = text_size;
-    //   new_shape.align = text_align;
-    //   new_shape.text_fixed = text_fixed;
-    //   new_shape.text_font = text_font;
-    // } else if (type == "script") {
-    //   new_shape.type = data::shape_type::script;
-    // } else {
-    //   new_shape.type = data::shape_type::none;
     // }
     // wrap this in a proper add method
     if (stepper.next_step != stepper.max_step) {
@@ -2110,6 +2051,7 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
         new_shape.text_size = shape.text_size();
         new_shape.align = shape.text_align();
         new_shape.text_fixed = shape.text_fixed();
+        // TODO: new_shape.text_font = shape.text_font();
         new_shape.x = shape.transitive_location_ref().position_cref().x;
         new_shape.y = shape.transitive_location_ref().position_cref().y;
         initialize(shape);
@@ -2334,6 +2276,7 @@ native_generator::_instantiate_object_from_scene(
                  bridge->instance(),                 // bridged object is "this"
                  "init");
       bridge->pop_object();
+      write_back_copy(copy);
     }
   };
 
@@ -2577,5 +2520,18 @@ void native_generator::copy_texture_from_object_to_shape(
     for (const auto& [opacity, texture_id] : source_object.styling_ref().get_textures_cref()) {
       destination_shape.textures.emplace_back(opacity, known_textures_map[texture_id]);
     }
+  }
+}
+
+template <typename T>
+void native_generator::write_back_copy(T& copy) {
+  size_t index = 0;
+  for (auto& instance : instantiated_objects[scenesettings.current_scene_next]) {
+    meta_callback(instance, [&]<typename TS>(TS& shape) {
+      if (shape.meta_cref().unique_id() == copy.meta_cref().unique_id()) {
+        instantiated_objects[scenesettings.current_scene_next][index] = copy;
+      }
+    });
+    index++;
   }
 }

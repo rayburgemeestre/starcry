@@ -26,7 +26,7 @@ private:
   std::shared_ptr<v8::Persistent<v8::Object>> instance_ = nullptr;
 
 public:
-  object_bridge(native_generator* generator);
+  explicit object_bridge(native_generator* generator);
 
   void push_object(shape_class& c);
   void pop_object();
@@ -79,7 +79,6 @@ public:
   v8::Local<v8::Array> get_gradients_local_ref() const;
 
   std::vector<std::tuple<double, std::string>>& get_gradients_ref() const;
-  // void set_gradients(std::vector<std::tuple<double, std::string>> gradients);
 
   int64_t spawn(v8::Local<v8::Object> obj);
   int64_t spawn3(v8::Local<v8::Object> line_obj, int64_t obj1, int64_t obj2);

@@ -5,9 +5,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 
 #include "generator/object_bridge.h"
-
 #include "util/v8_interact.hpp"
-
 #include "native_generator.h"
 
 template <>

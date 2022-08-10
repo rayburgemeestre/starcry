@@ -17,15 +17,11 @@ native_generator_context::native_generator_context(v8::Local<v8::Value> script_v
 
 void native_generator_context::set_scene(size_t current_scene_idx) {
   auto& i = this->i();
-  // auto isolate = i.get_isolate();
 
   current_scene_val.Reset(i.get_isolate(), i.get_index(scenes, current_scene_idx));
   current_scene_obj.Reset(i.get_isolate(), current_scene_val.As<v8::Object>());
 
   scene_objects.Reset(i.get_isolate(), i.v8_array(current_scene_obj, "objects"));
-  // instances = i.v8_array(current_scene_obj, "instances", v8::Array::New(isolate));
-  // instances_next = i.v8_array(current_scene_obj, "instances_next", v8::Array::New(isolate));
-  // instances_intermediate = i.v8_array(current_scene_obj, "instances_intermediate", v8::Array::New(isolate));
 }
 
 v8_interact& native_generator_context::i() const {

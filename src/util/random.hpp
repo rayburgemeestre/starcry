@@ -19,7 +19,7 @@ private:
   std::mutex mut;
 
 public:
-  random_generator(double seed = 0) {
+  explicit random_generator(double seed = 0) {
     set_seed(seed);
   }
 

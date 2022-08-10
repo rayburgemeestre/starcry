@@ -240,4 +240,7 @@ private:
   void copy_texture_from_object_to_shape(T& source_object,
                                          data::shape& destination_shape,
                                          std::unordered_map<std::string, data::texture>& known_textures_map);
+
+  template <typename T>
+  void write_back_copy(T& copy);
 };
