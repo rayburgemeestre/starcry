@@ -5,8 +5,8 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 
 #include "generator/object_bridge.h"
-#include "util/v8_interact.hpp"
 #include "native_generator.h"
+#include "util/v8_interact.hpp"
 
 template <>
 int64_t object_bridge<data_staging::text>::get_unique_id() const {

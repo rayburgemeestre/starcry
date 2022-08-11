@@ -162,12 +162,7 @@ public:
                    const std::string& instance_id,
                    scene_settings& scenesettings);
   int update_steps(double dist);
-  double get_max_travel_of_object(v8_interact& i,
-                                  v8::Local<v8::Array>& next_instances,
-                                  v8::Local<v8::Object>& previous_instance,
-                                  v8::Local<v8::Object>& instance
-
-  );
+  double get_max_travel_of_object(data_staging::shape_t& shape_now, data_staging::shape_t& shape_prev);
   void convert_objects_to_render_job(v8_interact& i, step_calculator& sc, v8::Local<v8::Object> video);
   void convert_object_to_render_job(v8_interact& i,
                                     data_staging::shape_t& shape,

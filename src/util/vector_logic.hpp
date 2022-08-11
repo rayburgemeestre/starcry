@@ -10,7 +10,9 @@ public:
   double x = 0;
   double y = 0;
 
+  vector2d() = default;
   vector2d(double x, double y) : x(x), y(y) {}
+
   void rotate(double degrees) {
     const double radian = degrees_to_radian(degrees);
     const double sine = std::sin(radian);
@@ -21,6 +23,9 @@ public:
   double degrees_to_radian(double degrees) {
     const auto pi = 3.14159265358979323846;
     return degrees * pi / 180.0;
+  }
+  double distance_to(const vector2d& other) {
+    return sqrt(pow(x - other.x, 2) + pow(y - other.y, 2));
   }
 };
 

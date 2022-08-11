@@ -162,7 +162,7 @@ void native_generator::init(const std::string& filename, std::optional<double> r
   scenesettings_objs.clear();
 
   // throw away any existing instances from array
-  scene_shapes_next.clear();
+  for (auto& scene_shapes : scene_shapes_next) scene_shapes.clear();
 
   // reset random number generator
   set_rand_seed(rand_seed.value_or(0));
@@ -732,6 +732,7 @@ bool native_generator::_generate_frame() {
           update_object_positions(i, video);
 
           // handle collisions, gravity and "inherited" objects
+          // absolute xy are known after this function call
           update_object_interactions(i, video);
 
           // calculate distance and steps
@@ -1119,7 +1120,7 @@ void native_generator::update_object_distances() {
     if (find == intermediate_map.end()) {
       return;
     }
-    double dist = 1;  // TODO: implement new version of: get_max_travel_of_object
+    double dist = get_max_travel_of_object(abstract_shape, find->second.get());
     if (dist > max_dist_found) {
       max_dist_found = dist;
     }
@@ -1647,10 +1648,57 @@ int native_generator::update_steps(double dist) {
 
 // TODO: there is too much logic in this function that is now clearly in the wrong place.
 // This will be refactored soon.
-double native_generator::get_max_travel_of_object(v8_interact& i,
-                                                  v8::Local<v8::Array>& next_instances,
-                                                  v8::Local<v8::Object>& previous_instance,
-                                                  v8::Local<v8::Object>& instance) {
+double native_generator::get_max_travel_of_object(data_staging::shape_t& shape_now, data_staging::shape_t& shape_prev) {
+  vector2d xy_now;
+  vector2d xy_prev;
+  vector2d xy2_now;
+  vector2d xy2_prev;
+  bool compare_xy2 = false;
+
+  double radius_now = 0;
+  double radius_prev = 0;
+
+  meta_visit(
+      shape_now,
+      [&](data_staging::circle& shape) {
+        xy_now = shape.transitive_location_ref().position_cref();
+        radius_now = shape.radius() + shape.radius_size();
+      },
+      [&](data_staging::line& shape) {
+        xy_now = shape.transitive_line_start_ref().position_cref();
+        xy2_now = shape.transitive_line_end_ref().position_cref();
+        compare_xy2 = true;
+      },
+      [&](data_staging::text& shape) {
+        xy_now = shape.transitive_location_ref().position_cref();
+      },
+      [&](data_staging::script& shape) {
+        xy_now = shape.transitive_location_ref().position_cref();
+      });
+
+  meta_visit(
+      shape_prev,
+      [&](data_staging::circle& shape) {
+        xy_prev = shape.transitive_location_ref().position_cref();
+        radius_prev = shape.radius() + shape.radius_size();
+      },
+      [&](data_staging::line& shape) {
+        xy_prev = shape.transitive_line_start_ref().position_cref();
+        xy2_prev = shape.transitive_line_end_ref().position_cref();
+      },
+      [&](data_staging::text& shape) {
+        xy_prev = shape.transitive_location_ref().position_cref();
+      },
+      [&](data_staging::script& shape) {
+        xy_prev = shape.transitive_location_ref().position_cref();
+      });
+
+  auto dist = xy_now.distance_to(xy_prev);
+  if (compare_xy2) dist = std::max(dist, xy2_now.distance_to(xy2_prev));
+
+  dist += squared_dist(radius_now, radius_prev);
+
+  return dist;
   return 1;  // temp
   //  // Update level for all objects
   //  // TODO: move to better place
