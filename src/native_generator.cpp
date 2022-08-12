@@ -1087,7 +1087,7 @@ void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::
     }
     handle_rotations(abstract_shape);
     handle_collisions(i, abstract_shape);
-    handle_gravity(abstract_shape);
+    handle_gravity(i, abstract_shape);
   };
   stack.clear();
   for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
@@ -1455,7 +1455,7 @@ void native_generator::handle_collision(v8_interact& i,
   }
 }
 
-void native_generator::handle_gravity(data_staging::shape_t& shape) {
+void native_generator::handle_gravity(v8_interact& i, data_staging::shape_t& shape) {
   try {
     std::vector<point_type> found;
     data_staging::circle& c = std::get<data_staging::circle>(shape);
