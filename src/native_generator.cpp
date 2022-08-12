@@ -1085,9 +1085,9 @@ void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::
         stack[meta.level()] = std::ref(abstract_shape);
       }
     }
-    handle_rotations(i, abstract_shape, scene_shapes_next[scenesettings.current_scene_next]);
-    handle_collisions(i, abstract_shape, scene_shapes_next[scenesettings.current_scene_next]);
-    handle_gravity(i, abstract_shape, scene_shapes_next[scenesettings.current_scene_next]);
+    handle_rotations(abstract_shape);
+    handle_collisions(i, abstract_shape);
+    handle_gravity(abstract_shape);
   };
   stack.clear();
   for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
@@ -1160,9 +1160,7 @@ void native_generator::update_object_distances() {
   }
 }
 
-void native_generator::handle_rotations(v8_interact& i,
-                                        data_staging::shape_t& shape,
-                                        std::vector<data_staging::shape_t>& shapes) {
+void native_generator::handle_rotations(data_staging::shape_t& shape) {
   data::coord pos;              // X, Y
   data::coord pos2;             // X2, Y2.
   data::coord pos_parent;       // pos_parent X, Y
@@ -1170,15 +1168,12 @@ void native_generator::handle_rotations(v8_interact& i,
 
   bool pivot_found = false;
 
-  const auto handle = [&]<typename T>(data_staging::shape_t abstract_shape,
-                                      T concrete_shape,
-                                      data_staging::meta& meta,
-                                      data_staging::generic& gen) {
+  const auto handle = [&]<typename T>(T concrete_shape) {
     double inherited_angle = 0;
 
     // we'll iterate over all the parents of the current shape, and the shape itself, starting at the top pos_parent.
     // in case the current shape is at level 3, we iterate over 0, 1, 2, 3.
-    for (size_t i = 0; i <= meta.level(); i++) {
+    for (size_t i = 0; i <= concrete_shape.meta_cref().level(); i++) {
       meta_callback(stack[i].get(), [&]<typename TP>(TP& parent_shape) {
         // X, Y, for all objects
         data::coord current;
@@ -1196,31 +1191,36 @@ void native_generator::handle_rotations(v8_interact& i,
           current = {parent_shape.location_ref().position_ref().x, parent_shape.location_ref().position_ref().y};
         }
 
-        // pos will be recursively all X, Y positions added together
-        pos.add(current);
-
-        if constexpr (std::is_same_v<TP, data_staging::line>) {
-          // pos will be recursively all X2, Y2 positions added together
-          pos2.add(current2);
-          // next parent location will add middle of the line as X,Y
-          pos_parent_next.add(current_center);
+        if (pivot_found) {
+          // in case we already know the pivot, we will use the current as the position
+          // discarding all the parent X,Y positions added together, because we compare our XY against
+          // the pivot directly
+          pos = current;
         } else {
-          // next parent location will add X,Y
-          pos_parent_next.add(current);
+          // pos will be recursively all X, Y positions added together
+          pos.add(current);
+          if constexpr (std::is_same_v<TP, data_staging::line>) {
+            // pos will be recursively all X2, Y2 positions added together
+            pos2.add(current2);
+            // next parent location will add middle of the line as X,Y
+            pos_parent_next.add(current_center);
+          } else {
+            // next parent location will add X,Y
+            pos_parent_next.add(current);
+          }
+          // inherit the angle up till the pivot only, after that, all object angles are relative to the pivot
+          inherited_angle += parent_shape.generic_cref().angle();
         }
 
+        // if the current element is the pivot, set a flag and save it for the future parent position
         if (parent_shape.meta_ref().is_pivot()) {
           pivot_found = true;
           pos_parent_next = current;
-          // TODO: this should be next, but, this causes pretty cool effect in hdr.js
-          // pos_parent = current;
         }
 
-        // was this correct?
         double current_angle = parent_shape.generic_ref().angle();
-
-        // total angle, cumulative no matter what
-        double angle = !std::isnan(current_angle) ? current_angle : gen.angle();
+        double angle = !std::isnan(current_angle) ? current_angle : 0;
+        angle += inherited_angle;
 
         if (angle != 0.) {
           if constexpr (std::is_same_v<T, data_staging::line>) {
@@ -1249,9 +1249,11 @@ void native_generator::handle_rotations(v8_interact& i,
               pos2.x = pos_parent.x + (cos(rads) * move);
               pos2.y = pos_parent.y + (sin(rads) * move);
             }
-            // unsure
-            pos_parent_next.x = pos_parent.x + (cos(rads) * move);
-            pos_parent_next.y = pos_parent.y + (sin(rads) * move);
+
+            if (!pivot_found) {
+              pos_parent_next.x = pos_parent.x + (cos(rads) * move);
+              pos_parent_next.y = pos_parent.y + (sin(rads) * move);
+            }
           } else {
             // current angle + angle with pos_parent
             auto angle1 = angle + get_angle(pos_parent.x, pos_parent.y, pos.x, pos.y);
@@ -1263,23 +1265,23 @@ void native_generator::handle_rotations(v8_interact& i,
             auto move = dist * ratio * -1;
             pos.x = pos_parent.x + (cos(rads) * move);
             pos.y = pos_parent.y + (sin(rads) * move);
-            pos_parent_next = pos;
+            if (!pivot_found) pos_parent_next = pos;
           }
         }
         // now we can update the pos_parent for the next level we're about to handle
-        if (!pivot_found) pos_parent = pos_parent_next;
+        pos_parent = pos_parent_next;
       });
     }
   };
   meta_visit(
       shape,
-      [&handle, &shape, &pos](data_staging::circle& c) {
-        handle(shape, c, c.meta_ref(), c.generic_ref());
+      [&handle, &pos](data_staging::circle& c) {
+        handle(c);
         c.transitive_location_ref().position_ref().x = pos.x;
         c.transitive_location_ref().position_ref().y = pos.y;
       },
-      [&handle, &shape, &pos, &pos2](data_staging::line& l) {
-        handle(shape, l, l.meta_ref(), l.generic_ref());
+      [&handle, &pos, &pos2](data_staging::line& l) {
+        handle(l);
         bool skip_start = false, skip_end = false;
         for (const auto& cascade_in : l.cascades_in()) {
           if (cascade_in.type() == cascade_type::start) {
@@ -1298,21 +1300,19 @@ void native_generator::handle_rotations(v8_interact& i,
           l.transitive_line_end_ref().position_ref().y = pos2.y;
         }
       },
-      [&handle, &shape, &pos](data_staging::text& t) {
-        handle(shape, t, t.meta_ref(), t.generic_ref());
+      [&handle, &pos](data_staging::text& t) {
+        handle(t);
         t.transitive_location_ref().position_ref().x = pos.x;
         t.transitive_location_ref().position_ref().y = pos.y;
       },
-      [&handle, &shape, &pos](data_staging::script& s) {
-        handle(shape, s, s.meta_ref(), s.generic_ref());
+      [&handle, &pos](data_staging::script& s) {
+        handle(s);
         s.transitive_location_ref().position_ref().x = pos.x;
         s.transitive_location_ref().position_ref().y = pos.y;
       });
 }
 
-void native_generator::handle_collisions(v8_interact& i,
-                                         data_staging::shape_t& shape,
-                                         std::vector<data_staging::shape_t>& shapes) {
+void native_generator::handle_collisions(v8_interact& i, data_staging::shape_t& shape) {
   // Now do the collision detection part
   // NOTE: we multiple radius/size * 2.0 since we're not looking up a point, and querying the quadtree does
   // not check for overlap, but only whether the x,y is inside the specified range. If we don't want to miss
@@ -1455,9 +1455,7 @@ void native_generator::handle_collision(v8_interact& i,
   }
 }
 
-void native_generator::handle_gravity(v8_interact& i,
-                                      data_staging::shape_t& shape,
-                                      std::vector<data_staging::shape_t>& shapes) {
+void native_generator::handle_gravity(data_staging::shape_t& shape) {
   try {
     std::vector<point_type> found;
     data_staging::circle& c = std::get<data_staging::circle>(shape);
@@ -1494,7 +1492,7 @@ void native_generator::handle_gravity(v8_interact& i,
         try {
           data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
           if (c.meta_cref().unique_id() != c2.meta_cref().unique_id()) {
-            handle_gravity(i, c, c2, acceleration, G, range, constrain_dist_min, constrain_dist_max);
+            handle_gravity(c, c2, acceleration, G, range, constrain_dist_min, constrain_dist_max);
           }
         } catch (std::bad_variant_access const& ex) {
           // only supporting circles for now
@@ -1511,8 +1509,7 @@ void native_generator::handle_gravity(v8_interact& i,
   //---
 }
 
-void native_generator::handle_gravity(v8_interact& i,
-                                      data_staging::circle& instance,
+void native_generator::handle_gravity(data_staging::circle& instance,
                                       data_staging::circle& instance2,
                                       vector2d& acceleration,
                                       double G,

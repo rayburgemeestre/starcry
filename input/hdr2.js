@@ -49,18 +49,36 @@ _ = {
       'y': 0,
       'angle': 0,
       'init': function() {
-        this.spawn({
-          'id': 'blue_circle',
-          'x': 0,
-          'y': 0,
-          'pivot': true,
-          'scale': 1.0,
-          'props': {'radius_limit': 5., 'opacity': 1.0, 'parent': false, 'scale': 1.0}
-        });
+        // temporary changed for testing purposes
+        if (false)
+          this.spawn({
+            'id': 'blue_circle',
+            //'x': -450,
+            'x': -400,
+            'y': 0,
+            //'scale': 0.5,
+            'scale': 1.0,
+            'props': {'radius_limit': 60., 'opacity': 1.0}
+          });  // 50.
+        if (false)
+          this.spawn({
+            'id': 'blue_circle',
+            'x': 400,
+            'y': 0,
+            'scale': 1.0,
+            'props': {'radius_limit': 60., 'opacity': 1.0, 'scale': 1.0}
+          });  // 20.
+        if (true)
+          this.spawn({
+            'id': 'blue_circle',
+            'x': 0,
+            'y': 0,
+            'scale': 1.0,
+            // 'pivot': true,
+            //'props': {'radius_limit': 5., 'opacity': 1.0, 'parent': false, 'scale': 1.0}
+            'props': {'radius_limit': 5., 'opacity': 1.0, 'parent': false, 'scale': 1.0, 'px': 0, 'py': 0}
+          });  // was 5.
       },
-      'time': function(t, e, s, gt) {
-        this.angle -= e * 200;
-      }
     },
     'blue_circle': {
       'type': 'circle',
@@ -71,17 +89,18 @@ _ = {
       // ],
       // temporary commentedfor testing purposes
       'texture': 'clouds',
-      'pivot': false,
       'radius': 100.,
       'radiussize': 30.0,
       'opacity': 0.,
       'blending_type': blending_type.pinlight,
-      'angle': 0,  // script.video.mode === 1 ? 1 : 0,
+      'angle': script.video.mode === 1 ? 1 : 0,
       'props': {
         'parent_radius': false,  // create pivot , set to true, and then all will have this.pivot()
         'extra_radius': 0,
         'scale': 1.0,
         'spawned': 0,
+        'px': 0,
+        'py': 0,
       },
       'scale': 1.0,
       'init': function() {
@@ -93,22 +112,18 @@ _ = {
         }
       },
       'time': function(time, elapsed, scene, global_time) {
-        this.radius += elapsed * 100;
-        this.props.parent_radius += elapsed * 100;
-
-        this.x = this.props.parent_radius - this.radius;
-
+        // if (this.level > 3)  return;
         // temporary added for testing purposes
-
+        // if (this.level > 10) return;
         // this.gradients[0][0] = 1.0 - global_time;
         // this.gradients[1][0] = global_time;
+        // this.angle *= 1.005;
         this.opacity = 1. * this.props.opacity;
         if (this.radius > this.props.radius_limit && this.props.spawned === 0) {
           var child_radius = this.radius * 0.67;
-          // var x = script.video.mode === 1 ?
-          //      :
-          //     0;
-          let x = (this.props.scale * this.props.parent_radius) - (this.props.scale * child_radius);
+          var x = script.video.mode === 1 ?
+              (this.props.scale * this.props.parent_radius) - (this.props.scale * child_radius) :
+              0;
           this.spawn({
             'id': 'blue_circle',
             // keep somehow the parent radius...
@@ -118,18 +133,18 @@ _ = {
             'radius': child_radius,
             'scale': script.video.mode === 1 ? this.scale : 1.0,
             'props': {
-              //'parent_radius': this.radius,
               'parent_radius': this.props.parent_radius,
               'radius_limit': this.props.radius_limit,
               'scale': 1.0,
+              'px': this.props.px + x,
+              'py': this.props.py
             },
 
             // cool with #1,2,3
             //'angle': script.video.mode === 1 ? 5 : 0,
 
             // also cool with #4
-            'angle': 15 * this.level,
-            // 'angle': 10,
+            'angle': script.video.mode === 1 ? 15 : 0,
           });
           this.props.spawned++;
           // this.subobj[this.subobj.length - 1].x += ((rand()*2)-1.)*5.;
@@ -146,12 +161,14 @@ _ = {
         // if (this.level > 1) this.angle += (elapsed * 5.);
 
         // ?? # 4
-        // if (this.level > 1) this.angle += (elapsed * 15.) * this.level;  // * this.level;
+        if (this.level > 1) this.angle += (elapsed * 15.) * this.level;  // * this.level;
 
         switch (scene) {
           case 0:
+            this.radius += elapsed * 100;
+            this.props.parent_radius += elapsed * 100;
             // if (this.level > 1 && script.video.mode === 1)
-            // this.x = this.props.parent_radius - this.radius;
+            this.x = (this.props.scale * this.props.parent_radius) - (this.props.scale * this.radius);
         }
 
         this.opacity = 1.0 * logn(1. - global_time * 1.0, 10000);
