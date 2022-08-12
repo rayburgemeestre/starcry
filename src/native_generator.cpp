@@ -71,6 +71,16 @@ void meta_callback(const T& shape, auto&& callback) {
       });
 }
 
+void fix_properties(std::vector<std::vector<data_staging::shape_t>>& scene_shapes) {
+  for (auto& shapes : scene_shapes) {
+    for (auto& shape : shapes) {
+      meta_callback(shape, [](auto& the_shape) {
+        the_shape.properties_ref().reinitialize();
+      });
+    }
+  }
+}
+
 native_generator::native_generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context)
     : context(context), metrics_(metrics) {}
 
@@ -436,6 +446,7 @@ void native_generator::init_object_instances() {
     // the instances "current" frame, or reverting (e.g., due to motion blur requirements) will discard all of this.
     ////util::generator::copy_instances(i, genctx->instances, genctx->instances_next);
     scene_shapes = scene_shapes_next;
+    fix_properties(scene_shapes);
   });
 }
 
@@ -745,6 +756,7 @@ bool native_generator::_generate_frame() {
           convert_objects_to_render_job(i, sc, video);
 
           scene_shapes_intermediate = scene_shapes_next;
+          fix_properties(scene_shapes_intermediate);
 
           scalesettings.update();
           scenesettings.update();
@@ -772,6 +784,7 @@ bool native_generator::_generate_frame() {
       }
 
       scene_shapes = scene_shapes_next;
+      fix_properties(scene_shapes);
 
       scalesettings.commit();
       scenesettings.commit();
@@ -798,7 +811,11 @@ void native_generator::revert_all_changes(v8_interact& i) {
 
   // reset next and intermediate instances
   scene_shapes_next = scene_shapes;
+  fix_properties(scene_shapes_next);
+
   scene_shapes_intermediate = scene_shapes;
+  fix_properties(scene_shapes_intermediate);
+
   scalesettings.revert();
   scenesettings.revert();
   for (auto& iter : scenesettings_objs) {

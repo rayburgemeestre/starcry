@@ -452,7 +452,8 @@ public:
   }
 
   // utils
-  void recursively_copy_object(v8::Local<v8::Object>& dest_object, v8::Local<v8::Object>& source_object) {
+  template <typename T>
+  void recursively_copy_object(T& dest_object, T& source_object) {
     auto isolate = get_isolate();
     auto obj_fields = prop_names(source_object);
     for (size_t k = 0; k < obj_fields->Length(); k++) {
@@ -462,12 +463,12 @@ public:
       auto field_value = get(source_object, field_name);
       if (field_value->IsArray()) {
         v8::Local<v8::Array> new_sub_array = v8::Array::New(isolate);
-        auto arr = field_value.As<v8::Array>();
+        auto arr = field_value.template As<v8::Array>();
         for (size_t l = 0; l < arr->Length(); l++) {
           auto a_src = get_index(arr, l);
           if (a_src->IsObject()) {
             auto a_dst = v8::Object::New(isolate);
-            auto a_src_obj = a_src.As<v8::Object>();
+            auto a_src_obj = a_src.template As<v8::Object>();
             recursively_copy_object(a_dst, a_src_obj);
             call_fun(new_sub_array, "push", a_dst);
           } else {
@@ -477,7 +478,7 @@ public:
         set_field(dest_object, field_name, new_sub_array);
       } else if (field_value->IsObject() && !field_value->IsFunction()) {
         v8::Local<v8::Object> new_sub_instance = v8::Object::New(isolate);
-        auto tmp = field_value.As<v8::Object>();
+        auto tmp = field_value.template As<v8::Object>();
         recursively_copy_object(new_sub_instance, tmp);
         set_field(dest_object, field_name, new_sub_instance);
       } else {
