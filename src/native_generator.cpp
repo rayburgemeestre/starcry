@@ -1163,66 +1163,69 @@ void native_generator::update_object_distances() {
 void native_generator::handle_rotations(v8_interact& i,
                                         data_staging::shape_t& shape,
                                         std::vector<data_staging::shape_t>& shapes) {
-  data::coord pos;   // X, Y
-  data::coord pos2;  // X2, Y2.
-  data::coord parent;
-  data::coord pos_for_parent;  // X, Y of circles or middle point of lines
+  data::coord pos;              // X, Y
+  data::coord pos2;             // X2, Y2.
+  data::coord pos_parent;       // pos_parent X, Y
+  data::coord pos_parent_next;  // X, Y of circles or middle point of lines
+
   bool pivot_found = false;
 
   const auto handle = [&]<typename T>(data_staging::shape_t abstract_shape,
                                       T concrete_shape,
                                       data_staging::meta& meta,
                                       data_staging::generic& gen) {
-    double angle = gen.angle();
+    double inherited_angle = 0;
+
+    // we'll iterate over all the parents of the current shape, and the shape itself, starting at the top pos_parent.
+    // in case the current shape is at level 3, we iterate over 0, 1, 2, 3.
     for (size_t i = 0; i <= meta.level(); i++) {
-      auto& parent_shape = stack[i];
-      meta_callback(parent_shape.get(), [&]<typename TP>(TP& parent_shape) {
+      meta_callback(stack[i].get(), [&]<typename TP>(TP& parent_shape) {
+        // X, Y, for all objects
         data::coord current;
+        // X2, Y2, and centerX, centerY, for lines (middle)
+        data::coord current2;
+        data::coord current_center;
+
         if constexpr (std::is_same_v<TP, data_staging::circle>) {
           current = {parent_shape.location_ref().position_ref().x, parent_shape.location_ref().position_ref().y};
         } else if constexpr (std::is_same_v<TP, data_staging::line>) {
           current = {parent_shape.line_start_ref().position_ref().x, parent_shape.line_start_ref().position_ref().y};
+          current2 = {parent_shape.line_end_ref().position_ref().x, parent_shape.line_end_ref().position_ref().y};
+          current_center = {((current.x - current2.x) / 2) + current2.x, ((current.y - current2.y) / 2) + current2.y};
         } else if constexpr (std::is_same_v<TP, data_staging::script>) {
           current = {parent_shape.location_ref().position_ref().x, parent_shape.location_ref().position_ref().y};
         }
 
-        // X2, Y2, and centerX, centerY, for lines
-        data::coord current2;
-        data::coord current_center;
-        if constexpr (std::is_same_v<TP, data_staging::line>) {
-          current2 =
-              data::coord{parent_shape.line_end_ref().position_ref().x, parent_shape.line_end_ref().position_ref().y};
-          // for lines current is middle of the line
-          current_center.x = ((current.x - current2.x) / 2) + current2.x;
-          current_center.y = ((current.y - current2.y) / 2) + current2.y;
-        }
-
-        // for now, let's go for the most intuitive choice
+        // pos will be recursively all X, Y positions added together
         pos.add(current);
 
         if constexpr (std::is_same_v<TP, data_staging::line>) {
-          pos_for_parent.add(current_center);
+          // pos will be recursively all X2, Y2 positions added together
           pos2.add(current2);
+          // next parent location will add middle of the line as X,Y
+          pos_parent_next.add(current_center);
         } else {
-          pos_for_parent.add(current);
+          // next parent location will add X,Y
+          pos_parent_next.add(current);
         }
 
         if (parent_shape.meta_ref().is_pivot()) {
           pivot_found = true;
-          parent = current;
+          pos_parent_next = current;
+          // TODO: this should be next, but, this causes pretty cool effect in hdr.js
+          // pos_parent = current;
         }
 
         // was this correct?
         double current_angle = parent_shape.generic_ref().angle();
 
         // total angle, cumulative no matter what
-        // why would this shit be cumulative?
-        if (!std::isnan(current_angle)) angle /*+*/ = current_angle;
+        double angle = !std::isnan(current_angle) ? current_angle : gen.angle();
 
         if (angle != 0.) {
           if constexpr (std::is_same_v<T, data_staging::line>) {
-            // current angle + angle with parent
-            auto angle1 = angle + get_angle(parent.x, parent.y, pos2.x, pos2.y);
+            // current angle + angle with pos_parent
+            auto angle1 = angle + get_angle(pos_parent.x, pos_parent.y, pos2.x, pos2.y);
             while (angle1 > 360.) angle1 -= 360.;
             auto rads = angle1 * M_PI / 180.0;
             auto ratio = 1.0;
@@ -1232,39 +1235,39 @@ void native_generator::handle_rotations(v8_interact& i,
             if (false) {
               // auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
               // auto move = dist * ratio * -1;
-              pos.x = parent.x + (cos(rads) * move) + current_center.x;
-              pos.y = parent.y + (sin(rads) * move) + current_center.y;
-              pos2.x = parent.x - (cos(rads) * move) + current_center.x;
-              pos2.y = parent.y - (sin(rads) * move) + current_center.y;
+              pos.x = pos_parent.x + (cos(rads) * move) + current_center.x;
+              pos.y = pos_parent.y + (sin(rads) * move) + current_center.y;
+              pos2.x = pos_parent.x - (cos(rads) * move) + current_center.x;
+              pos2.y = pos_parent.y - (sin(rads) * move) + current_center.y;
             }
             // rotates in length
             if (true) {
               dist = get_distance(current.x, current.y, current2.x, current2.y);
               move = dist * ratio * -1;
-              // pos.x = parent.x + (cos(rads) * move);
-              // pos.y = parent.y + (sin(rads) * move);
-              pos2.x = parent.x + (cos(rads) * move);
-              pos2.y = parent.y + (sin(rads) * move);
+              pos.x = pos_parent.x + (cos(rads) * move);
+              pos.y = pos_parent.y + (sin(rads) * move);
+              pos2.x = pos_parent.x + (cos(rads) * move);
+              pos2.y = pos_parent.y + (sin(rads) * move);
             }
             // unsure
-            pos_for_parent.x = parent.x + (cos(rads) * move);
-            pos_for_parent.y = parent.y + (sin(rads) * move);
+            pos_parent_next.x = pos_parent.x + (cos(rads) * move);
+            pos_parent_next.y = pos_parent.y + (sin(rads) * move);
           } else {
-            // current angle + angle with parent
-            auto angle1 = angle + get_angle(parent.x, parent.y, pos.x, pos.y);
+            // current angle + angle with pos_parent
+            auto angle1 = angle + get_angle(pos_parent.x, pos_parent.y, pos.x, pos.y);
             while (angle1 > 360.) angle1 -= 360.;
             auto rads = angle1 * M_PI / 180.0;
             auto ratio = 1.0;
             // auto dist = get_distance(0, 0, current.x, current.y);
-            auto dist = get_distance(pos.x, pos.y, parent.x, parent.y);
+            auto dist = get_distance(pos.x, pos.y, pos_parent.x, pos_parent.y);
             auto move = dist * ratio * -1;
-            pos.x = parent.x + (cos(rads) * move);
-            pos.y = parent.y + (sin(rads) * move);
-            pos_for_parent = pos;
+            pos.x = pos_parent.x + (cos(rads) * move);
+            pos.y = pos_parent.y + (sin(rads) * move);
+            pos_parent_next = pos;
           }
         }
-        // now we can update the parent for the next level we're about to handle
-        if (!pivot_found) parent = pos_for_parent;
+        // now we can update the pos_parent for the next level we're about to handle
+        if (!pivot_found) pos_parent = pos_parent_next;
       });
     }
   };

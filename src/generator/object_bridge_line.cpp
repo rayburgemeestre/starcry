@@ -145,7 +145,9 @@ object_bridge<data_staging::line>::object_bridge(native_generator *generator) : 
       .set("y2", v8pp::property(&object_bridge::get_y2, &object_bridge::set_y2))
       .set("z2", v8pp::property(&object_bridge::get_z2, &object_bridge::set_z2))
       .set("radiussize", v8pp::property(&object_bridge::get_radius_size, &object_bridge::set_radius_size))
-      .set("spawn", &object_bridge::spawn);
+      .set("spawn", &object_bridge::spawn)
+      .set("props", v8pp::property(&object_bridge::get_properties_local_ref))
+      .set("gradients", v8pp::property(&object_bridge::get_gradients_local_ref));
   instance_ = std::make_shared<v8::Persistent<v8::Object>>();
   (*instance_)
       .Reset(v8::Isolate::GetCurrent(), object_bridge_class.reference_external(v8::Isolate::GetCurrent(), this));
