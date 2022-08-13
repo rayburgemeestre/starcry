@@ -1169,27 +1169,30 @@ void native_generator::handle_rotations(data_staging::shape_t& shape) {
   bool pivot_found = false;
 
   const auto handle = [&]<typename T>(T concrete_shape) {
+    double running_angle = 0;
     double inherited_angle = 0;
 
     // we'll iterate over all the parents of the current shape, and the shape itself, starting at the top pos_parent.
     // in case the current shape is at level 3, we iterate over 0, 1, 2, 3.
     for (size_t i = 0; i <= concrete_shape.meta_cref().level(); i++) {
       meta_callback(stack[i].get(), [&]<typename TP>(TP& parent_shape) {
-        // X, Y, for all objects
+        // X, Y, for all objects, or middle X, Y for lines
         data::coord current;
-        // X2, Y2, and centerX, centerY, for lines (middle)
+        // X1, Y1, X2, Y2 for lines
+        data::coord current1;
         data::coord current2;
-        data::coord current_center;
 
         if constexpr (std::is_same_v<TP, data_staging::circle>) {
           current = {parent_shape.location_ref().position_ref().x, parent_shape.location_ref().position_ref().y};
         } else if constexpr (std::is_same_v<TP, data_staging::line>) {
-          current = {parent_shape.line_start_ref().position_ref().x, parent_shape.line_start_ref().position_ref().y};
+          current = {((current.x - current2.x) / 2) + current2.x, ((current.y - current2.y) / 2) + current2.y};
+          current1 = {parent_shape.line_start_ref().position_ref().x, parent_shape.line_start_ref().position_ref().y};
           current2 = {parent_shape.line_end_ref().position_ref().x, parent_shape.line_end_ref().position_ref().y};
-          current_center = {((current.x - current2.x) / 2) + current2.x, ((current.y - current2.y) / 2) + current2.y};
         } else if constexpr (std::is_same_v<TP, data_staging::script>) {
           current = {parent_shape.location_ref().position_ref().x, parent_shape.location_ref().position_ref().y};
         }
+
+        running_angle += parent_shape.generic_cref().angle();
 
         if (pivot_found) {
           // in case we already know the pivot, we will use the current as the position
@@ -1197,26 +1200,13 @@ void native_generator::handle_rotations(data_staging::shape_t& shape) {
           // the pivot directly
           pos = current;
         } else {
-          // pos will be recursively all X, Y positions added together
           pos.add(current);
-          if constexpr (std::is_same_v<TP, data_staging::line>) {
-            // pos will be recursively all X2, Y2 positions added together
-            pos2.add(current2);
-            // next parent location will add middle of the line as X,Y
-            pos_parent_next.add(current_center);
-          } else {
-            // next parent location will add X,Y
-            pos_parent_next.add(current);
-          }
+          pos_parent_next.add(current);
           // inherit the angle up till the pivot only, after that, all object angles are relative to the pivot
-          inherited_angle += parent_shape.generic_cref().angle();
+          inherited_angle += running_angle;
         }
 
         // if the current element is the pivot, set a flag and save it for the future parent position
-        if (parent_shape.meta_ref().is_pivot()) {
-          pivot_found = true;
-          pos_parent_next = current;
-        }
 
         double current_angle = parent_shape.generic_ref().angle();
         double angle = !std::isnan(current_angle) ? current_angle : 0;
@@ -1230,30 +1220,30 @@ void native_generator::handle_rotations(data_staging::shape_t& shape) {
             auto rads = angle1 * M_PI / 180.0;
             auto ratio = 1.0;
             // rotates around its center
-            auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
+            auto dist = get_distance(pos.x, pos.y, current.x, current.y);
             auto move = dist * ratio * -1;
             if (false) {
               // auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
               // auto move = dist * ratio * -1;
-              pos.x = pos_parent.x + (cos(rads) * move) + current_center.x;
-              pos.y = pos_parent.y + (sin(rads) * move) + current_center.y;
-              pos2.x = pos_parent.x - (cos(rads) * move) + current_center.x;
-              pos2.y = pos_parent.y - (sin(rads) * move) + current_center.y;
+              pos.x = pos_parent.x + (cos(rads) * move) + pos.x;
+              pos.y = pos_parent.y + (sin(rads) * move) + pos.y;
+              pos2.x = pos_parent.x - (cos(rads) * move) + pos.x;
+              pos2.y = pos_parent.y - (sin(rads) * move) + pos.y;
             }
             // rotates in length
-            if (true) {
+            if (false) {
               dist = get_distance(current.x, current.y, current2.x, current2.y);
               move = dist * ratio * -1;
               pos.x = pos_parent.x + (cos(rads) * move);
               pos.y = pos_parent.y + (sin(rads) * move);
-              pos2.x = pos_parent.x + (cos(rads) * move);
-              pos2.y = pos_parent.y + (sin(rads) * move);
+              // pos2.x = pos_parent.x + (cos(rads) * move);
+              // pos2.y = pos_parent.y + (sin(rads) * move);
             }
 
-            if (!pivot_found) {
-              pos_parent_next.x = pos_parent.x + (cos(rads) * move);
-              pos_parent_next.y = pos_parent.y + (sin(rads) * move);
-            }
+            // if (!pivot_found) {
+            //   pos_parent_next.x = pos_parent.x + (cos(rads) * move);
+            //   pos_parent_next.y = pos_parent.y + (sin(rads) * move);
+            // }
           } else {
             // current angle + angle with pos_parent
             auto angle1 = angle + get_angle(pos_parent.x, pos_parent.y, pos.x, pos.y);
@@ -1268,6 +1258,12 @@ void native_generator::handle_rotations(data_staging::shape_t& shape) {
             if (!pivot_found) pos_parent_next = pos;
           }
         }
+
+        if (parent_shape.meta_ref().is_pivot()) {
+          pivot_found = true;
+          pos_parent_next = current;
+        }
+
         // now we can update the pos_parent for the next level we're about to handle
         pos_parent = pos_parent_next;
       });
@@ -1663,8 +1659,6 @@ int native_generator::update_steps(double dist) {
   return steps;
 }
 
-// TODO: there is too much logic in this function that is now clearly in the wrong place.
-// This will be refactored soon.
 double native_generator::get_max_travel_of_object(data_staging::shape_t& shape_now, data_staging::shape_t& shape_prev) {
   vector2d xy_now;
   vector2d xy_prev;
@@ -1677,36 +1671,36 @@ double native_generator::get_max_travel_of_object(data_staging::shape_t& shape_n
 
   meta_visit(
       shape_now,
-      [&](data_staging::circle& shape) {
+      [&xy_now, &radius_prev](data_staging::circle& shape) {
         xy_now = shape.transitive_location_ref().position_cref();
         radius_now = shape.radius() + shape.radius_size();
       },
-      [&](data_staging::line& shape) {
+      [&xy_now, &xy2_now, &compare_xy2](data_staging::line& shape) {
         xy_now = shape.transitive_line_start_ref().position_cref();
         xy2_now = shape.transitive_line_end_ref().position_cref();
         compare_xy2 = true;
       },
-      [&](data_staging::text& shape) {
+      [&xy_now](data_staging::text& shape) {
         xy_now = shape.transitive_location_ref().position_cref();
       },
-      [&](data_staging::script& shape) {
+      [&xy_now](data_staging::script& shape) {
         xy_now = shape.transitive_location_ref().position_cref();
       });
 
   meta_visit(
       shape_prev,
-      [&](data_staging::circle& shape) {
+      [&xy_prev, &radius_prev](data_staging::circle& shape) {
         xy_prev = shape.transitive_location_ref().position_cref();
         radius_prev = shape.radius() + shape.radius_size();
       },
-      [&](data_staging::line& shape) {
+      [&xy_prev, &xy2_prev](data_staging::line& shape) {
         xy_prev = shape.transitive_line_start_ref().position_cref();
         xy2_prev = shape.transitive_line_end_ref().position_cref();
       },
-      [&](data_staging::text& shape) {
+      [&xy_prev](data_staging::text& shape) {
         xy_prev = shape.transitive_location_ref().position_cref();
       },
-      [&](data_staging::script& shape) {
+      [&xy_prev](data_staging::script& shape) {
         xy_prev = shape.transitive_location_ref().position_cref();
       });
 
@@ -1716,248 +1710,6 @@ double native_generator::get_max_travel_of_object(data_staging::shape_t& shape_n
   dist += squared_dist(radius_now, radius_prev);
 
   return dist;
-  return 1;  // temp
-  //  // Update level for all objects
-  //  // TODO: move to better place
-  //  auto level = i.integer_number(instance, "level");
-  //  auto type = i.str(instance, "type");
-  //  auto is_line = type == "line";
-  //  auto label = i.str(instance, "label");
-  //  auto random_hash = i.str(instance, "__random_hash__");
-  //  auto shape_scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
-  //  auto prev_shape_scale = i.has_field(previous_instance, "scale") ? i.double_number(previous_instance, "scale")
-  //  : 1.0;
-  //
-  //  const auto calculate = [this](v8_interact& i,
-  //                                v8::Local<v8::Array>& next_instances,
-  //                                v8::Local<v8::Object>& instance,
-  //                                std::unordered_map<int64_t, v8::Local<v8::Object>>& lookup,
-  //                                int64_t level,
-  //                                bool is_line) {
-  //    double angle = 0;
-  //
-  //    data::coord pos;     // X, Y
-  //    data::coord pos2;    // for lines there is an X2, Y2.
-  //    data::coord parent;  // X, Y of parent
-  //                         //    data::coord parent2; // X2, Y2 of parent
-  //                         //    data::coord parent3; // centered X,Y of parent (i.o.w., middle of the line for lines)
-  //    data::coord pos_for_parent;
-  //
-  //    std::vector<v8::Local<v8::Object>> lineage;
-  //    lineage.push_back(instance);
-  //    auto parent_uid = i.integer_number(instance, "parent_uid");
-  //    while (parent_uid != -1) {
-  //      auto parent = lookup.at(parent_uid);
-  //      lineage.push_back(parent);
-  //      parent_uid = i.integer_number(parent, "parent_uid");
-  //    }
-  //
-  //    // reverse iterate over lineage vector
-  //    for (auto it = lineage.rbegin(); it != lineage.rend(); ++it) {
-  //      auto& current_obj = *it;
-  //      const bool current_is_line = i.str(current_obj, "type") == "line";
-  //      // const bool current_is_pivot =
-  //      //    i.has_field(parent, "pivot") ? i.boolean(current_obj, "pivot") : false;
-  //
-  //      // X,Y
-  //      data::coord current{i.double_number(current_obj, "x"), i.double_number(current_obj, "y")};
-  //      const double current_angle = i.double_number(current_obj, "angle", 0.);
-  //
-  //      // X2, Y2, and centerX, centerY, for lines
-  //      data::coord current2, current_center;
-  //      if (current_is_line) {
-  //        current2 = data::coord{i.double_number(current_obj, "x2"), i.double_number(current_obj, "y2")};
-  //        current_center.x = ((current.x - current2.x) / 2) + current2.x;
-  //        current_center.y = ((current.y - current2.y) / 2) + current2.y;
-  //      }
-  //
-  //      // OPTION 1: simply center from X,Y always (option for points and lines)
-  //      // pos.add(current);
-  //
-  //      // OPTION 2: center from X2, Y2 (only option for lines)
-  //      // pos.add(current2);
-  //
-  //      // OPTION 3: center from centerX, centerY (only option for lines)
-  //      // pos.add(current_center);
-  //
-  //      // for now, let's go for the most intuitive choice
-  //      pos_for_parent.add(current_is_line ? current_center : current);
-  //      pos.add(current);
-  //      pos2.add(current_is_line ? current2 : current);
-  //
-  //      // angle = current_is_pivot ? current_angle : (angle + current_angle);
-  //
-  //      // total angle, cumulative no matter what
-  //      if (!std::isnan(current_angle)) angle += current_angle;
-  //
-  //      if (angle != 0.) {
-  //        if (current_is_line) {
-  //          // current angle + angle with parent
-  //          auto angle1 = angle + get_angle(parent.x, parent.y, pos2.x, pos2.y);
-  //          while (angle1 > 360.) angle1 -= 360.;
-  //          auto rads = angle1 * M_PI / 180.0;
-  //          auto ratio = 1.0;
-  //          // rotates around its center
-  //          auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
-  //          auto move = dist * ratio * -1;
-  //          if (false) {
-  //            // auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
-  //            // auto move = dist * ratio * -1;
-  //            pos.x = parent.x + (cos(rads) * move) + current_center.x;
-  //            pos.y = parent.y + (sin(rads) * move) + current_center.y;
-  //            pos2.x = parent.x - (cos(rads) * move) + current_center.x;
-  //            pos2.y = parent.y - (sin(rads) * move) + current_center.y;
-  //          }
-  //          // rotates in length
-  //          if (true) {
-  //            dist = get_distance(current.x, current.y, current2.x, current2.y);
-  //            move = dist * ratio * -1;
-  //            // pos.x = parent.x + (cos(rads) * move);
-  //            // pos.y = parent.y + (sin(rads) * move);
-  //            pos2.x = parent.x + (cos(rads) * move);
-  //            pos2.y = parent.y + (sin(rads) * move);
-  //          }
-  //          // unsure
-  //          pos_for_parent.x = parent.x + (cos(rads) * move);  // + current_center.x;
-  //          pos_for_parent.y = parent.y + (sin(rads) * move);  // + current_center.y;
-  //        } else {
-  //          // current angle + angle with parent
-  //          auto angle1 = angle + get_angle(parent.x, parent.y, pos.x, pos.y);
-  //          while (angle1 > 360.) angle1 -= 360.;
-  //          auto rads = angle1 * M_PI / 180.0;
-  //          auto ratio = 1.0;
-  //          auto dist = get_distance(0, 0, current.x, current.y);
-  //          auto move = dist * ratio * -1;
-  //          pos.x = parent.x + (cos(rads) * move);
-  //          pos.y = parent.y + (sin(rads) * move);
-  //          pos_for_parent.x = parent.x + (cos(rads) * move);
-  //          pos_for_parent.y = parent.y + (sin(rads) * move);
-  //        }
-  //      }
-  //
-  //      // now we can update the parent for the next level we're about to handle
-  //      parent = pos_for_parent;
-  //    }
-  //
-  //    // store transitive x & y etc.
-  //    i.set_field(instance, "transitive_x", v8::Number::New(i.get_isolate(), pos.x));
-  //    i.set_field(instance, "transitive_y", v8::Number::New(i.get_isolate(), pos.y));
-  //    if (is_line) {
-  //      i.set_field(instance, "transitive_x2", v8::Number::New(i.get_isolate(), pos2.x));
-  //      i.set_field(instance, "transitive_y2", v8::Number::New(i.get_isolate(), pos2.y));
-  //    }
-  //
-  //    // pass along x, y, x2, y2.
-  //    if (i.has_field(instance, "props")) {
-  //      const auto process_obj =
-  //          [&i, &pos, this](v8::Local<v8::Object>& o, const std::string& inherit_x, const std::string& inherit_y) {
-  //            const auto unique_id = i.integer_number(o, "unique_id");
-  //            const auto find = next_instance_map.find(unique_id);
-  //            if (find != next_instance_map.end()) {
-  //              auto other_val = find->second;
-  //              if (other_val->IsObject()) {
-  //                auto other = other_val.As<v8::Object>();
-  //                i.set_field(other, inherit_x, v8::Number::New(i.get_isolate(), pos.x));
-  //                i.set_field(other, inherit_y, v8::Number::New(i.get_isolate(), pos.y));
-  //              }
-  //            }
-  //          };
-  //      const auto process = [&i, &process_obj](const v8::Local<v8::Value>& field_value,
-  //                                              const std::string& inherit_x,
-  //                                              const std::string& inherit_y) {
-  //        if (field_value->IsArray()) {
-  //          auto a = field_value.As<v8::Array>();
-  //          for (size_t l = 0; l < a->Length(); l++) {
-  //            auto o = i.get_index(a, l).As<v8::Object>();
-  //            process_obj(o, inherit_x, inherit_y);
-  //          }
-  //        } else if (field_value->IsObject()) {
-  //          auto o = field_value.As<v8::Object>();
-  //          process_obj(o, inherit_x, inherit_y);
-  //        }
-  //      };
-  //      auto props = i.v8_obj(instance, "props");
-  //      auto obj_fields = i.prop_names(props);
-  //      for (size_t k = 0; k < obj_fields->Length(); k++) {
-  //        auto field_name = i.get_index(obj_fields, k);
-  //        auto field_value = i.get(props, field_name);
-  //        if (!field_value->IsObject()) continue;
-  //        auto str = i.str(obj_fields, k);
-  //        if (str == "left") {
-  //          process(field_value, "inherited_x", "inherited_y");
-  //        } else if (str == "right") {
-  //          process(field_value, "inherited_x2", "inherited_y2");
-  //        }
-  //      }
-  //    }
-  //
-  //    return std::make_tuple(pos.x, pos.y, pos2.x, pos2.y);
-  //  };
-  //
-  //  auto [x, y, x2, y2] = calculate(i, next_instances, instance, next_instance_map, level, is_line);
-  //  auto [prev_x, prev_y, prev_x2, prev_y2] =
-  //      calculate(i, next_instances, previous_instance, intermediate_map, level, is_line);
-  //
-  //  // Calculate how many pixels are maximally covered by this instance, this is currently very simplified
-  //  x *= scalesettings.video_scale_next * shape_scale;
-  //  prev_x *= scalesettings.video_scale_intermediate * prev_shape_scale;
-  //  y *= scalesettings.video_scale_next * shape_scale;
-  //  prev_y *= scalesettings.video_scale_intermediate * prev_shape_scale;
-  //
-  //  //  // TODO: make smarter for circles and lines, this is just temporary code
-  //  //  rectangle canvas(position(-canvas_w / 2., -canvas_h/2.), position(canvas_w / 2., canvas_h/2.));
-  //  //  if (is_line) {
-  //  //    rectangle shape_rect(position(x, y), position(x2, y2));
-  //  //    rectangle prev_shape_rect(position(prev_x - rad, prev_y - rad), position(prev_x + rad, prev_y + rad));
-  //  //    if (!canvas.overlaps(shape_rect) && !canvas.overlaps(prev_shape_rect)) {
-  //  //      return 0.;
-  //  //    }
-  //  //  } else {
-  //  //    rectangle shape_rect(position(x - rad, y - rad), position(x + rad, y + rad));
-  //  //    rectangle prev_shape_rect(position(prev_x - rad, prev_y - rad), position(prev_x + rad, prev_y + rad));
-  //  //    if (!canvas.overlaps(shape_rect) && !canvas.overlaps(prev_shape_rect)) {
-  //  //      return 0.;
-  //  //    }
-  //  //  }
-  //  auto dist = sqrt(pow(x - prev_x, 2) + pow(y - prev_y, 2));
-  //  // x2, y2
-  //  if (is_line) {
-  //    x2 *= scalesettings.video_scale_next * shape_scale;
-  //    prev_x2 *= scalesettings.video_scale_intermediate * prev_shape_scale;
-  //    y2 *= scalesettings.video_scale_next * shape_scale;
-  //    prev_y2 *= scalesettings.video_scale_intermediate * prev_shape_scale;
-  //    dist = std::max(dist, sqrt(pow(x2 - prev_x2, 2) + pow(y2 - prev_y2, 2)));
-  //  }
-  //
-  //  // radius
-  //  auto radius = i.double_number(instance, "radius");
-  //  auto radiussize = i.double_number(instance, "radiussize");
-  //  auto prev_radius = i.double_number(previous_instance, "radius");
-  //  auto prev_radiussize = i.double_number(previous_instance, "radiussize");
-  //  auto rad = radius + radiussize;
-  //  auto prev_rad = prev_radius + prev_radiussize;
-  //  rad *= scalesettings.video_scale_next * shape_scale;
-  //  prev_rad *= scalesettings.video_scale_intermediate * prev_shape_scale;
-  //  // TODO: this is not 100% accurate, if an object is moving and expanding its radius the max distance can be more
-  //  // but this should at least result in a decent enough effect in most cases
-  //  dist = std::max(dist, fabs(prev_rad - rad));
-  //
-  //  // Make sure that we do not include any warped distance
-  // This is now in toroidal_ref()
-  //  if (i.has_field(instance, "__warped_dist__")) {
-  //    dist -= i.double_number(instance, "__warped_dist__");
-  //    // If object moves two pixels to the right, is then warped 500 px to the left
-  //    // It has traveled 498, and the above statement has resulted in a value of -2.
-  //    // If it moves to the left for 2 pixels, and is moved 500px to the right, the
-  //    // distance is 502px - 500px = 2px as well.
-  //    dist = fabs(dist);
-  //  }
-  //
-  //  // TODO: proper support for connected objects, so they can inherit the warped stuff!
-  //  if (dist > 100) {
-  //    // logger(INFO) << "Warning, distance found > 100, id hash: " << random_hash << std::endl;
-  //  }
-  //  return dist;
 }
 
 void native_generator::convert_objects_to_render_job(v8_interact& i, step_calculator& sc, v8::Local<v8::Object> video) {
@@ -2108,6 +1860,17 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
         new_shape.y = shape.transitive_line_start_ref().position_cref().y;
         new_shape.x2 = shape.transitive_line_end_ref().position_cref().x;
         new_shape.y2 = shape.transitive_line_end_ref().position_cref().y;
+        if (new_shape.y != new_shape.y2) {
+          logger(INFO) << " shape x, y, x2 and y2: " << new_shape.x << ", " << new_shape.y << ", " << new_shape.x2
+                       << ", " << new_shape.y2 << std::endl;
+          new_shape.x = shape.line_start_ref().position_cref().x;
+          new_shape.y = shape.line_start_ref().position_cref().y;
+          new_shape.x2 = shape.line_end_ref().position_cref().x;
+          new_shape.y2 = shape.line_end_ref().position_cref().y;
+          logger(INFO) << " shape x, y, x2 and y2: " << new_shape.x << ", " << new_shape.y << ", " << new_shape.x2
+                       << ", " << new_shape.y2 << std::endl;
+          int x = 1001;
+        }
         initialize(shape);
       },
       [&](data_staging::text& shape) {
@@ -2516,7 +2279,8 @@ void native_generator::debug_print_next(const std::string& desc) {
     logger(INFO) << "uid=" << meta.unique_id() << ", puid=" << meta.parent_uid() << ", id=" << meta.id()
                  << ", level=" << meta.level() << ", namespace=" << meta.namespace_name() << " @ "
                  << loc.position_cref().x << "," << loc.position_cref().y << " +" << mov.velocity().x << ","
-                 << mov.velocity().y << ", last_collide=" << beh.last_collide() << ", mass=" << gen.mass() << std::endl;
+                 << mov.velocity().y << ", last_collide=" << beh.last_collide() << ", mass=" << gen.mass()
+                 << ", angle = " << gen.angle() << std::endl;
   };
   for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
     meta_visit(
