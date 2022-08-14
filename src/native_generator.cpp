@@ -1161,122 +1161,73 @@ void native_generator::update_object_distances() {
 }
 
 void native_generator::handle_rotations(data_staging::shape_t& shape) {
-  data::coord pos;              // X, Y
-  data::coord pos2;             // X2, Y2.
-  data::coord pos_parent;       // pos_parent X, Y
-  data::coord pos_parent_next;  // X, Y of circles or middle point of lines
-
+  vector2d parent;
+  vector2d new_position;
+  vector2d new_position2;
   bool pivot_found = false;
 
   const auto handle = [&]<typename T>(T concrete_shape) {
-    double running_angle = 0;
-    double inherited_angle = 0;
-
     // we'll iterate over all the parents of the current shape, and the shape itself, starting at the top pos_parent.
     // in case the current shape is at level 3, we iterate over 0, 1, 2, 3.
+    vector2d current;
+    vector2d current1;
+    vector2d current2;
     for (size_t i = 0; i <= concrete_shape.meta_cref().level(); i++) {
       meta_callback(stack[i].get(), [&]<typename TP>(TP& parent_shape) {
-        // X, Y, for all objects, or middle X, Y for lines
-        data::coord current;
-        // X1, Y1, X2, Y2 for lines
-        data::coord current1;
-        data::coord current2;
-
         if constexpr (std::is_same_v<TP, data_staging::circle>) {
-          current = {parent_shape.location_ref().position_ref().x, parent_shape.location_ref().position_ref().y};
+          current = add_vector(current, parent_shape.location_ref().position_ref());
         } else if constexpr (std::is_same_v<TP, data_staging::line>) {
-          current = {((current.x - current2.x) / 2) + current2.x, ((current.y - current2.y) / 2) + current2.y};
-          current1 = {parent_shape.line_start_ref().position_ref().x, parent_shape.line_start_ref().position_ref().y};
-          current2 = {parent_shape.line_end_ref().position_ref().x, parent_shape.line_end_ref().position_ref().y};
+          current1 = add_vector(current, parent_shape.line_start_ref().position_ref());
+          current2 = add_vector(current, parent_shape.line_end_ref().position_ref());
+          current = add_vector(
+              current, {((current1.x - current2.x) / 2) + current2.x, ((current1.y - current2.y) / 2) + current2.y});
         } else if constexpr (std::is_same_v<TP, data_staging::script>) {
-          current = {parent_shape.location_ref().position_ref().x, parent_shape.location_ref().position_ref().y};
+          current = add_vector(current, parent_shape.location_ref().position_ref());
         }
 
-        running_angle += parent_shape.generic_cref().angle();
+        double angle = parent_shape.generic_ref().angle();
 
-        if (pivot_found) {
-          // in case we already know the pivot, we will use the current as the position
-          // discarding all the parent X,Y positions added together, because we compare our XY against
-          // the pivot directly
-          pos = current;
+        const auto rotate = [&](auto& current, auto& parent) {
+          auto angle1 = angle + get_angle(parent.x, parent.y, current.x, current.y);
+          angle1 = std::fmod(angle1, 360.);
+          auto rads = angle1 * M_PI / 180.0;
+          auto ratio = 1.0;
+          auto dist = get_distance(parent.x, parent.y, current.x, current.y);
+          auto move = dist * ratio * -1;
+          // now current will be adjusted with the rotation
+          current.x = parent.x + (cos(rads) * move);
+          current.y = parent.y + (sin(rads) * move);
+        };
+
+        if constexpr (std::is_same_v<TP, data_staging::line>) {
+          rotate(current1, parent);
+          rotate(current2, parent);
+          new_position = current1;
+          new_position2 = current2;
         } else {
-          pos.add(current);
-          pos_parent_next.add(current);
-          // inherit the angle up till the pivot only, after that, all object angles are relative to the pivot
-          inherited_angle += running_angle;
+          rotate(current, parent);
+          new_position = current;
         }
 
-        // if the current element is the pivot, set a flag and save it for the future parent position
+        parent = current;
 
-        double current_angle = parent_shape.generic_ref().angle();
-        double angle = !std::isnan(current_angle) ? current_angle : 0;
-        angle += inherited_angle;
-
-        if (angle != 0.) {
-          if constexpr (std::is_same_v<T, data_staging::line>) {
-            // current angle + angle with pos_parent
-            auto angle1 = angle + get_angle(pos_parent.x, pos_parent.y, pos2.x, pos2.y);
-            while (angle1 > 360.) angle1 -= 360.;
-            auto rads = angle1 * M_PI / 180.0;
-            auto ratio = 1.0;
-            // rotates around its center
-            auto dist = get_distance(pos.x, pos.y, current.x, current.y);
-            auto move = dist * ratio * -1;
-            if (false) {
-              // auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
-              // auto move = dist * ratio * -1;
-              pos.x = pos_parent.x + (cos(rads) * move) + pos.x;
-              pos.y = pos_parent.y + (sin(rads) * move) + pos.y;
-              pos2.x = pos_parent.x - (cos(rads) * move) + pos.x;
-              pos2.y = pos_parent.y - (sin(rads) * move) + pos.y;
-            }
-            // rotates in length
-            if (false) {
-              dist = get_distance(current.x, current.y, current2.x, current2.y);
-              move = dist * ratio * -1;
-              pos.x = pos_parent.x + (cos(rads) * move);
-              pos.y = pos_parent.y + (sin(rads) * move);
-              // pos2.x = pos_parent.x + (cos(rads) * move);
-              // pos2.y = pos_parent.y + (sin(rads) * move);
-            }
-
-            // if (!pivot_found) {
-            //   pos_parent_next.x = pos_parent.x + (cos(rads) * move);
-            //   pos_parent_next.y = pos_parent.y + (sin(rads) * move);
-            // }
-          } else {
-            // current angle + angle with pos_parent
-            auto angle1 = angle + get_angle(pos_parent.x, pos_parent.y, pos.x, pos.y);
-            while (angle1 > 360.) angle1 -= 360.;
-            auto rads = angle1 * M_PI / 180.0;
-            auto ratio = 1.0;
-            // auto dist = get_distance(0, 0, current.x, current.y);
-            auto dist = get_distance(pos.x, pos.y, pos_parent.x, pos_parent.y);
-            auto move = dist * ratio * -1;
-            pos.x = pos_parent.x + (cos(rads) * move);
-            pos.y = pos_parent.y + (sin(rads) * move);
-            if (!pivot_found) pos_parent_next = pos;
-          }
-        }
-
-        if (parent_shape.meta_ref().is_pivot()) {
+        if (!pivot_found && parent_shape.meta_cref().is_pivot()) {
+          // skip to the last element in the stack, i - 1 due to i++ every iteration
+          i = concrete_shape.meta_cref().level() - 1;
           pivot_found = true;
-          pos_parent_next = current;
         }
-
-        // now we can update the pos_parent for the next level we're about to handle
-        pos_parent = pos_parent_next;
       });
     }
   };
+
   meta_visit(
       shape,
-      [&handle, &pos](data_staging::circle& c) {
+      [&handle, &new_position](data_staging::circle& c) {
         handle(c);
-        c.transitive_location_ref().position_ref().x = pos.x;
-        c.transitive_location_ref().position_ref().y = pos.y;
+        c.transitive_location_ref().position_ref().x = new_position.x;
+        c.transitive_location_ref().position_ref().y = new_position.y;
       },
-      [&handle, &pos, &pos2](data_staging::line& l) {
+      [&handle, &new_position, &new_position2](data_staging::line& l) {
         handle(l);
         bool skip_start = false, skip_end = false;
         for (const auto& cascade_in : l.cascades_in()) {
@@ -1288,23 +1239,23 @@ void native_generator::handle_rotations(data_staging::shape_t& shape) {
           }
         }
         if (!skip_start) {
-          l.transitive_line_start_ref().position_ref().x = pos.x;
-          l.transitive_line_start_ref().position_ref().y = pos.y;
+          l.transitive_line_start_ref().position_ref().x = new_position.x;
+          l.transitive_line_start_ref().position_ref().y = new_position.y;
         }
         if (!skip_end) {
-          l.transitive_line_end_ref().position_ref().x = pos2.x;
-          l.transitive_line_end_ref().position_ref().y = pos2.y;
+          l.transitive_line_end_ref().position_ref().x = new_position2.x;
+          l.transitive_line_end_ref().position_ref().y = new_position2.y;
         }
       },
-      [&handle, &pos](data_staging::text& t) {
+      [&handle, &new_position](data_staging::text& t) {
         handle(t);
-        t.transitive_location_ref().position_ref().x = pos.x;
-        t.transitive_location_ref().position_ref().y = pos.y;
+        t.transitive_location_ref().position_ref().x = new_position.x;
+        t.transitive_location_ref().position_ref().y = new_position.y;
       },
-      [&handle, &pos](data_staging::script& s) {
+      [&handle, &new_position](data_staging::script& s) {
         handle(s);
-        s.transitive_location_ref().position_ref().x = pos.x;
-        s.transitive_location_ref().position_ref().y = pos.y;
+        s.transitive_location_ref().position_ref().x = new_position.x;
+        s.transitive_location_ref().position_ref().y = new_position.y;
       });
 }
 
@@ -1857,20 +1808,16 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
         new_shape.radius = 0;
         new_shape.radius_size = shape.line_width();
         new_shape.x = shape.transitive_line_start_ref().position_cref().x;
-        new_shape.y = shape.transitive_line_start_ref().position_cref().y;
+        new_shape.y = shape.transitive_line_start_ref().position_cref().y - 22;
         new_shape.x2 = shape.transitive_line_end_ref().position_cref().x;
         new_shape.y2 = shape.transitive_line_end_ref().position_cref().y;
-        if (new_shape.y != new_shape.y2) {
-          logger(INFO) << " shape x, y, x2 and y2: " << new_shape.x << ", " << new_shape.y << ", " << new_shape.x2
-                       << ", " << new_shape.y2 << std::endl;
-          new_shape.x = shape.line_start_ref().position_cref().x;
-          new_shape.y = shape.line_start_ref().position_cref().y;
-          new_shape.x2 = shape.line_end_ref().position_cref().x;
-          new_shape.y2 = shape.line_end_ref().position_cref().y;
-          logger(INFO) << " shape x, y, x2 and y2: " << new_shape.x << ", " << new_shape.y << ", " << new_shape.x2
-                       << ", " << new_shape.y2 << std::endl;
-          int x = 1001;
-        }
+        //        if (new_shape.y != new_shape.y2) {
+        //          new_shape.x = shape.line_start_ref().position_cref().x;
+        //          new_shape.y = shape.line_start_ref().position_cref().y;
+        //          new_shape.x2 = shape.line_end_ref().position_cref().x;
+        //          new_shape.y2 = shape.line_end_ref().position_cref().y;
+        //          int x = 1001;
+        //        }
         initialize(shape);
       },
       [&](data_staging::text& shape) {
