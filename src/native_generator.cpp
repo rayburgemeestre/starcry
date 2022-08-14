@@ -1671,7 +1671,7 @@ double native_generator::get_max_travel_of_object(data_staging::shape_t& shape_n
 
   meta_visit(
       shape_now,
-      [&xy_now, &radius_prev](data_staging::circle& shape) {
+      [&xy_now, &radius_now](data_staging::circle& shape) {
         xy_now = shape.transitive_location_ref().position_cref();
         radius_now = shape.radius() + shape.radius_size();
       },
