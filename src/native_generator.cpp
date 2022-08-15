@@ -81,8 +81,8 @@ void fix_properties(std::vector<std::vector<data_staging::shape_t>>& scene_shape
   }
 }
 
-native_generator::native_generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context)
-    : context(context), metrics_(metrics) {}
+native_generator::native_generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug)
+    : context(context), metrics_(metrics), debug_(debug) {}
 
 native_generator* global_native_generator = nullptr;
 
@@ -788,6 +788,9 @@ bool native_generator::_generate_frame() {
 
       scalesettings.commit();
       scenesettings.commit();
+      if (debug_) {
+        debug_print_next();
+      }
       fpsp.inc();
       for (auto& [_, scenesetting] : scenesettings_objs) {
         scenesetting.commit();
@@ -1811,13 +1814,6 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
         new_shape.y = shape.transitive_line_start_ref().position_cref().y - 22;
         new_shape.x2 = shape.transitive_line_end_ref().position_cref().x;
         new_shape.y2 = shape.transitive_line_end_ref().position_cref().y;
-        //        if (new_shape.y != new_shape.y2) {
-        //          new_shape.x = shape.line_start_ref().position_cref().x;
-        //          new_shape.y = shape.line_start_ref().position_cref().y;
-        //          new_shape.x2 = shape.line_end_ref().position_cref().x;
-        //          new_shape.y2 = shape.line_end_ref().position_cref().y;
-        //          int x = 1001;
-        //        }
         initialize(shape);
       },
       [&](data_staging::text& shape) {
@@ -2216,8 +2212,7 @@ void native_generator::_instantiate_object(v8_interact& i,
   i.set_fun(new_instance, "spawn", the_fun);
 }
 
-void native_generator::debug_print_next(const std::string& desc) {
-  logger(INFO) << "desc = " << desc << std::endl;
+void native_generator::debug_print_next() {
   const auto print_meta = [](data_staging::meta& meta,
                              data_staging::location& loc,
                              data_staging::movement& mov,

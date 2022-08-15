@@ -176,7 +176,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   if (!gen) {
     context->recreate_isolate_in_this_thread();
 #ifdef DEVELOP
-    gen = std::make_shared<native_generator>(metrics_, context);
+    gen = std::make_shared<native_generator>(metrics_, context, options().debug);
 #else
     gen = std::make_shared<generator>(metrics_, context);
 #endif

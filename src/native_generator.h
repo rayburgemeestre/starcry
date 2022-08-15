@@ -101,6 +101,7 @@ private:
   std::string filename_;
 
   std::shared_ptr<native_generator_context> genctx;
+  bool debug_;
 
 public:
   struct time_settings {
@@ -109,7 +110,9 @@ public:
     double scene_time;
   };
 
-  explicit native_generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context);
+  explicit native_generator(std::shared_ptr<metrics>& metrics,
+                            std::shared_ptr<v8_wrapper>& context,
+                            bool debug = false);
   ~native_generator() = default;
 
   void reset_context();
@@ -199,7 +202,6 @@ public:
 
   std::shared_ptr<v8_wrapper> get_context() const;
 
-  // v8::Local<v8::Object> spawn_object_native(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj);
   int64_t spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
   int64_t spawn_object3(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1, int64_t obj2);
 
@@ -224,7 +226,7 @@ private:
                            int64_t level,
                            const std::string& namespace_);
 
-  void debug_print_next(const std::string& desc);
+  void debug_print_next();
 
   template <typename T>
   void copy_gradient_from_object_to_shape(T& source_object,
