@@ -94,6 +94,8 @@ void starcry::configure_inotify() {
     logger(DEBUG) << "File of interest: " << script_ << std::endl;
     if (notification.path.string() == script_) {
       // TODO: for the future implement HOT swapping (requires parsing JSON and merging intelligently)
+      // TODO: fix this feature, currently it's super annoying, as it generates crashes
+      /*
       gen->reset_context();
       gen->init(script_, {}, viewpoint.preview, features_.caching);
       json j{
@@ -101,6 +103,7 @@ void starcry::configure_inotify() {
           {"file", script_},
       };
       webserv->send_fs_change(j.dump());
+      */
     }
   };
   auto handleUnexpectedNotification = [](inotify::Notification notification) {};
