@@ -53,6 +53,12 @@ int64_t object_bridge<T>::spawn3(v8::Local<v8::Object> line_obj, int64_t obj1, i
 }
 
 template <typename T>
+int64_t object_bridge<T>::spawn_parent(v8::Local<v8::Object> line_obj) {
+  data_staging::shape_t var = *shape_stack.back();
+  return generator_->spawn_object_at_parent(var, line_obj);
+}
+
+template <typename T>
 int64_t object_bridge<T>::get_level() const {
   data_staging::shape_t var = *shape_stack.back();
   return shape_stack.back()->meta_cref().level();

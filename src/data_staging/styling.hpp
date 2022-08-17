@@ -22,6 +22,7 @@ private:
   std::shared_ptr<v8::Persistent<v8::Array>> gradients_obj_ = nullptr;
   std::vector<std::tuple<double, std::string>> textures_;
   data::blending_type blending_type_ = data::blending_type::normal;
+  int64_t seed_;
 
 public:
   styling() {
@@ -88,6 +89,14 @@ public:
       auto gradient_id = /* namespace_name +*/ i.str(gradient_data, size_t(1));
       gradients_.emplace_back(opacity, gradient_id);
     }
+  }
+
+  int64_t seed() const {
+    return seed_;
+  }
+
+  void set_seed(int64_t seed) {
+    seed_ = seed;
   }
 };
 }  // namespace data_staging

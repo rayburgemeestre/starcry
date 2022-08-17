@@ -52,6 +52,7 @@ public:
   double get_text_size() const;
   const std::string& get_text_align() const;
   bool get_text_fixed() const;
+  int64_t get_seed() const;
 
   void set_unique_id(int64_t unique_id);
   void set_angle(double angle);
@@ -73,6 +74,7 @@ public:
   void set_text_size(double size);
   void set_text_align(const std::string& align);
   void set_text_fixed(bool fixed);
+  void set_seed(int64_t) const;
 
   v8::Persistent<v8::Object>& get_properties_ref() const;
   v8::Local<v8::Object> get_properties_local_ref() const;
@@ -81,7 +83,9 @@ public:
   std::vector<std::tuple<double, std::string>>& get_gradients_ref() const;
 
   int64_t spawn(v8::Local<v8::Object> obj);
+  // TODO: rename to spawn_line
   int64_t spawn3(v8::Local<v8::Object> line_obj, int64_t obj1, int64_t obj2);
+  int64_t spawn_parent(v8::Local<v8::Object> obj);
 
   v8::Persistent<v8::Object>& instance();
 };

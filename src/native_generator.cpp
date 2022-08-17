@@ -1701,7 +1701,10 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
 
     // auto radius = shape.radius();           // i.double_number(instance, "radius");
     // auto radiussize = shape.radius_size();  // i.double_number(instance, "radiussize");
-    // auto seed = i.double_number(instance, "seed");
+    auto seed = this->seed;
+    if constexpr (std::is_same_v<T, data_staging::circle> || std::is_same_v<T, data_staging::line>) {
+      seed = shape.styling_cref().seed();
+    }
     auto scale = shape.generic_cref().scale();
 
     auto shape_opacity = shape.generic_cref().opacity();
@@ -1900,6 +1903,22 @@ int64_t native_generator::spawn_object3(data_staging::shape_t& spawner,
   return i.integer_number(created_instance, "unique_id");
 }
 
+int64_t native_generator::spawn_object_at_parent(data_staging::shape_t& spawner, v8::Local<v8::Object> obj) {
+  auto& i = genctx->i();
+  std::optional<std::reference_wrapper<data_staging::shape_t>> parent;
+  meta_callback(spawner, [&]<typename T>(const T& cc) {
+    if (cc.meta_cref().level() > 0) {
+      parent = next_instance_map.at(cc.meta_cref().parent_uid());
+    }
+  });
+  if (!parent) {
+    return -1;
+  }
+  auto [created_instance, shape_ref, created_shape_copy] = _instantiate_object_from_scene(i, obj, &((*parent).get()));
+  create_bookkeeping_for_script_objects(created_instance, created_shape_copy);
+  return i.integer_number(created_instance, "unique_id");
+}
+
 std::unordered_map<std::string, v8::Persistent<v8::Object>>& native_generator::get_object_definitions_ref() {
   return object_definitions_map;
 }
@@ -2065,6 +2084,8 @@ native_generator::_instantiate_object_from_scene(
                                   i.double_number(instance, "velocity", 0));
 
     c.meta_ref().set_namespace(parent_object_ns);
+
+    c.styling_ref().set_seed(i.integer_number(instance, "seed", 0));
 
     initialize(c, object_bridge_circle);
 

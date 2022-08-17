@@ -158,6 +158,11 @@ void object_bridge<data_staging::text>::set_velocity(double vel) {
 }
 
 template <>
+void object_bridge<data_staging::text>::set_seed(int64_t new_value) const {
+  return shape_stack.back()->styling_ref().set_seed(new_value);
+}
+
+template <>
 object_bridge<data_staging::text>::object_bridge(native_generator* generator) : generator_(generator) {
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
   object_bridge_class  // .template ctor<int>()

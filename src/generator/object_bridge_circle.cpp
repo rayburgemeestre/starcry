@@ -59,6 +59,11 @@ double object_bridge<data_staging::circle>::get_radius_size() const {
 }
 
 template <>
+int64_t object_bridge<data_staging::circle>::get_seed() const {
+  return shape_stack.back()->styling_ref().seed();
+}
+
+template <>
 void object_bridge<data_staging::circle>::set_unique_id(int64_t unique_id) {
   shape_stack.back()->meta_ref().set_unique_id(unique_id);
 }
@@ -138,6 +143,11 @@ void object_bridge<data_staging::circle>::set_velocity(double vel) {
 }
 
 template <>
+void object_bridge<data_staging::circle>::set_seed(int64_t new_value) const {
+  return shape_stack.back()->styling_ref().set_seed(new_value);
+}
+
+template <>
 object_bridge<data_staging::circle>::object_bridge(native_generator *generator) : generator_(generator) {
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
   object_bridge_class  // .template ctor<int>()
@@ -158,7 +168,9 @@ object_bridge<data_staging::circle>::object_bridge(native_generator *generator) 
       .set("props", v8pp::property(&object_bridge::get_properties_local_ref))
       .set("gradients", v8pp::property(&object_bridge::get_gradients_local_ref))
       .set("spawn", &object_bridge::spawn)
-      .set("spawn3", &object_bridge::spawn3);
+      .set("spawn3", &object_bridge::spawn3)
+      .set("spawn_parent", &object_bridge::spawn_parent)
+      .set("seed", v8pp::property(&object_bridge::get_seed, &object_bridge::set_seed));
   instance_ = std::make_shared<v8::Persistent<v8::Object>>();
   (*instance_)
       .Reset(v8::Isolate::GetCurrent(), object_bridge_class.reference_external(v8::Isolate::GetCurrent(), this));
