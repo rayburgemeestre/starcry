@@ -13,25 +13,10 @@ _ = {
   'objects': {
     'splitter': {
       'init': function() {
-        this.subobj.push(this.spawn({'id': 'circle', 'x': 0, 'y': 0, 'z': 0, 'props': {'x': 0, 'y': 0}}));
-        this.subobj.push(this.spawn({'id': 'circle', 'x': 0, 'y': 0, 'z': 0, 'props': {'x': 0, 'y': 0}}));
+        this.spawn({'id': 'circle', 'x': 0, 'y': 0, 'z': 0, 'props': {'x': 0, 'y': 0, 'jump': 100}});
+        this.spawn({'id': 'circle', 'x': 0, 'y': 0, 'z': 0, 'props': {'x': 0, 'y': 0, 'jump': -100}});
       },
       'time': function(t, e, scene, tt) {
-        let jump = 100;
-        if (scene === 0) {
-          this.subobj[0].props.x = expf(t, 50) * jump;
-          this.subobj[1].props.x = expf(t, 50) * -jump;
-          this.subobj[0].angle = 360 * t;
-          this.subobj[1].angle = 360 * t;
-        } else if (scene === 1) {
-          this.subobj[0].props.x = jump;
-          this.subobj[1].props.x = -jump;
-          this.subobj[0].angle = 360 * t;
-          this.subobj[1].angle = 360 * t;
-        } else {
-          this.subobj[0].props.x = jump;
-          this.subobj[1].props.x = -jump;
-        }
         if (this.level === 0) script.video.scale = (expf(tt, 10000) * 3.0) + 1.5;
       },
     },
@@ -75,7 +60,19 @@ _ = {
       'angle': 0.,
       'init': function() {},
       'time': function(t, e, scene) {
-        let jump = 100;
+        let jump = this.props.jump;
+        if (scene === 0) {
+          this.props.x = expf(t, 50) * jump;
+          this.angle = 360 * t;
+        } else if (scene === 1) {
+          this.props.x = jump;
+          this.angle = 360 * t;
+        } else {
+          this.props.x = jump;
+        }
+
+
+        jump = 100;
         var total_frames = 1.0 /*scene duration*/ * 25.;
         var current_frame = total_frames * t;
         switch (scene) {
