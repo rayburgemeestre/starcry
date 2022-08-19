@@ -12,11 +12,10 @@ _ = {
       'x': 0,
       'y': 0,
       'props': {},
-      'subobj': [],
       'radius': 0,
       'radiussize': 10.0,
       'init': function() {
-        this.subobj.push(this.spawn({
+        this.spawn({
           'id': 'ball',
           'label': 'ball_1',
           'x': -100,
@@ -25,8 +24,8 @@ _ = {
           'velocity': 10,  // do not specify negative velocity
           'vel_x': 1,
           'vel_y': 0,
-        }));
-        this.subobj.push(this.spawn({
+        });
+        this.spawn({
           'id': 'ball',
           'label': 'ball_2',
           'x': 100,
@@ -35,7 +34,7 @@ _ = {
           'velocity': 10,  // do not specify negative velocity
           'vel_x': -1,
           'vel_y': 0,
-        }));
+        });
       },
       'time': function(t, e) {},
     },
@@ -47,13 +46,9 @@ _ = {
       'radiussize': 20.0,
       'init': function() {},
       'time': function(t, elapsed) {},
-      'subobj': [],
-      'on': {
-        'collide': function(other) {
-          this.subobj.push(
-              this.spawn({'id': 'tempring', 'label': 'ring_' + this.label, 'x': 0, 'y': 0, 'z': 0, 'props': {}}));
-        }
-      }
+      'collide': function(other) {
+        this.spawn({'id': 'tempring', 'label': 'ring_' + this.label, 'x': 0, 'y': 0, 'z': 0, 'props': {}});
+      },
     },
     'tempring': {
       'type': 'circle',
