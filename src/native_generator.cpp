@@ -24,7 +24,6 @@
 #include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
 
-#include "data/coord.hpp"
 #include "data/texture.hpp"
 #include "data_staging/circle.hpp"
 #include "shapes/circle.h"
@@ -84,8 +83,6 @@ void fix_properties(std::vector<std::vector<data_staging::shape_t>>& scene_shape
 native_generator::native_generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug)
     : context(context), metrics_(metrics), debug_(debug) {}
 
-native_generator* global_native_generator = nullptr;
-
 void native_generator::reset_context() {
   // reset context
   context->reset();
@@ -104,7 +101,6 @@ void native_generator::reset_context() {
   context->add_fun("blending_type_str", &data::blending_type::to_str);
   context->add_fun("exit", &my_exit);
 
-  global_native_generator = this;
   context->add_include_fun();
 
   // add blending constants
@@ -172,7 +168,7 @@ void native_generator::init(const std::string& filename, std::optional<double> r
   scenesettings_objs.clear();
 
   // throw away any existing instances from array
-  for (auto& scene_shapes : scene_shapes_next) scene_shapes.clear();
+  for (auto& scene_shapes_vec : scene_shapes_next) scene_shapes_vec.clear();
 
   // reset random number generator
   set_rand_seed(rand_seed.value_or(0));
@@ -827,7 +823,7 @@ void native_generator::revert_all_changes(v8_interact& i) {
 }
 
 void native_generator::revert_position_updates(v8_interact& i) {
-  return;  // todo
+  // TODO
   //  for (size_t j = 0; j < next_instances->Length(); j++) {
   //    auto src = i.get_index(instances, j).As<v8::Object>();
   //    auto dst = i.get_index(next_instances, j).As<v8::Object>();
@@ -1465,7 +1461,7 @@ void native_generator::handle_gravity(data_staging::circle& instance,
                                       double G,
                                       double range,
                                       double constrain_dist_min,
-                                      double constrain_dist_max) {
+                                      double constrain_dist_max) const {
   // auto unique_id = instance.meta_cref().unique_id();
   auto x = instance.location_ref().position_cref().x;
   auto y = instance.location_ref().position_cref().y;
@@ -1733,7 +1729,7 @@ void native_generator::convert_object_to_render_job(v8_interact& i,
     copy_texture_from_object_to_shape(shape, new_shape, textures);
 
     // temp hack
-    std::string namespace_ = "";
+    std::string namespace_;
     std::string gradient_id;
     if constexpr (!std::is_same_v<T, data_staging::script>) {
       gradient_id = shape.styling_cref().gradient();

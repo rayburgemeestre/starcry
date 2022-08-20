@@ -132,12 +132,12 @@ public:
   void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance,
                                              const data_staging::shape_t& created_shape);
   void set_scene(size_t scene);
-  void set_scene_sub_object(scene_settings& scenesettings, size_t scene);
+  static void set_scene_sub_object(scene_settings& scenesettings, size_t scene);
   void fast_forward(int frame_of_interest);
   bool generate_frame();
   void revert_all_changes(v8_interact& i);
   static void revert_position_updates(v8_interact& i);
-  void call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances);
+  static void call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances);
   void create_new_mappings();
   void update_object_positions(v8_interact& i, v8::Local<v8::Object>& video);
   void insert_newly_created_objects();
@@ -158,13 +158,13 @@ public:
                       double G,
                       double range,
                       double constrain_dist_min,
-                      double constrain_dist_max);
+                      double constrain_dist_max) const;
   void update_time(v8_interact& i,
                    data_staging::shape_t& object_bridge,
                    const std::string& instance_id,
                    scene_settings& scenesettings);
   int update_steps(double dist);
-  double get_max_travel_of_object(data_staging::shape_t& shape_now, data_staging::shape_t& shape_prev);
+  static double get_max_travel_of_object(data_staging::shape_t& shape_now, data_staging::shape_t& shape_prev);
   void convert_objects_to_render_job(v8_interact& i, step_calculator& sc, v8::Local<v8::Object> video);
   void convert_object_to_render_job(v8_interact& i,
                                     data_staging::shape_t& shape,
