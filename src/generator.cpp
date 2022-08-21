@@ -3,7 +3,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-#ifndef DEVELOP
 #include "generator.h"
 
 #include <fmt/core.h>
@@ -18,49 +17,75 @@
 
 #include "scripting.h"
 #include "starcry/metrics.h"
-#include "util/generator.h"
 #include "util/logger.h"
 #include "util/math.h"
+#include "util/random.hpp"
 #include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
 
-#include "data/coord.hpp"
 #include "data/texture.hpp"
+#include "data_staging/circle.hpp"
 #include "shapes/circle.h"
 #include "shapes/position.h"
 #include "shapes/rectangle.h"
 
-// #define TEMPORARY_PERF_COMPARE_WITH_NATIVE 1
-
-generator::generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context)
-    : context(context), metrics_(metrics) {}
-
-generator* global_generator = nullptr;
-
-v8::Local<v8::Object> spawn_object(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  auto ctx = global_generator->get_context();
-  v8::Isolate* isolate = ctx->isolate;
-  v8::HandleScope scope(isolate);
-  v8::Local<v8::Object> obj = args[0]->ToObject(ctx->context->impl()).ToLocalChecked();
-  auto spawner = args.Holder();
-  return global_generator->spawn_object(spawner, obj);
+void meta_visit(auto& shape, auto&& handle_circle, auto&& handle_line, auto&& handle_text, auto&& handle_script) {
+  std::visit(overloaded{[](std::monostate) {}, handle_circle, handle_line, handle_text, handle_script}, shape);
 }
 
+template <typename T>
+void meta_callback(T& shape, auto&& callback) {
+  meta_visit(
+      shape,
+      [&](data_staging::circle& c) {
+        callback(c);
+      },
+      [&](data_staging::line& l) {
+        callback(l);
+      },
+      [&](data_staging::text& t) {
+        callback(t);
+      },
+      [&](data_staging::script& s) {
+        callback(s);
+      });
+}
+
+template <typename T>
+void meta_callback(const T& shape, auto&& callback) {
+  meta_visit(
+      shape,
+      [&](const data_staging::circle& c) {
+        callback(c);
+      },
+      [&](const data_staging::line& l) {
+        callback(l);
+      },
+      [&](const data_staging::text& t) {
+        callback(t);
+      },
+      [&](const data_staging::script& s) {
+        callback(s);
+      });
+}
+
+void fix_properties(std::vector<std::vector<data_staging::shape_t>>& scene_shapes) {
+  for (auto& shapes : scene_shapes) {
+    for (auto& shape : shapes) {
+      meta_callback(shape, [](auto& the_shape) {
+        the_shape.properties_ref().reinitialize();
+      });
+    }
+  }
+}
+
+generator::generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug)
+    : context(context), metrics_(metrics), debug_(debug) {}
+
 void generator::reset_context() {
-  // clear c++ caches
-  cache.job_cache.clear();
-  cache.next_instance_mapping.clear();
-  // TODO: we need to update this caching feature
-  cache.scalesettings.clear();
-  cache.scenesettings.clear();
-
-  // clear js caches
-  context->run("cache = {};");
-
   // reset context
   context->reset();
 
-  // add context global functions
   context->add_fun("output", &output_fun);
   context->add_fun("rand", &rand_fun);
   context->add_fun("random_velocity", &random_velocity);
@@ -73,9 +98,8 @@ void generator::reset_context() {
   context->add_fun("get_angle", &get_angle);
   context->add_fun("triangular_wave", &triangular_wave);
   context->add_fun("blending_type_str", &data::blending_type::to_str);
+  context->add_fun("exit", &my_exit);
 
-  global_generator = this;
-  context->add_fun("__spawn__", &::spawn_object);
   context->add_include_fun();
 
   // add blending constants
@@ -113,9 +137,8 @@ void generator::reset_context() {
   context->context->set("blending_type", consts);
 }
 void generator::init(const std::string& filename, std::optional<double> rand_seed, bool preview, bool caching) {
-  prctl(PR_SET_NAME, "generator thread");
+  prctl(PR_SET_NAME, "native generator thread");
   filename_ = filename;
-  cache.enabled = caching;
   init_context();
   init_user_script();
   init_job();
@@ -123,25 +146,41 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
   init_gradients();
   init_textures();
   init_toroidals();
+
+  context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+    genctx = std::make_shared<generator_context>(val, 0);
+  });
+
+  init_object_definitions();
+
   scenesettings.scene_initialized = std::numeric_limits<size_t>::max();
 
+  // refresh the scene object to get rid of left-over state
+  scene_settings tmp;
+  std::swap(scenesettings, tmp);
+
+  // restore scene durations info in the recreated object
+  scenesettings.scene_durations = tmp.scene_durations;
+  scenesettings.scenes_duration = tmp.scenes_duration;
+
+  // throw away all the scene information for script objects
+  scenesettings_objs.clear();
+
+  // throw away any existing instances from array
+  for (auto& scene_shapes_vec : scene_shapes_next) scene_shapes_vec.clear();
+
+  // reset random number generator
+  set_rand_seed(rand_seed.value_or(0));
+
   // set_scene requires generator_context to be set
-  context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    genctx = generator_context(val, 0);
+  set_scene(0);
 
-    // refresh the scene object to get rid of left-over state
-    scene_settings tmp;
-    std::swap(scenesettings, tmp);
-
-    // restore scene durations info in the recreated object
-    scenesettings.scene_durations = tmp.scene_durations;
-    scenesettings.scenes_duration = tmp.scenes_duration;
-
-    // throw away all the scene information for script objects
-    scenesettings_objs.clear();
-
-    set_scene(0);
-  });
+  // all objects added at this point can be blindly appended
+  scene_shapes_next[scenesettings.current_scene_next].insert(
+      std::end(scene_shapes_next[scenesettings.current_scene_next]),
+      std::begin(instantiated_objects[scenesettings.current_scene_next]),
+      std::end(instantiated_objects[scenesettings.current_scene_next]));
+  instantiated_objects[scenesettings.current_scene_next].clear();
 }
 
 void generator::init_context() {
@@ -150,13 +189,6 @@ void generator::init_context() {
 }
 
 void generator::init_user_script() {
-  // {
-  //   std::ifstream stream("web/webroot/lodash.js");
-  //   std::istreambuf_iterator<char> begin(stream), end;
-  //   const auto source = std::string(begin, end);
-  //   context->run(source);
-  //   // context->run("var a = {};");
-  //   // context->run("var b = _.cloneDeep(a);");
   // }
   std::ifstream stream(filename().c_str());
   if (!stream && filename() != "-") {
@@ -172,6 +204,12 @@ void generator::init_user_script() {
   context->run("cache = typeof cache == 'undefined' ? {} : cache;");
   context->run("script = {\"video\": {}};");
   context->run(source);
+
+  v8::HandleScope hs(context->context->isolate());
+  object_bridge_circle = std::make_shared<object_bridge<data_staging::circle>>(this);
+  object_bridge_line = std::make_shared<object_bridge<data_staging::line>>(this);
+  object_bridge_text = std::make_shared<object_bridge<data_staging::text>>(this);
+  object_bridge_script = std::make_shared<object_bridge<data_staging::script>>(this);
 }
 
 void generator::init_job() {
@@ -196,7 +234,7 @@ void generator::init_job() {
   job->save_image = false;
 }
 
-v8::Local<v8::Context> current_context(std::shared_ptr<v8_wrapper>& wrapper_context) {
+v8::Local<v8::Context> current_context_native(std::shared_ptr<v8_wrapper>& wrapper_context) {
   return wrapper_context->context->isolate()->GetCurrentContext();
 }
 
@@ -204,11 +242,11 @@ void generator::init_video_meta_info(std::optional<double> rand_seed, bool previ
   // "run_array" is a bit of a misnomer, this only invokes the callback once
   context->run_array("script", [this, &preview, &rand_seed](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i;
-    auto video = v8_index_object(current_context(context), val, "video").As<v8::Object>();
+    auto video = v8_index_object(current_context_native(context), val, "video").As<v8::Object>();
     if (preview) {
       v8::Local<v8::Object> preview_obj;
-      if (v8_index_object(current_context(context), val, "preview")->IsObject()) {
-        preview_obj = v8_index_object(current_context(context), val, "preview").As<v8::Object>();
+      if (v8_index_object(current_context_native(context), val, "preview")->IsObject()) {
+        preview_obj = v8_index_object(current_context_native(context), val, "preview").As<v8::Object>();
       } else {
         preview_obj = v8::Object::New(isolate);
       }
@@ -230,6 +268,10 @@ void generator::init_video_meta_info(std::optional<double> rand_seed, bool previ
     auto obj = val.As<v8::Object>();
     auto scenes = i.v8_array(obj, "scenes");
     for (size_t I = 0; I < scenes->Length(); I++) {
+      scene_shapes.emplace_back();
+      scene_shapes_next.emplace_back();
+      scene_shapes_intermediate.emplace_back();
+      instantiated_objects.emplace_back();
       auto current_scene = i.get_index(scenes, I);
       if (!current_scene->IsObject()) continue;
       auto sceneobj = current_scene.As<v8::Object>();
@@ -368,42 +410,81 @@ void generator::init_toroidals() {
 
 void generator::init_object_instances() {
   // This function is called whenever a scene is set. (once per scene)
-  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    genctx.set_scene(scenesettings.current_scene_next);
-    auto& i = genctx.i();
+  context->enter_object("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+    // enter_objects creates a new isolate, using the old gives issues, so we'll recreate
+    genctx = std::make_shared<generator_context>(val, scenesettings.current_scene_next);
+
+    genctx->set_scene(scenesettings.current_scene_next);
+    // auto& i = genctx->i();
 
     // whenever we switch to a new scene, we'll copy all the object state from the previous scene
     if (scenesettings.current_scene_next > 0) {
       logger(INFO) << "Switching to new scene, copying all state from previous." << std::endl;
-      auto prev_current_scene = i.get_index(genctx.scenes, scenesettings.current_scene_next - 1);
-      auto prev_sceneobj = prev_current_scene.As<v8::Object>();
+      // auto prev_current_scene = i.get_index(genctx->scenes, scenesettings.current_scene_next - 1);
+      // auto prev_sceneobj = prev_current_scene.As<v8::Object>();
       // continue from previous
-      genctx.instances = i.v8_array(prev_sceneobj, "instances", v8::Array::New(isolate));
-      genctx.instances_next = i.v8_array(prev_sceneobj, "instances_next", v8::Array::New(isolate));
-      genctx.instances_intermediate = i.v8_array(prev_sceneobj, "instances_intermediate", v8::Array::New(isolate));
-      i.set_field(genctx.current_scene_obj, "instances", genctx.instances);
-      i.set_field(genctx.current_scene_obj, "instances_next", genctx.instances_next);
-      i.set_field(genctx.current_scene_obj, "instances_intermediate", genctx.instances_intermediate);
+      //      genctx->instances = i.v8_array(prev_sceneobj, "instances", v8::Array::New(isolate));
+      //      genctx->instances_next = i.v8_array(prev_sceneobj, "instances_next", v8::Array::New(isolate));
+      //      genctx->instances_intermediate = i.v8_array(prev_sceneobj, "instances_intermediate",
+      //      v8::Array::New(isolate)); i.set_field(genctx->current_scene_obj, "instances", genctx->instances);
+      //      i.set_field(genctx->current_scene_obj, "instances_next", genctx->instances_next);
+      //      i.set_field(genctx->current_scene_obj, "instances_intermediate", genctx->instances_intermediate);
+      scene_shapes[scenesettings.current_scene_next] = scene_shapes[scenesettings.current_scene_next - 1];
+      scene_shapes_next[scenesettings.current_scene_next] = scene_shapes_next[scenesettings.current_scene_next - 1];
+      scene_shapes_intermediate[scenesettings.current_scene_next] =
+          scene_shapes_intermediate[scenesettings.current_scene_next - 1];
     }
 
-    instantiate_additional_objects_from_new_scene(genctx.scene_objects);
+    instantiate_additional_objects_from_new_scene(genctx->scene_objects);
 
     // since this is invoked directly after a scene change, and in the very beginning, make sure this state is part of
     // the instances "current" frame, or reverting (e.g., due to motion blur requirements) will discard all of this.
-    util::generator::copy_instances(i, genctx.instances, genctx.instances_next);
+    ////util::generator::copy_instances(i, genctx->instances, genctx->instances_next);
+    scene_shapes = scene_shapes_next;
+    fix_properties(scene_shapes);
   });
 }
 
-void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance) {
-  auto& i = genctx.i();
+void generator::init_object_definitions() {
+  context->run("var object_definitions = {}");
+  context->enter_object("object_definitions", [this](v8::Isolate* isolate, v8::Local<v8::Value> object_definitions) {
+    // we keep stuff here to avoid overwrites, we might be able to get rid of this in the future
+    // but it's a one-time overhead, so doesn't matter too much.
+    auto defs_storage = object_definitions.As<v8::Object>();
+    context->enter_object("script", [&, this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+      v8_interact i;
+      auto obj = val.As<v8::Object>();
+      auto object_definitions = i.v8_obj(obj, "objects");
+      auto object_definitions_fields = object_definitions->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+      for (size_t k = 0; k < object_definitions_fields->Length(); k++) {
+        auto object_id = i.get_index(object_definitions_fields, k);
+        auto object_definition = i.get(object_definitions, object_id).As<v8::Object>();
+        i.set_field(defs_storage, object_id, object_definition);
+        auto obj_from_storage = i.get(defs_storage, object_id).As<v8::Object>();
+        auto id = v8_str(isolate, object_id.As<v8::String>());
+        object_definitions_map[id].Reset(isolate, obj_from_storage);
+      }
+    });
+  });
+}
+
+void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance,
+                                                      const data_staging::shape_t& created_shape) {
+  auto& i = genctx->i();
 
   // only do extra work for script objects
   if (i.str(created_instance, "type") != "script") {
     return;
   }
 
+  // created shape namespace
+  std::string created_shape_namespace;
+  meta_callback(created_shape, [&]<typename T>(T& shape) {
+    created_shape_namespace = shape.meta_cref().namespace_name();
+  });
+
   const auto unique_id = i.integer_number(created_instance, "unique_id");
-  const auto namespace_ = i.str(created_instance, "id") + "_";
+  const auto namespace_ = created_shape_namespace;
   i.set_field(created_instance, "namespace", v8_str(i.get_context(), namespace_));
   const auto file = i.str(created_instance, "file");
   const auto specified_duration =
@@ -449,7 +530,7 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
   for (size_t k = 0; k < gradient_fields->Length(); k++) {
     auto gradient_src_id = i.get_index(gradient_fields, k);
     auto gradient_dst_id = namespace_ + i.str(gradient_fields, k);
-    i.set_field(genctx.gradients, gradient_dst_id, i.get(gradients, gradient_src_id));
+    i.set_field(genctx->gradients, gradient_dst_id, i.get(gradients, gradient_src_id));
   }
   init_gradients();
 
@@ -459,7 +540,10 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
   for (size_t k = 0; k < objects_fields->Length(); k++) {
     auto object_src_id = i.get_index(objects_fields, k);
     auto object_dst_id = namespace_ + i.str(objects_fields, k);
-    i.set_field(genctx.objects, object_dst_id, i.get(objects, object_src_id));
+    // TODO: is this still needed?
+    i.set_field(genctx->objects, object_dst_id, i.get(objects, object_src_id));
+    auto val = i.get(objects, object_src_id);
+    object_definitions_map[object_dst_id].Reset(i.get_isolate(), val.As<v8::Object>());
   }
 
   // make sure we start from the current 'global' time as an offset
@@ -473,24 +557,27 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
   if (current_scene->IsObject()) {
     auto o = current_scene.As<v8::Object>();
     auto scene_objects = i.v8_array(o, "objects");
-    instantiate_additional_objects_from_new_scene(scene_objects, &created_instance);
+    // TODO: why is it needed to convert these v8::Local objects? They seem to be garbage collected otherwise during
+    // execution.
+    v8::Persistent<v8::Array> tmp;
+    tmp.Reset(i.get_isolate(), scene_objects);
+    instantiate_additional_objects_from_new_scene(tmp, &created_shape);
   }
 
   // clean-up temporary variable that referenced the entire imported script
   context->run("tmp = undefined;");
 }
 
-void generator::instantiate_additional_objects_from_new_scene(v8::Local<v8::Array>& scene_objects,
-                                                              v8::Local<v8::Object>* parent_object) {
-  auto& i = genctx.i();
+void generator::instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
+                                                              const data_staging::shape_t* parent_object) {
+  auto& i = genctx->i();
 
   // instantiate all the additional objects from the new scene
-  for (size_t j = 0; j < scene_objects->Length(); j++) {
+  for (size_t j = 0; j < scene_objects.Get(i.get_isolate())->Length(); j++) {
     auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
-    // below can recursively add new objects as init() invocations spawn new objects, and so on
-    v8::Local<v8::Object> created_instance = util::generator::instantiate_object_from_scene(
-        i, genctx.objects, genctx.instances_next, scene_obj, parent_object);
-    create_bookkeeping_for_script_objects(created_instance);
+
+    auto [created_instance, shape_ref, shape_copy] = _instantiate_object_from_scene(i, scene_obj, parent_object);
+    create_bookkeeping_for_script_objects(created_instance, shape_copy);
   }
 }
 
@@ -520,9 +607,6 @@ void generator::set_scene_sub_object(scene_settings& scenesettings, size_t scene
 }
 
 void generator::fast_forward(int frame_of_interest) {
-  if (_forward_latest_cached_frame(frame_of_interest)) {
-    return;
-  }
   if (fast_ff && frame_of_interest > 2) {
     int backup_min_intermediates = min_intermediates;
     int backup_max_intermediates = max_intermediates;
@@ -543,32 +627,6 @@ void generator::fast_forward(int frame_of_interest) {
       metrics_->skip_job(job->job_number);
     }
   }
-}
-
-bool generator::_forward_latest_cached_frame(int frame_of_interest) {
-  if (!cache.enabled) return false;
-  cache.use = false;
-  // minus one, because frame of interest doesn't start counting at zero
-  if (cache.job_cache.find(frame_of_interest - 1) != cache.job_cache.end()) {
-    job->job_number = frame_of_interest - 1;
-    job->frame_number = frame_of_interest - 1;
-    cache.use = true;
-    return true;
-  }
-  for (int i = 1; frame_of_interest - 1 - i > 0; i++) {
-    if (cache.job_cache.find(frame_of_interest - 1 - i) != cache.job_cache.end()) {
-      job->job_number = frame_of_interest - 1 - i;
-      job->frame_number = frame_of_interest - 1 - i;
-      for (int j = 0; j < i; j++) {
-        cache.use = j == 0;
-        generate_frame();
-        metrics_->skip_job(job->job_number);
-      }
-      cache.use = false;
-      return true;
-    }
-  }
-  return false;
 }
 
 bool generator::generate_frame() {
@@ -604,45 +662,17 @@ bool generator::_generate_frame() {
     // job_number is incremented later, hence we do a +1 on the next line.
     metrics_->register_job(job->job_number + 1, job->frame_number, job->chunk, job->num_chunks);
 
-    if (cache.enabled) {
-      if (cache.use) {
-        _load_cache();
-      } else {
-        _save_cache();
-      }
-    }
-
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-      genctx = generator_context(val, scenesettings.current_scene_next);
-      auto& i = genctx.i();
-
-      v8::Handle<v8::Object> global = isolate->GetCurrentContext()->Global();
-      auto cache_ =
-          global->Get(isolate->GetCurrentContext(), v8_str(current_context(context), "cache")).ToLocalChecked();
-      auto cache = cache_.As<v8::Object>();
+      genctx = std::make_shared<generator_context>(val, scenesettings.current_scene_next);
+      auto& i = genctx->i();
 
       auto obj = val.As<v8::Object>();
       auto scenes = i.v8_array(obj, "scenes");
-      if (!cache->IsObject()) {
-        throw std::runtime_error("Could not access cache object.");
-      }
       auto video = i.v8_obj(obj, "video");
       // auto objects = i.v8_array(obj, "objects");
       auto current_scene = i.get_index(scenes, scenesettings.current_scene_next);
       if (!current_scene->IsObject()) return;
-      auto sceneobj = current_scene.As<v8::Object>();
-      auto instances = i.v8_array(sceneobj, "instances");
-      auto intermediates = i.v8_array(sceneobj, "instances_intermediate");
-      auto next_instances = i.v8_array(sceneobj, "instances_next");
-      if (!next_instances->IsArray()) return;
-
-      if (this->cache.enabled) {
-        if (this->cache.use) {
-          _load_js_cache(i, cache, instances, intermediates, next_instances);
-        } else {
-          _save_js_cache(i, cache, &instances, &intermediates, &next_instances);
-        }
-      }
+      // auto sceneobj = current_scene.As<v8::Object>();
 
       stepper.reset();
       indexes.clear();
@@ -650,7 +680,7 @@ bool generator::_generate_frame() {
       max_dist_found = std::numeric_limits<double>::max();
       scalesettings.reset();
 
-      util::generator::garbage_collect_erased_objects(i, instances, intermediates, next_instances);
+      // util::generator::garbage_collect_erased_objects(i, instances, intermediates, next_instances);
 
       if (min_intermediates > 0.) {
         update_steps(min_intermediates);
@@ -661,11 +691,11 @@ bool generator::_generate_frame() {
         if (++attempt >= max_attempts) {
           stepper.freeze();
         }
-        logger(DEBUG) << "Generating frame " << job->frame_number << " attempt " << attempt << std::endl;
+        logger(DEBUG) << "Generating frame [native] " << job->frame_number << " attempt " << attempt << std::endl;
         max_dist_found = 0;
         if (attempt > 1) {
           if (!settings_.motion_blur) break;
-          revert_all_changes(i, instances, next_instances, intermediates);
+          revert_all_changes(i);
         }
         step_calculator sc(stepper.max_step);
         job->resize_for_num_steps(stepper.max_step);
@@ -674,13 +704,19 @@ bool generator::_generate_frame() {
         stepper.rewind();
         bool detected_too_many_steps = false;
         while (stepper.has_next_step() && !detected_too_many_steps) {
-          logger(DEBUG) << "Stepper at step " << stepper.current_step << " out of " << stepper.max_step << std::endl;
+          // logger(DEBUG) << "Stepper at step " << stepper.current_step << " out of " << stepper.max_step << std::endl;
           qts.clear();
           qts_gravity.clear();
 
           // initialize scene
           if (scenesettings.update(get_time(scenesettings).time)) {
             set_scene(scenesettings.current_scene_next + 1);
+            // all objects added at this point can be blindly appended
+            scene_shapes_next[scenesettings.current_scene_next].insert(
+                std::end(scene_shapes_next[scenesettings.current_scene_next]),
+                std::begin(instantiated_objects[scenesettings.current_scene_next]),
+                std::end(instantiated_objects[scenesettings.current_scene_next]));
+            instantiated_objects[scenesettings.current_scene_next].clear();
           }
 
           // initialize scenes for script objects
@@ -692,26 +728,31 @@ bool generator::_generate_frame() {
 
           // call next frame event on all objects (TODO: optimize)
           if (stepper.current_step == 0) {
-            call_next_frame_event(i, next_instances);
+            // call_next_frame_event(i, next_instances);
           }
 
           // create mappings
-#ifndef TEMPORARY_PERF_COMPARE_WITH_NATIVE
-          create_new_mappings(i, next_instances, intermediates);
-#endif
+          create_new_mappings();
 
           // handle object movement (velocity added to position)
-          update_object_positions(i, next_instances, video);
+          update_object_positions(i, video);
 
           // handle collisions, gravity and "inherited" objects
-#ifndef TEMPORARY_PERF_COMPARE_WITH_NATIVE
-          update_object_interactions(i, next_instances, intermediates, instances, video);
-#endif
+          // absolute xy are known after this function call
+          update_object_interactions(i, video);
+
+          // calculate distance and steps
+          update_object_distances();
+
+          // above update functions could have triggered spawning of new objects
+          insert_newly_created_objects();
 
           // convert javascript to renderable objects
-          convert_objects_to_render_job(i, next_instances, sc, video);
+          convert_objects_to_render_job(i, sc, video);
 
-          util::generator::copy_instances(i, intermediates, next_instances);
+          scene_shapes_intermediate = scene_shapes_next;
+          fix_properties(scene_shapes_intermediate);
+
           scalesettings.update();
           scenesettings.update();
           for (auto& iter : scenesettings_objs) {
@@ -734,13 +775,17 @@ bool generator::_generate_frame() {
       }
 
       if (!settings_.update_positions) {
-        revert_position_updates(i, instances, next_instances, intermediates);
+        revert_position_updates(i);
       }
 
-      util::generator::copy_instances(i, instances, next_instances);
+      scene_shapes = scene_shapes_next;
+      fix_properties(scene_shapes);
 
       scalesettings.commit();
       scenesettings.commit();
+      if (debug_) {
+        debug_print_next();
+      }
       fpsp.inc();
       for (auto& [_, scenesetting] : scenesettings_objs) {
         scenesetting.commit();
@@ -748,9 +793,6 @@ bool generator::_generate_frame() {
 
       metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
     });
-    if (cache.enabled) {
-      cache.job_cache[job->frame_number] = true;
-    }
     job->job_number++;
     job->frame_number++;
     metrics_->complete_job(job->job_number);
@@ -761,72 +803,17 @@ bool generator::_generate_frame() {
   return job->frame_number != max_frames;
 }
 
-void generator::_load_cache() {
-  scenesettings = cache.scenesettings[job->job_number];
-  scalesettings = cache.scalesettings[job->job_number];
-  // next_instance_map = cache.next_instance_mapping[job->job_number];
-  util::generator::counter = cache.counter[job->job_number];
-}
-
-void generator::_save_cache() {
-  cache.scenesettings[job->job_number] = scenesettings;
-  cache.scalesettings[job->job_number] = scalesettings;
-  // cache.next_instance_mapping[job->job_number] = next_instance_map;
-  cache.counter[job->job_number] = util::generator::counter;
-}
-
-void generator::_load_js_cache(v8_interact& i,
-                               v8::Local<v8::Object> cache,
-                               v8::Local<v8::Array>& instances,
-                               v8::Local<v8::Array>& intermediates,
-                               v8::Local<v8::Array>& next_instances) {
-  std::string frame_index = std::string("frame") + std::to_string(job->job_number);
-  auto frame_cache = i.v8_obj(cache, frame_index);
-  if (frame_cache->IsObject()) {
-    auto cache_instances = i.v8_array(frame_cache, "instances");
-    auto cache_intermediates = i.v8_array(frame_cache, "instances_intermediate");
-    auto cache_next_instances = i.v8_array(frame_cache, "instances_next");
-    i.empty_and_resize(instances, cache_instances->Length());
-    i.empty_and_resize(intermediates, cache_intermediates->Length());
-    i.empty_and_resize(next_instances, cache_next_instances->Length());
-    util::generator::copy_instances(i, instances, cache_instances);
-    util::generator::copy_instances(i, intermediates, cache_intermediates);
-    util::generator::copy_instances(i, next_instances, cache_next_instances);
-  }
-}
-
-void generator::_save_js_cache(v8_interact& i,
-                               v8::Local<v8::Object> cache,
-                               v8::Local<v8::Array>* instances,
-                               v8::Local<v8::Array>* intermediates,
-                               v8::Local<v8::Array>* next_instances) {
-  std::string frame_index = std::string("frame") + std::to_string(job->job_number);
-  i.set_field(cache, frame_index, v8::Object::New(i.get_isolate()));
-  auto frame_cache = i.v8_obj(cache, frame_index);
-  i.set_field(frame_cache, "instances", v8::Array::New(i.get_isolate()));
-  i.set_field(frame_cache, "instances_intermediate", v8::Array::New(i.get_isolate()));
-  i.set_field(frame_cache, "instances_next", v8::Array::New(i.get_isolate()));
-  auto cache_instances = i.v8_array(frame_cache, "instances");
-  auto cache_intermediates = i.v8_array(frame_cache, "instances_intermediate");
-  auto cache_next_instances = i.v8_array(frame_cache, "instances_next");
-  i.empty_and_resize(cache_instances, (*instances)->Length());
-  i.empty_and_resize(cache_intermediates, (*intermediates)->Length());
-  i.empty_and_resize(cache_next_instances, (*next_instances)->Length());
-  util::generator::copy_instances(i, cache_instances, *instances);
-  util::generator::copy_instances(i, cache_intermediates, *intermediates);
-  util::generator::copy_instances(i, cache_next_instances, *next_instances);
-}
-
-void generator::revert_all_changes(v8_interact& i,
-                                   v8::Local<v8::Array>& instances,
-                                   v8::Local<v8::Array>& next_instances,
-                                   v8::Local<v8::Array>& intermediates) {
+void generator::revert_all_changes(v8_interact& i) {
   job->shapes.clear();
   indexes.clear();
 
   // reset next and intermediate instances
-  util::generator::copy_instances(i, next_instances, instances);
-  util::generator::copy_instances(i, intermediates, instances);
+  scene_shapes_next = scene_shapes;
+  fix_properties(scene_shapes_next);
+
+  scene_shapes_intermediate = scene_shapes;
+  fix_properties(scene_shapes_intermediate);
+
   scalesettings.revert();
   scenesettings.revert();
   for (auto& iter : scenesettings_objs) {
@@ -834,23 +821,21 @@ void generator::revert_all_changes(v8_interact& i,
   }
 }
 
-void generator::revert_position_updates(v8_interact& i,
-                                        v8::Local<v8::Array>& instances,
-                                        v8::Local<v8::Array>& next_instances,
-                                        v8::Local<v8::Array>& intermediates) {
-  for (size_t j = 0; j < next_instances->Length(); j++) {
-    auto src = i.get_index(instances, j).As<v8::Object>();
-    auto dst = i.get_index(next_instances, j).As<v8::Object>();
-    auto dst2 = i.get_index(intermediates, j).As<v8::Object>();
-    i.copy_field(dst, "x", src, "x");
-    i.copy_field(dst, "y", src, "y");
-    i.copy_field(dst, "x2", src, "x2");
-    i.copy_field(dst, "y2", src, "y2");
-    i.copy_field(dst2, "x", src, "x");
-    i.copy_field(dst2, "y", src, "y");
-    i.copy_field(dst2, "x2", src, "x2");
-    i.copy_field(dst2, "y2", src, "y2");
-  }
+void generator::revert_position_updates(v8_interact& i) {
+  // TODO
+  //  for (size_t j = 0; j < next_instances->Length(); j++) {
+  //    auto src = i.get_index(instances, j).As<v8::Object>();
+  //    auto dst = i.get_index(next_instances, j).As<v8::Object>();
+  //    auto dst2 = i.get_index(intermediates, j).As<v8::Object>();
+  //    i.copy_field(dst, "x", src, "x");
+  //    i.copy_field(dst, "y", src, "y");
+  //    i.copy_field(dst, "x2", src, "x2");
+  //    i.copy_field(dst, "y2", src, "y2");
+  //    i.copy_field(dst2, "x", src, "x");
+  //    i.copy_field(dst2, "y", src, "y");
+  //    i.copy_field(dst2, "x2", src, "x2");
+  //    i.copy_field(dst2, "y2", src, "y2");
+  //  }
 }
 
 void generator::call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances) {
@@ -861,261 +846,434 @@ void generator::call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next
   }
 }
 
-void generator::create_new_mappings(v8_interact& i,
-                                    v8::Local<v8::Array>& next_instances,
-                                    v8::Local<v8::Array>& intermediates) {
+void generator::create_new_mappings() {
   next_instance_map.clear();
   intermediate_map.clear();
-  for (size_t j = 0; j < next_instances->Length(); j++) {
-    auto next = i.get_index(next_instances, j).As<v8::Object>();
-    const auto unique_id = i.integer_number(next, "unique_id");
-    next_instance_map[unique_id] = next;
+  for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
+    // Will we just put copies here now??
+    meta_callback(abstract_shape, [&]<typename T>(T& shape) {
+      next_instance_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
+    });
   }
-  for (size_t index = 0; index < intermediates->Length(); index++) {
-    auto intermediate_instance = i.get_index(intermediates, index).As<v8::Object>();
-    const auto uid = i.integer_number(intermediate_instance, "unique_id");
-    intermediate_map[uid] = intermediate_instance;
+  for (auto& abstract_shape : scene_shapes_intermediate[scenesettings.current_scene_next]) {
+    // Will we just put copies here now??
+    meta_callback(abstract_shape, [&]<typename T>(T& shape) {
+      intermediate_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
+    });
   }
 }
 
-void generator::update_object_positions(v8_interact& i,
-                                        v8::Local<v8::Array>& next_instances,
-                                        v8::Local<v8::Object>& video) {
+void generator::update_object_positions(v8_interact& i, v8::Local<v8::Object>& video) {
   // clear function caching
   cached_xy.clear();
-  auto isolate = i.get_isolate();
   int64_t scenesettings_from_object_id = -1;
   int64_t scenesettings_from_object_id_level = -1;
-  for (size_t j = 0; j < next_instances->Length(); j++) {
-    auto instance = i.get_index(next_instances, j).As<v8::Object>();
-    if (!instance->IsObject()) continue;
 
-    auto unique_id = i.integer_number(instance, "unique_id");
-    auto level = i.integer_number(instance, "level");
-    std::string type = i.str(instance, "type");
-    bool is_line = type == "line";
-    bool is_script = type == "script";
-
-    if (is_script) {
-      // TODO: this strategy does not support nested script objects
-      // TODO: we need to use stack for that
-      scenesettings_from_object_id = unique_id;
-      scenesettings_from_object_id_level = level;
-    } else if (scenesettings_from_object_id_level == level) {
-      scenesettings_from_object_id = -1;
-      scenesettings_from_object_id_level = -1;
-    }
-
-    if (scenesettings_from_object_id == -1) {
-      update_time(i, instance, scenesettings);
-    } else {
-      update_time(i, instance, scenesettings_objs[scenesettings_from_object_id]);
-    }
-
-    scalesettings.video_scale_next = i.double_number(video, "scale");
-
-    std::string collision_group = i.str(instance, "collision_group");
-    std::string gravity_group = i.str(instance, "gravity_group");
-    auto angle = i.double_number(instance, "angle");
-    if (std::isnan(angle)) {
-      angle = 0.;
-    }
-    auto x = i.double_number(instance, "x");
-    auto y = i.double_number(instance, "y");
-    auto x2 = i.double_number(instance, "x2");
-    auto y2 = i.double_number(instance, "y2");
-    auto velocity = i.double_number(instance, "velocity", 1.);
-    auto vel_x = i.double_number(instance, "vel_x", 0.0);
-    auto vel_y = i.double_number(instance, "vel_y", 0.0);
-    // auto vel_x2 = is_line ? i.double_number(instance, "vel_x2") : 0.0;
-    // auto vel_y2 = is_line ? i.double_number(instance, "vel_y2") : 0.0;
-
-    velocity /= static_cast<double>(stepper.max_step);
-    x += (vel_x * velocity);
-    y += (vel_y * velocity);
-
-    // For now we only care about circles
-    if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
-      update_object_toroidal(i, instance, x, y);
-      if (collision_group != "undefined") {
-        qts.try_emplace(collision_group,
-                        quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
-        auto x_copy = x;
-        auto y_copy = y;
-#ifndef TEMPORARY_PERF_COMPARE_WITH_NATIVE
-        fix_xy(i, instance, unique_id, x_copy, y_copy);
-#endif
-        qts[collision_group].insert(point_type(position(x_copy, y_copy), unique_id));
+  for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
+    meta_callback(abstract_shape, [&]<typename T>(T& shape) {
+      if constexpr (std::is_same_v<T, data_staging::script>) {
+        // TODO: this strategy does not support nested script objects
+        // TODO: we need to use stack for that
+        scenesettings_from_object_id = shape.meta_cref().unique_id();
+        scenesettings_from_object_id_level = shape.meta_cref().level();
+      } else if (scenesettings_from_object_id_level == shape.meta_cref().level()) {
+        scenesettings_from_object_id = -1;
+        scenesettings_from_object_id_level = -1;
       }
-      if (gravity_group != "undefined") {
-        qts_gravity.try_emplace(gravity_group,
-                                quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
-        qts_gravity[gravity_group].insert(point_type(position(x, y), unique_id));
-      }
-    }
-    i.set_field(instance, "x", v8::Number::New(isolate, x));
-    i.set_field(instance, "y", v8::Number::New(isolate, y));
-    if (is_line) {
-      i.set_field(instance, "x2", v8::Number::New(isolate, x2));
-      i.set_field(instance, "y2", v8::Number::New(isolate, y2));
-    }
-    if (attempt == 1) {
-      i.set_field(instance, "steps", v8::Number::New(isolate, 1));
-    }
-  }
-}
 
-void generator::update_object_toroidal(v8_interact& i, v8::Local<v8::Object>& instance, double& x, double& y) {
-  auto toroidal = i.has_field(instance, "toroidal") ? i.str(instance, "toroidal") : "";
-  if (!toroidal.empty()) {
-    auto the_width = toroidals[toroidal].width;
-    auto the_height = toroidals[toroidal].height;
-    auto diff_x = 0;
-    auto diff_y = 0;
-
-    while (x + (the_width / 2) < 0) {
-      x += the_width;
-      diff_x += the_width;
-    }
-    while (y + (the_height / 2) < 0) {
-      y += the_height;
-      diff_y += the_height;
-    }
-    while (x + (the_width / 2) > the_width) {
-      x -= the_width;
-      diff_x -= the_width;
-    }
-    while (y + (the_height / 2) > the_height) {
-      y -= the_height;
-      diff_y -= the_height;
-    }
-    const auto warped_dist = get_distance(0, 0, diff_x, diff_y);
-    auto isolate = i.get_isolate();
-    i.set_field(instance, "__warp_width__", v8::Number::New(isolate, the_width));
-    i.set_field(instance, "__warp_height__", v8::Number::New(isolate, the_height));
-    i.set_field(instance, "__warped_dist__", v8::Number::New(isolate, warped_dist));
-  }
-}
-
-void generator::update_object_interactions(v8_interact& i,
-                                           v8::Local<v8::Array>& next_instances,
-                                           v8::Local<v8::Array>& intermediates,
-                                           v8::Local<v8::Array>& previous_instances,
-                                           v8::Local<v8::Object>& video) {
-  stepper.reset_current();
-  const auto isolate = i.get_isolate();
-
-  // we cannot simply iterate over the next_instances array, since the array might mutate
-  // during looping (since objects can trigger spawned objects, etc.) for this reason, create
-  // a copy of the array and iterate over that
-
-  std::vector<v8::Local<v8::Object>> instances;
-  for (size_t index = 0; index < next_instances->Length(); index++) {
-    auto next_instance = i.get_index(next_instances, index).As<v8::Object>();
-    instances.push_back(next_instance);
-  }
-
-  for (auto& next_instance : instances) {
-    auto instance_uid = i.integer_number(next_instance, "unique_id");
-    auto find = intermediate_map.find(instance_uid);
-    if (find == intermediate_map.end()) {
-      continue;
-    }
-    auto intermediate_instance = find->second;
-
-    auto motion_blur = !i.has_field(next_instance, "motion_blur") || i.boolean(next_instance, "motion_blur");
-
-    if (!motion_blur) {
-      i.set_field(next_instance, "steps", v8::Number::New(isolate, 1));
-    } else {
-      double dist = get_max_travel_of_object(i, next_instances, intermediate_instance, next_instance);
-      if (dist > max_dist_found) {
-        max_dist_found = dist;
-      }
-      auto steps = update_steps(dist);
-
-      // TODO: why is this recorded_steps static
-      // experimentally put this here for now
-      static std::unordered_map<int64_t, int> recorded_steps;
-
-      // below code is ugly and should be refactored soon anyway
-      auto inherit = i.get(next_instance, "inherited");
-      if (inherit->IsBoolean() && inherit.As<v8::Boolean>()->Value()) {
-        // inherited, do not set our own dist etc.
-        // EDIT: we need to read from cache as well, in case stuff got reverted..
-        i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[instance_uid]));
+      if (scenesettings_from_object_id == -1) {
+        update_time(i, abstract_shape, shape.meta_cref().id(), scenesettings);
       } else {
-        if (attempt == 1) {
-          i.set_field(next_instance, "__dist__", v8::Number::New(isolate, dist));
-          i.set_field(next_instance, "steps", v8::Number::New(isolate, steps));
-          recorded_steps[instance_uid] = steps;
-        } else if (attempt > 1) {
-          i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[instance_uid]));
+        // TODO:
+        update_time(i, abstract_shape, shape.meta_cref().id(), scenesettings_objs[scenesettings_from_object_id]);
+      }
+
+      scalesettings.video_scale_next = i.double_number(video, "scale");
+
+      auto angle = shape.generic_cref().angle();
+      if (std::isnan(angle)) {
+        angle = 0.;
+      }
+      double x = 0;
+      double y = 0;
+      double x2 = 0;
+      double y2 = 0;
+      double velocity = 0;
+      double vel_x = 0;
+      double vel_y = 0;
+      double vel_x2 = 0;
+      double vel_y2 = 0;
+      if constexpr (std::is_same_v<T, data_staging::line>) {
+        x = shape.line_start_ref().position_cref().x;
+        y = shape.line_start_ref().position_cref().y;
+        x2 = shape.line_end_ref().position_cref().x;
+        y2 = shape.line_end_ref().position_cref().y;
+        velocity = shape.movement_line_start_ref().velocity_speed();
+        vel_x = shape.movement_line_start_ref().velocity().x;
+        vel_y = shape.movement_line_start_ref().velocity().y;
+        vel_x2 = shape.movement_line_end_ref().velocity().x;
+        vel_y2 = shape.movement_line_end_ref().velocity().y;
+      } else {
+        x = shape.location_cref().position_cref().x;
+        y = shape.location_cref().position_cref().y;
+        velocity = shape.movement_cref().velocity_speed();
+        vel_x = shape.movement_cref().velocity().x;
+        vel_y = shape.movement_cref().velocity().y;
+      }
+
+      velocity /= static_cast<double>(stepper.max_step);
+      x += (vel_x * velocity);
+      y += (vel_y * velocity);
+      x2 += (vel_x2 * velocity);
+      y2 += (vel_y2 * velocity);
+
+      if constexpr (std::is_same_v<T, data_staging::line>) {
+        shape.line_start_ref().position_ref().x = x;
+        shape.line_start_ref().position_ref().y = y;
+        shape.line_end_ref().position_ref().x = x2;
+        shape.line_end_ref().position_ref().y = y2;
+      } else {
+        shape.location_ref().position_ref().x = x;
+        shape.location_ref().position_ref().y = y;
+      }
+      // Needed?
+      // if (attempt == 1) {
+      //   i.set_field(instance, "steps", v8::Number::New(isolate, 1));
+      // }
+    });
+  }
+}
+
+void generator::insert_newly_created_objects() {
+  auto& dest = scene_shapes_next[scenesettings.current_scene_next];
+  auto& source = instantiated_objects[scenesettings.current_scene_next];
+  if (source.empty()) return;
+
+  dest.reserve(dest.size() + source.size());
+
+  auto handle = [&](auto& shape, const data_staging::meta& meta) {
+    if (meta.parent_uid() == -1 /* no parent */) {
+      dest.emplace_back(std::move(shape));
+    } else {
+      // calculate first where to insert instance in destination array
+      const auto parent_uid = meta.parent_uid();
+      size_t insert_offset = dest.size();
+      int64_t found_level = 0;
+      bool searching = false;
+      for (size_t j = 0; j < dest.size(); j++) {
+        auto& elem = dest[j];
+        std::optional<std::reference_wrapper<const data_staging::meta>> elem_meta;
+        meta_callback(elem, [&]<typename TP>(TP& shape) {
+          elem_meta = shape.meta_cref();
+        });
+        const auto uid = elem_meta->get().unique_id();
+        const auto level = elem_meta->get().level();
+        if (searching && level <= found_level) {
+          insert_offset = j;
+          break;
+        } else if (uid == parent_uid) {
+          found_level = level;
+          // assume at this point it's the element after this one
+          insert_offset = j + 1;
+          searching = true;
+          // NOTE: we can early exit here to spawn new objects on top within their parent
+          // We can make that feature configurable, or even add some z-index-like support
+          // break;
         }
-        // cascade to left and right props, temp
-        if (i.has_field(next_instance, "props")) {
-          auto p = i.get(next_instance, "props");
-          if (p->IsObject()) {
-            auto props = p.As<v8::Object>();
-            for (const auto& left_or_right_str : {"left", "right"})
-              if (i.has_field(props, left_or_right_str)) {
-                auto l = i.get(props, left_or_right_str);
-                if (l->IsArray()) {
-                  auto a = l.As<v8::Array>();
-                  for (size_t m = 0; m < a->Length(); m++) {
-                    auto left_or_right = i.get_index(a, m).As<v8::Object>();
-                    // TODO: lambdafy: below is copied from block above.
-                    if (attempt == 1) {
-                      auto use_dist = dist;
-                      auto use_steps = steps;
-                      if (i.has_field(left_or_right, "__dist__")) {
-                        use_dist = std::max(use_dist, i.double_number(left_or_right, "__dist__"));
-                      }
-                      if (i.has_field(left_or_right, "steps")) {
-                        use_steps = std::max(use_steps, (int)i.integer_number(left_or_right, "steps"));
-                      }
-                      auto a = i.integer_number(left_or_right, "unique_id");
-                      recorded_steps[a] = use_steps;
-                      i.set_field(left_or_right, "__dist__", v8::Number::New(isolate, dist));
-                      i.set_field(left_or_right, "steps", v8::Number::New(isolate, use_steps));
-                    } else if (attempt > 1) {
-                      auto a = i.integer_number(left_or_right, "unique_id");
-                      i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
-                    }
-                    i.set_field(left_or_right, "inherited", v8::Boolean::New(isolate, true));
-                  }
-                } else if (l->IsObject()) {
-                  auto left_or_right = l.As<v8::Object>();
-                  if (attempt == 1) {
-                    auto use_dist = dist;
-                    auto use_steps = steps;
-                    if (i.has_field(left_or_right, "__dist__")) {
-                      use_dist = std::max(use_dist, i.double_number(left_or_right, "__dist__"));
-                    }
-                    if (i.has_field(left_or_right, "steps")) {
-                      use_steps = std::max(use_steps, (int)i.integer_number(left_or_right, "steps"));
-                    }
-                    auto a = i.integer_number(left_or_right, "unique_id");
-                    recorded_steps[a] = use_steps;
-                    i.set_field(left_or_right, "__dist__", v8::Number::New(isolate, use_dist));
-                    i.set_field(left_or_right, "steps", v8::Number::New(isolate, use_steps));
-                  } else if (attempt > 1) {
-                    auto a = i.integer_number(left_or_right, "unique_id");
-                    i.set_field(next_instance, "steps", v8::Number::New(isolate, recorded_steps[a]));
-                  }
-                  i.set_field(left_or_right, "inherited", v8::Boolean::New(isolate, true));
-                }
-              }
+      }
+
+      // reverse iterate over the destination array
+      // note that we iterate from one beyond the size of the array, if size() = 3, [3] will potentially be out of
+      // bounds
+      for (size_t rev_index = dest.size(); rev_index; rev_index--) {
+        // insert element where we calculated it should be
+        if (rev_index == insert_offset) {
+          if (insert_offset == dest.size()) {
+            dest.emplace_back(std::move(shape));
+          } else {
+            dest[insert_offset] = std::move(shape);
+          }
+          // no need to process the rest of the array at this point
+          break;
+        }
+        // for all elements move them down so that we create space for the new element
+        if (rev_index > 0) {
+          if (rev_index == dest.size()) {
+            dest.emplace_back(std::move(dest[rev_index - 1]) /* element above */);
+          } else {
+            dest[rev_index] = std::move(dest[rev_index - 1]) /* element above */;
           }
         }
       }
     }
-    handle_collisions(i, next_instance, next_instances);
-    handle_gravity(i, next_instance, next_instances);
+  };
+  for (auto& abstract_shape : source) {
+    meta_callback(abstract_shape, [&]<typename TP>(TP& shape) {
+      handle(abstract_shape, shape.meta_cref());
+    });
+  }
+  source.clear();
+  create_new_mappings();
+}
+
+void generator::update_object_toroidal(v8_interact& i, data_staging::toroidal& toroidal_data, double& x, double& y) {
+  if (toroidal_data.group().empty()) return;
+
+  auto the_width = toroidals[toroidal_data.group()].width;
+  auto the_height = toroidals[toroidal_data.group()].height;
+  auto diff_x = 0;
+  auto diff_y = 0;
+
+  while (x + (the_width / 2) < 0) {
+    x += the_width;
+    diff_x += the_width;
+  }
+  while (y + (the_height / 2) < 0) {
+    y += the_height;
+    diff_y += the_height;
+  }
+  while (x + (the_width / 2) > the_width) {
+    x -= the_width;
+    diff_x -= the_width;
+  }
+  while (y + (the_height / 2) > the_height) {
+    y -= the_height;
+    diff_y -= the_height;
+  }
+  const auto warped_dist = get_distance(0, 0, diff_x, diff_y);
+  toroidal_data.set_warp_width(the_width);
+  toroidal_data.set_warp_height(the_height);
+  toroidal_data.set_warp_dist(warped_dist);
+}
+
+void generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video) {
+  const auto handle_pass1 = [&]<typename T>(data_staging::shape_t& abstract_shape, T& shape, data_staging::meta& meta) {
+    if (meta.level() >= 0) {
+      if (stack.size() <= meta.level()) {
+        stack.emplace_back(abstract_shape);
+      } else {
+        stack[meta.level()] = std::ref(abstract_shape);
+      }
+    }
+    handle_rotations(abstract_shape);
+
+    if constexpr (std::is_same_v<T, data_staging::circle>) {
+      if (shape.radius_size() < 1000 /* todo create property of course */) {
+        double x = shape.transitive_location_cref().position_cref().x;
+        double y = shape.transitive_location_cref().position_cref().y;
+        // TODO:
+        update_object_toroidal(i, shape.toroidal_ref(), x, y);
+        const auto collision_group = shape.behavior_cref().collision_group();
+        const auto gravity_group = shape.behavior_cref().gravity_group();
+        if (!collision_group.empty()) {
+          qts.try_emplace(collision_group,
+                          quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
+          qts[collision_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
+        }
+        if (!gravity_group.empty()) {
+          qts_gravity.try_emplace(gravity_group,
+                                  quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
+          qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
+        }
+      }
+    }
+  };
+
+  const auto handle_pass2 = [&]<typename T>(data_staging::shape_t& abstract_shape, T& shape, data_staging::meta& meta) {
+    handle_collisions(i, abstract_shape);
+    handle_gravity(i, abstract_shape);
+  };
+
+  // first pass transitive xy become set
+  stack.clear();
+  for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
+    std::visit(overloaded{[](std::monostate) {},
+                          [&](data_staging::circle& c) {
+                            handle_pass1(abstract_shape, c, c.meta_ref());
+                          },
+                          [&](data_staging::line& l) {
+                            handle_pass1(abstract_shape, l, l.meta_ref());
+                          },
+                          [&](data_staging::text& t) {
+                            handle_pass1(abstract_shape, t, t.meta_ref());
+                          },
+                          [&](data_staging::script& s) {
+                            handle_pass1(abstract_shape, s, s.meta_ref());
+                          }},
+               abstract_shape);
+  }
+
+  // second pass depends on knowing transitive xy
+  for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
+    std::visit(overloaded{[](std::monostate) {},
+                          [&](data_staging::circle& c) {
+                            handle_pass2(abstract_shape, c, c.meta_ref());
+                            for (const auto& cascade_out : c.cascade_out_cref()) {
+                              auto& other = next_instance_map.at(cascade_out.unique_id()).get();
+                              if (auto other_line = std::get_if<data_staging::line>(&other)) {
+                                if (cascade_out.type() == cascade_type::start) {
+                                  other_line->line_start_ref().position_ref().x = c.location_ref().position_cref().x;
+                                  other_line->line_start_ref().position_ref().y = c.location_ref().position_cref().y;
+                                  other_line->transitive_line_start_ref().position_ref().x =
+                                      c.transitive_location_ref().position_cref().x;
+                                  other_line->transitive_line_start_ref().position_ref().y =
+                                      c.transitive_location_ref().position_cref().y;
+                                } else if (cascade_out.type() == cascade_type::end) {
+                                  other_line->line_end_ref().position_ref().x = c.location_ref().position_cref().x;
+                                  other_line->line_end_ref().position_ref().y = c.location_ref().position_cref().y;
+                                  other_line->transitive_line_end_ref().position_ref().x =
+                                      c.transitive_location_ref().position_cref().x;
+                                  other_line->transitive_line_end_ref().position_ref().y =
+                                      c.transitive_location_ref().position_cref().y;
+                                }
+                              }
+                            }
+                          },
+                          [&](data_staging::line& l) {
+                            handle_pass2(abstract_shape, l, l.meta_ref());
+                          },
+                          [&](data_staging::text& t) {
+                            handle_pass2(abstract_shape, t, t.meta_ref());
+                          },
+                          [&](data_staging::script& s) {
+                            handle_pass2(abstract_shape, s, s.meta_ref());
+                          }},
+               abstract_shape);
   }
 }
 
-void generator::handle_collisions(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Array> next_instances) {
+void generator::update_object_distances() {
+  stepper.reset_current();
+  const auto handle = [&](data_staging::shape_t& abstract_shape, data_staging::meta& meta) {
+    auto instance_uid = meta.unique_id();
+    // MARK
+    auto find = intermediate_map.find(instance_uid);
+    if (find == intermediate_map.end()) {
+      return;
+    }
+    double dist = get_max_travel_of_object(abstract_shape, find->second.get());
+    if (dist > max_dist_found) {
+      max_dist_found = dist;
+    }
+    auto steps = update_steps(dist);
+
+    static std::unordered_map<int64_t, int> recorded_steps;
+
+    if (attempt == 1) {
+      meta.set_distance(dist);
+      meta.set_steps(steps);
+      recorded_steps[instance_uid] = steps;
+    } else if (attempt > 1) {
+      meta.set_steps(recorded_steps[instance_uid]);
+    }
+  };
+  for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
+    meta_callback(abstract_shape, [&]<typename TP>(TP& shape) {
+      handle(abstract_shape, shape.meta_ref());
+    });
+  }
+}
+
+void generator::handle_rotations(data_staging::shape_t& shape) {
+  vector2d parent;
+  vector2d new_position;
+  vector2d new_position2;
+  bool pivot_found = false;
+
+  const auto handle = [&]<typename T>(T concrete_shape) {
+    // we'll iterate over all the parents of the current shape, and the shape itself, starting at the top pos_parent.
+    // in case the current shape is at level 3, we iterate over 0, 1, 2, 3.
+    vector2d current;
+    vector2d current1;
+    vector2d current2;
+    for (size_t i = 0; i <= concrete_shape.meta_cref().level(); i++) {
+      meta_callback(stack[i].get(), [&]<typename TP>(TP& parent_shape) {
+        if constexpr (std::is_same_v<TP, data_staging::circle>) {
+          current = add_vector(current, parent_shape.location_ref().position_ref());
+        } else if constexpr (std::is_same_v<TP, data_staging::line>) {
+          current1 = add_vector(current, parent_shape.line_start_ref().position_ref());
+          current2 = add_vector(current, parent_shape.line_end_ref().position_ref());
+          current = add_vector(
+              current, {((current1.x - current2.x) / 2) + current2.x, ((current1.y - current2.y) / 2) + current2.y});
+        } else if constexpr (std::is_same_v<TP, data_staging::script>) {
+          current = add_vector(current, parent_shape.location_ref().position_ref());
+        }
+
+        double angle = parent_shape.generic_ref().angle();
+
+        const auto rotate = [&](auto& current, auto& parent) {
+          auto angle1 = angle + get_angle(parent.x, parent.y, current.x, current.y);
+          angle1 = std::fmod(angle1, 360.);
+          auto rads = angle1 * M_PI / 180.0;
+          auto ratio = 1.0;
+          auto dist = get_distance(parent.x, parent.y, current.x, current.y);
+          auto move = dist * ratio * -1;
+          // now current will be adjusted with the rotation
+          current.x = parent.x + (cos(rads) * move);
+          current.y = parent.y + (sin(rads) * move);
+        };
+
+        if constexpr (std::is_same_v<TP, data_staging::line>) {
+          rotate(current1, parent);
+          rotate(current2, parent);
+          new_position = current1;
+          new_position2 = current2;
+        } else {
+          rotate(current, parent);
+          new_position = current;
+        }
+
+        parent = current;
+
+        if (!pivot_found && parent_shape.meta_cref().is_pivot()) {
+          // skip to the last element in the stack, i - 1 due to i++ every iteration
+          i = concrete_shape.meta_cref().level() - 1;
+          pivot_found = true;
+        }
+      });
+    }
+  };
+
+  meta_visit(
+      shape,
+      [&handle, &new_position](data_staging::circle& c) {
+        handle(c);
+        c.transitive_location_ref().position_ref().x = new_position.x;
+        c.transitive_location_ref().position_ref().y = new_position.y;
+      },
+      [&handle, &new_position, &new_position2](data_staging::line& l) {
+        handle(l);
+        bool skip_start = false, skip_end = false;
+        for (const auto& cascade_in : l.cascades_in()) {
+          if (cascade_in.type() == cascade_type::start) {
+            skip_start = true;
+          }
+          if (cascade_in.type() == cascade_type::end) {
+            skip_end = true;
+          }
+        }
+        if (!skip_start) {
+          l.transitive_line_start_ref().position_ref().x = new_position.x;
+          l.transitive_line_start_ref().position_ref().y = new_position.y;
+        }
+        if (!skip_end) {
+          l.transitive_line_end_ref().position_ref().x = new_position2.x;
+          l.transitive_line_end_ref().position_ref().y = new_position2.y;
+        }
+      },
+      [&handle, &new_position](data_staging::text& t) {
+        handle(t);
+        t.transitive_location_ref().position_ref().x = new_position.x;
+        t.transitive_location_ref().position_ref().y = new_position.y;
+      },
+      [&handle, &new_position](data_staging::script& s) {
+        handle(s);
+        s.transitive_location_ref().position_ref().x = new_position.x;
+        s.transitive_location_ref().position_ref().y = new_position.y;
+      });
+}
+
+void generator::handle_collisions(v8_interact& i, data_staging::shape_t& shape) {
   // Now do the collision detection part
   // NOTE: we multiple radius/size * 2.0 since we're not looking up a point, and querying the quadtree does
   // not check for overlap, but only whether the x,y is inside the specified range. If we don't want to miss
@@ -1123,65 +1281,78 @@ void generator::handle_collisions(v8_interact& i, v8::Local<v8::Object> instance
   // TODO: for different sizes of circle collision detection, we need to somehow adjust the interface to this
   // lookup somehow.
   std::vector<point_type> found;
-  auto type = i.str(instance, "type");
-  auto collision_group = i.str(instance, "collision_group");
-  if (collision_group == "undefined") {
-    return;
-  }
-  auto x = i.double_number(instance, "x");
-  auto y = i.double_number(instance, "y");
-  auto unique_id = i.integer_number(instance, "unique_id");
-  fix_xy(i, instance, unique_id, x, y);
-
-  auto radius = i.double_number(instance, "radius");
-  auto radiussize = i.double_number(instance, "radiussize");
-
-  qts[collision_group].query(unique_id, circle(position(x, y), radius * 2.0, radiussize * 2.0), found);
-  if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
-    for (const auto& collide : found) {
-      const auto unique_id2 = collide.userdata;
-      auto instance2 = next_instance_map.at(unique_id2);
-      handle_collision(i, instance, instance2);
+  try {
+    data_staging::circle& c = std::get<data_staging::circle>(shape);
+    const auto& collision_group = c.behavior_ref().collision_group_ref();
+    if (collision_group.empty() || collision_group == "undefined") {
+      return;
     }
+    auto x = c.transitive_location_ref().position_ref().x;
+    auto y = c.transitive_location_ref().position_ref().y;
+    auto unique_id = c.meta_cref().unique_id();
+
+    if (c.meta_cref().id() == "balls") return;
+
+    auto radius = c.radius();
+    auto radiussize = c.radius_size();
+
+    qts[collision_group].query(unique_id, circle(position(x, y), radius * 2.0, radiussize * 2.0), found);
+    if (radiussize < 1000 /* todo create property of course */) {
+      for (const auto& collide : found) {
+        const auto unique_id2 = collide.userdata;
+        auto& shape2 = next_instance_map.at(unique_id2);
+        try {
+          data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
+          if (c2.meta_cref().id() != "balls" && c.meta_cref().unique_id() != c2.meta_cref().unique_id()) {
+            handle_collision(i, c, c2, shape, shape2.get());
+          }
+        } catch (std::bad_variant_access const& ex) {
+          // only supporting circles for now
+          return;
+        }
+      }
+    }
+  } catch (std::bad_variant_access const& ex) {
+    // only supporting circles for now
+    return;
   }
 }
 
-void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2) {
-  const auto isolate = i.get_isolate();
-  auto unique_id = i.integer_number(instance, "unique_id");
-  auto unique_id2 = i.integer_number(instance2, "unique_id");
-  auto last_collide = i.double_number(instance, "last_collide");
+void generator::handle_collision(v8_interact& i,
+                                 data_staging::circle& instance,
+                                 data_staging::circle& instance2,
+                                 data_staging::shape_t& shape,
+                                 data_staging::shape_t& shape2) {
+  auto unique_id = instance.meta_cref().unique_id();
+  auto unique_id2 = instance2.meta_cref().unique_id();
+  auto last_collide = instance.behavior_ref().last_collide();
 
-  auto x = i.double_number(instance, "x");
-  auto y = i.double_number(instance, "y");
-  fix_xy(i, instance, unique_id, x, y);
+  auto x = instance.transitive_location_ref().position_cref().x;
+  auto y = instance.transitive_location_ref().position_cref().y;
 
-  auto x2 = i.double_number(instance2, "x");
-  auto y2 = i.double_number(instance2, "y");
-  fix_xy(i, instance2, unique_id2, x2, y2);
+  auto x2 = instance2.transitive_location_ref().position_cref().x;
+  auto y2 = instance2.transitive_location_ref().position_cref().y;
 
-  auto radius = i.double_number(instance, "radius");
-  auto radiussize = i.double_number(instance, "radiussize");
-  auto radius2 = i.double_number(instance2, "radius");
-  auto radiussize2 = i.double_number(instance2, "radiussize");
-  auto mass = i.double_number(instance, "mass", 1.);
-  auto mass2 = i.double_number(instance2, "mass", 1.);
+  auto radius = instance.radius();
+  auto radiussize = instance.radius_size();
+  auto radius2 = instance2.radius();
+  auto radiussize2 = instance2.radius_size();
+  auto mass = instance.generic_cref().mass();
+  auto mass2 = instance2.generic_cref().mass();
 
   // If the quadtree reported a match, it doesn't mean the objects fully collide
   circle a(position(x, y), radius, radiussize);
   circle b(position(x2, y2), radius2, radiussize2);
   if (!a.overlaps(b)) return;
 
-  if (!instance2->IsObject()) return;
-
   // they already collided, no need to let them collide again
   if (last_collide == unique_id2) return;
 
   // handle collision
-  auto vel_x = i.double_number(instance, "vel_x");
-  auto vel_y = i.double_number(instance, "vel_y");
-  auto vel_x2 = i.double_number(instance2, "vel_x");
-  auto vel_y2 = i.double_number(instance2, "vel_y");
+  auto vel_x = instance.movement_ref().velocity().x;
+  auto vel_y = instance.movement_ref().velocity().y;
+  auto vel_x2 = instance2.movement_ref().velocity().x;
+  auto vel_y2 = instance2.movement_ref().velocity().y;
 
   const auto normal = unit_vector(subtract_vector(vector2d(x, y), vector2d(x2, y2)));
   const auto ta = dot_product(vector2d(vel_x, vel_y), normal);
@@ -1191,96 +1362,135 @@ void generator::handle_collision(v8_interact& i, v8::Local<v8::Object> instance,
   // save velocities
   const auto multiplied_vector = multiply_vector(normal, optimized_p);
   auto updated_vel1 = subtract_vector(vector2d(vel_x, vel_y), multiply_vector(multiplied_vector, mass2));
-  i.set_field(instance, "vel_x", v8::Number::New(isolate, updated_vel1.x));
-  i.set_field(instance, "vel_y", v8::Number::New(isolate, updated_vel1.y));
+  instance.movement_ref().set_velocity(updated_vel1);
   auto updated_vel2 = add_vector(vector2d(vel_x2, vel_y2), multiply_vector(multiplied_vector, mass));
-  i.set_field(instance2, "vel_x", v8::Number::New(isolate, updated_vel2.x));
-  i.set_field(instance2, "vel_y", v8::Number::New(isolate, updated_vel2.y));
+  instance2.movement_ref().set_velocity(updated_vel2);
 
   // save collision
-  i.set_field(instance, "last_collide", v8::Number::New(isolate, unique_id2));
-  i.set_field(instance2, "last_collide", v8::Number::New(isolate, unique_id));
+  instance.behavior_ref().set_last_collide(unique_id2);
+  instance2.behavior_ref().set_last_collide(unique_id);
 
-  // call 'on collision' event
-  auto on = i.get(instance, "on").As<v8::Object>();
-  i.call_fun(on, instance, "collide", instance2);
-  auto on2 = i.get(instance2, "on").As<v8::Object>();
-  i.call_fun(on2, instance2, "collide", instance);
+  // collide callback
+  auto find = object_definitions_map.find(instance.meta_cref().id());
+  if (find != object_definitions_map.end()) {
+    auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
+    auto handle_time_for_shape = [&](auto& c, auto& object_bridge_circle, auto other_unique_id) {
+      object_bridge_circle->push_object(c);
+      i.call_fun(object_definition, object_bridge_circle->instance(), "collide", other_unique_id);
+      object_bridge_circle->pop_object();
+    };
+    meta_visit(
+        shape,
+        [&](data_staging::circle& c) {
+          handle_time_for_shape(c, object_bridge_circle, unique_id2);
+        },
+        [&](data_staging::line& l) {
+          handle_time_for_shape(l, object_bridge_line, unique_id2);
+        },
+        [&](data_staging::text& t) {
+          handle_time_for_shape(t, object_bridge_text, unique_id2);
+        },
+        [&](data_staging::script& s) {
+          handle_time_for_shape(s, object_bridge_script, unique_id2);
+        });
+    meta_visit(
+        shape2,
+        [&](data_staging::circle& c) {
+          handle_time_for_shape(c, object_bridge_circle, unique_id);
+        },
+        [&](data_staging::line& l) {
+          handle_time_for_shape(l, object_bridge_line, unique_id);
+        },
+        [&](data_staging::text& t) {
+          handle_time_for_shape(t, object_bridge_text, unique_id);
+        },
+        [&](data_staging::script& s) {
+          handle_time_for_shape(s, object_bridge_script, unique_id);
+        });
+  }
 }
 
-void generator::handle_gravity(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Array> next_instances) {
-  std::vector<point_type> found;
+void generator::handle_gravity(v8_interact& i, data_staging::shape_t& shape) {
+  try {
+    std::vector<point_type> found;
+    data_staging::circle& c = std::get<data_staging::circle>(shape);
 
-  auto type = i.str(instance, "type");
-  auto unique_id = i.integer_number(instance, "unique_id");
-  auto gravity_group = i.str(instance, "gravity_group");
-  if (gravity_group == "undefined") {
+    auto unique_id = c.meta_cref().unique_id();
+    auto gravity_group = c.behavior_ref().gravity_group();
+    if (gravity_group.empty()) {
+      return;
+    }
+
+    if (c.movement_ref().velocity_speed() == 0) return;  // skip this one.
+
+    auto x = c.transitive_location_ref().position_cref().x;
+    auto y = c.transitive_location_ref().position_cref().y;
+
+    auto radius = c.radius();
+    auto radiussize = c.radius_size();
+
+    auto& video = genctx->video_obj;
+    auto G = i.double_number(video, "gravity_G", 1);
+    auto range = i.double_number(video, "gravity_range", 1000);
+    const auto constrain_dist_min = i.double_number(video, "gravity_constrain_dist_min", 5.);
+    const auto constrain_dist_max = i.double_number(video, "gravity_constrain_dist_max", 25.);
+
+    qts_gravity[gravity_group].query(
+        unique_id, circle(position(x, y), range + (radius * 2.0), range + (radiussize * 2.0)), found);
+
+    if (c.radius_size() < 1000 /* todo create property of course */) {
+      vector2d acceleration(0, 0);
+      for (const auto& in_range : found) {
+        const auto unique_id2 = in_range.userdata;
+        auto shape2 = next_instance_map.at(unique_id2);
+        try {
+          data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
+          if (c.meta_cref().unique_id() != c2.meta_cref().unique_id()) {
+            handle_gravity(c, c2, acceleration, G, range, constrain_dist_min, constrain_dist_max);
+          }
+        } catch (std::bad_variant_access const& ex) {
+          // only supporting circles for now
+          return;
+        }
+      }
+      auto vel = add_vector(c.movement_ref().velocity(), acceleration);
+      c.movement_ref().set_velocity(vel);
+    }
+  } catch (std::bad_variant_access const& ex) {
+    // only supporting circles for now
     return;
   }
-
-  if (i.double_number(instance, "velocity", 0) == 0) return;  // skip this one.
-
-  auto& video = genctx.video_obj;
-  auto x = i.double_number(instance, "x");
-  auto y = i.double_number(instance, "y");
-  fix_xy(i, instance, unique_id, x, y);
-
-  auto radius = i.double_number(instance, "radius");
-  auto radiussize = i.double_number(instance, "radiussize");
-  auto range = i.double_number(video, "gravity_range", 1000);
-
-  qts_gravity[gravity_group].query(
-      unique_id, circle(position(x, y), range + (radius * 2.0), range + (radiussize * 2.0)), found);
-
-  if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create property of course */) {
-    vector2d acceleration(0, 0);
-    for (const auto& in_range : found) {
-      const auto unique_id2 = in_range.userdata;
-      auto instance2 = next_instance_map.at(unique_id2);
-      handle_gravity(i, instance, instance2, acceleration);
-    }
-    vector2d vel(i.double_number(instance, "vel_x", 0.), i.double_number(instance, "vel_y", 0.));
-    vel = add_vector(vel, acceleration);
-    i.set_field(instance, "vel_x", v8::Number::New(i.get_isolate(), vel.x));
-    i.set_field(instance, "vel_y", v8::Number::New(i.get_isolate(), vel.y));
-  }
+  //---
 }
 
-void generator::handle_gravity(v8_interact& i,
-                               v8::Local<v8::Object> instance,
-                               v8::Local<v8::Object> instance2,
-                               vector2d& acceleration) {
-  auto& video = genctx.video_obj;
+void generator::handle_gravity(data_staging::circle& instance,
+                               data_staging::circle& instance2,
+                               vector2d& acceleration,
+                               double G,
+                               double range,
+                               double constrain_dist_min,
+                               double constrain_dist_max) const {
+  // auto unique_id = instance.meta_cref().unique_id();
+  auto x = instance.transitive_location_ref().position_cref().x;
+  auto y = instance.transitive_location_ref().position_cref().y;
 
-  auto unique_id = i.integer_number(instance, "unique_id");
-  auto x = i.double_number(instance, "x");
-  auto y = i.double_number(instance, "y");
-  fix_xy(i, instance, unique_id, x, y);
+  // auto unique_id2 = instance.meta_cref().unique_id();
+  auto x2 = instance2.transitive_location_ref().position_cref().x;
+  auto y2 = instance2.transitive_location_ref().position_cref().y;
 
-  auto unique_id2 = i.integer_number(instance2, "unique_id");
-  auto x2 = i.double_number(instance2, "x");
-  auto y2 = i.double_number(instance2, "y");
-  fix_xy(i, instance2, unique_id2, x2, y2);
-
-  auto radius = i.double_number(instance, "radius");
-  auto radiussize = i.double_number(instance, "radiussize");
-  auto radius2 = i.double_number(instance2, "radius");
-  auto radiussize2 = i.double_number(instance2, "radiussize");
-  auto mass = i.double_number(instance, "mass", 1.);
-  auto mass2 = i.double_number(instance2, "mass", 1.);
-
-  auto G = i.double_number(video, "gravity_G", 1);
-  auto range = i.double_number(video, "gravity_range", 1000);
+  auto radius = instance.radius();
+  auto radiussize = instance.radius_size();
+  auto radius2 = instance2.radius();
+  auto radiussize2 = instance2.radius_size();
+  auto mass = instance.generic_ref().mass();
+  auto mass2 = instance2.generic_ref().mass();
 
   // If the quadtree reported a match, it doesn't mean the objects fully collide
   circle a(position(x, y), radius + range, radiussize);
   circle b(position(x2, y2), radius2 + range, radiussize2);
   double dist = 0;
   if (!a.overlaps(b, dist)) return;
-  if (!instance2->IsObject()) return;
 
-  const auto constrain_dist_min = i.double_number(video, "gravity_constrain_dist_min", 5.);
-  const auto constrain_dist_max = i.double_number(video, "gravity_constrain_dist_max", 25.);
   const auto constrained_distance = std::clamp(dist, constrain_dist_min, constrain_dist_max);
 
   vector2d vec_a(x, y);
@@ -1340,14 +1550,49 @@ std::shared_ptr<v8_wrapper> generator::get_context() const {
   return context;
 }
 
-void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance, scene_settings& scenesettings) {
+void generator::update_time(v8_interact& i,
+                            data_staging::shape_t& instance,
+                            const std::string& instance_id,
+                            scene_settings& scenesettings) {
   const auto time_settings = get_time(scenesettings);
   const auto execute = [&](double scene_time) {
-    i.set_field(instance, "__time__", v8::Number::New(i.get_isolate(), scene_time));
-    i.set_field(instance, "__global_time__", v8::Number::New(i.get_isolate(), time_settings.time));
-    i.set_field(instance, "__elapsed__", v8::Number::New(i.get_isolate(), time_settings.elapsed));
-    i.call_fun(
-        instance, "time", scene_time, time_settings.elapsed, scenesettings.current_scene_next, time_settings.time);
+    // Are these still needed?? (EDIT: I don't think it's used)
+    // EDIT: during texture rendering we query the shape for the time
+    // i.set_field(instance, "__time__", v8::Number::New(i.get_isolate(), scene_time));
+    // i.set_field(instance, "__global_time__", v8::Number::New(i.get_isolate(), time_settings.time));
+    // i.set_field(instance, "__elapsed__", v8::Number::New(i.get_isolate(), time_settings.elapsed));
+
+    auto find = object_definitions_map.find(instance_id);
+    if (find != object_definitions_map.end()) {
+      auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
+      auto handle_time_for_shape = [&](auto& c, auto& object_bridge) {
+        // TODO: check if the object has an "time" function, or we can just skip this entire thing
+        c.meta_ref().set_time(scene_time);
+        object_bridge->push_object(c);
+        i.call_fun(object_definition,
+                   object_bridge->instance(),
+                   "time",
+                   scene_time,
+                   time_settings.elapsed,
+                   scenesettings.current_scene_next,
+                   time_settings.time);
+        object_bridge->pop_object();
+      };
+      meta_visit(
+          instance,
+          [&](data_staging::circle& c) {
+            handle_time_for_shape(c, object_bridge_circle);
+          },
+          [&](data_staging::line& l) {
+            handle_time_for_shape(l, object_bridge_line);
+          },
+          [&](data_staging::text& t) {
+            handle_time_for_shape(t, object_bridge_text);
+          },
+          [&](data_staging::script& s) {
+            handle_time_for_shape(s, object_bridge_script);
+          });
+    }
   };
 
   if (scenesettings.current_scene_next > scenesettings.current_scene_intermediate) {
@@ -1362,7 +1607,6 @@ void generator::update_time(v8_interact& i, v8::Local<v8::Object>& instance, sce
 }
 
 int generator::update_steps(double dist) {
-  // auto steps = round(std::max(1.0, (fabs(dist) + 0.5) / (tolerated_granularity)));
   auto steps = round(std::max(1.0, fabs(dist) / tolerated_granularity));
   if (steps > max_intermediates) {
     steps = max_intermediates;
@@ -1371,446 +1615,690 @@ int generator::update_steps(double dist) {
   return steps;
 }
 
-// TODO: there is too much logic in this function that is now clearly in the wrong place.
-// This will be refactored soon.
-double generator::get_max_travel_of_object(v8_interact& i,
-                                           v8::Local<v8::Array>& next_instances,
-                                           v8::Local<v8::Object>& previous_instance,
-                                           v8::Local<v8::Object>& instance) {
-  // Update level for all objects
-  // TODO: move to better place
-  auto level = i.integer_number(instance, "level");
-  auto type = i.str(instance, "type");
-  auto is_line = type == "line";
-  auto label = i.str(instance, "label");
-  auto random_hash = i.str(instance, "__random_hash__");
-  auto shape_scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
-  auto prev_shape_scale = i.has_field(previous_instance, "scale") ? i.double_number(previous_instance, "scale") : 1.0;
+double generator::get_max_travel_of_object(data_staging::shape_t& shape_now, data_staging::shape_t& shape_prev) {
+  vector2d xy_now;
+  vector2d xy_prev;
+  vector2d xy2_now;
+  vector2d xy2_prev;
+  bool compare_xy2 = false;
 
-  const auto calculate = [this](v8_interact& i,
-                                v8::Local<v8::Array>& next_instances,
-                                v8::Local<v8::Object>& instance,
-                                std::unordered_map<int64_t, v8::Local<v8::Object>>& lookup,
-                                int64_t level,
-                                bool is_line) {
-    double angle = 0;
+  double radius_now = 0;
+  double radius_prev = 0;
 
-    data::coord pos;     // X, Y
-    data::coord pos2;    // for lines there is an X2, Y2.
-    data::coord parent;  // X, Y of parent
-                         //    data::coord parent2; // X2, Y2 of parent
-                         //    data::coord parent3; // centered X,Y of parent (i.o.w., middle of the line for lines)
-    data::coord pos_for_parent;
+  meta_visit(
+      shape_now,
+      [&xy_now, &radius_now](data_staging::circle& shape) {
+        xy_now = shape.transitive_location_ref().position_cref();
+        radius_now = shape.radius() + shape.radius_size();
+      },
+      [&xy_now, &xy2_now, &compare_xy2](data_staging::line& shape) {
+        xy_now = shape.transitive_line_start_ref().position_cref();
+        xy2_now = shape.transitive_line_end_ref().position_cref();
+        compare_xy2 = true;
+      },
+      [&xy_now](data_staging::text& shape) {
+        xy_now = shape.transitive_location_ref().position_cref();
+      },
+      [&xy_now](data_staging::script& shape) {
+        xy_now = shape.transitive_location_ref().position_cref();
+      });
 
-    std::vector<v8::Local<v8::Object>> lineage;
-    lineage.push_back(instance);
-    auto parent_uid = i.integer_number(instance, "parent_uid");
-    while (parent_uid != -1) {
-      auto parent = lookup.at(parent_uid);
-      lineage.push_back(parent);
-      parent_uid = i.integer_number(parent, "parent_uid");
-    }
+  meta_visit(
+      shape_prev,
+      [&xy_prev, &radius_prev](data_staging::circle& shape) {
+        xy_prev = shape.transitive_location_ref().position_cref();
+        radius_prev = shape.radius() + shape.radius_size();
+      },
+      [&xy_prev, &xy2_prev](data_staging::line& shape) {
+        xy_prev = shape.transitive_line_start_ref().position_cref();
+        xy2_prev = shape.transitive_line_end_ref().position_cref();
+      },
+      [&xy_prev](data_staging::text& shape) {
+        xy_prev = shape.transitive_location_ref().position_cref();
+      },
+      [&xy_prev](data_staging::script& shape) {
+        xy_prev = shape.transitive_location_ref().position_cref();
+      });
 
-    // reverse iterate over lineage vector
-    for (auto it = lineage.rbegin(); it != lineage.rend(); ++it) {
-      auto& current_obj = *it;
-      const bool current_is_line = i.str(current_obj, "type") == "line";
-      // const bool current_is_pivot =
-      //    i.has_field(parent, "pivot") ? i.boolean(current_obj, "pivot") : false;
+  auto dist = xy_now.distance_to(xy_prev);
+  if (compare_xy2) dist = std::max(dist, xy2_now.distance_to(xy2_prev));
 
-      // X,Y
-      data::coord current{i.double_number(current_obj, "x"), i.double_number(current_obj, "y")};
-      const double current_angle = i.double_number(current_obj, "angle", 0.);
+  dist += squared_dist(radius_now, radius_prev);
 
-      // X2, Y2, and centerX, centerY, for lines
-      data::coord current2, current_center;
-      if (current_is_line) {
-        current2 = data::coord{i.double_number(current_obj, "x2"), i.double_number(current_obj, "y2")};
-        current_center.x = ((current.x - current2.x) / 2) + current2.x;
-        current_center.y = ((current.y - current2.y) / 2) + current2.y;
-      }
-
-      // OPTION 1: simply center from X,Y always (option for points and lines)
-      // pos.add(current);
-
-      // OPTION 2: center from X2, Y2 (only option for lines)
-      // pos.add(current2);
-
-      // OPTION 3: center from centerX, centerY (only option for lines)
-      // pos.add(current_center);
-
-      // for now, let's go for the most intuitive choice
-      pos_for_parent.add(current_is_line ? current_center : current);
-      pos.add(current);
-      pos2.add(current_is_line ? current2 : current);
-
-      // angle = current_is_pivot ? current_angle : (angle + current_angle);
-
-      // total angle, cumulative no matter what
-      if (!std::isnan(current_angle)) angle += current_angle;
-
-      if (angle != 0.) {
-        if (current_is_line) {
-          // current angle + angle with parent
-          auto angle1 = angle + get_angle(parent.x, parent.y, pos2.x, pos2.y);
-          while (angle1 > 360.) angle1 -= 360.;
-          auto rads = angle1 * M_PI / 180.0;
-          auto ratio = 1.0;
-          // rotates around its center
-          auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
-          auto move = dist * ratio * -1;
-          if (false) {
-            // auto dist = get_distance(current_center.x, current_center.y, current.x, current.y);
-            // auto move = dist * ratio * -1;
-            pos.x = parent.x + (cos(rads) * move) + current_center.x;
-            pos.y = parent.y + (sin(rads) * move) + current_center.y;
-            pos2.x = parent.x - (cos(rads) * move) + current_center.x;
-            pos2.y = parent.y - (sin(rads) * move) + current_center.y;
-          }
-          // rotates in length
-          if (true) {
-            dist = get_distance(current.x, current.y, current2.x, current2.y);
-            move = dist * ratio * -1;
-            // pos.x = parent.x + (cos(rads) * move);
-            // pos.y = parent.y + (sin(rads) * move);
-            pos2.x = parent.x + (cos(rads) * move);
-            pos2.y = parent.y + (sin(rads) * move);
-          }
-          // unsure
-          pos_for_parent.x = parent.x + (cos(rads) * move);  // + current_center.x;
-          pos_for_parent.y = parent.y + (sin(rads) * move);  // + current_center.y;
-        } else {
-          // current angle + angle with parent
-          auto angle1 = angle + get_angle(parent.x, parent.y, pos.x, pos.y);
-          while (angle1 > 360.) angle1 -= 360.;
-          auto rads = angle1 * M_PI / 180.0;
-          auto ratio = 1.0;
-          auto dist = get_distance(0, 0, current.x, current.y);
-          auto move = dist * ratio * -1;
-          pos.x = parent.x + (cos(rads) * move);
-          pos.y = parent.y + (sin(rads) * move);
-          pos_for_parent.x = parent.x + (cos(rads) * move);
-          pos_for_parent.y = parent.y + (sin(rads) * move);
-        }
-      }
-
-      // now we can update the parent for the next level we're about to handle
-      parent = pos_for_parent;
-    }
-
-    // store transitive x & y etc.
-    i.set_field(instance, "transitive_x", v8::Number::New(i.get_isolate(), pos.x));
-    i.set_field(instance, "transitive_y", v8::Number::New(i.get_isolate(), pos.y));
-    if (is_line) {
-      i.set_field(instance, "transitive_x2", v8::Number::New(i.get_isolate(), pos2.x));
-      i.set_field(instance, "transitive_y2", v8::Number::New(i.get_isolate(), pos2.y));
-    }
-
-    // pass along x, y, x2, y2.
-    if (i.has_field(instance, "props")) {
-      const auto process_obj =
-          [&i, &pos, this](v8::Local<v8::Object>& o, const std::string& inherit_x, const std::string& inherit_y) {
-            const auto unique_id = i.integer_number(o, "unique_id");
-            const auto find = next_instance_map.find(unique_id);
-            if (find != next_instance_map.end()) {
-              auto other_val = find->second;
-              if (other_val->IsObject()) {
-                auto other = other_val.As<v8::Object>();
-                i.set_field(other, inherit_x, v8::Number::New(i.get_isolate(), pos.x));
-                i.set_field(other, inherit_y, v8::Number::New(i.get_isolate(), pos.y));
-              }
-            }
-          };
-      const auto process = [&i, &process_obj](const v8::Local<v8::Value>& field_value,
-                                              const std::string& inherit_x,
-                                              const std::string& inherit_y) {
-        if (field_value->IsArray()) {
-          auto a = field_value.As<v8::Array>();
-          for (size_t l = 0; l < a->Length(); l++) {
-            auto o = i.get_index(a, l).As<v8::Object>();
-            process_obj(o, inherit_x, inherit_y);
-          }
-        } else if (field_value->IsObject()) {
-          auto o = field_value.As<v8::Object>();
-          process_obj(o, inherit_x, inherit_y);
-        }
-      };
-      auto props = i.v8_obj(instance, "props");
-      auto obj_fields = i.prop_names(props);
-      for (size_t k = 0; k < obj_fields->Length(); k++) {
-        auto field_name = i.get_index(obj_fields, k);
-        auto field_value = i.get(props, field_name);
-        if (!field_value->IsObject()) continue;
-        auto str = i.str(obj_fields, k);
-        if (str == "left") {
-          process(field_value, "inherited_x", "inherited_y");
-        } else if (str == "right") {
-          process(field_value, "inherited_x2", "inherited_y2");
-        }
-      }
-    }
-
-    return std::make_tuple(pos.x, pos.y, pos2.x, pos2.y);
-  };
-
-  auto [x, y, x2, y2] = calculate(i, next_instances, instance, next_instance_map, level, is_line);
-  auto [prev_x, prev_y, prev_x2, prev_y2] =
-      calculate(i, next_instances, previous_instance, intermediate_map, level, is_line);
-
-  // Calculate how many pixels are maximally covered by this instance, this is currently very simplified
-  x *= scalesettings.video_scale_next * shape_scale;
-  prev_x *= scalesettings.video_scale_intermediate * prev_shape_scale;
-  y *= scalesettings.video_scale_next * shape_scale;
-  prev_y *= scalesettings.video_scale_intermediate * prev_shape_scale;
-
-  //  // TODO: make smarter for circles and lines, this is just temporary code
-  //  rectangle canvas(position(-canvas_w / 2., -canvas_h/2.), position(canvas_w / 2., canvas_h/2.));
-  //  if (is_line) {
-  //    rectangle shape_rect(position(x, y), position(x2, y2));
-  //    rectangle prev_shape_rect(position(prev_x - rad, prev_y - rad), position(prev_x + rad, prev_y + rad));
-  //    if (!canvas.overlaps(shape_rect) && !canvas.overlaps(prev_shape_rect)) {
-  //      return 0.;
-  //    }
-  //  } else {
-  //    rectangle shape_rect(position(x - rad, y - rad), position(x + rad, y + rad));
-  //    rectangle prev_shape_rect(position(prev_x - rad, prev_y - rad), position(prev_x + rad, prev_y + rad));
-  //    if (!canvas.overlaps(shape_rect) && !canvas.overlaps(prev_shape_rect)) {
-  //      return 0.;
-  //    }
-  //  }
-  auto dist = sqrt(pow(x - prev_x, 2) + pow(y - prev_y, 2));
-  // x2, y2
-  if (is_line) {
-    x2 *= scalesettings.video_scale_next * shape_scale;
-    prev_x2 *= scalesettings.video_scale_intermediate * prev_shape_scale;
-    y2 *= scalesettings.video_scale_next * shape_scale;
-    prev_y2 *= scalesettings.video_scale_intermediate * prev_shape_scale;
-    dist = std::max(dist, sqrt(pow(x2 - prev_x2, 2) + pow(y2 - prev_y2, 2)));
-  }
-
-  // radius
-  auto radius = i.double_number(instance, "radius");
-  auto radiussize = i.double_number(instance, "radiussize");
-  auto prev_radius = i.double_number(previous_instance, "radius");
-  auto prev_radiussize = i.double_number(previous_instance, "radiussize");
-  auto rad = radius + radiussize;
-  auto prev_rad = prev_radius + prev_radiussize;
-  rad *= scalesettings.video_scale_next * shape_scale;
-  prev_rad *= scalesettings.video_scale_intermediate * prev_shape_scale;
-  // TODO: this is not 100% accurate, if an object is moving and expanding its radius the max distance can be more
-  // but this should at least result in a decent enough effect in most cases
-  dist = std::max(dist, fabs(prev_rad - rad));
-
-  // Make sure that we do not include any warped distance
-  if (i.has_field(instance, "__warped_dist__")) {
-    dist -= i.double_number(instance, "__warped_dist__");
-    // If object moves two pixels to the right, is then warped 500 px to the left
-    // It has traveled 498, and the above statement has resulted in a value of -2.
-    // If it moves to the left for 2 pixels, and is moved 500px to the right, the
-    // distance is 502px - 500px = 2px as well.
-    dist = fabs(dist);
-  }
-
-  // TODO: proper support for connected objects, so they can inherit the warped stuff!
-  if (dist > 100) {
-    // logger(INFO) << "Warning, distance found > 100, id hash: " << random_hash << std::endl;
-  }
   return dist;
 }
 
-void generator::convert_objects_to_render_job(v8_interact& i,
-                                              v8::Local<v8::Array> next_instances,
-                                              step_calculator& sc,
-                                              v8::Local<v8::Object> video) {
-  // Risking doing this for nothing, as this may still be discarded, we'll translate all the instances to
-  // objects ready for rendering Note that we save object states for multiple "steps" per frame if needed.
-  for (size_t index = 0; index < next_instances->Length(); index++) {
-    auto instance = i.get_index(next_instances, index).As<v8::Object>();
-    if (!instance->IsObject()) continue;
-    convert_object_to_render_job(i, instance, index, sc, video);
+void generator::convert_objects_to_render_job(v8_interact& i, step_calculator& sc, v8::Local<v8::Object> video) {
+  //  // Risking doing this for nothing, as this may still be discarded, we'll translate all the instances to
+  //  // objects ready for rendering Note that we save object states for multiple "steps" per frame if needed.
+  //  for (size_t index = 0; index < next_instances->Length(); index++) {
+  //    auto instance = i.get_index(next_instances, index).As<v8::Object>();
+  //    if (!instance->IsObject()) continue;
+  //    convert_object_to_render_job(i, instance, index, sc, video);
+  //  }
+  for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
+    convert_object_to_render_job(i, shape, sc, video);
   }
 }
 
-void generator::convert_object_to_render_job(
-    v8_interact& i, v8::Local<v8::Object> instance, size_t index, step_calculator& sc, v8::Local<v8::Object> video) {
-  // Update level for all objects
-  auto level = i.integer_number(instance, "level");
-  auto exists = !i.has_field(instance, "exists") || i.boolean(instance, "exists");
-  if (!exists) return;
-  auto type = i.str(instance, "type");
-  auto is_line = type == "line";
-  parents_stack[level] = instance;
+void generator::convert_object_to_render_job(v8_interact& i,
+                                             data_staging::shape_t& shape,
+                                             step_calculator& sc,
+                                             v8::Local<v8::Object> video) {
+  data::shape new_shape;
 
-  // See if we require this step for this object
-  auto steps = i.integer_number(instance, "steps");
-  if (minimize_steps_per_object && !sc.do_step(steps, stepper.next_step)) {
+  const auto initialize = [&]<typename T>(T& shape) {
+    auto level = 0;      // shape.level;
+    auto exists = true;  // !i.has_field(instance, "exists") || i.boolean(instance, "exists");
+    if (!exists) return;
+    // See if we require this step for this object
+    // auto steps = i.integer_number(instance, "steps");
+    // if (minimize_steps_per_object && !sc.do_step(steps, stepper.next_step)) {
     // TODO: make this a property also for objects, if they are vibrating they need this
-    return;
-  }
-  auto id = i.str(instance, "id");
-  auto label = i.str(instance, "label");
-  auto time = i.double_number(instance, "__time__");
-#ifndef TEMPORARY_PERF_COMPARE_WITH_NATIVE
-  auto transitive_x = i.double_number(instance, "transitive_x");
-  auto transitive_y = i.double_number(instance, "transitive_y");
-#else
-  auto transitive_x = i.double_number(instance, "x");
-  auto transitive_y = i.double_number(instance, "y");
-#endif
-  auto transitive_x2 = is_line ? i.double_number(instance, "transitive_x2") : 0.0;
-  auto transitive_y2 = is_line ? i.double_number(instance, "transitive_y2") : 0.0;
-  auto vel_x = i.double_number(instance, "vel_x");
-  auto vel_y = i.double_number(instance, "vel_y");
+    //  return;
+    //}
+    // auto id = i.str(instance, "id");
+    // auto label = i.str(instance, "label");
+    // auto time = i.double_number(instance, "__time__");
 
-  auto inherited_x = i.has_field(instance, "inherited_x") ? i.double_number(instance, "inherited_x") : 0.;
-  auto inherited_y = i.has_field(instance, "inherited_y") ? i.double_number(instance, "inherited_y") : 0.;
-  auto inherited_x2 = i.has_field(instance, "inherited_x2") ? i.double_number(instance, "inherited_x2") : 0.;
-  auto inherited_y2 = i.has_field(instance, "inherited_y2") ? i.double_number(instance, "inherited_y2") : 0.;
+    // auto radius = shape.radius();           // i.double_number(instance, "radius");
+    // auto radiussize = shape.radius_size();  // i.double_number(instance, "radiussize");
+    auto seed = this->seed;
+    if constexpr (std::is_same_v<T, data_staging::circle> || std::is_same_v<T, data_staging::line>) {
+      seed = shape.styling_cref().seed();
+    }
+    auto scale = shape.generic_cref().scale();
 
-  if (inherited_x) transitive_x = inherited_x;
-  if (inherited_y) transitive_y = inherited_y;
-  if (inherited_x2) transitive_x2 = inherited_x2;
-  if (inherited_y2) transitive_y2 = inherited_y2;
+    auto shape_opacity = shape.generic_cref().opacity();
+    auto warp_width = shape.toroidal_ref().warp_width();
+    auto warp_height = shape.toroidal_ref().warp_height();
 
-  auto radius = i.double_number(instance, "radius");
-  auto radiussize = i.double_number(instance, "radiussize");
-  auto seed = i.double_number(instance, "seed");
-  auto blending_type = i.has_field(instance, "blending_type") ? i.integer_number(instance, "blending_type")
-                                                              : data::blending_type::normal;
-  auto scale = i.has_field(instance, "scale") ? i.double_number(instance, "scale") : 1.0;
-  auto unique_id = i.integer_number(instance, "unique_id");
-  // auto video_scale = i.double_number(video, "scale");
-  auto shape_opacity = i.double_number(instance, "opacity");
-  auto motion_blur = i.boolean(instance, "motion_blur");
-  auto warp_width = i.has_field(instance, "__warp_width__") ? i.integer_number(instance, "__warp_width__") : 0;
-  auto warp_height = i.has_field(instance, "__warp_height__") ? i.integer_number(instance, "__warp_height__") : 0;
+    // auto text_font = i.has_field(instance, "text_font") ? i.str(instance, "text_font") : "";
 
-  auto text = i.str(instance, "text");
-  auto text_align = i.str(instance, "text_align");
-  auto text_size = i.integer_number(instance, "text_size");
-  auto text_fixed = i.boolean(instance, "text_fixed");
-  auto text_font = i.has_field(instance, "text_font") ? i.str(instance, "text_font") : "";
-
-  // TODO: might not need this param after all
-  auto dist = i.double_number(instance, "__dist__");
+    // TODO: might not need this param after all
+// auto dist = i.double_number(instance, "__dist__");
 #define DEBUG_NUM_SHAPES
 #ifdef DEBUG_NUM_SHAPES
-  auto random_hash = i.str(instance, "__random_hash__");
+// auto random_hash = i.str(instance, "__random_hash__");
 #endif
 
-  data::shape new_shape;
-  new_shape.time = time;
-  new_shape.x = transitive_x;
-  new_shape.y = transitive_y;
-  new_shape.level = level;
-  new_shape.dist = dist;
+    // temp
+    new_shape.level = level;
+    new_shape.time = shape.meta_cref().get_time();
+    // new_shape.dist = dist;
 
-  new_shape.gradients_.clear();
-  new_shape.textures.clear();
-  std::string gradient_id_str;
-  util::generator::copy_gradient_from_object_to_shape(i, instance, new_shape, gradients, &gradient_id_str);
-  util::generator::copy_texture_from_object_to_shape(i, instance, new_shape, textures);
-  while (level > 0) {
-    level--;
-    util::generator::copy_gradient_from_object_to_shape(
-        i, parents_stack[level], new_shape, gradients, &gradient_id_str);
-    util::generator::copy_texture_from_object_to_shape(i, parents_stack[level], new_shape, textures);
-    auto s = i.double_number(parents_stack[level], "scale");
-    if (!std::isnan(s)) {
-      scale *= s;
+    new_shape.gradients_.clear();
+    new_shape.textures.clear();
+    std::string gradient_id_str;
+
+    copy_gradient_from_object_to_shape(shape, new_shape, gradients);
+    copy_texture_from_object_to_shape(shape, new_shape, textures);
+
+    // temp hack
+    std::string namespace_;
+    std::string gradient_id;
+    if constexpr (!std::is_same_v<T, data_staging::script>) {
+      gradient_id = shape.styling_cref().gradient();
     }
-  }
-  new_shape.gradient_id_str = gradient_id_str;
-  if (new_shape.gradients_.empty()) {
-    new_shape.gradients_.emplace_back(1.0, data::gradient{});
-    new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
-    new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
-    new_shape.gradients_[0].second.colors.emplace_back(1.0, data::color{0.0, 0, 0, 1});
-  }
-  new_shape.z = 0;
-  new_shape.vel_x = vel_x;
-  new_shape.vel_y = vel_y;
-  new_shape.radius = radius;
-  new_shape.radius_size = radiussize;
-  new_shape.blending_ = blending_type;
-  new_shape.scale = scale;
-  new_shape.opacity = std::isnan(shape_opacity) ? 1.0 : shape_opacity;
-  new_shape.unique_id = unique_id;
-#ifdef DEBUG_NUM_SHAPES
-  new_shape.random_hash = random_hash;
-#endif
-  new_shape.seed = seed;
-  new_shape.id = id;
-  new_shape.label = label;
-  new_shape.motion_blur = motion_blur;
-  new_shape.warp_width = warp_width;
-  new_shape.warp_height = warp_height;
 
-  if (type == "circle") {
-    new_shape.type = data::shape_type::circle;
-  } else if (type == "line") {
-    new_shape.type = data::shape_type::line;
-    new_shape.x2 = transitive_x2;
-    new_shape.y2 = transitive_y2;
-  } else if (type == "text") {
-    new_shape.type = data::shape_type::text;
-    new_shape.text = text;
-    new_shape.text_size = text_size;
-    new_shape.align = text_align;
-    new_shape.text_fixed = text_fixed;
-    new_shape.text_font = text_font;
-  } else if (type == "script") {
-    new_shape.type = data::shape_type::script;
-  } else {
-    new_shape.type = data::shape_type::none;
-  }
-  // wrap this in a proper add method
-  if (stepper.next_step != stepper.max_step) {
-    indexes[unique_id][stepper.current_step] = job->shapes[stepper.current_step].size();
-  } else {
-    new_shape.indexes = indexes[unique_id];
-  }
-  job->shapes[stepper.current_step].push_back(new_shape);
-  job->scale = scalesettings.video_scale;
-  job->scales = scalesettings.video_scales;
+    if (!gradient_id.empty()) {
+      if (new_shape.gradients_.empty()) {
+        auto& known_gradients_map = gradients;
+        if (known_gradients_map.contains(gradient_id)) {
+          new_shape.gradients_.emplace_back(1.0, known_gradients_map[gradient_id]);
+        }
+      }
+    }
+
+    if (new_shape.gradients_.empty()) {
+      new_shape.gradients_.emplace_back(1.0, data::gradient{});
+      new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
+      new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
+      new_shape.gradients_[0].second.colors.emplace_back(1.0, data::color{0.0, 0, 0, 1});
+    }
+    new_shape.z = 0;
+    // new_shape.vel_x = vel_x;
+    // new_shape.vel_y = vel_y;
+    if constexpr (!std::is_same_v<T, data_staging::script>) {
+      new_shape.blending_ = shape.styling_cref().blending_type();
+    }
+    new_shape.scale = scale;
+    new_shape.opacity = std::isnan(shape_opacity) ? 1.0 : shape_opacity;
+    // new_shape.unique_id = unique_id;
+#ifdef DEBUG_NUM_SHAPES
+    // new_shape.random_hash = random_hash;
+#endif
+    new_shape.seed = seed;
+    new_shape.id = shape.meta_cref().id();
+    // new_shape.label = label;
+    // new_shape.motion_blur = motion_blur;
+    new_shape.warp_width = warp_width;
+    new_shape.warp_height = warp_height;
+
+    // }
+    // wrap this in a proper add method
+    if (stepper.next_step != stepper.max_step) {
+      indexes[shape.meta_cref().unique_id()][stepper.current_step] = job->shapes[stepper.current_step].size();
+    } else {
+      new_shape.indexes = indexes[shape.meta_cref().unique_id()];
+    }
+    // logger(INFO) << "sizeof shape: " << sizeof(new_shape) << " circle was size: " << sizeof(shape) <<
+    // std::endl;
+    //                   if (job->shapes[stepper.current_step].capacity() < 10000) {
+    //                     logger(INFO) << "resizing to fix capacity" << std::endl;
+    //                     job->shapes[stepper.current_step].reserve(10000);
+    //                   }
+    // why is this shit super slow
+    job->shapes[stepper.current_step].emplace_back(std::move(new_shape));
+    // and this reasonably fast
+    // job->shapes_prototype_test[stepper.current_step].emplace_back(shape);
+    // job->shapes[stepper.current_step].emplace_back(data::shape{});
+    //                   if (job->shapes[stepper.current_step].size() > 9999)
+    //                     logger(INFO) << "current_step = " << stepper.current_step << ", shapes: " <<
+    //                     job->shapes[stepper.current_step].size() << std::endl;
+    job->scale = scalesettings.video_scale;
+    job->scales = scalesettings.video_scales;
+  };
+
+  // Update level for all objects
+  meta_visit(
+      shape,
+      [&](data_staging::circle& shape) {
+        new_shape.type = data::shape_type::circle;
+        new_shape.radius = shape.radius();
+        new_shape.radius_size = shape.radius_size();
+        new_shape.x = shape.transitive_location_ref().position_cref().x;
+        new_shape.y = shape.transitive_location_ref().position_cref().y;
+        initialize(shape);
+      },
+      [&](data_staging::line& shape) {
+        new_shape.type = data::shape_type::line;
+        new_shape.radius = 0;
+        new_shape.radius_size = shape.line_width();
+        new_shape.x = shape.transitive_line_start_ref().position_cref().x;
+        new_shape.y = shape.transitive_line_start_ref().position_cref().y - 22;
+        new_shape.x2 = shape.transitive_line_end_ref().position_cref().x;
+        new_shape.y2 = shape.transitive_line_end_ref().position_cref().y;
+        initialize(shape);
+      },
+      [&](data_staging::text& shape) {
+        new_shape.type = data::shape_type::text;
+        new_shape.text = shape.text_cref();
+        new_shape.text_size = shape.text_size();
+        new_shape.align = shape.text_align();
+        new_shape.text_fixed = shape.text_fixed();
+        // TODO: new_shape.text_font = shape.text_font();
+        new_shape.x = shape.transitive_location_ref().position_cref().x;
+        new_shape.y = shape.transitive_location_ref().position_cref().y;
+        initialize(shape);
+      },
+      [&](data_staging::script& shape) {
+        new_shape.type = data::shape_type::script;
+        new_shape.x = shape.transitive_location_ref().position_cref().x;
+        new_shape.y = shape.transitive_location_ref().position_cref().y;
+        initialize(shape);
+      });
 }
 
 std::shared_ptr<data::job> generator::get_job() const {
   return job;
 }
 
-v8::Local<v8::Object> generator::spawn_object(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj) {
-  auto& i = genctx.i();
-  auto created_instance =
-      util::generator::instantiate_object_from_scene(i, genctx.objects, genctx.instances_next, obj, &spawner);
-  next_instance_map[i.integer_number(created_instance, "unique_id")] = created_instance;
-  create_bookkeeping_for_script_objects(created_instance);
-  return created_instance;
+int64_t generator::spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj) {
+  auto& i = genctx->i();
+  auto [created_instance, shape_ref, created_shape_copy] = _instantiate_object_from_scene(i, obj, &spawner);
+  create_bookkeeping_for_script_objects(created_instance, created_shape_copy);
+  return i.integer_number(created_instance, "unique_id");
 }
 
-// TODO: will refactor soon
-void generator::fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t uid, double& x, double& y) {
-  // experimental function caching
-  double xx = 0;
-  double yy = 0;
-  auto find = cached_xy.find(uid);
-  if (find != cached_xy.end()) {
-    std::tie(xx, yy) = find->second;
-    x += xx;
-    y += yy;
-    return;
-  }
-  auto parent_uid = i.integer_number(instance, "parent_uid", -1);
-  while (parent_uid != -1) {
-    auto parent = next_instance_map.at(parent_uid);
-    if (i.str(parent, "type", "") == "script") {
-      xx += i.double_number(parent, "x");
-      yy += i.double_number(parent, "y");
+int64_t generator::spawn_object3(data_staging::shape_t& spawner,
+                                 v8::Local<v8::Object> line_obj,
+                                 int64_t obj1,
+                                 int64_t obj2) {
+  auto& i = genctx->i();
+  auto [created_instance, shape_ref, created_shape_copy] = _instantiate_object_from_scene(i, line_obj, &spawner);
+  // BEGIN: Temporary code (to try out something
+  data_staging::shape_t* obj1o = nullptr;
+  data_staging::shape_t* obj2o = nullptr;
+  auto find1 = next_instance_map.find(obj1);
+  if (find1 != next_instance_map.end()) {
+    obj1o = &find1->second.get();
+  } else {
+    // todo; we need a mapping for this...
+    for (auto& newo : instantiated_objects[scenesettings.current_scene_next]) {
+      if (auto c = std::get_if<data_staging::circle>(&newo)) {
+        if (c->meta_cref().unique_id() == obj1) {
+          obj1o = &newo;
+        }
+      }
     }
-    parent_uid = i.integer_number(parent, "parent_uid");
   }
-  cached_xy[uid] = std::make_pair(xx, yy);
-  x += xx;
-  y += yy;
+  auto find2 = next_instance_map.find(obj2);
+  if (find2 != next_instance_map.end()) {
+    obj2o = &find2->second.get();
+  } else {
+    // todo; we need a mapping for this...
+    for (auto& newo : instantiated_objects[scenesettings.current_scene_next]) {
+      if (auto c = std::get_if<data_staging::circle>(&newo)) {
+        if (c->meta_cref().unique_id() == obj2) {
+          obj2o = &newo;
+        }
+      }
+    }
+  }
+  // END
+  const auto handle = [](auto& line_o, auto& side_a, auto& side_b) {
+    try {
+      auto& line_obj = std::get<data_staging::line>(line_o);
+      auto& circle_obj1 = std::get<data_staging::circle>(side_a);
+      auto& circle_obj2 = std::get<data_staging::circle>(side_b);
+      circle_obj1.add_cascade_out(cascade_type::start, line_obj.meta_cref().unique_id());
+      circle_obj2.add_cascade_out(cascade_type::end, line_obj.meta_cref().unique_id());
+      line_obj.add_cascade_in(cascade_type::start, circle_obj1.meta_cref().unique_id());
+      line_obj.add_cascade_in(cascade_type::end, circle_obj2.meta_cref().unique_id());
+    } catch (std::bad_variant_access const& ex) {
+      return;
+    }
+  };
+  handle(shape_ref.get(), *obj1o, *obj2o);
+  create_bookkeeping_for_script_objects(created_instance, created_shape_copy);
+  return i.integer_number(created_instance, "unique_id");
 }
-#endif
+
+int64_t generator::spawn_object_at_parent(data_staging::shape_t& spawner, v8::Local<v8::Object> obj) {
+  auto& i = genctx->i();
+  std::optional<std::reference_wrapper<data_staging::shape_t>> parent;
+  meta_callback(spawner, [&]<typename T>(const T& cc) {
+    if (cc.meta_cref().level() > 0) {
+      parent = next_instance_map.at(cc.meta_cref().parent_uid());
+    }
+  });
+  if (!parent) {
+    return -1;
+  }
+  auto [created_instance, shape_ref, created_shape_copy] = _instantiate_object_from_scene(i, obj, &((*parent).get()));
+  create_bookkeeping_for_script_objects(created_instance, created_shape_copy);
+  return i.integer_number(created_instance, "unique_id");
+}
+
+std::unordered_map<std::string, v8::Persistent<v8::Object>>& generator::get_object_definitions_ref() {
+  return object_definitions_map;
+}
+
+std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>
+generator::_instantiate_object_from_scene(
+    v8_interact& i,
+    v8::Local<v8::Object>& scene_object,        // object description from scene to be instantiated
+    const data_staging::shape_t* parent_object  // it's optional parent
+) {
+  v8::Isolate* isolate = i.get_isolate();
+
+  int64_t current_level = 0;
+  auto parent_object_ns = std::string("");
+  int64_t parent_uid = -1;
+
+  if (parent_object) {
+    meta_callback(*parent_object, [&]<typename T>(const T& cc) {
+      current_level = cc.meta_cref().level() + 1;
+      parent_object_ns = cc.meta_cref().namespace_name();
+      parent_uid = cc.meta_cref().unique_id();
+    });
+  }
+
+  // lookup the object prototype to be instantiated
+  auto object_id = parent_object_ns + i.str(scene_object, "id", "");
+  auto object_prototype = v8_index_object(i.get_context(), genctx->objects, object_id).template As<v8::Object>();
+
+  // create a new javascript object
+  v8::Local<v8::Object> instance = v8::Object::New(isolate);
+
+  // TODO: make sure this is the only source..., and get rid of genctx->objects usage
+  if (!object_prototype->IsObject()) {
+    object_prototype = object_definitions_map[object_id].Get(isolate);
+  }
+
+  if (!object_prototype->IsObject()) {
+    logger(WARNING) << "cannot instantiate object id: " << object_id << ", does not exist" << std::endl;
+    throw std::runtime_error(fmt::format("cannot instantiate object id: {}, does not exist", object_id));
+  }
+
+  // instantiate the prototype into newly allocated javascript object
+  _instantiate_object(i, scene_object, object_prototype, instance, current_level, parent_object_ns);
+
+  // give it a unique id (it already has been assigned a __random_hash__ for debugging purposes
+  static int64_t counter = 0;
+  i.set_field(instance, "unique_id", v8::Number::New(i.get_isolate(), ++counter));
+  i.set_field(instance, "parent_uid", v8::Number::New(i.get_isolate(), parent_uid));
+
+  // TODO: in the future we will simply instantiate this directly, for now, to save some refactoring time
+  // we will map, to see if the proof of concept works
+
+  // TODO: try to use a raw pointer, see if it improves performance
+  std::optional<std::reference_wrapper<data_staging::shape_t>> shape_ref;
+  std::optional<data_staging::shape_t> shape_copy;
+
+  const auto handle = [&]<typename T>(T& c) -> data_staging::shape_t& {
+    // we buffer instantiated objects, and will insert in the array later.
+    instantiated_objects[scenesettings.current_scene_next].emplace_back(c);
+    return instantiated_objects[scenesettings.current_scene_next].back();
+  };
+
+  const auto type = i.str(object_definitions_map[object_id], "type", "");
+
+  const auto initialize = [&]<typename T>(T& c, auto& bridge) {
+    c.meta_ref().set_level(current_level);
+    c.meta_ref().set_parent_uid(parent_uid);
+    c.meta_ref().set_pivot(i.boolean(instance, "pivot"));
+    c.behavior_ref().set_collision_group(i.str(instance, "collision_group", ""));
+    c.behavior_ref().set_gravity_group(i.str(instance, "gravity_group", ""));
+    c.toroidal_ref().set_group(i.str(instance, "toroidal", ""));
+    c.generic_ref().set_angle(i.double_number(instance, "angle", 0));
+    c.generic_ref().set_opacity(i.double_number(instance, "opacity", 1));
+    c.generic_ref().set_mass(i.double_number(instance, "mass", 1));
+    c.generic_ref().set_scale(i.double_number(instance, "scale", 1));
+    if constexpr (!std::is_same_v<T, data_staging::script>) {
+      if (i.has_field(instance, "texture")) {
+        c.styling_ref().set_texture(i.str(instance, "texture"));
+      }
+      if (i.has_field(instance, "gradient")) {
+        c.styling_ref().set_gradient(i.str(instance, "gradient"));
+      }
+    }
+    if (i.has_field(instance, "gradients")) {
+      auto gradient_array = i.v8_array(instance, "gradients");
+      for (size_t k = 0; k < gradient_array->Length(); k++) {
+        auto gradient_data = i.get_index(gradient_array, k).As<v8::Array>();
+        if (!gradient_data->IsArray()) continue;
+        auto opacity = i.double_number(gradient_data, size_t(0));
+        auto gradient_id = parent_object_ns + i.str(gradient_data, size_t(1));
+        if constexpr (!std::is_same_v<T, data_staging::script>) {
+          c.styling_ref().add_gradient(opacity, gradient_id);
+        }
+      }
+    }
+    if (i.has_field(instance, "props")) {
+      auto props_object = i.v8_obj(instance, "props");
+      auto obj_fields = i.prop_names(props_object);
+      for (size_t k = 0; k < obj_fields->Length(); k++) {
+        auto field_name = i.get_index(obj_fields, k);
+        auto field_name_str = i.str(obj_fields, k);
+        auto field_value = i.get(props_object, field_name);
+        i.set_field(c.properties_ref().properties_ref(), field_name, field_value);
+      }
+    }
+
+    // the handle function returns a ref, which is all fine, but recursively init
+    // may actually invalidate this ref with other inserts.
+    shape_ref = std::ref(handle(c));
+    shape_copy = (*shape_ref).get();
+
+    // call init last, so that objects exist when using 'this' inside init()
+    if (bridge) {
+      // take a copy as the reference might point to a non-existant instance at some point,
+      // for example when other cascading 'init's insert new objects.
+      auto copy = std::get<T>((*shape_ref).get());
+      bridge->push_object(copy);
+      i.call_fun(object_definitions_map[object_id],  // object definition
+                 bridge->instance(),                 // bridged object is "this"
+                 "init");
+      bridge->pop_object();
+      write_back_copy(copy);
+    }
+  };
+
+  if (type == "circle" || type.empty() /* treat every "non-type" as circles too */) {
+    data_staging::circle c(object_id,
+                           counter,
+                           vector2d(i.double_number(instance, "x"), i.double_number(instance, "y")),
+                           i.double_number(instance, "radius"),
+                           i.double_number(instance, "radiussize"));
+
+    if (type.empty()) c.generic_ref().set_opacity(0);
+
+    c.movement_ref().set_velocity(i.double_number(instance, "vel_x", 0),
+                                  i.double_number(instance, "vel_y", 0),
+                                  i.double_number(instance, "velocity", 0));
+
+    c.meta_ref().set_namespace(parent_object_ns);
+
+    c.styling_ref().set_seed(i.integer_number(instance, "seed", 0));
+
+    initialize(c, object_bridge_circle);
+
+  } else if (type == "line") {
+    data_staging::line c(object_id,
+                         counter,
+                         vector2d(i.double_number(instance, "x"), i.double_number(instance, "y")),
+                         vector2d(i.double_number(instance, "x2"), i.double_number(instance, "y2")),
+                         i.double_number(instance, "radiussize"));
+
+    // TODO: no logic for end of line
+    c.movement_line_start_ref().set_velocity(i.double_number(instance, "vel_x", 0),
+                                             i.double_number(instance, "vel_y", 0),
+                                             i.double_number(instance, "velocity", 0));
+
+    c.meta_ref().set_namespace(parent_object_ns);
+
+    initialize(c, object_bridge_line);
+  } else if (type == "text") {
+    data_staging::text t(object_id,
+                         counter,
+                         vector2d(i.double_number(instance, "x"), i.double_number(instance, "y")),
+                         i.str(instance, "text"),
+                         i.double_number(instance, "text_size"),
+                         i.str(instance, "text_align"),
+                         i.boolean(instance, "text_fixed"));
+
+    t.movement_ref().set_velocity(i.double_number(instance, "vel_x", 0),
+                                  i.double_number(instance, "vel_y", 0),
+                                  i.double_number(instance, "velocity", 0));
+
+    t.meta_ref().set_namespace(parent_object_ns);
+
+    initialize(t, object_bridge_text);
+
+  } else if (type == "script") {
+    data_staging::script s(
+        object_id, counter, vector2d(i.double_number(instance, "x"), i.double_number(instance, "y")));
+
+    s.meta_ref().set_namespace(object_id + "_");
+
+    initialize(s, object_bridge_script);
+  } else {
+    throw std::logic_error(fmt::format("unknown type: {}", type));
+  }
+
+  if (!shape_ref) {
+    throw std::runtime_error("unexpected shape_ref not set to reference");
+  }
+
+  return std::make_tuple(instance, *shape_ref, *shape_copy);
+}
+void generator::_instantiate_object(v8_interact& i,
+                                    std::optional<v8::Local<v8::Object>> scene_obj,
+                                    v8::Local<v8::Object> object_prototype,
+                                    v8::Local<v8::Object> new_instance,
+                                    int64_t level,
+                                    const std::string& namespace_) {
+  v8::Isolate* isolate = i.get_isolate();
+
+  i.recursively_copy_object(new_instance, object_prototype);
+
+  if (!namespace_.empty()) {
+    i.set_field(new_instance, "namespace", v8_str(i.get_context(), namespace_));
+  }
+
+  if (scene_obj) {
+    i.copy_field_if_exists(new_instance, "id", *scene_obj);
+    i.copy_field_if_exists(new_instance, "x", *scene_obj);
+    i.copy_field_if_exists(new_instance, "y", *scene_obj);
+    i.copy_field_if_exists(new_instance, "x2", *scene_obj);
+    i.copy_field_if_exists(new_instance, "y2", *scene_obj);
+    i.copy_field_if_exists(new_instance, "vel_x", *scene_obj);
+    i.copy_field_if_exists(new_instance, "vel_y", *scene_obj);
+    i.copy_field_if_exists(new_instance, "vel_x2", *scene_obj);
+    i.copy_field_if_exists(new_instance, "vel_y2", *scene_obj);
+    i.copy_field_if_exists(new_instance, "velocity", *scene_obj);
+    i.copy_field_if_exists(new_instance, "mass", *scene_obj);
+    i.copy_field_if_exists(new_instance, "radius", *scene_obj);
+    i.copy_field_if_exists(new_instance, "radiussize", *scene_obj);
+    i.copy_field_if_exists(new_instance, "gradient", *scene_obj);
+    i.copy_field_if_exists(new_instance, "texture", *scene_obj);
+    i.copy_field_if_exists(new_instance, "seed", *scene_obj);
+    i.copy_field_if_exists(new_instance, "blending_type", *scene_obj);
+    i.copy_field_if_exists(new_instance, "opacity", *scene_obj);
+    i.copy_field_if_exists(new_instance, "scale", *scene_obj);
+    i.copy_field_if_exists(new_instance, "angle", *scene_obj);
+    i.copy_field_if_exists(new_instance, "pivot", *scene_obj);
+    i.copy_field_if_exists(new_instance, "text", *scene_obj);
+    i.copy_field_if_exists(new_instance, "text_align", *scene_obj);
+    i.copy_field_if_exists(new_instance, "text_size", *scene_obj);
+    i.copy_field_if_exists(new_instance, "text_fixed", *scene_obj);
+    i.copy_field_if_exists(new_instance, "text_font", *scene_obj);
+    i.copy_field_if_exists(new_instance, "file", *scene_obj);
+    i.copy_field_if_exists(new_instance, "duration", *scene_obj);
+  }
+
+  i.set_field(new_instance, "subobj", v8::Array::New(isolate));
+  i.set_field(new_instance, "level", v8::Number::New(isolate, level));
+  {
+    static std::mt19937 generator{std::random_device{}()};
+    static std::uniform_int_distribution<int> distribution{'a', 'z'};
+    static auto generate_len = 6;
+    static std::string rand_str(generate_len, '\0');
+    for (auto& dis : rand_str) dis = distribution(generator);
+    i.set_field(new_instance, "__random_hash__", v8_str(i.get_context(), rand_str));
+  }
+  i.set_field(new_instance, "__instance__", v8::Boolean::New(isolate, true));
+
+  // Make sure we deep copy the gradients
+  i.set_field(new_instance, "gradients", v8::Array::New(isolate));
+  auto dest_gradients = i.get(new_instance, "gradients").As<v8::Array>();
+  auto gradients = i.has_field(object_prototype, "gradients") && i.get(object_prototype, "gradients")->IsArray()
+                       ? i.get(object_prototype, "gradients").As<v8::Array>()
+                       : v8::Array::New(i.get_isolate());
+  for (size_t k = 0; k < gradients->Length(); k++) {
+    i.set_field(dest_gradients, k, v8::Array::New(isolate));
+
+    auto gradient = i.get_index(gradients, k).As<v8::Array>();
+    auto dest_gradient = i.get_index(dest_gradients, k).As<v8::Array>();
+    for (size_t l = 0; l < gradient->Length(); l++) {
+      i.set_field(dest_gradient, l, i.get_index(gradient, l));
+    }
+  }
+
+  // Ensure we have a props object in the new obj
+  if (!i.has_field(new_instance, "props")) {
+    i.set_field(new_instance, "props", v8::Object::New(i.get_isolate()));
+  }
+
+  // Copy over scene properties to instance properties
+  if (scene_obj) {
+    auto props = i.v8_obj(new_instance, "props");
+    auto scene_props = i.v8_obj(*scene_obj, "props");
+    auto obj_fields = i.prop_names(scene_props);
+
+    for (size_t k = 0; k < obj_fields->Length(); k++) {
+      auto field_name = i.get_index(obj_fields, k);
+      auto field_value = i.get(scene_props, field_name);
+      i.set_field(props, field_name, field_value);
+    }
+  }
+
+  auto the_fun = i.get_fun("__spawn__");
+  i.set_fun(new_instance, "spawn", the_fun);
+}
+
+void generator::debug_print_next() {
+  const auto print_meta = [](data_staging::meta& meta,
+                             data_staging::location& loc,
+                             data_staging::movement& mov,
+                             data_staging::behavior& beh,
+                             data_staging::generic& gen) {
+    logger(INFO) << "uid=" << meta.unique_id() << ", puid=" << meta.parent_uid() << ", id=" << meta.id()
+                 << ", level=" << meta.level() << ", namespace=" << meta.namespace_name() << " @ "
+                 << loc.position_cref().x << "," << loc.position_cref().y << " +" << mov.velocity().x << ","
+                 << mov.velocity().y << ", last_collide=" << beh.last_collide() << ", mass=" << gen.mass()
+                 << ", angle = " << gen.angle() << std::endl;
+  };
+  for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
+    meta_visit(
+        shape,
+        [&](data_staging::circle& shape) {
+          print_meta(
+              shape.meta_ref(), shape.location_ref(), shape.movement_ref(), shape.behavior_ref(), shape.generic_ref());
+        },
+        [&](data_staging::line& shape) {
+          print_meta(shape.meta_ref(),
+                     shape.line_start_ref(),
+                     shape.movement_line_start_ref(),
+                     shape.behavior_ref(),
+                     shape.generic_ref());
+        },
+        [&](data_staging::text& shape) {
+          print_meta(
+              shape.meta_ref(), shape.location_ref(), shape.movement_ref(), shape.behavior_ref(), shape.generic_ref());
+        },
+        [&](data_staging::script& shape) {
+          print_meta(
+              shape.meta_ref(), shape.location_ref(), shape.movement_ref(), shape.behavior_ref(), shape.generic_ref());
+        });
+  }
+}
+
+template <typename T>
+void generator::copy_gradient_from_object_to_shape(
+    T& source_object,
+    data::shape& destination_shape,
+    std::unordered_map<std::string, data::gradient>& known_gradients_map) {
+  if constexpr (!std::is_same_v<T, data_staging::script>) {
+    std::string namespace_ = source_object.meta_cref().namespace_name();
+    std::string gradient_id = namespace_ + source_object.styling_ref().gradient();
+
+    if (!gradient_id.empty()) {
+      if (destination_shape.gradients_.empty()) {
+        if (known_gradients_map.find(gradient_id) != known_gradients_map.end()) {
+          destination_shape.gradients_.emplace_back(1.0, known_gradients_map[gradient_id]);
+        }
+      }
+    }
+    for (const auto& [opacity, gradient_id] : source_object.styling_ref().get_gradients_cref()) {
+      destination_shape.gradients_.emplace_back(opacity, known_gradients_map[gradient_id]);
+    }
+  }
+}
+
+template <typename T>
+void generator::copy_texture_from_object_to_shape(T& source_object,
+                                                  data::shape& destination_shape,
+                                                  std::unordered_map<std::string, data::texture>& known_textures_map) {
+  if constexpr (!std::is_same_v<T, data_staging::script>) {
+    std::string namespace_ = source_object.meta_cref().namespace_name();
+    std::string texture_id = namespace_ + source_object.styling_ref().texture();
+
+    if (!texture_id.empty()) {
+      if (destination_shape.textures.empty()) {
+        if (known_textures_map.find(texture_id) != known_textures_map.end()) {
+          destination_shape.textures.emplace_back(1.0, known_textures_map[texture_id]);
+        }
+      }
+    }
+
+    for (const auto& [opacity, texture_id] : source_object.styling_ref().get_textures_cref()) {
+      destination_shape.textures.emplace_back(opacity, known_textures_map[texture_id]);
+    }
+  }
+}
+
+template <typename T>
+void generator::write_back_copy(T& copy) {
+  size_t index = 0;
+  for (auto& instance : instantiated_objects[scenesettings.current_scene_next]) {
+    meta_callback(instance, [&]<typename TS>(TS& shape) {
+      if (shape.meta_cref().unique_id() == copy.meta_cref().unique_id()) {
+        instantiated_objects[scenesettings.current_scene_next][index] = copy;
+      }
+    });
+    index++;
+  }
+}

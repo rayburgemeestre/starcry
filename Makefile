@@ -244,20 +244,3 @@ a:
 b:
 	make build
 	./build/starcry input/greenlines.js --raw
-
-debugdev:
-	make debug-clean
-	@$(call make-clang, mkdir -p build && pushd build && CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) \
-	                    cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on -DDEVELOP=on .. && \
-	                    make VERBOSE=1 -j $$(nproc) starcry && \
-	                    ln -fs $$PWD/build/compile_commands.json $$PWD/compile_commands.json)
-
-builddev:
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEVELOP=on -GNinja -B build && \
-	                    cmake --build build --target starcry && \
-	                    strip --strip-debug build/starcry)
-
-builddevgcc:
-	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEVELOP=on -GNinja -B build && \
-	              cmake --build build --target starcry && \
-	              strip --strip-debug build/starcry)

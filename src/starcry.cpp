@@ -24,11 +24,7 @@
 #include "data/frame_request.hpp"
 #include "data/video_request.hpp"
 #include "framer.hpp"
-#ifndef DEVELOP
 #include "generator.h"
-#else
-#include "native_generator.h"
-#endif
 #include "network/render_client.h"
 #include "network/render_server.h"
 #include "rendering_engine.h"
@@ -178,11 +174,7 @@ void starcry::render_job(
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   if (!gen) {
     context->recreate_isolate_in_this_thread();
-#ifdef DEVELOP
-    gen = std::make_shared<native_generator>(metrics_, context, options().debug);
-#else
-    gen = std::make_shared<generator>(metrics_, context);
-#endif
+    gen = std::make_shared<generator>(metrics_, context, options().debug);
   }
 
   bool client_is_nullptr = false;

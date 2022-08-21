@@ -78,17 +78,3 @@ Almost everything is statically linked, resulting in a relatively portable binar
 The Web UI is based on Vue2. Currently the UI is using Buefy, which is not going to support Vue3.
 
 Currently waiting for Vue3 to become more mature before switching to it.
-
-## Notes
-
-Currently experimenting with replacing the heavy V8-reliant generator component with a more native generator.
-
-This is a work in progress.
-
-    # native generator version
-    make clean; make builddev && ./build/starcry input/native_test.js
-
-    # non-native generator version
-    make clean; make build && ./build/starcry input/js_test.js
-
-

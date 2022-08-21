@@ -4,7 +4,6 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #pragma once
-#ifndef DEVELOP
 
 #include <memory>
 #include <string>
@@ -16,10 +15,13 @@
 #include "scalesettings.h"
 #include "scenesettings.h"
 
+#include "generator/object_bridge.h"
+
 #include "data/job.hpp"
 #include "data/settings.hpp"
 #include "data/texture.hpp"
 #include "data/toroidal.hpp"
+#include "data_staging/shape.hpp"
 
 #include "core/fps_progress.hpp"
 
@@ -47,6 +49,16 @@ private:
   std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
   std::shared_ptr<data::job> job;
+  std::vector<std::vector<data_staging::shape_t>> scene_shapes;
+  std::vector<std::vector<data_staging::shape_t>> scene_shapes_next;
+  std::vector<std::vector<data_staging::shape_t>> instantiated_objects;
+  std::vector<std::vector<data_staging::shape_t>> scene_shapes_intermediate;
+  std::shared_ptr<object_bridge<data_staging::circle>> object_bridge_circle = nullptr;
+  std::shared_ptr<object_bridge<data_staging::line>> object_bridge_line = nullptr;
+  std::shared_ptr<object_bridge<data_staging::script>> object_bridge_script = nullptr;
+  std::shared_ptr<object_bridge<data_staging::text>> object_bridge_text = nullptr;
+  std::vector<std::reference_wrapper<data_staging::shape_t>> stack;
+
   uint32_t frame_number = 0;
 
   size_t max_frames = 0;
@@ -72,8 +84,10 @@ private:
 
   std::map<std::string, quadtree> qts;
   std::map<std::string, quadtree> qts_gravity;
-  std::unordered_map<int64_t, v8::Local<v8::Object>> next_instance_map;
-  std::unordered_map<int64_t, v8::Local<v8::Object>> intermediate_map;
+  // TODO: Can we do without copies, please?
+  std::unordered_map<int64_t, std::reference_wrapper<data_staging::shape_t>> next_instance_map;
+  std::unordered_map<int64_t, std::reference_wrapper<data_staging::shape_t>> intermediate_map;
+  std::unordered_map<std::string, v8::Persistent<v8::Object>> object_definitions_map;
   data::settings settings_;
 
   int min_intermediates = 1.;
@@ -84,19 +98,10 @@ private:
   scene_settings scenesettings;
   std::unordered_map<int64_t, scene_settings> scenesettings_objs;
 
-  struct cache {
-    bool enabled = false;
-    bool use = false;
-    std::unordered_map<size_t, bool> job_cache;
-    std::map<size_t, std::unordered_map<int64_t, size_t>> next_instance_mapping;
-    std::map<size_t, int64_t> counter;
-    std::map<size_t, scale_settings> scalesettings;
-    std::map<size_t, scene_settings> scenesettings;
-  } cache;
-
   std::string filename_;
 
-  generator_context genctx;
+  std::shared_ptr<generator_context> genctx;
+  bool debug_;
 
 public:
   struct time_settings {
@@ -105,7 +110,7 @@ public:
     double scene_time;
   };
 
-  explicit generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context);
+  explicit generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug = false);
   ~generator() = default;
 
   void reset_context();
@@ -118,52 +123,51 @@ public:
   void init_textures();
   void init_toroidals();
   void init_object_instances();
+  void init_object_definitions();
 
-  void instantiate_additional_objects_from_new_scene(v8::Local<v8::Array>& scene_objects,
-                                                     v8::Local<v8::Object>* parent_object = nullptr);
-  void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance);
+  void instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
+                                                     const data_staging::shape_t* parent_object = nullptr);
+  void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance,
+                                             const data_staging::shape_t& created_shape);
   void set_scene(size_t scene);
-  void set_scene_sub_object(scene_settings& scenesettings, size_t scene);
+  static void set_scene_sub_object(scene_settings& scenesettings, size_t scene);
   void fast_forward(int frame_of_interest);
   bool generate_frame();
-  void revert_all_changes(v8_interact& i,
-                          v8::Local<v8::Array>& instances,
-                          v8::Local<v8::Array>& next_instances,
-                          v8::Local<v8::Array>& intermediates);
-  static void revert_position_updates(v8_interact& i,
-                                      v8::Local<v8::Array>& instances,
-                                      v8::Local<v8::Array>& next_instances,
-                                      v8::Local<v8::Array>& intermediates);
-  void call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances);
-  void create_new_mappings(v8_interact& i, v8::Local<v8::Array>& next_instances, v8::Local<v8::Array>& intermediates);
-  void update_object_positions(v8_interact& i, v8::Local<v8::Array>& next_instances, v8::Local<v8::Object>& video);
-  void update_object_toroidal(v8_interact& i, v8::Local<v8::Object>& instance, double& x, double& y);
-  void update_object_interactions(v8_interact& i,
-                                  v8::Local<v8::Array>& next_instances,
-                                  v8::Local<v8::Array>& intermediates,
-                                  v8::Local<v8::Array>& previous_instances,
-                                  v8::Local<v8::Object>& video);
-  void handle_collisions(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Array> next_instances);
-  void handle_gravity(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Array> next_instances);
-  void handle_collision(v8_interact& i, v8::Local<v8::Object> instance, v8::Local<v8::Object> instance2);
-  void handle_gravity(v8_interact& i,
-                      v8::Local<v8::Object> instance,
-                      v8::Local<v8::Object> instance2,
-                      vector2d& acceleration);
-  void update_time(v8_interact& i, v8::Local<v8::Object>& instance, scene_settings& scenesettings);
+  void revert_all_changes(v8_interact& i);
+  static void revert_position_updates(v8_interact& i);
+  static void call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances);
+  void create_new_mappings();
+  void update_object_positions(v8_interact& i, v8::Local<v8::Object>& video);
+  void insert_newly_created_objects();
+  void update_object_toroidal(v8_interact& i, data_staging::toroidal& toroidal_data, double& x, double& y);
+  void update_object_distances();
+  void update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video);
+  void handle_rotations(data_staging::shape_t& instance);
+  void handle_collisions(v8_interact& i, data_staging::shape_t& instance);
+  void handle_collision(v8_interact& i,
+                        data_staging::circle& instance,
+                        data_staging::circle& instance2,
+                        data_staging::shape_t& shape,
+                        data_staging::shape_t& shape2);
+  void handle_gravity(v8_interact& i, data_staging::shape_t& instance);
+  void handle_gravity(data_staging::circle& instance,
+                      data_staging::circle& instance2,
+                      vector2d& acceleration,
+                      double G,
+                      double range,
+                      double constrain_dist_min,
+                      double constrain_dist_max) const;
+  void update_time(v8_interact& i,
+                   data_staging::shape_t& object_bridge,
+                   const std::string& instance_id,
+                   scene_settings& scenesettings);
   int update_steps(double dist);
-  double get_max_travel_of_object(v8_interact& i,
-                                  v8::Local<v8::Array>& next_instances,
-                                  v8::Local<v8::Object>& previous_instance,
-                                  v8::Local<v8::Object>& instance
-
-  );
-  void convert_objects_to_render_job(v8_interact& i,
-                                     v8::Local<v8::Array> next_instances,
-                                     step_calculator& sc,
-                                     v8::Local<v8::Object> video);
-  void convert_object_to_render_job(
-      v8_interact& i, v8::Local<v8::Object> instance, size_t index, step_calculator& sc, v8::Local<v8::Object> video);
+  static double get_max_travel_of_object(data_staging::shape_t& shape_now, data_staging::shape_t& shape_prev);
+  void convert_objects_to_render_job(v8_interact& i, step_calculator& sc, v8::Local<v8::Object> video);
+  void convert_object_to_render_job(v8_interact& i,
+                                    data_staging::shape_t& shape,
+                                    step_calculator& sc,
+                                    v8::Local<v8::Object> video);
 
   std::shared_ptr<data::job> get_job() const;
   double fps() const {
@@ -196,25 +200,41 @@ public:
 
   std::shared_ptr<v8_wrapper> get_context() const;
 
-  v8::Local<v8::Object> spawn_object(v8::Local<v8::Object> spawner, v8::Local<v8::Object> obj);
+  int64_t spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
+  int64_t spawn_object3(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1, int64_t obj2);
+  int64_t spawn_object_at_parent(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
+
+  std::unordered_map<std::string, v8::Persistent<v8::Object>>& get_object_definitions_ref();
 
 private:
   bool _generate_frame();
-  bool _forward_latest_cached_frame(int frame_of_interest);
-  void _load_cache();
-  void _save_cache();
-  void _load_js_cache(v8_interact& i,
-                      v8::Local<v8::Object> cache,
-                      v8::Local<v8::Array>& instances,
-                      v8::Local<v8::Array>& intermediates,
-                      v8::Local<v8::Array>& next_instances);
-  void _save_js_cache(v8_interact& i,
-                      v8::Local<v8::Object> cache,
-                      v8::Local<v8::Array>* instances,
-                      v8::Local<v8::Array>* intermediates,
-                      v8::Local<v8::Array>* next_instances);
 
   std::map<int64_t, std::pair<double, double>> cached_xy;
-  void fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t uid, double& x, double& y);
+
+  std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>
+  _instantiate_object_from_scene(
+      v8_interact& i,
+      v8::Local<v8::Object>& scene_object,        // object description from scene to be instantiated
+      const data_staging::shape_t* parent_object  // it's optional parent
+  );
+  void _instantiate_object(v8_interact& i,
+                           std::optional<v8::Local<v8::Object>> scene_obj,
+                           v8::Local<v8::Object> object_prototype,
+                           v8::Local<v8::Object> new_instance,
+                           int64_t level,
+                           const std::string& namespace_);
+
+  void debug_print_next();
+
+  template <typename T>
+  void copy_gradient_from_object_to_shape(T& source_object,
+                                          data::shape& destination_shape,
+                                          std::unordered_map<std::string, data::gradient>& known_gradients_map);
+  template <typename T>
+  void copy_texture_from_object_to_shape(T& source_object,
+                                         data::shape& destination_shape,
+                                         std::unordered_map<std::string, data::texture>& known_textures_map);
+
+  template <typename T>
+  void write_back_copy(T& copy);
 };
-#endif
