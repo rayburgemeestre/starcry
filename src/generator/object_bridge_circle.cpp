@@ -64,6 +64,16 @@ int64_t object_bridge<data_staging::circle>::get_seed() const {
 }
 
 template <>
+std::string object_bridge<data_staging::circle>::get_collision_group() const {
+  return shape_stack.back()->behavior_ref().gravity_group();
+}
+
+template <>
+std::string object_bridge<data_staging::circle>::get_gravity_group() const {
+  return shape_stack.back()->behavior_ref().gravity_group();
+}
+
+template <>
 void object_bridge<data_staging::circle>::set_unique_id(int64_t unique_id) {
   shape_stack.back()->meta_ref().set_unique_id(unique_id);
 }
@@ -148,7 +158,17 @@ void object_bridge<data_staging::circle>::set_seed(int64_t new_value) const {
 }
 
 template <>
-object_bridge<data_staging::circle>::object_bridge(native_generator *generator) : generator_(generator) {
+void object_bridge<data_staging::circle>::set_collision_group(const std::string& cg) const {
+  return shape_stack.back()->behavior_ref().set_collision_group(cg);
+}
+
+template <>
+void object_bridge<data_staging::circle>::set_gravity_group(const std::string& gg) const {
+  return shape_stack.back()->behavior_ref().set_gravity_group(gg);
+}
+
+template <>
+object_bridge<data_staging::circle>::object_bridge(native_generator* generator) : generator_(generator) {
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
   object_bridge_class  // .template ctor<int>()
       .set("level", v8pp::property(&object_bridge::get_level))
@@ -170,7 +190,10 @@ object_bridge<data_staging::circle>::object_bridge(native_generator *generator) 
       .set("spawn", &object_bridge::spawn)
       .set("spawn3", &object_bridge::spawn3)
       .set("spawn_parent", &object_bridge::spawn_parent)
-      .set("seed", v8pp::property(&object_bridge::get_seed, &object_bridge::set_seed));
+      .set("seed", v8pp::property(&object_bridge::get_seed, &object_bridge::set_seed))
+      .set("collision_group", v8pp::property(&object_bridge::get_collision_group, &object_bridge::set_collision_group))
+      .set("gravity_group", v8pp::property(&object_bridge::get_gravity_group, &object_bridge::set_gravity_group));
+
   instance_ = std::make_shared<v8::Persistent<v8::Object>>();
   (*instance_)
       .Reset(v8::Isolate::GetCurrent(), object_bridge_class.reference_external(v8::Isolate::GetCurrent(), this));

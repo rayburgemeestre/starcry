@@ -928,31 +928,6 @@ void native_generator::update_object_positions(v8_interact& i, v8::Local<v8::Obj
       x2 += (vel_x2 * velocity);
       y2 += (vel_y2 * velocity);
 
-      // For now we only care about circles
-      // if (type == "circle" && i.double_number(instance, "radiussize") < 1000 /* todo create
-      // property of course */) {
-      if constexpr (std::is_same_v<T, data_staging::circle>) {
-        if (shape.radius_size() < 1000 /* todo create property of course */) {
-          // TODO:
-          update_object_toroidal(i, shape.toroidal_ref(), x, y);
-          const auto collision_group = shape.behavior_cref().collision_group();
-          const auto gravity_group = shape.behavior_cref().gravity_group();
-          if (!collision_group.empty()) {
-            qts.try_emplace(collision_group,
-                            quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
-            auto x_copy = x;
-            auto y_copy = y;
-            // TODO: fix
-            //  fix_xy(i, instance, unique_id, x_copy, y_copy);
-            qts[collision_group].insert(point_type(position(x_copy, y_copy), shape.meta_cref().unique_id()));
-          }
-          if (!gravity_group.empty()) {
-            qts_gravity.try_emplace(gravity_group,
-                                    quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
-            qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
-          }
-        }
-      }
       if constexpr (std::is_same_v<T, data_staging::line>) {
         shape.line_start_ref().position_ref().x = x;
         shape.line_start_ref().position_ref().y = y;
@@ -1076,7 +1051,7 @@ void native_generator::update_object_toroidal(v8_interact& i,
 }
 
 void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video) {
-  const auto handle = [&](data_staging::shape_t& abstract_shape, data_staging::meta& meta) {
+  const auto handle_pass1 = [&]<typename T>(data_staging::shape_t& abstract_shape, T& shape, data_staging::meta& meta) {
     if (meta.level() >= 0) {
       if (stack.size() <= meta.level()) {
         stack.emplace_back(abstract_shape);
@@ -1085,14 +1060,58 @@ void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::
       }
     }
     handle_rotations(abstract_shape);
+
+    if constexpr (std::is_same_v<T, data_staging::circle>) {
+      if (shape.radius_size() < 1000 /* todo create property of course */) {
+        double x = shape.transitive_location_cref().position_cref().x;
+        double y = shape.transitive_location_cref().position_cref().y;
+        // TODO:
+        update_object_toroidal(i, shape.toroidal_ref(), x, y);
+        const auto collision_group = shape.behavior_cref().collision_group();
+        const auto gravity_group = shape.behavior_cref().gravity_group();
+        if (!collision_group.empty()) {
+          qts.try_emplace(collision_group,
+                          quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
+          qts[collision_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
+        }
+        if (!gravity_group.empty()) {
+          qts_gravity.try_emplace(gravity_group,
+                                  quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
+          qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
+        }
+      }
+    }
+  };
+
+  const auto handle_pass2 = [&]<typename T>(data_staging::shape_t& abstract_shape, T& shape, data_staging::meta& meta) {
     handle_collisions(i, abstract_shape);
     handle_gravity(i, abstract_shape);
   };
+
+  // first pass transitive xy become set
   stack.clear();
   for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& c) {
-                            handle(abstract_shape, c.meta_ref());
+                            handle_pass1(abstract_shape, c, c.meta_ref());
+                          },
+                          [&](data_staging::line& l) {
+                            handle_pass1(abstract_shape, l, l.meta_ref());
+                          },
+                          [&](data_staging::text& t) {
+                            handle_pass1(abstract_shape, t, t.meta_ref());
+                          },
+                          [&](data_staging::script& s) {
+                            handle_pass1(abstract_shape, s, s.meta_ref());
+                          }},
+               abstract_shape);
+  }
+
+  // second pass depends on knowing transitive xy
+  for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
+    std::visit(overloaded{[](std::monostate) {},
+                          [&](data_staging::circle& c) {
+                            handle_pass2(abstract_shape, c, c.meta_ref());
                             for (const auto& cascade_out : c.cascade_out_cref()) {
                               auto& other = next_instance_map.at(cascade_out.unique_id()).get();
                               if (auto other_line = std::get_if<data_staging::line>(&other)) {
@@ -1115,13 +1134,13 @@ void native_generator::update_object_interactions(v8_interact& i, v8::Local<v8::
                             }
                           },
                           [&](data_staging::line& l) {
-                            handle(abstract_shape, l.meta_ref());
+                            handle_pass2(abstract_shape, l, l.meta_ref());
                           },
                           [&](data_staging::text& t) {
-                            handle(abstract_shape, t.meta_ref());
+                            handle_pass2(abstract_shape, t, t.meta_ref());
                           },
                           [&](data_staging::script& s) {
-                            handle(abstract_shape, s.meta_ref());
+                            handle_pass2(abstract_shape, s, s.meta_ref());
                           }},
                abstract_shape);
   }
@@ -1272,10 +1291,9 @@ void native_generator::handle_collisions(v8_interact& i, data_staging::shape_t& 
     if (collision_group.empty() || collision_group == "undefined") {
       return;
     }
-    auto x = c.location_ref().position_ref().x;
-    auto y = c.location_ref().position_ref().y;
+    auto x = c.transitive_location_ref().position_ref().x;
+    auto y = c.transitive_location_ref().position_ref().y;
     auto unique_id = c.meta_cref().unique_id();
-    // TODO: fix_xy(i, instance, unique_id, x, y);
 
     if (c.meta_cref().id() == "balls") return;
 
@@ -1313,13 +1331,11 @@ void native_generator::handle_collision(v8_interact& i,
   auto unique_id2 = instance2.meta_cref().unique_id();
   auto last_collide = instance.behavior_ref().last_collide();
 
-  auto x = instance.location_ref().position_cref().x;
-  auto y = instance.location_ref().position_cref().y;
-  // TODO: fix_xy(i, instance, unique_id, x, y);
+  auto x = instance.transitive_location_ref().position_cref().x;
+  auto y = instance.transitive_location_ref().position_cref().y;
 
-  auto x2 = instance2.location_ref().position_cref().x;
-  auto y2 = instance2.location_ref().position_cref().y;
-  // TODO: fix_xy(i, instance2, unique_id2, x2, y2);
+  auto x2 = instance2.transitive_location_ref().position_cref().x;
+  auto y2 = instance2.transitive_location_ref().position_cref().y;
 
   auto radius = instance.radius();
   auto radiussize = instance.radius_size();
@@ -1414,9 +1430,8 @@ void native_generator::handle_gravity(v8_interact& i, data_staging::shape_t& sha
 
     if (c.movement_ref().velocity_speed() == 0) return;  // skip this one.
 
-    auto x = c.location_ref().position_cref().x;
-    auto y = c.location_ref().position_cref().y;
-    // TODO: fix_xy(i, instance, unique_id, x, y);
+    auto x = c.transitive_location_ref().position_cref().x;
+    auto y = c.transitive_location_ref().position_cref().y;
 
     auto radius = c.radius();
     auto radiussize = c.radius_size();
@@ -1463,14 +1478,12 @@ void native_generator::handle_gravity(data_staging::circle& instance,
                                       double constrain_dist_min,
                                       double constrain_dist_max) const {
   // auto unique_id = instance.meta_cref().unique_id();
-  auto x = instance.location_ref().position_cref().x;
-  auto y = instance.location_ref().position_cref().y;
-  // TODO: fix_xy(i, instance, unique_id, x, y);
+  auto x = instance.transitive_location_ref().position_cref().x;
+  auto y = instance.transitive_location_ref().position_cref().y;
 
   // auto unique_id2 = instance.meta_cref().unique_id();
-  auto x2 = instance2.location_ref().position_cref().x;
-  auto y2 = instance2.location_ref().position_cref().y;
-  // TODO: fix_xy(i, instance2, unique_id2, x2, y2);
+  auto x2 = instance2.transitive_location_ref().position_cref().x;
+  auto y2 = instance2.transitive_location_ref().position_cref().y;
 
   auto radius = instance.radius();
   auto radiussize = instance.radius_size();
@@ -1917,32 +1930,6 @@ int64_t native_generator::spawn_object_at_parent(data_staging::shape_t& spawner,
 
 std::unordered_map<std::string, v8::Persistent<v8::Object>>& native_generator::get_object_definitions_ref() {
   return object_definitions_map;
-}
-
-// TODO: will refactor soon
-void native_generator::fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t uid, double& x, double& y) {
-  //  // experimental function caching
-  //  double xx = 0;
-  //  double yy = 0;
-  //  auto find = cached_xy.find(uid);
-  //  if (find != cached_xy.end()) {
-  //    std::tie(xx, yy) = find->second;
-  //    x += xx;
-  //    y += yy;
-  //    return;
-  //  }
-  //  auto parent_uid = i.integer_number(instance, "parent_uid", -1);
-  //  while (parent_uid != -1) {
-  //    auto parent = next_instance_map.at(parent_uid);
-  //    if (i.str(parent, "type", "") == "script") {
-  //      xx += i.double_number(parent, "x");
-  //      yy += i.double_number(parent, "y");
-  //    }
-  //    parent_uid = i.integer_number(parent, "parent_uid");
-  //  }
-  //  cached_xy[uid] = std::make_pair(xx, yy);
-  //  x += xx;
-  //  y += yy;
 }
 
 std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>

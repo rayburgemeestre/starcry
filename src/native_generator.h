@@ -212,7 +212,6 @@ private:
   bool _generate_frame();
 
   std::map<int64_t, std::pair<double, double>> cached_xy;
-  void fix_xy(v8_interact& i, v8::Local<v8::Object>& instance, int64_t uid, double& x, double& y);
 
   std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>
   _instantiate_object_from_scene(

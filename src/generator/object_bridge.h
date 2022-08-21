@@ -53,6 +53,8 @@ public:
   const std::string& get_text_align() const;
   bool get_text_fixed() const;
   int64_t get_seed() const;
+  std::string get_collision_group() const;
+  std::string get_gravity_group() const;
 
   void set_unique_id(int64_t unique_id);
   void set_angle(double angle);
@@ -75,6 +77,8 @@ public:
   void set_text_align(const std::string& align);
   void set_text_fixed(bool fixed);
   void set_seed(int64_t) const;
+  void set_collision_group(const std::string& group) const;
+  void set_gravity_group(const std::string& group) const;
 
   v8::Persistent<v8::Object>& get_properties_ref() const;
   v8::Local<v8::Object> get_properties_local_ref() const;

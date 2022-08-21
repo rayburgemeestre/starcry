@@ -63,6 +63,9 @@ public:
   data_staging::location& transitive_location_ref() {
     return transitive_location_;
   }
+  const data_staging::location& transitive_location_cref() {
+    return transitive_location_;
+  }
   const movement& movement_cref() const {
     return movement_;
   }
