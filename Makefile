@@ -18,7 +18,7 @@ docker_run = $(docker_exe_tmp) $(docker_params) run -i $(docker_tty) --rm \
 	                                            -v $$PWD/.ccache:/root/.ccache \
 	                                            -v $$PWD/.emscripten_cache:/tmp/.emscripten_cache \
 	                                            --entrypoint /bin/bash \
-	                                            -w $$PWD rayburgemeestre/build-starcry-ubuntu:20.04
+	                                            -w $$PWD rayburgemeestre/build-starcry-ubuntu:22.04
 inside_docker_container = [[ "$$container" == "podman" ]]
 run_in_container = ($(docker_run) -c "if $(ccache_enabled); then $(ccache_env) $1; else $1; fi")
 run_locally = (if $(ccache_enabled); then $(ccache_env) $1; else $1; fi)
@@ -115,11 +115,11 @@ format:  ## format source code (build at least once first)
 	                    cmake --build build --target clangformat)
 
 pull:  ## pull the starcry docker build image
-	$(docker_exe) pull rayburgemeestre/build-starcry-ubuntu:20.04
+	$(docker_exe) pull rayburgemeestre/build-starcry-ubuntu:22.04
 
 build-image:  ## build the starcry build image using podman
-	$(docker_exe) pull -q rayburgemeestre/build-ubuntu:20.04 && \
-	$(docker_exe) build -t rayburgemeestre/build-starcry-ubuntu:20.04 -f Dockerfile .
+	$(docker_exe) pull -q rayburgemeestre/build-ubuntu:22.04 && \
+	$(docker_exe) build -t rayburgemeestre/build-starcry-ubuntu:22.04 -f Dockerfile .
 
 runtime_deps:  ## install run-time dependencies
 	./docs/install_runtime_deps.sh
@@ -173,7 +173,7 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 	# quick test
 	$(docker_exe) run -it docker.io/rayburgemeestre/starcry:v`cat .version` /starcry --help || true
 	# second build the docker image with gui support
-	@$(call make-clang, sed -i.bak 's/FROM scratch/FROM ubuntu:20.04/g' out/Dockerfile);
+	@$(call make-clang, sed -i.bak 's/FROM scratch/FROM ubuntu:22.04/g' out/Dockerfile);
 	@$(call make-clang, sed -i.bak '2 a RUN apt update && apt install mesa-common-dev -y && apt clean && apt autoremove -y' out/Dockerfile);
 	(cd out && $(docker_exe) build . -t docker.io/rayburgemeestre/starcry:v`cat ../.version`); \
 	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then \
@@ -218,12 +218,12 @@ clion:
 	xhost +
 	mkdir -p /tmp/ccache-root
 	podman rm starcry_clion || true
-	podman run --rm --name starcry_clion -p 18081:18080 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix rayburgemeestre/build-starcry-ubuntu:20.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/clion ${HOME}"
+	podman run --rm --name starcry_clion -p 18081:18080 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/clion ${HOME}"
 
 webstorm:
 	xhost +
 	mkdir -p /tmp/ccache-root
-	podman run --rm --name starcry_webstorm -p 8081:8080 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix rayburgemeestre/build-starcry-ubuntu:20.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/webstorm ${HOME}"
+	podman run --rm --name starcry_webstorm -p 8081:8080 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/webstorm ${HOME}"
 
 profile:  ## run starcry with valgrind's callgrind for profiling
 	#valgrind --tool=callgrind ./build/starcry input/script.js

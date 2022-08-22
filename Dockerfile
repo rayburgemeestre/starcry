@@ -1,4 +1,4 @@
-FROM rayburgemeestre/build-ubuntu:20.04 AS build1
+FROM rayburgemeestre/build-ubuntu:22.04 AS build1
 
 MAINTAINER Ray Burgemeestre
 
