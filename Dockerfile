@@ -15,7 +15,8 @@ RUN make dockerize_deps
 RUN /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -s USE_SDL_TTF=2 -O3 /dev/null || true
 
 # IDE dependencies (LSP plugin)
-RUN apt install -y clangd-10
+# EDIT: we already have it in the new image
+#RUN apt install -y clangd-10
 
 # IDE plugin SonarLint requires nodejs
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
