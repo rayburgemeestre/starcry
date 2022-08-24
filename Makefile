@@ -119,7 +119,7 @@ pull:  ## pull the starcry docker build image
 
 build-image:  ## build the starcry build image using podman
 	$(docker_exe) pull -q docker.io/rayburgemeestre/build-ubuntu:22.04 && \
-	$(docker_exe) build -t docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -f Dockerfile .
+	$(docker_exe) build --no-cache -t docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -f Dockerfile .
 
 runtime_deps:  ## install run-time dependencies
 	./docs/install_runtime_deps.sh

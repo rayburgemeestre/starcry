@@ -45,7 +45,8 @@ function(configure_links target)
   # v8
   target_link_libraries(${target} PRIVATE /opt/cppse/build/v8pp/lib/libv8_monolith.a)
   #target_link_libraries(${target} PRIVATE /usr/lib/gcc/x86_64-linux-gnu/7/libstdc++fs.a) # ubuntu 18.04
-  target_link_libraries(${target} PRIVATE /usr/lib/gcc/x86_64-linux-gnu/9/libstdc++fs.a)  # ubuntu 20.04
+  #target_link_libraries(${target} PRIVATE /usr/lib/gcc/x86_64-linux-gnu/9/libstdc++fs.a)  # ubuntu 20.04
+  target_link_libraries(${target} PRIVATE /usr/lib/gcc/x86_64-linux-gnu/11/libstdc++fs.a)  # ubuntu 20.04
 
   # generic
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libssl.a)
@@ -55,13 +56,13 @@ function(configure_links target)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/seasocks/lib/libseasocks.a)
 
   # openexr
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIexMath-2_5.a)
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIlmImf-2_5.a)
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIlmImfUtil-2_5.a)
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIlmThread-2_5.a)
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libImath-2_5.a)
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libHalf-2_5.a)
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIex-2_5.a)
+  # no longer exists ? target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIexMath-2_5.a)
+  #target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIlmImf-3_1.a)
+  #target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIlmImfUtil-3_1.a)
+  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIlmThread-3_1.a)
+  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libImath-3_1.a)
+  #target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libHalf-3_1.a)
+  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIex-3_1.a)
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libz.a)
 
   # curses

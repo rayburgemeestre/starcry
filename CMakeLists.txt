@@ -15,7 +15,7 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-set(CLANGFORMAT_EXECUTABLE clang-format-12)
+set(CLANGFORMAT_EXECUTABLE clang-format-14)
 set(Boost_USE_STATIC_LIBS ON)
 set(BOOST_ROOT "/opt/cppse/build/boost/")
 

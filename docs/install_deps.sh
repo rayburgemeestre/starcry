@@ -43,3 +43,6 @@ sudo apt install -y libxtst6
 sudo apt install -y imagemagick-6.q16
 
 sudo apt install -y ninja-build
+
+#ubuntu 22.04
+sudo apt install -y libbz2-dev
