@@ -110,7 +110,7 @@ debug-clean:
 format:  ## format source code (build at least once first)
 	@$(call make-clang, stat -c 'chown %u:%g . -R' CMakeLists.txt | sh - && \
 	                    mv -v web/webpack*.js input/ && \
-	                    find ./input -name '*.js' -type f | xargs -I{} -n 1 -P 8 clang-format-12 -i {} && \
+	                    find ./input -name '*.js' -type f | xargs -I{} -n 1 -P 8 clang-format-14 -i {} && \
 	                    mv -v input/webpack*.js ./web/ && \
 	                    cmake --build build --target clangformat)
 
