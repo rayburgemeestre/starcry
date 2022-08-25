@@ -1,4 +1,4 @@
-FROM rayburgemeestre/build-ubuntu:22.04 AS build1
+FROM docker.io/rayburgemeestre/build-ubuntu:22.04 AS build1
 
 MAINTAINER Ray Burgemeestre
 

@@ -1,5 +1,8 @@
 #/bin/bash
 
+set -ex
+set -o pipefail
+
 sudo apt-get update
 sudo apt install -y lsb-release software-properties-common ca-certificates
 
@@ -9,7 +12,8 @@ sudo apt-get install -y cppseffmpeg=1.1.1 v8pp=1.1.1 allegro5=1.1.1 allegro5sdl=
 sudo apt-get install -y coz-profiler
 sudo apt-get install -y ccache
 
-sudo apt-get install -y cmake git wget bzip2 python-dev libbz2-dev \
+# removed for ubuntu 22.04: python-dev
+sudo apt-get install -y cmake git wget bzip2 libbz2-dev \
             pkg-config curl \
             liblzma-dev libomp5
 
