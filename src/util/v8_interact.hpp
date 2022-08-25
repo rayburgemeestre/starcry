@@ -8,6 +8,7 @@
 #include "util/v8_wrapper.hpp"
 
 #include <iostream>
+#include <optional>
 #include <utility>
 
 extern v8::Local<v8::Context> context;

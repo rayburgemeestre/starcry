@@ -49,9 +49,12 @@ struct feature_settings {
   bool caching = false;
 };
 
+#define NO_INOTIFY
+#ifndef NO_INOTIFY
 namespace inotify {
 class NotifierBuilder;
 }
+#endif
 
 enum class log_level { silent, info, debug };
 
@@ -126,7 +129,9 @@ private:
   data::viewpoint viewpoint;
 
   std::string script_;
+#ifndef NO_INOTIFY
   std::unique_ptr<inotify::NotifierBuilder> notifier;
+#endif
   std::thread notifier_thread;
 
 public:

@@ -399,7 +399,11 @@ inline void v8_wrapper::add_include_fun() {
                          v8::Handle<v8::String> source =
                              v8::String::NewFromUtf8(context->isolate(), js_file.c_str()).ToLocalChecked();
                          auto script_origin = v8::String::NewFromUtf8(context->isolate(), p.c_str()).ToLocalChecked();
-                         v8::ScriptOrigin so(script_origin);
+#if V8_MAJOR_VERSION > 9 || (V8_MAJOR_VERSION == 9 && V8_MINOR_VERSION >= 7)
+                         v8::ScriptOrigin so(context->isolate(), script_origin);
+#else
+                         v8::ScriptOrigin so(to_v8(context->isolate(), script_origin));
+#endif
                          v8::Handle<v8::Script> script =
                              v8::Script::Compile(context->isolate()->GetCurrentContext(), source, &so).ToLocalChecked();
                          return script->Run(context->isolate()->GetCurrentContext()).ToLocalChecked();

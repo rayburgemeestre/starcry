@@ -12,11 +12,14 @@
 #include <coz.h>
 #include <fmt/core.h>
 
+#define NO_OPENEXR
+#ifndef NO_OPENEXR
 #include <ImfArray.h>
 #include <ImfChannelList.h>
 #include <ImfInputFile.h>
 #include <ImfOutputFile.h>
 #include <ImfStringAttribute.h>
+#endif
 
 #include "cereal/archives/json.hpp"
 
@@ -41,8 +44,11 @@
 // TODO: re-organize this somehow
 #include <sys/prctl.h>
 
+#define NO_INOTIFY
+#ifndef NO_INOTIFY
 #include <inotify-cpp/FileSystemAdapter.h>
 #include <inotify-cpp/NotifierBuilder.h>
+#endif
 
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
@@ -64,8 +70,12 @@ starcry::starcry(starcry_options &options, std::shared_ptr<v8_wrapper> &context)
                                          [this]() {
                                            if (gui) gui->toggle_window();
                                          })),
-      script_(options.script_file),
-      notifier(nullptr) {
+      script_(options.script_file)
+#ifndef NO_INOTIFY
+      ,
+      notifier(nullptr)
+#endif
+{
   if (options.stdout_) {
     _stdout = true;
   }
@@ -77,13 +87,18 @@ starcry::starcry(starcry_options &options, std::shared_ptr<v8_wrapper> &context)
 }
 
 starcry::~starcry() {
+#ifndef NO_INOTIFY
   notifier->stop();
+#endif
   metrics_->notify();
   pe.cancel();
+#ifndef NO_INOTIFY
   if (notifier_thread.joinable()) notifier_thread.join();
+#endif
 }
 
 void starcry::configure_inotify() {
+#ifndef NO_INOTIFY
   inotifypp::filesystem::path path("input");
   auto handleNotification = [&](inotify::Notification notification) {
     logger(DEBUG) << "File modified on disk: " << notification.path.string() << std::endl;
@@ -115,6 +130,7 @@ void starcry::configure_inotify() {
   notifier_thread = std::thread([&]() {
     notifier->run();
   });
+#endif
 }
 
 feature_settings &starcry::features() {
@@ -705,6 +721,7 @@ void starcry::save_images(std::vector<data::color> &pixels_raw,
       }
     }
 
+#ifndef NO_OPENEXR
     if (write_32bit_exr) {
       // Save EXR through OpenEXR directly
       using namespace Imf;
@@ -772,5 +789,6 @@ void starcry::save_images(std::vector<data::color> &pixels_raw,
       file.setFrameBuffer(frameBuffer);
       file.writePixels(h);
     }
+#endif
   }
 }
