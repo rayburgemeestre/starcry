@@ -12,14 +12,14 @@
 #include <coz.h>
 #include <fmt/core.h>
 
-#define NO_OPENEXR
-#ifndef NO_OPENEXR
 #include <ImfArray.h>
 #include <ImfChannelList.h>
 #include <ImfInputFile.h>
 #include <ImfOutputFile.h>
+#include "half.h"
 #include <ImfStringAttribute.h>
-#endif
+#include <ImfFrameBuffer.h>
+#include <ImfHeader.h>
 
 #include "cereal/archives/json.hpp"
 
@@ -721,7 +721,6 @@ void starcry::save_images(std::vector<data::color> &pixels_raw,
       }
     }
 
-#ifndef NO_OPENEXR
     if (write_32bit_exr) {
       // Save EXR through OpenEXR directly
       using namespace Imf;
@@ -789,6 +788,5 @@ void starcry::save_images(std::vector<data::color> &pixels_raw,
       file.setFrameBuffer(frameBuffer);
       file.writePixels(h);
     }
-#endif
   }
 }

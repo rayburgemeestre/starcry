@@ -74,6 +74,7 @@ include_directories(
     "/opt/cppse/build/seasocks/include/"
     "/opt/cppse/build/fmt/include/"
     "/opt/cppse/build/png++/"
+    "/opt/cppse/build/openexr/include/Imath/"
     "/opt/cppse/build/openexr/include/OpenEXR/"
     "/opt/cppse/build/tvision/include/"
     "/opt/cppse/build/inotify-cpp/include/"
