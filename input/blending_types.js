@@ -23,6 +23,7 @@ _ = {
   'objects': {
     'mother': {
       'init': function() {
+        let subobjs = [];
         let types = [
           blending_type.normal,      blending_type.lighten,    blending_type.darken,      blending_type.multiply,
           blending_type.average,     blending_type.add,        blending_type.subtract,    blending_type.difference,
@@ -60,14 +61,14 @@ _ = {
             x = (rand() * 1920) - 1920 / 2.;
             y = (rand() * 1080) - 1080 / 2.;
             collides = false;
-            for (let subobj of this.subobj) {
+            for (let subobj of subobjs) {
               let d = get_distance(subobj.x, subobj.y, x, y);
               if (d <= 200.) {
                 collides = true;
               }
             }
           }
-          this.subobj.push(this.spawn({
+          let o = {
             'id': 'rainbow',
             'blending_type': type,
             'x': x,
@@ -77,7 +78,9 @@ _ = {
             'velocity': (rand() * 10.) + 10.,
             'z': 0,
             'props': {}
-          }));
+          };
+          this.spawn(o);
+          subobjs.push(o);
         }
       },
       'time': function(t, e, scene) {},
@@ -101,13 +104,9 @@ _ = {
       'angle': 0.,
       'subobj': [],
       'init': function() {
-        this.subobj.push(this.spawn({'id': 'text', 'text': blending_type_str(this.blending_type), 'x': 0, 'y': 0}));
+        this.spawn({'id': 'text', 'text': blending_type_str(this.blending_type), 'x': 0, 'y': 0});
       },
-      'time': function(t, e, scene) {
-        if (this.subobj.length === 0) {
-          this.subobj.push(this.spawn({'id': 'text', 'text': blending_type_str(this.blending_type), 'x': 0, 'y': 0}));
-        }
-      },
+      'time': function(t, e, scene) {},
     },
     'text': {
       'type': 'text',

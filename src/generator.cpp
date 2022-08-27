@@ -2062,6 +2062,7 @@ generator::_instantiate_object_from_scene(
     c.meta_ref().set_namespace(parent_object_ns);
 
     c.styling_ref().set_seed(i.integer_number(instance, "seed", 0));
+    c.styling_ref().set_blending_type(i.integer_number(instance, "blending_type"));
 
     initialize(c, object_bridge_circle);
 
@@ -2079,6 +2080,8 @@ generator::_instantiate_object_from_scene(
 
     c.meta_ref().set_namespace(parent_object_ns);
 
+    c.styling_ref().set_blending_type(i.integer_number(instance, "blending_type"));
+
     initialize(c, object_bridge_line);
   } else if (type == "text") {
     data_staging::text t(object_id,
@@ -2094,6 +2097,8 @@ generator::_instantiate_object_from_scene(
                                   i.double_number(instance, "velocity", 0));
 
     t.meta_ref().set_namespace(parent_object_ns);
+
+    t.styling_ref().set_blending_type(i.integer_number(instance, "blending_type"));
 
     initialize(t, object_bridge_text);
 

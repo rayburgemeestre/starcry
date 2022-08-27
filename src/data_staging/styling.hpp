@@ -98,5 +98,13 @@ public:
   void set_seed(int64_t seed) {
     seed_ = seed;
   }
+
+  data::blending_type get_blending_type() const {
+    return blending_type_;
+  }
+
+  void set_blending_type(data::blending_type blending_type) {
+    blending_type_ = blending_type;
+  }
 };
 }  // namespace data_staging

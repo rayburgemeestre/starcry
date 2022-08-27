@@ -64,6 +64,11 @@ int64_t object_bridge<data_staging::circle>::get_seed() const {
 }
 
 template <>
+int64_t object_bridge<data_staging::circle>::get_blending_type() const {
+  return shape_stack.back()->styling_ref().get_blending_type().type();
+}
+
+template <>
 std::string object_bridge<data_staging::circle>::get_collision_group() const {
   return shape_stack.back()->behavior_ref().gravity_group();
 }
@@ -158,6 +163,11 @@ void object_bridge<data_staging::circle>::set_seed(int64_t new_value) const {
 }
 
 template <>
+void object_bridge<data_staging::circle>::set_blending_type(int64_t blending_type) const {
+  return shape_stack.back()->styling_ref().set_blending_type(data::blending_type(blending_type));
+}
+
+template <>
 void object_bridge<data_staging::circle>::set_collision_group(const std::string& cg) const {
   return shape_stack.back()->behavior_ref().set_collision_group(cg);
 }
@@ -191,6 +201,7 @@ object_bridge<data_staging::circle>::object_bridge(generator* generator) : gener
       .function("spawn3", &object_bridge::spawn3)
       .function("spawn_parent", &object_bridge::spawn_parent)
       .property("seed", &object_bridge::get_seed, &object_bridge::set_seed)
+      .property("blending_type", &object_bridge::get_blending_type, &object_bridge::set_blending_type)
       .property("collision_group", &object_bridge::get_collision_group, &object_bridge::set_collision_group)
       .property("gravity_group", &object_bridge::get_gravity_group, &object_bridge::set_gravity_group);
 
