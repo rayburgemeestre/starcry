@@ -121,21 +121,21 @@ template <>
 object_bridge<data_staging::script>::object_bridge(generator *generator) : generator_(generator) {
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
   object_bridge_class  // .template ctor<int>()
-      .set("level", v8pp::property(&object_bridge::get_level))
-      .set("unique_id", v8pp::property(&object_bridge::get_unique_id, &object_bridge::set_unique_id))
-      .set("angle", v8pp::property(&object_bridge::get_angle, &object_bridge::set_angle))
-      .set("opacity", v8pp::property(&object_bridge::get_opacity, &object_bridge::set_opacity))
-      .set("mass", v8pp::property(&object_bridge::get_mass, &object_bridge::set_mass))
-      .set("scale", v8pp::property(&object_bridge::get_scale, &object_bridge::set_scale))
-      .set("x", v8pp::property(&object_bridge::get_x, &object_bridge::set_x))
-      .set("y", v8pp::property(&object_bridge::get_y, &object_bridge::set_y))
-      .set("z", v8pp::property(&object_bridge::get_z, &object_bridge::set_z))
-      .set("vel_x", v8pp::property(&object_bridge::get_vel_x, &object_bridge::set_vel_x))
-      .set("vel_y", v8pp::property(&object_bridge::get_vel_y, &object_bridge::set_vel_y))
-      .set("velocity", v8pp::property(&object_bridge::get_velocity, &object_bridge::set_velocity))
-      .set("props", v8pp::property(&object_bridge::get_properties_local_ref))
-      .set("spawn", &object_bridge::spawn)
-      .set("spawn3", &object_bridge::spawn3);
+      .property("level", &object_bridge::get_level)
+      .property("unique_id", &object_bridge::get_unique_id, &object_bridge::set_unique_id)
+      .property("angle", &object_bridge::get_angle, &object_bridge::set_angle)
+      .property("opacity", &object_bridge::get_opacity, &object_bridge::set_opacity)
+      .property("mass", &object_bridge::get_mass, &object_bridge::set_mass)
+      .property("scale", &object_bridge::get_scale, &object_bridge::set_scale)
+      .property("x", &object_bridge::get_x, &object_bridge::set_x)
+      .property("y", &object_bridge::get_y, &object_bridge::set_y)
+      .property("z", &object_bridge::get_z, &object_bridge::set_z)
+      .property("vel_x", &object_bridge::get_vel_x, &object_bridge::set_vel_x)
+      .property("vel_y", &object_bridge::get_vel_y, &object_bridge::set_vel_y)
+      .property("velocity", &object_bridge::get_velocity, &object_bridge::set_velocity)
+      .function("props", &object_bridge::get_properties_local_ref)
+      .function("spawn", &object_bridge::spawn)
+      .function("spawn3", &object_bridge::spawn3);
   instance_ = std::make_shared<v8::Persistent<v8::Object>>();
   (*instance_)
       .Reset(v8::Isolate::GetCurrent(), object_bridge_class.reference_external(v8::Isolate::GetCurrent(), this));

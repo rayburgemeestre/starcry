@@ -360,7 +360,7 @@ inline void v8_wrapper::call(std::string const& function_name, T param) {
 template <typename T>
 inline void v8_wrapper::add_fun(const std::string& name, T func) {
   v8::HandleScope scope(context->isolate());
-  context->set(name.c_str(), v8pp::wrap_function(context->isolate(), name.c_str(), func));
+  context->function(name.c_str(), func);
 }
 template <typename T>
 inline void v8_wrapper::add_class(T func) {
@@ -371,46 +371,40 @@ inline void v8_wrapper::add_class(T func) {
 
 inline void v8_wrapper::add_include_fun() {
   v8::HandleScope scope(context->isolate());
-  context->set("include",
-               v8pp::wrap_function(
-                   context->isolate(),
-                   "include",
-                   [=, this](const v8::FunctionCallbackInfo<v8::Value>& args) -> v8::Handle<v8::Value> {
-                     for (int i = 0; i < args.Length(); i++) {
-                       std::string const str = v8pp::from_v8<std::string>(
-                           context->isolate(),
-                           args[0]->ToString(context->isolate()->GetCurrentContext()).ToLocalChecked());
+  context->function("include", [=, this](const v8::FunctionCallbackInfo<v8::Value>& args) -> v8::Handle<v8::Value> {
+    for (int i = 0; i < args.Length(); i++) {
+      std::string const str = v8pp::from_v8<std::string>(
+          context->isolate(), args[0]->ToString(context->isolate()->GetCurrentContext()).ToLocalChecked());
 
-                       // load_file loads the file with this name into a string,
-                       // I imagine you can write a function to do this :)
-                       std::string file(str.c_str());
-                       fs::path p = filename_;
-                       p.remove_filename();
-                       p.append(file);
+      // load_file loads the file with this name into a string,
+      // I imagine you can write a function to do this :)
+      std::string file(str.c_str());
+      fs::path p = filename_;
+      p.remove_filename();
+      p.append(file);
 
-                       std::ifstream stream(p);
-                       if (!stream) {
-                         throw std::runtime_error("could not locate file " + std::string(p.c_str()));
-                       }
-                       std::istreambuf_iterator<char> begin(stream), end;
-                       std::string js_file(begin, end);
+      std::ifstream stream(p);
+      if (!stream) {
+        throw std::runtime_error("could not locate file " + std::string(p.c_str()));
+      }
+      std::istreambuf_iterator<char> begin(stream), end;
+      std::string js_file(begin, end);
 
-                       if (js_file.length() > 0) {
-                         v8::Handle<v8::String> source =
-                             v8::String::NewFromUtf8(context->isolate(), js_file.c_str()).ToLocalChecked();
-                         auto script_origin = v8::String::NewFromUtf8(context->isolate(), p.c_str()).ToLocalChecked();
+      if (js_file.length() > 0) {
+        v8::Handle<v8::String> source = v8::String::NewFromUtf8(context->isolate(), js_file.c_str()).ToLocalChecked();
+        auto script_origin = v8::String::NewFromUtf8(context->isolate(), p.c_str()).ToLocalChecked();
 #if V8_MAJOR_VERSION > 9 || (V8_MAJOR_VERSION == 9 && V8_MINOR_VERSION >= 7)
-                         v8::ScriptOrigin so(context->isolate(), script_origin);
+        v8::ScriptOrigin so(context->isolate(), script_origin);
 #else
-                         v8::ScriptOrigin so(to_v8(context->isolate(), script_origin));
+                              v8::ScriptOrigin so(to_v8(context->isolate(), script_origin));
 #endif
-                         v8::Handle<v8::Script> script =
-                             v8::Script::Compile(context->isolate()->GetCurrentContext(), source, &so).ToLocalChecked();
-                         return script->Run(context->isolate()->GetCurrentContext()).ToLocalChecked();
-                       }
-                     }
-                     return v8::Undefined(context->isolate());
-                   }));
+        v8::Handle<v8::Script> script =
+            v8::Script::Compile(context->isolate()->GetCurrentContext(), source, &so).ToLocalChecked();
+        return script->Run(context->isolate()->GetCurrentContext()).ToLocalChecked();
+      }
+    }
+    return v8::Undefined(context->isolate());
+  });
 }
 
 inline const char* ToCString(const v8::String::Utf8Value& value) {
