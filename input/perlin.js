@@ -45,6 +45,7 @@ _ = {
   'objects': {
     'obj': {
       'type': 'circle',
+      'blending_type': blending_type.hardlight,
       'gradient': 'white1',
       //'texture': 'clouds1',
       'radius': 0,
@@ -59,19 +60,16 @@ _ = {
       'radius': 0,
       'radiussize': 0,
       'props': {},
-      'subobj': [],
       'x': 0,
       'y': 150,
       'init': function() {
         for (var i = 0; i < 30; i++) {
           var x = i / 50.;
           var step = expf(x, 10) * 100.;
-          this.subobj.push(this.spawn(
-              {'id': 'ring', 'x': -300, 'y': 150, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}}));
-          this.subobj.push(
-              this.spawn({'id': 'ring', 'x': -300, 'y': 150, 'x2': 0, 'y2': -300, 'scale': step, 'z': 0, 'props': {}}));
-          this.subobj.push(
-              this.spawn({'id': 'ring', 'x': 0, 'y': -300, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}}));
+          this.spawn({'id': 'ring', 'x': -300, 'y': 150, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}});
+
+          this.spawn({'id': 'ring', 'x': -300, 'y': 150, 'x2': 0, 'y2': -300, 'scale': step, 'z': 0, 'props': {}});
+          this.spawn({'id': 'ring', 'x': 0, 'y': -300, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}});
         }
       },
       'time': function(t, elapsed) {},
@@ -99,7 +97,7 @@ _ = {
     'fps': 25,
     'width': 1920,
     'height': 1920,
-    'scale': 0.5,
+    'scale': 0.5 + 1.0,
     'init_scale': 0.5,
     'rand_seed': 1,
     'granularity': 100,
@@ -109,10 +107,10 @@ _ = {
     //   'exclude': 5.,  // then skip 5 seconds, and so on.
     // },
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
-    'minimize_steps_per_object': true,
+    'minimize_steps_per_object': false,
     'grain_for_opacity': true,
-    // 'min_intermediates': 5,
-    // 'max_intermediates': 5,
+    'min_intermediates': 5,
+    'max_intermediates': 5,
   },
   'scenes': [{
     'name': 'scene1',
@@ -154,7 +152,7 @@ _ = {
         'seed': 3,
         'props': {}
       },
-      {'id': 'rings', 'x': 0, 'y': 75, 'z': 0, 'radius': 0, 'radiussize': 0, 'props': {}},
+      // {'id': 'rings', 'x': 0, 'y': 75, 'z': 0, 'radius': 0, 'radiussize': 0, 'props': {}},
     ],
   }]
 };

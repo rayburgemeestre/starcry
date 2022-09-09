@@ -46,30 +46,56 @@ _ = {
       'radius': 0,
       'radiussize': 0,
       'props': {'depth': 30},
+      'pivot': true,
       'subobj': [],
       'x': 0,
       'y': 150,
-      'angle': -25,
+      'angle': 0,
       'init': function() {
         var x = this.props.depth / 50.;
         var step = expf(x, 300) * 100.;
-        this.subobj.push(
-            this.spawn({'id': 'ring', 'x': -300, 'y': 150, 'x2': 300, 'y2': 150, 'z': 0, 'props': {'scale': step}}));
-        this.subobj.push(
-            this.spawn({'id': 'ring', 'x': -300, 'y': 150, 'x2': 0, 'y2': -300, 'z': 0, 'props': {'scale': step}}));
-        this.subobj.push(
-            this.spawn({'id': 'ring', 'x': 0, 'y': -300, 'x2': 300, 'y2': 150, 'z': 0, 'props': {'scale': step}}));
+        this.spawn({
+          'id': 'ring',
+          'x': -300,
+          'y': 150,
+          'x2': 300,
+          'y2': 150,
+          'z': 0,
+          'props': {'scale': step},
+          'angle': this.angle + 15
+        });
+        this.spawn({
+          'id': 'ring',
+          'x': -300,
+          'y': 150,
+          'x2': 0,
+          'y2': -300,
+          'z': 0,
+          'props': {'scale': step},
+          'angle': this.angle + 15
+        });
+        this.spawn({
+          'id': 'ring',
+          'x': 0,
+          'y': -300,
+          'x2': 300,
+          'y2': 150,
+          'z': 0,
+          'props': {'scale': step},
+          'angle': this.angle + 15
+        });
         if (this.props.depth > 0) {
-          this.subobj.push(this.spawn({
+          output('heel ');
+          this.spawn({
             'id': 'rings',
             'x': 0,
             'y': 0,
             'x2': 0,
             'y2': 0,
             'z': 0,
-            'angle': 5,
+            'angle': this.angle + 15,
             'props': {'depth': this.props.depth - 1}
-          }));
+          });
         }
       },
       'time': function(t, elapsed) {},
@@ -79,19 +105,21 @@ _ = {
       'gradients': [[0.1, 'white2']],
       'radiussize': 20,
       'props': {},
-      'opacity': 0.15,
+      'opacity': 1.,  // 0.15,
       'init': function() {},
       'time': function(t, elapsed) {
+        output('unique_id: ' + this.unique_id + ' has angle: ' + this.angle);
         // this.radiussize = t * 600.;
         // this.radiussize = 20. - (logn(t, 100) * 15.);
-        this.radiussize = 20. - (logn(t, 10000) * 15.);
+        //        this.radiussize = 20. - (logn(t, 10000) * 15.);
         this.gradients[0][0] = t;
-        // hack test
-        this.gradients[0][0] = 1.;
+        // this.gradients[1][0] = 1.0 - t;
+        this.gradients[0][0] = 1;
         // this.scale = 1.0 + (logn(t, 100) * 1);
         script.video.scale = 1.0 + (logn(t, 100) * 1);
         // this.scale = this.props.scale
         this.radiussize = 20 * this.props.scale;
+        // this.radiussize = 2;
       },
       'blending_type': blending_type.add,
       'scale': 1.0,
@@ -105,7 +133,7 @@ _ = {
     'rand_seed': 1,
     'granularity': 1000,
     'update_positions': false,
-    'grain_for_opacity': true,
+    'grain_for_opacity': false,
     // 'sample': {
     //   'include': 1.,  // include one second.
     //   'exclude': 5.,  // then skip 5 seconds, and so on.

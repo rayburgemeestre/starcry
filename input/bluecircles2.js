@@ -142,7 +142,12 @@ _ = {
       'opacity': 1.0,  // / 3.,
       'radiussize': 3,
       'init': function() {},
-      'time': function(t) {},
+      'time': function(t) {
+        if (rand() > 0.5) {
+          this.opacity = 0.;
+          this.radiussize = 0.;
+        }
+      },
     },
   },
   'video': {

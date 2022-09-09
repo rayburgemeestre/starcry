@@ -26,7 +26,7 @@ _ = {
         let n = 6;
         for (let i = 0; i < n; i++) {
           let t = (360 / n) * i;
-          this.subobj.push(this.spawn({
+          this.spawn({
             'id': 'ball',
             'x': 50 * Math.cos(radians(t)),
             'y': 50 * Math.sin(radians(t)),
@@ -36,13 +36,13 @@ _ = {
             'velocity': 1,
             'vel_x': 5 * Math.cos(radians(t + 90)),
             'vel_y': 5 * Math.sin(radians(t + 90)),
-          }));
+          });
         }
 
         n = 8;
         for (let i = 0; i < n; i++) {
           let t = (360 / n) * i;
-          this.subobj.push(this.spawn({
+          this.spawn({
             'id': 'ball',
             'x': 150 * Math.cos(radians(t)),
             'y': 150 * Math.sin(radians(t)),
@@ -52,13 +52,13 @@ _ = {
             'velocity': 1,
             'vel_x': 10 * Math.cos(radians(t - 90)),
             'vel_y': 10 * Math.sin(radians(t - 90)),
-          }));
+          });
         }
 
         n = 32;
         for (let i = 0; i < n; i++) {
           let t = (360 / n) * i;
-          this.subobj.push(this.spawn({
+          this.spawn({
             'id': 'ball',
             'x': 200 * Math.cos(radians(t)),
             'y': 200 * Math.sin(radians(t)),
@@ -68,9 +68,8 @@ _ = {
             'velocity': 1,
             'vel_x': 10 * Math.cos(radians(t + 90)),
             'vel_y': 10 * Math.sin(radians(t + 90)),
-          }));
+          });
         }
-        this.subobj = [];
       },
     },
     'ball': {
@@ -99,7 +98,6 @@ _ = {
             'radius': this.radiussize,
             'props': {}
           });
-          this.subobj.push(obj);
         }
       },
       'time': function(t, e, s, tt) {
@@ -193,6 +191,12 @@ _ = {
           'y': 0,
           'z': 0,
         },
+        // {
+        //   'id': 'balls',
+        //   'x': -100,
+        //   'y': 0,
+        //   'z': 0,
+        // },
       ],
     },
     {
