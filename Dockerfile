@@ -34,6 +34,9 @@ RUN apt install -y x11-apps
 # clean up cache
 RUN apt clean
 
+# fix weird IDs (podman doesn't seem to like it much)
+RUN chown root.root /emsdk -R
+
 COPY docs/entrypoint.sh /entrypoint.sh
 
 RUN chmod a+rx /entrypoint.sh
