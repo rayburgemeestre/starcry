@@ -37,16 +37,16 @@ template <typename T>
 void meta_callback(T& shape, auto&& callback) {
   meta_visit(
       shape,
-      [&](data_staging::circle& c) {
+      [&callback](data_staging::circle& c) {
         callback(c);
       },
-      [&](data_staging::line& l) {
+      [&callback](data_staging::line& l) {
         callback(l);
       },
-      [&](data_staging::text& t) {
+      [&callback](data_staging::text& t) {
         callback(t);
       },
-      [&](data_staging::script& s) {
+      [&callback](data_staging::script& s) {
         callback(s);
       });
 }
