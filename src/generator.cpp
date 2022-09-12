@@ -55,16 +55,16 @@ template <typename T>
 void meta_callback(const T& shape, auto&& callback) {
   meta_visit(
       shape,
-      [&](const data_staging::circle& c) {
+      [&callback](const data_staging::circle& c) {
         callback(c);
       },
-      [&](const data_staging::line& l) {
+      [&callback](const data_staging::line& l) {
         callback(l);
       },
-      [&](const data_staging::text& t) {
+      [&callback](const data_staging::text& t) {
         callback(t);
       },
-      [&](const data_staging::script& s) {
+      [&callback](const data_staging::script& s) {
         callback(s);
       });
 }
