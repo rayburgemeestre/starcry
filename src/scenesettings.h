@@ -24,7 +24,12 @@ public:
   size_t current_scene = 0;
   size_t current_scene_next = 0;
   size_t current_scene_intermediate = std::numeric_limits<size_t>::max();
+
+  // TODO: why is this stuff not handled through update/commit/revert??
   size_t scene_initialized = std::numeric_limits<size_t>::max();
+  // EDIT: now handled partially.. in revert at least
+  size_t scene_initialized_previous = std::numeric_limits<size_t>::max();
+
   double scenes_duration = 0;           // non-relative seconds of duration
   double desired_duration = -1;         // in seconds
   std::vector<double> scene_durations;  // normalized

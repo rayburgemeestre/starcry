@@ -27,6 +27,7 @@ void scene_settings::revert() {
   current_scene_intermediate = current_scene;
   offset_next = offset;
   offset_intermediate = offset;
+  scene_initialized = scene_initialized_previous;
 }
 
 void scene_settings::commit() {

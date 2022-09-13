@@ -154,6 +154,7 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
   init_object_definitions();
 
   scenesettings.scene_initialized = std::numeric_limits<size_t>::max();
+  scenesettings.scene_initialized_previous = std::numeric_limits<size_t>::max();
 
   // refresh the scene object to get rid of left-over state
   scene_settings tmp;
@@ -588,6 +589,7 @@ void generator::set_scene(size_t scene) {
     scenesettings.current_scene_next = std::max(scenesettings.current_scene_next, scene);
   if (scenesettings.scene_initialized == std::numeric_limits<size_t>::max() ||
       scenesettings.current_scene_next > scenesettings.scene_initialized) {
+    scenesettings.scene_initialized_previous = scenesettings.scene_initialized; // in case we need to revert
     scenesettings.scene_initialized = scenesettings.current_scene_next;
     init_object_instances();
   }
