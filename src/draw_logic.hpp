@@ -184,7 +184,9 @@ public:
 
       for (int rel_x = hxcl_inner; rel_x < hxcl_outer; rel_x++) {
         int abs_x_left = static_cast<int>(circle_x - rel_x + 0.5) - 1;
+        if (abs_x_left > static_cast<int>(width_)) break;
         int abs_x_right = static_cast<int>(circle_x + rel_x + 0.5) - 1;
+        if (abs_x_right < 0) break;
 
         box.update_x(abs_x_left);
         box.update_x(abs_x_right);
