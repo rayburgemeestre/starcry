@@ -119,8 +119,9 @@ else()
 endif()
 
 # SDL
-target_link_libraries(sc_client -lSDL2)
-target_link_libraries(sc_client /opt/cppse/build/fmt/lib/libfmt.a)
+target_link_libraries(sc_client PRIVATE -lSDL2)
+target_link_libraries(sc_client PRIVATE /opt/cppse/build/fmt/lib/libfmt.a)
+# configure_links(sc_client)
 
 configure_links(starcry)
 
