@@ -295,8 +295,10 @@ image &rendering_engine::render(size_t thread_num,
 
 void rendering_engine::write_image(image &bmp, int width, int height, std::string filename) {
 #ifndef EMSCRIPTEN
+#ifndef SC_CLIENT
   png::image<png::rgba_pixel> image(width, height);
   copy_to_png(bmp.pixels(), width, height, image, false);
   image.write(filename);
+#endif
 #endif
 }

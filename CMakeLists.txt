@@ -92,10 +92,12 @@ list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/client.cpp")
 list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/deprecated/generator.cpp")
 list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/deprecated/scripting.cpp")
 
-file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp" "src/perlin.cpp" "src/texture.cpp")
+file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp" "src/perlin.cpp" "src/texture.cpp" "src/stb.cpp" "src/util/logger.cpp")
 
 add_executable(starcry ${starcry_SOURCES})
 add_executable(sc_client ${sc_client_SOURCES})
+
+target_compile_definitions(sc_client PUBLIC SC_CLIENT)
 
 # integration tests
 file(GLOB_RECURSE integration_tests_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test/test_integration.cpp")
@@ -118,6 +120,7 @@ endif()
 
 # SDL
 target_link_libraries(sc_client -lSDL2)
+target_link_libraries(sc_client /opt/cppse/build/fmt/lib/libfmt.a)
 
 configure_links(starcry)
 
