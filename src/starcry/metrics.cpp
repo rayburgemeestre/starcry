@@ -16,7 +16,8 @@
 #endif
 #include "tvision/tstarcry.h"
 #ifdef __clang__
-#pragma clang diagnostic pop
+// no idea why this pop does not work
+// #pragma clang diagnostic pop
 #else
 #pragma GCC diagnostic pop
 #endif

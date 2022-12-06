@@ -4,10 +4,12 @@
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
+#pragma clang diagnostic ignored "-Wbitwise-instead-of-logical"
 #else
 #endif
 #include <tvision/tv.h>
 #ifdef __clang__
+#pragma clang diagnostic pop
 #pragma clang diagnostic pop
 #else
 #endif

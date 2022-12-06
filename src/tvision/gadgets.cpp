@@ -4,6 +4,8 @@
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wbitwise-instead-of-logical"
 #include <tvision/tv.h>
 
 #include "gadgets.h"

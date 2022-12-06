@@ -19,6 +19,9 @@ set(CLANGFORMAT_EXECUTABLE clang-format-14)
 set(Boost_USE_STATIC_LIBS ON)
 set(BOOST_ROOT "/opt/cppse/build/boost/")
 
+# include(warnings)
+# set_warnings()
+
 include(ClangFormat)
 include(StarcryLinking)
 
