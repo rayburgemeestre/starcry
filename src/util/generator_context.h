@@ -17,6 +17,7 @@ public:
   v8::Persistent<v8::Object> video_obj;
   v8::Persistent<v8::Array> scenes;
   v8::Persistent<v8::Object> gradients;
+  v8::Persistent<v8::Object> textures;
   v8::Persistent<v8::Object> objects;
   v8::Persistent<v8::Value> current_scene_val;
   v8::Persistent<v8::Object> current_scene_obj;

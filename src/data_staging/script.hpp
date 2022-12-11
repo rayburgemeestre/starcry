@@ -16,6 +16,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include "data_staging/meta.hpp"
 #include "data_staging/movement.hpp"
 #include "data_staging/properties.hpp"
+#include "data_staging/styling.hpp"
 #include "data_staging/toroidal.hpp"
 
 // merged into data namespace when ready
@@ -32,6 +33,7 @@ private:
   behavior behavior_;
   toroidal toroidal_;
   properties properties_;
+  styling styling_;
 
 public:
   script(std::string id, int64_t unique_id, vector2d position) : meta_(std::move(id), unique_id), location_(position) {}
@@ -80,6 +82,12 @@ public:
   }
   data_staging::properties& properties_ref() {
     return properties_;
+  }
+  const styling& styling_cref() const {
+    return styling_;
+  }
+  data_staging::styling& styling_ref() {
+    return styling_;
   }
 };
 }  // namespace data_staging

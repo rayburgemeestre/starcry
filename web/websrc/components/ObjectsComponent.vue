@@ -77,6 +77,7 @@
         this.$data.data = new_value;
       },
       selected: function (new_value) {
+        console.log(new_value);
       }
     },
     mounted: function() {

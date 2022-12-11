@@ -224,6 +224,10 @@ private:
                            int64_t level,
                            const std::string& namespace_);
 
+  void _instantiate_object_copy_fields(v8_interact& i,
+                                       v8::Local<v8::Object> scene_obj,
+                                       v8::Local<v8::Object> new_instance);
+
   void debug_print_next();
 
   template <typename T>

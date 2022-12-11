@@ -318,7 +318,9 @@ void generator::init_textures() {
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i;
     auto obj = val.As<v8::Object>();
-    if (!i.has_field(obj, "textures")) return;
+    if (!i.has_field(obj, "textures")) {
+      i.set_field(obj, "textures", v8::Object::New(isolate));
+    }
     auto texture_objects = i.v8_obj(obj, "textures");
     auto texture_fields = texture_objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
     for (size_t k = 0; k < texture_fields->Length(); k++) {
@@ -495,6 +497,16 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
   }
   init_gradients();
 
+  // import all textures from script
+  auto textures = i.v8_obj(tmp, "textures");
+  auto texture_fields = textures->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+  for (size_t k = 0; k < texture_fields->Length(); k++) {
+    auto texture_src_id = i.get_index(texture_fields, k);
+    auto texture_dst_id = namespace_ + i.str(texture_fields, k);
+    i.set_field(genctx->textures, texture_dst_id, i.get(textures, texture_src_id));
+  }
+  init_textures();
+
   // import all object definitions from script
   auto objects = i.v8_obj(tmp, "objects");
   auto objects_fields = objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
@@ -502,7 +514,13 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
     auto object_src_id = i.get_index(objects_fields, k);
     auto object_dst_id = namespace_ + i.str(objects_fields, k);
     // TODO: is this still needed?
-    i.set_field(genctx->objects, object_dst_id, i.get(objects, object_src_id));
+    auto object_src = i.get(objects, object_src_id);
+
+    // also copy all the stuff from the object definition
+    auto object_src_obj = object_src.As<v8::Object>();
+    _instantiate_object_copy_fields(i, created_instance, object_src_obj);
+
+    i.set_field(genctx->objects, object_dst_id, object_src);
     auto val = i.get(objects, object_src_id);
     object_definitions_map[object_dst_id].Reset(i.get_isolate(), val.As<v8::Object>());
   }
@@ -549,7 +567,7 @@ void generator::set_scene(size_t scene) {
     scenesettings.current_scene_next = std::max(scenesettings.current_scene_next, scene);
   if (scenesettings.scene_initialized == std::numeric_limits<size_t>::max() ||
       scenesettings.current_scene_next > scenesettings.scene_initialized) {
-    scenesettings.scene_initialized_previous = scenesettings.scene_initialized; // in case we need to revert
+    scenesettings.scene_initialized_previous = scenesettings.scene_initialized;  // in case we need to revert
     scenesettings.scene_initialized = scenesettings.current_scene_next;
     init_object_instances();
   }
@@ -653,7 +671,7 @@ bool generator::_generate_frame() {
         if (++attempt >= max_attempts) {
           stepper.freeze();
         }
-        logger(DEBUG) << "Generating frame [native] " << job->frame_number << " attempt " << attempt << std::endl;
+        // logger(DEBUG) << "Generating frame [native] " << job->frame_number << " attempt " << attempt << std::endl;
         max_dist_found = 0;
         if (attempt > 1) {
           if (!settings_.motion_blur) break;
@@ -2096,34 +2114,7 @@ void generator::_instantiate_object(v8_interact& i,
   }
 
   if (scene_obj) {
-    i.copy_field_if_exists(new_instance, "id", *scene_obj);
-    i.copy_field_if_exists(new_instance, "x", *scene_obj);
-    i.copy_field_if_exists(new_instance, "y", *scene_obj);
-    i.copy_field_if_exists(new_instance, "x2", *scene_obj);
-    i.copy_field_if_exists(new_instance, "y2", *scene_obj);
-    i.copy_field_if_exists(new_instance, "vel_x", *scene_obj);
-    i.copy_field_if_exists(new_instance, "vel_y", *scene_obj);
-    i.copy_field_if_exists(new_instance, "vel_x2", *scene_obj);
-    i.copy_field_if_exists(new_instance, "vel_y2", *scene_obj);
-    i.copy_field_if_exists(new_instance, "velocity", *scene_obj);
-    i.copy_field_if_exists(new_instance, "mass", *scene_obj);
-    i.copy_field_if_exists(new_instance, "radius", *scene_obj);
-    i.copy_field_if_exists(new_instance, "radiussize", *scene_obj);
-    i.copy_field_if_exists(new_instance, "gradient", *scene_obj);
-    i.copy_field_if_exists(new_instance, "texture", *scene_obj);
-    i.copy_field_if_exists(new_instance, "seed", *scene_obj);
-    i.copy_field_if_exists(new_instance, "blending_type", *scene_obj);
-    i.copy_field_if_exists(new_instance, "opacity", *scene_obj);
-    i.copy_field_if_exists(new_instance, "scale", *scene_obj);
-    i.copy_field_if_exists(new_instance, "angle", *scene_obj);
-    i.copy_field_if_exists(new_instance, "pivot", *scene_obj);
-    i.copy_field_if_exists(new_instance, "text", *scene_obj);
-    i.copy_field_if_exists(new_instance, "text_align", *scene_obj);
-    i.copy_field_if_exists(new_instance, "text_size", *scene_obj);
-    i.copy_field_if_exists(new_instance, "text_fixed", *scene_obj);
-    i.copy_field_if_exists(new_instance, "text_font", *scene_obj);
-    i.copy_field_if_exists(new_instance, "file", *scene_obj);
-    i.copy_field_if_exists(new_instance, "duration", *scene_obj);
+    generator::_instantiate_object_copy_fields(i, *scene_obj, new_instance);
   }
 
   i.set_field(new_instance, "subobj", v8::Array::New(isolate));
@@ -2176,39 +2167,89 @@ void generator::_instantiate_object(v8_interact& i,
   i.set_fun(new_instance, "spawn", the_fun);
 }
 
+void generator::_instantiate_object_copy_fields(v8_interact& i,
+                                                v8::Local<v8::Object> scene_obj,
+                                                v8::Local<v8::Object> new_instance) {
+  i.copy_field_if_exists(new_instance, "id", scene_obj);
+  i.copy_field_if_exists(new_instance, "x", scene_obj);
+  i.copy_field_if_exists(new_instance, "y", scene_obj);
+  i.copy_field_if_exists(new_instance, "x2", scene_obj);
+  i.copy_field_if_exists(new_instance, "y2", scene_obj);
+  i.copy_field_if_exists(new_instance, "vel_x", scene_obj);
+  i.copy_field_if_exists(new_instance, "vel_y", scene_obj);
+  i.copy_field_if_exists(new_instance, "vel_x2", scene_obj);
+  i.copy_field_if_exists(new_instance, "vel_y2", scene_obj);
+  i.copy_field_if_exists(new_instance, "velocity", scene_obj);
+  i.copy_field_if_exists(new_instance, "mass", scene_obj);
+  i.copy_field_if_exists(new_instance, "radius", scene_obj);
+  i.copy_field_if_exists(new_instance, "radiussize", scene_obj);
+  i.copy_field_if_exists(new_instance, "gradient", scene_obj);
+  i.copy_field_if_exists(new_instance, "texture", scene_obj);
+  i.copy_field_if_exists(new_instance, "seed", scene_obj);
+  i.copy_field_if_exists(new_instance, "blending_type", scene_obj);
+  i.copy_field_if_exists(new_instance, "opacity", scene_obj);
+  i.copy_field_if_exists(new_instance, "scale", scene_obj);
+  i.copy_field_if_exists(new_instance, "angle", scene_obj);
+  i.copy_field_if_exists(new_instance, "pivot", scene_obj);
+  i.copy_field_if_exists(new_instance, "text", scene_obj);
+  i.copy_field_if_exists(new_instance, "text_align", scene_obj);
+  i.copy_field_if_exists(new_instance, "text_size", scene_obj);
+  i.copy_field_if_exists(new_instance, "text_fixed", scene_obj);
+  i.copy_field_if_exists(new_instance, "text_font", scene_obj);
+  i.copy_field_if_exists(new_instance, "file", scene_obj);
+  i.copy_field_if_exists(new_instance, "duration", scene_obj);
+  i.copy_field_if_exists(new_instance, "collision_group", scene_obj);
+  i.copy_field_if_exists(new_instance, "gravity_group", scene_obj);
+}
+
 void generator::debug_print_next() {
   const auto print_meta = [](data_staging::meta& meta,
                              data_staging::location& loc,
                              data_staging::movement& mov,
                              data_staging::behavior& beh,
-                             data_staging::generic& gen) {
+                             data_staging::generic& gen,
+                             data_staging::styling& sty) {
     logger(INFO) << "uid=" << meta.unique_id() << ", puid=" << meta.parent_uid() << ", id=" << meta.id()
                  << ", level=" << meta.level() << ", namespace=" << meta.namespace_name() << " @ "
                  << loc.position_cref().x << "," << loc.position_cref().y << " +" << mov.velocity().x << ","
                  << mov.velocity().y << ", last_collide=" << beh.last_collide() << ", mass=" << gen.mass()
-                 << ", angle = " << gen.angle() << std::endl;
+                 << ", angle = " << gen.angle() << ", gravity_group=" << beh.gravity_group()
+                 << ", texture = " << sty.texture() << std::endl;
   };
   for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
     meta_visit(
         shape,
         [&](data_staging::circle& shape) {
-          print_meta(
-              shape.meta_ref(), shape.location_ref(), shape.movement_ref(), shape.behavior_ref(), shape.generic_ref());
+          print_meta(shape.meta_ref(),
+                     shape.location_ref(),
+                     shape.movement_ref(),
+                     shape.behavior_ref(),
+                     shape.generic_ref(),
+                     shape.styling_ref());
         },
         [&](data_staging::line& shape) {
           print_meta(shape.meta_ref(),
                      shape.line_start_ref(),
                      shape.movement_line_start_ref(),
                      shape.behavior_ref(),
-                     shape.generic_ref());
+                     shape.generic_ref(),
+                     shape.styling_ref());
         },
         [&](data_staging::text& shape) {
-          print_meta(
-              shape.meta_ref(), shape.location_ref(), shape.movement_ref(), shape.behavior_ref(), shape.generic_ref());
+          print_meta(shape.meta_ref(),
+                     shape.location_ref(),
+                     shape.movement_ref(),
+                     shape.behavior_ref(),
+                     shape.generic_ref(),
+                     shape.styling_ref());
         },
         [&](data_staging::script& shape) {
-          print_meta(
-              shape.meta_ref(), shape.location_ref(), shape.movement_ref(), shape.behavior_ref(), shape.generic_ref());
+          print_meta(shape.meta_ref(),
+                     shape.location_ref(),
+                     shape.movement_ref(),
+                     shape.behavior_ref(),
+                     shape.generic_ref(),
+                     shape.styling_ref());
         });
   }
 }
