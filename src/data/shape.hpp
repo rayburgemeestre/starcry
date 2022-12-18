@@ -28,42 +28,42 @@ enum class shape_type {
 };
 
 struct shape {
-  double time;
-  double x;
-  double y;
-  double z;
-  double x2;
-  double y2;
-  double z2;
-  double vel_x;
-  double vel_y;
-  shape_type type;
-  double r;
-  double g;
-  double b;
-  double radius;
-  double radius_size;
-  double text_size;
+  double time = 0;
+  double x = 0;
+  double y = 0;
+  double z = 0;
+  double x2 = 0;
+  double y2 = 0;
+  double z2 = 0;
+  double vel_x = 0;
+  double vel_y = 0;
+  shape_type type = shape_type::none;
+  double r = 0;
+  double g = 0;
+  double b = 0;
+  double radius = 0;
+  double radius_size = 0;
+  double text_size = 10;
   std::string text;
   std::string align;
-  bool text_fixed;
+  bool text_fixed = false;
   std::string text_font;
   std::vector<std::pair<double, gradient>> gradients_;
   std::vector<std::pair<double, texture>> textures;
   std::string gradient_id_str;
-  blending_type blending_;
+  blending_type blending_ = blending_type::normal;
   std::map<int, size_t> indexes;
-  double seed;
-  double scale;
-  double opacity;
+  double seed = 0;
+  double scale = 1.;
+  double opacity = 1.;
 
-  int64_t unique_id;
+  int64_t unique_id = 0;
 
   // annotate
   std::string id;
   std::string label;
   std::string random_hash;
-  int level;
+  int level = 0;
   bool motion_blur = true;
   int warp_width = 0;
   int warp_height = 0;
