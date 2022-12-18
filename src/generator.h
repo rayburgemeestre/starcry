@@ -201,6 +201,7 @@ public:
   std::shared_ptr<v8_wrapper> get_context() const;
 
   int64_t spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
+  int64_t spawn_object2(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1);
   int64_t spawn_object3(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1, int64_t obj2);
   int64_t spawn_object_at_parent(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
 

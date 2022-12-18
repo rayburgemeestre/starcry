@@ -135,6 +135,7 @@ object_bridge<data_staging::script>::object_bridge(generator *generator) : gener
       .property("velocity", &object_bridge::get_velocity, &object_bridge::set_velocity)
       .function("props", &object_bridge::get_properties_local_ref)
       .function("spawn", &object_bridge::spawn)
+      .function("spawn2", &object_bridge::spawn2)
       .function("spawn3", &object_bridge::spawn3);
   instance_ = std::make_shared<v8::Persistent<v8::Object>>();
   (*instance_)

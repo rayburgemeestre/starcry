@@ -1832,6 +1832,29 @@ int64_t generator::spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Ob
   return i.integer_number(created_instance, "unique_id");
 }
 
+int64_t generator::spawn_object2(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1) {
+  auto& i = genctx->i();
+  auto uid = i.integer_number(line_obj, "unique_id");
+
+  // create __point__ object definition
+  if (object_definitions_map.find("__point__") == object_definitions_map.end()) {
+    auto self_def = v8::Object::New(i.get_isolate());
+    i.set_field(self_def, "x", v8::Number::New(i.get_isolate(), 0));
+    i.set_field(self_def, "y", v8::Number::New(i.get_isolate(), 0));
+    i.set_field(genctx->objects.Get(i.get_isolate()), "__point__", self_def);
+    object_definitions_map["__point__"].Reset(i.get_isolate(), self_def);
+  }
+
+  // spawn one, we do this so we can get full transitive x and y for the line start
+  // without it, the parent for example, will always be one level above the spawner,
+  // typically 0,0 for example.
+  auto self_obj = v8::Object::New(i.get_isolate());
+  i.set_field(self_obj, "id", v8pp::to_v8(i.get_isolate(), "__point__"));
+  uid = spawn_object(spawner, self_obj);
+
+  return spawn_object3(spawner, line_obj, obj1, uid);
+}
+
 int64_t generator::spawn_object3(data_staging::shape_t& spawner,
                                  v8::Local<v8::Object> line_obj,
                                  int64_t obj1,

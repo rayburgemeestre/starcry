@@ -76,20 +76,12 @@ _ = {
             'angle': angle,
             'props': {'level': this.props.level + 1}
           });
-          let line = this.spawn({
-            'id': 'logo_line',
-            'x': 0,
-            'y': 0,
-            'x2': 0,
-            'y2': 0,
-            'z': 0,
-            'z2': 0,
-            'opacity': 0.30,
-          });
-          this.props.left = line;
-          newobj.props.right = line;
-          this.subobj.push(line);
-          this.subobj.push(newobj);
+          let line = this.spawn2(
+              {
+                'id': 'logo_line',
+                'opacity': 0.30,
+              },
+              newobj);
         }
       }
     },
@@ -115,22 +107,7 @@ _ = {
             'angle': angle,
             'props': {'level': this.props.level + 1}
           });
-          let line = this.spawn({
-            'id': 'logo_line',
-            'gradient': 'red',
-            'radiussize': 2.5,
-            'x': 0,
-            'y': 0,
-            'x2': 0,
-            'y2': 0,
-            'z': 0,
-            'z2': 0,
-            'opacity': 1.0
-          });
-          this.props.left = line;
-          newobj.props.right = line;
-          this.subobj.push(line);
-          this.subobj.push(newobj);
+          let line = this.spawn2({'id': 'logo_line', 'gradient': 'red', 'radiussize': 2.5, 'opacity': 1.0}, newobj);
         }
         for (let i = 0; i < n; i++) {
           let angle = (360. / n) * i;
@@ -146,6 +123,15 @@ _ = {
             });
           }
         }
+        // force real white in the center too
+        this.spawn({
+          'id': 'logo_art_v2_sub',
+          'x': 0,
+          'y': 0,
+          'z': 0,
+          'opacity': 1.0,
+          'angle': 0,
+        });
       },
 
     },
