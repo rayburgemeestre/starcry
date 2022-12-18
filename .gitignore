@@ -1,10 +1,12 @@
 *.exr
 *.h264
 *.png
+.cache
 .ccache
 .clangd
 .emscripten_cache
 .idea
+.vscode
 CMakeFiles
 boost_1_61_0
 build
