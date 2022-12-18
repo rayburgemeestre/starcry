@@ -126,9 +126,11 @@ public:
   void init_object_definitions();
 
   void instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
+                                                     int debug_level = 0,
                                                      const data_staging::shape_t* parent_object = nullptr);
   void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance,
-                                             const data_staging::shape_t& created_shape);
+                                             const data_staging::shape_t& created_shape,
+                                             int debug_level = 0);
   void set_scene(size_t scene);
   static void set_scene_sub_object(scene_settings& scenesettings, size_t scene);
   void fast_forward(int frame_of_interest);

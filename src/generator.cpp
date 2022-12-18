@@ -396,9 +396,11 @@ void generator::init_object_instances() {
       scene_shapes_next[scenesettings.current_scene_next] = scene_shapes_next[scenesettings.current_scene_next - 1];
       scene_shapes_intermediate[scenesettings.current_scene_next] =
           scene_shapes_intermediate[scenesettings.current_scene_next - 1];
+    } else {
+      logger(DEBUG) << "Stay in existing scene " << scenesettings.current_scene_next << ", not copying." << std::endl;
     }
 
-    instantiate_additional_objects_from_new_scene(genctx->scene_objects);
+    instantiate_additional_objects_from_new_scene(genctx->scene_objects, 0);
 
     // since this is invoked directly after a scene change, and in the very beginning, make sure this state is part of
     // the instances "current" frame, or reverting (e.g., due to motion blur requirements) will discard all of this.
@@ -421,6 +423,8 @@ void generator::init_object_definitions() {
       auto object_definitions_fields = object_definitions->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
       for (size_t k = 0; k < object_definitions_fields->Length(); k++) {
         auto object_id = i.get_index(object_definitions_fields, k);
+        auto object_id_str = i.str(object_definitions_fields, k);
+        logger(DEBUG) << "Importing object " << object_id_str << std::endl;
         auto object_definition = i.get(object_definitions, object_id).As<v8::Object>();
         i.set_field(defs_storage, object_id, object_definition);
         auto obj_from_storage = i.get(defs_storage, object_id).As<v8::Object>();
@@ -432,7 +436,8 @@ void generator::init_object_definitions() {
 }
 
 void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance,
-                                                      const data_staging::shape_t& created_shape) {
+                                                      const data_staging::shape_t& created_shape,
+                                                      int debug_level) {
   auto& i = genctx->i();
 
   // only do extra work for script objects
@@ -447,7 +452,10 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
   });
 
   const auto unique_id = i.integer_number(created_instance, "unique_id");
+  const auto id = i.str(created_instance, "id");
   const auto namespace_ = created_shape_namespace;
+  logger(DEBUG) << std::string(" ", debug_level) << "Bookkeeping for: " << id << " (namespace: " << namespace_ << ")"
+                << std::endl;
   i.set_field(created_instance, "namespace", v8_str(i.get_context(), namespace_));
   const auto file = i.str(created_instance, "file");
   const auto specified_duration =
@@ -462,10 +470,12 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
     begin++;
   }
 
+  static std::atomic<int> uidx = 0;
+  int use_index = uidx++;
   // evaluate script into temporary variable
-  const auto source = std::string("var tmp = ") + std::string(begin, end) + std::string(";");
+  const auto source = fmt::format("var tmp{} = {};", use_index, std::string(begin, end));
   context->run(source);
-  auto tmp = i.get_global("tmp").As<v8::Object>();
+  auto tmp = i.get_global(fmt::format("tmp{}", use_index)).As<v8::Object>();
 
   // process scenes and make the scenes relative, initialize helper objs etc
   auto scenes = i.v8_array(tmp, "scenes");
@@ -499,13 +509,15 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
 
   // import all textures from script
   auto textures = i.v8_obj(tmp, "textures");
-  auto texture_fields = textures->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
-  for (size_t k = 0; k < texture_fields->Length(); k++) {
-    auto texture_src_id = i.get_index(texture_fields, k);
-    auto texture_dst_id = namespace_ + i.str(texture_fields, k);
-    i.set_field(genctx->textures, texture_dst_id, i.get(textures, texture_src_id));
+  if (textures->IsObject()) {
+    auto texture_fields = textures->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+    for (size_t k = 0; k < texture_fields->Length(); k++) {
+      auto texture_src_id = i.get_index(texture_fields, k);
+      auto texture_dst_id = namespace_ + i.str(texture_fields, k);
+      i.set_field(genctx->textures, texture_dst_id, i.get(textures, texture_src_id));
+    }
+    init_textures();
   }
-  init_textures();
 
   // import all object definitions from script
   auto objects = i.v8_obj(tmp, "objects");
@@ -513,11 +525,13 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
   for (size_t k = 0; k < objects_fields->Length(); k++) {
     auto object_src_id = i.get_index(objects_fields, k);
     auto object_dst_id = namespace_ + i.str(objects_fields, k);
-    // TODO: is this still needed?
     auto object_src = i.get(objects, object_src_id);
+    auto object_src_obj = object_src.As<v8::Object>();
+    logger(DEBUG) << std::string(" ", debug_level) << "Importing object " << i.str(objects_fields, k)
+                  << " as: " << object_dst_id << ", from: " << fmt::format("tmp{}", use_index) << " and file: " << file
+                  << " , points to: " << i.str(object_src_obj, "file") << std::endl;
 
     // also copy all the stuff from the object definition
-    auto object_src_obj = object_src.As<v8::Object>();
     _instantiate_object_copy_fields(i, created_instance, object_src_obj);
 
     i.set_field(genctx->objects, object_dst_id, object_src);
@@ -540,23 +554,40 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
     // execution.
     v8::Persistent<v8::Array> tmp;
     tmp.Reset(i.get_isolate(), scene_objects);
-    instantiate_additional_objects_from_new_scene(tmp, &created_shape);
+    instantiate_additional_objects_from_new_scene(tmp, debug_level + 1, &created_shape);
   }
 
   // clean-up temporary variable that referenced the entire imported script
-  context->run("tmp = undefined;");
+  context->run(fmt::format("tmp{} = undefined;", use_index));
 }
 
 void generator::instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
+                                                              int debug_level,
                                                               const data_staging::shape_t* parent_object) {
   auto& i = genctx->i();
+  std::string namespace_;
+
+  if (parent_object)
+    meta_callback(*parent_object, [&]<typename T>(const T& shape) {
+      namespace_ = shape.meta_cref().namespace_name();
+      logger(DEBUG) << std::string(" ", debug_level)
+                    << "Instantiating additional objects from new scene for parent object: " << shape.meta_cref().id()
+                    << std::endl;
+    });
+  else {
+    logger(DEBUG) << std::string(" ", debug_level)
+                  << "Instantiating additional objects from new scene for parent object NULL" << std::endl;
+  }
 
   // instantiate all the additional objects from the new scene
   for (size_t j = 0; j < scene_objects.Get(i.get_isolate())->Length(); j++) {
     auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
+    auto scene_obj_id = i.str(scene_obj, "id");
+    logger(DEBUG) << std::string(" ", debug_level) << "Instantiating object id: " << scene_obj_id
+                  << " (namespace: " << namespace_ << ")" << std::endl;
 
     auto [created_instance, shape_ref, shape_copy] = _instantiate_object_from_scene(i, scene_obj, parent_object);
-    create_bookkeeping_for_script_objects(created_instance, shape_copy);
+    create_bookkeeping_for_script_objects(created_instance, shape_copy, debug_level + 1);
   }
 }
 
@@ -1796,7 +1827,7 @@ void generator::convert_object_to_render_job(v8_interact& i,
         new_shape.radius = 0;
         new_shape.radius_size = shape.line_width();
         new_shape.x = shape.transitive_line_start_ref().position_cref().x;
-        new_shape.y = shape.transitive_line_start_ref().position_cref().y - 22;
+        new_shape.y = shape.transitive_line_start_ref().position_cref().y;
         new_shape.x2 = shape.transitive_line_end_ref().position_cref().x;
         new_shape.y2 = shape.transitive_line_end_ref().position_cref().y;
         initialize(shape);
@@ -1952,6 +1983,8 @@ generator::_instantiate_object_from_scene(
   // lookup the object prototype to be instantiated
   auto object_id = parent_object_ns + i.str(scene_object, "id", "");
   auto object_prototype = v8_index_object(i.get_context(), genctx->objects, object_id).template As<v8::Object>();
+
+  logger(DEBUG) << "instantiate_object_from_scene, prototype: " << object_id << std::endl;
 
   // create a new javascript object
   v8::Local<v8::Object> instance = v8::Object::New(isolate);
@@ -2222,7 +2255,9 @@ void generator::_instantiate_object_copy_fields(v8_interact& i,
   i.copy_field_if_exists(new_instance, "text_size", scene_obj);
   i.copy_field_if_exists(new_instance, "text_fixed", scene_obj);
   i.copy_field_if_exists(new_instance, "text_font", scene_obj);
-  i.copy_field_if_exists(new_instance, "file", scene_obj);
+  // this function is also used for parent -> child field inheritence.
+  // for scripts, the 'file' field should never be inherited.
+  // i.copy_field_if_exists(new_instance, "file", scene_obj);
   i.copy_field_if_exists(new_instance, "duration", scene_obj);
   i.copy_field_if_exists(new_instance, "collision_group", scene_obj);
   i.copy_field_if_exists(new_instance, "gravity_group", scene_obj);
