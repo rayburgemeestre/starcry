@@ -1385,39 +1385,29 @@ void generator::handle_collision(v8_interact& i,
   auto find = object_definitions_map.find(instance.meta_cref().id());
   if (find != object_definitions_map.end()) {
     auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
-    auto handle_time_for_shape = [&](auto& c, auto& object_bridge_circle, auto other_unique_id) {
-      object_bridge_circle->push_object(c);
-      i.call_fun(object_definition, object_bridge_circle->instance(), "collide", other_unique_id);
-      object_bridge_circle->pop_object();
+    auto handle_time_for_shape = [&](auto& c, auto& object_bridge, auto other_unique_id) {
+      object_bridge->push_object(c);
+      i.call_fun(object_definition, object_bridge->instance(), "collide", other_unique_id);
+      object_bridge->pop_object();
     };
-    meta_visit(
-        shape,
-        [&](data_staging::circle& c) {
-          handle_time_for_shape(c, object_bridge_circle, unique_id2);
-        },
-        [&](data_staging::line& l) {
-          handle_time_for_shape(l, object_bridge_line, unique_id2);
-        },
-        [&](data_staging::text& t) {
-          handle_time_for_shape(t, object_bridge_text, unique_id2);
-        },
-        [&](data_staging::script& s) {
-          handle_time_for_shape(s, object_bridge_script, unique_id2);
-        });
-    meta_visit(
-        shape2,
-        [&](data_staging::circle& c) {
-          handle_time_for_shape(c, object_bridge_circle, unique_id);
-        },
-        [&](data_staging::line& l) {
-          handle_time_for_shape(l, object_bridge_line, unique_id);
-        },
-        [&](data_staging::text& t) {
-          handle_time_for_shape(t, object_bridge_text, unique_id);
-        },
-        [&](data_staging::script& s) {
-          handle_time_for_shape(s, object_bridge_script, unique_id);
-        });
+    auto callback_wrapper = [&]<typename T>(T& shape, int64_t unique_id) {
+      if constexpr (std::is_same_v<T, data_staging::circle>) {
+        handle_time_for_shape(shape, object_bridge_circle, unique_id);
+      } else if constexpr (std::is_same_v<T, data_staging::line>) {
+        handle_time_for_shape(shape, object_bridge_line, unique_id);
+      } else if constexpr (std::is_same_v<T, data_staging::text>) {
+        handle_time_for_shape(shape, object_bridge_text, unique_id);
+      } else if constexpr (std::is_same_v<T, data_staging::script>) {
+        handle_time_for_shape(shape, object_bridge_text, unique_id);
+      }
+      throw std::logic_error("missing element type in callback_wrapper");
+    };
+    meta_callback(shape, [&]<typename T>(const T& shape) {
+      callback_wrapper(shape, unique_id2);
+    });
+    meta_callback(shape2, [&]<typename T>(const T& shape) {
+      callback_wrapper(shape, unique_id);
+    });
   }
 }
 

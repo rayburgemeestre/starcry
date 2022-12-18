@@ -147,7 +147,7 @@ public:
   void handle_rotations(data_staging::shape_t& instance);
   void handle_collisions(v8_interact& i, data_staging::shape_t& instance);
   void handle_collision(v8_interact& i,
-                        data_staging::circle& instance,
+                        data_staging::circle& object_bridge,
                         data_staging::circle& instance2,
                         data_staging::shape_t& shape,
                         data_staging::shape_t& shape2);
