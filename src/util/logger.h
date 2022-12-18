@@ -41,12 +41,14 @@ public:
   friend logger operator<<(const logger &l, std::ostream &(*fun)(std::ostream &)) {
     bool line_ended = false;
 #ifndef SC_CLIENT
+#ifndef EMSCRIPTEN
     if (_metrics) {
       l._holder->_ss << "\n";
       line_ended = true;
       const auto line = l._holder->_ss.str();
       _metrics->log_callback((int)l._holder->_level, line);
     }
+#endif
 #endif
     if (_stdout) {
       if (!line_ended) l._holder->_ss << "\n";

@@ -26,6 +26,16 @@ int texture_h = 0;
 SDL_Renderer *renderer = nullptr;
 int x = 0, y = 0;
 bool pointer_state = true;
+auto last_received = std::chrono::high_resolution_clock::now();
+auto wake_for = 100;  // milliseconds
+
+void wake_main_loop() {
+#ifndef EMSCRIPTEN
+  // wake up main loop for 100 ms
+  emscripten_resume_main_loop();
+  last_received = std::chrono::high_resolution_clock::now();
+#endif
+}
 
 struct client_context {
   SDL_Renderer *renderer;
@@ -102,7 +112,14 @@ void mainloop(void *arg) {
 #ifdef EMSCRIPTEN
   // std::cout << "Frame: " << ctx->iteration << " " << ((double)ctx->iteration / (idle.count() / 1000)) << std::endl;
   ctx->iteration++;
-  // emscripten_cancel_main_loop();
+
+  // pause mainloop after 100 ms have passed
+  const auto current_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> idle = current_time - last_received;
+  if (idle.count() > wake_for) {
+    emscripten_pause_main_loop();
+  }
+
 #else
   // std::cout << "Frame: " << i << " " << ((double)i / (idle.count() / 1000)) << std::endl;
 #endif
@@ -203,6 +220,8 @@ void initialize(uint32_t width, uint32_t height, uint32_t canvas_w, uint32_t can
 #endif
 }
 
+client_context ctx;
+
 void start(uint32_t width, uint32_t height, uint32_t canvas_w, uint32_t canvas_h) {
   initialize(width, height, canvas_w, canvas_h);
 
@@ -215,7 +234,6 @@ void start(uint32_t width, uint32_t height, uint32_t canvas_w, uint32_t canvas_h
 
   SDL_Renderer *renderer;
   SDL_CreateWindowAndRenderer(canvas_w, canvas_h, 0, &window, &renderer);
-  client_context ctx;
   ctx.renderer = renderer;
   ctx.iteration = 0;
 #else
@@ -283,6 +301,7 @@ void set_shapes(std::string data) {
   is.str("");
   is.clear();
 
+  wake_main_loop();
   render_shapes_to_texture();
 }
 
@@ -294,6 +313,7 @@ void set_texture(std::string data) {
     SDL_DestroyTexture(texture);
     texture = nullptr;
   }
+  wake_main_loop();
   size_t n = data.size() - 8;
   char *ptr = &(data[0]);
   memcpy(&texture_w, ptr + n, sizeof(uint32_t));
@@ -303,9 +323,11 @@ void set_texture(std::string data) {
 }
 
 int get_mouse_x() {
+  wake_main_loop();
   return x;
 }
 int get_mouse_y() {
+  wake_main_loop();
   return y;
 }
 
@@ -327,6 +349,7 @@ double get_scale() {
   return job.scale;
 }
 void toggle_pointer() {
+  wake_main_loop();
   pointer_state = !pointer_state;
 }
 
