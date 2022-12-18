@@ -33,6 +33,7 @@ private:
   location transitive_location_;
   movement movement_;
 
+  std::string font_name_;
   std::string text_;
   double text_size_ = 10;
   std::string text_align_ = "center";
@@ -115,6 +116,14 @@ public:
 
   const std::string& text_cref() const {
     return text_;
+  }
+
+  void set_font_name(std::string font_name) {
+    font_name_ = std::move(font_name);
+  }
+
+  const std::string& font_name() const {
+    return font_name_;
   }
 
   void set_text(const std::string& text) {

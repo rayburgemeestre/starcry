@@ -1803,6 +1803,7 @@ void generator::convert_object_to_render_job(v8_interact& i,
       },
       [&](data_staging::text& shape) {
         new_shape.type = data::shape_type::text;
+        new_shape.text_font = shape.font_name();
         new_shape.text = shape.text_cref();
         new_shape.text_size = shape.text_size();
         new_shape.align = shape.text_align();
@@ -2071,6 +2072,8 @@ generator::_instantiate_object_from_scene(
                          i.double_number(instance, "text_size"),
                          i.str(instance, "text_align"),
                          i.boolean(instance, "text_fixed"));
+
+    t.set_font_name(i.has_field(instance, "text_font") ? i.str(instance, "text_font") : "monaco.ttf");
 
     t.movement_ref().set_velocity(i.double_number(instance, "vel_x", 0),
                                   i.double_number(instance, "vel_y", 0),
