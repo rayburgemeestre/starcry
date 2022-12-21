@@ -1392,17 +1392,17 @@ void generator::handle_collision(v8_interact& i,
     };
     auto callback_wrapper = [&]<typename T>(T& shape, int64_t unique_id) {
       if constexpr (std::is_same_v<T, data_staging::circle>) {
-        handle_time_for_shape(shape, object_bridge_circle, unique_id);
+        return handle_time_for_shape(shape, object_bridge_circle, unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::line>) {
-        handle_time_for_shape(shape, object_bridge_line, unique_id);
+        return handle_time_for_shape(shape, object_bridge_line, unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::text>) {
-        handle_time_for_shape(shape, object_bridge_text, unique_id);
+        return handle_time_for_shape(shape, object_bridge_text, unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::script>) {
-        handle_time_for_shape(shape, object_bridge_text, unique_id);
+        return handle_time_for_shape(shape, object_bridge_script, unique_id);
       }
-      throw std::logic_error("missing element type in callback_wrapper");
+      // unknown (undefined) objects, are ignored..
     };
-    meta_callback(shape, [&]<typename T>(const T& shape) {
+    meta_callback(shape, [&]<typename T>(T& shape) {
       callback_wrapper(shape, unique_id2);
     });
     meta_callback(shape2, [&]<typename T>(const T& shape) {
@@ -1971,7 +1971,10 @@ generator::_instantiate_object_from_scene(
   }
 
   // lookup the object prototype to be instantiated
-  auto object_id = parent_object_ns + i.str(scene_object, "id", "");
+  auto object_id = i.str(scene_object, "id", "");
+  if (object_id != "__point__") {
+    object_id = parent_object_ns + object_id;
+  }
   auto object_prototype = v8_index_object(i.get_context(), genctx->objects, object_id).template As<v8::Object>();
 
   logger(DEBUG) << "instantiate_object_from_scene, prototype: " << object_id << std::endl;

@@ -1,6 +1,10 @@
 _ = {
   'gradients': {},
   'objects': {
+    'orbitz': {
+      'type': 'script',
+      'file': 'input/orbit_b_b.js',
+    },
     'text': {
       'type': 'script',
       'file': 'input/text.js',
@@ -21,6 +25,10 @@ _ = {
     'orbit': {
       'type': 'script',
       'file': 'input/orbit2.js',
+    },
+    'logo': {
+      'type': 'script',
+      'file': 'input/logo.js',
     },
   },
   'video': {
@@ -51,6 +59,8 @@ _ = {
         {'id': 'motion', 'label': 'motion', 'x': 0, 'y': 0, 'z': 0},
         {'id': 'orbit', 'label': 'orbit1', 'x': -500, 'y': 0, 'z': 0},
         {'id': 'orbit', 'label': 'orbit2', 'x': 500, 'y': 0, 'z': 0},
+        {'id': 'logo', 'label': 'logo', 'x': 0, 'y': 100, 'z': 0},
+        {'id': 'orbitz', 'label': 'orbitz', 'x': 0, 'y': -100, 'z': 0},
       ],
     },
     {
