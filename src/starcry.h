@@ -22,7 +22,6 @@
 class v8_wrapper;
 class sfml_window;
 class bitmap_wrapper;
-class generator;
 class rendering_engine;
 class render_server;
 class webserver;
@@ -30,6 +29,10 @@ class frame_streamer;
 class render_client;
 class server_message_handler;
 class client_message_handler;
+
+namespace interpreter {
+class generator;
+}
 
 namespace data {
 struct job;
@@ -104,7 +107,7 @@ private:
   feature_settings features_;
 
   std::map<int, std::shared_ptr<bitmap_wrapper>> bitmaps;
-  std::shared_ptr<generator> gen;
+  std::shared_ptr<interpreter::generator> gen;
   std::map<int, std::shared_ptr<rendering_engine>> engines;
   std::shared_ptr<pipeline_system> system;
   std::shared_ptr<queue> cmds;

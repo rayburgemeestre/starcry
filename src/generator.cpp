@@ -29,6 +29,7 @@
 #include "shapes/position.h"
 #include "shapes/rectangle.h"
 
+namespace interpreter {
 void fix_properties(std::vector<std::vector<data_staging::shape_t>>& scene_shapes) {
   for (auto& shapes : scene_shapes) {
     for (auto& shape : shapes) {
@@ -40,78 +41,25 @@ void fix_properties(std::vector<std::vector<data_staging::shape_t>>& scene_shape
 }
 
 generator::generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug)
-    : context(context), metrics_(metrics), debug_(debug) {}
+    : context(context), metrics_(metrics), debug_(debug), initializer_(*this), bridges_(*this) {}
 
-void generator::reset_context() {
-  // reset context
-  context->reset();
-
-  context->add_fun("output", &output_fun);
-  context->add_fun("rand", &rand_fun);
-  context->add_fun("random_velocity", &random_velocity);
-  context->add_fun("expf", &expf_fun);
-  context->add_fun("logn", &logn_fun);
-  context->add_fun("clamp", &math::clamp<double>);
-  context->add_fun("squared", &squared);
-  context->add_fun("squared_dist", &squared_dist);
-  context->add_fun("get_distance", &get_distance);
-  context->add_fun("get_angle", &get_angle);
-  context->add_fun("triangular_wave", &triangular_wave);
-  context->add_fun("blending_type_str", &data::blending_type::to_str);
-  context->add_fun("exit", &my_exit);
-
-  context->add_include_fun();
-
-  // add blending constants
-  v8::HandleScope scope(context->context->isolate());
-  v8pp::module consts(context->isolate);
-  consts.const_("normal", data::blending_type::normal)
-      .const_("lighten", data::blending_type::lighten)
-      .const_("darken", data::blending_type::darken)
-      .const_("multiply", data::blending_type::multiply)
-      .const_("average", data::blending_type::average)
-      .const_("add", data::blending_type::add)
-      .const_("subtract", data::blending_type::subtract)
-      .const_("difference", data::blending_type::difference)
-      .const_("negation", data::blending_type::negation_)
-      .const_("screen", data::blending_type::screen)
-      .const_("exclusion", data::blending_type::exclusion)
-      .const_("overlay", data::blending_type::overlay)
-      .const_("softlight", data::blending_type::softlight)
-      .const_("hardlight", data::blending_type::hardlight)
-      .const_("colordodge", data::blending_type::colordodge)
-      .const_("colorburn", data::blending_type::colorburn)
-      .const_("lineardodge", data::blending_type::lineardodge)
-      .const_("linearburn", data::blending_type::linearburn)
-      .const_("linearlight", data::blending_type::linearlight)
-      .const_("vividlight", data::blending_type::vividlight)
-      .const_("pinlight", data::blending_type::pinlight)
-      .const_("hardmix", data::blending_type::hardmix)
-      .const_("reflect", data::blending_type::reflect)
-      .const_("glow", data::blending_type::glow)
-      .const_("phoenix", data::blending_type::phoenix)
-      .const_("hue", data::blending_type::hue)
-      .const_("saturation", data::blending_type::saturation)
-      .const_("color", data::blending_type::color)
-      .const_("luminosity", data::blending_type::luminosity);
-  context->context->module("blending_type", consts);
-}
 void generator::init(const std::string& filename, std::optional<double> rand_seed, bool preview, bool caching) {
   prctl(PR_SET_NAME, "native generator thread");
   filename_ = filename;
-  init_context();
-  init_user_script();
-  init_job();
-  init_video_meta_info(rand_seed, preview);
-  init_gradients();
-  init_textures();
-  init_toroidals();
+  job = std::make_shared<data::job>();
+  job->frame_number = frame_number;
+
+  initializer_.init_context();
+  initializer_.init_user_script();
+  initializer_.init_video_meta_info(rand_seed, preview);
+  initializer_.init_gradients();
+  initializer_.init_textures();
+  initializer_.init_toroidals();
+  initializer_.init_object_definitions();
 
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     genctx = std::make_shared<generator_context>(val, 0);
   });
-
-  init_object_definitions();
 
   scenesettings.scene_initialized = std::numeric_limits<size_t>::max();
   scenesettings.scene_initialized_previous = std::numeric_limits<size_t>::max();
@@ -144,254 +92,16 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
   instantiated_objects[scenesettings.current_scene_next].clear();
 }
 
-void generator::init_context() {
-  context->set_filename(filename());
-  reset_context();
-}
-
-void generator::init_user_script() {
-  // }
-  std::ifstream stream(filename().c_str());
-  if (!stream && filename() != "-") {
-    throw std::runtime_error("could not locate file " + filename());
-  }
-  std::istreambuf_iterator<char> begin(filename() == "-" ? std::cin : stream), end;
-  // remove "_ =" part from script (which is a workaround to silence 'not in use' linting)
-  if (*begin == '_') {
-    while (*begin != '=') begin++;
-    begin++;
-  }
-  const auto source = std::string("script = ") + std::string(begin, end);
-  context->run("cache = typeof cache == 'undefined' ? {} : cache;");
-  context->run("script = {\"video\": {}};");
-  context->run(source);
-
-  v8::HandleScope hs(context->context->isolate());
-  object_bridge_circle = std::make_shared<object_bridge<data_staging::circle>>(this);
-  object_bridge_line = std::make_shared<object_bridge<data_staging::line>>(this);
-  object_bridge_text = std::make_shared<object_bridge<data_staging::text>>(this);
-  object_bridge_script = std::make_shared<object_bridge<data_staging::script>>(this);
-}
-
-void generator::init_job() {
-  job = std::make_shared<data::job>();
-  job->background_color.r = 0;
-  job->background_color.g = 0;
-  job->background_color.b = 0;
-  job->background_color.a = 0;
-  job->width = 1920;   // canvas_w;
-  job->height = 1080;  // canvas_h;
-  job->job_number = 0;
-  job->frame_number = frame_number;
-  job->rendered = false;
-  job->last_frame = false;
-  job->num_chunks = 1;  // num_chunks;
-  job->offset_x = 0;
-  job->offset_y = 0;
-  job->canvas_w = 1920;   // canvas_w;
-  job->canvas_h = 1080;   // canvas_h;
-  job->scale = 1.0;       // scale;
-  job->compress = false;  // TODO: hardcoded
-  job->save_image = false;
-}
-
-v8::Local<v8::Context> current_context_native(std::shared_ptr<v8_wrapper>& wrapper_context) {
-  return wrapper_context->context->isolate()->GetCurrentContext();
-}
-
-void generator::init_video_meta_info(std::optional<double> rand_seed, bool preview) {
-  // "run_array" is a bit of a misnomer, this only invokes the callback once
-  context->run_array("script", [this, &preview, &rand_seed](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i;
-    auto video = v8_index_object(current_context_native(context), val, "video").As<v8::Object>();
-    if (preview) {
-      v8::Local<v8::Object> preview_obj;
-      if (v8_index_object(current_context_native(context), val, "preview")->IsObject()) {
-        preview_obj = v8_index_object(current_context_native(context), val, "preview").As<v8::Object>();
-      } else {
-        preview_obj = v8::Object::New(isolate);
-      }
-      if (!i.has_field(preview_obj, "width")) {
-        i.set_field(preview_obj, "width", v8::Number::New(isolate, 1920 / 2.));
-      }
-      if (!i.has_field(preview_obj, "height")) {
-        i.set_field(preview_obj, "height", v8::Number::New(isolate, 1080 / 2.));
-      }
-      if (!i.has_field(preview_obj, "max_intermediates")) {
-        i.set_field(preview_obj, "max_intermediates", v8::Number::New(isolate, 5));
-      }
-      i.recursively_copy_object(video, preview_obj);
-    }
-
-    auto& duration = scenesettings.scenes_duration;
-    auto& durations = scenesettings.scene_durations;
-    durations.clear();
-    auto obj = val.As<v8::Object>();
-    auto scenes = i.v8_array(obj, "scenes");
-    for (size_t I = 0; I < scenes->Length(); I++) {
-      scene_shapes.emplace_back();
-      scene_shapes_next.emplace_back();
-      scene_shapes_intermediate.emplace_back();
-      instantiated_objects.emplace_back();
-      auto current_scene = i.get_index(scenes, I);
-      if (!current_scene->IsObject()) continue;
-      auto sceneobj = current_scene.As<v8::Object>();
-      duration += i.double_number(sceneobj, "duration");
-      durations.push_back(i.double_number(sceneobj, "duration"));
-    }
-    std::for_each(durations.begin(), durations.end(), [&duration](double& n) {
-      n /= duration;
-    });
-
-    use_fps = i.double_number(video, "fps");
-    canvas_w = i.double_number(video, "width");
-    canvas_h = i.double_number(video, "height");
-    seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
-    tolerated_granularity = i.double_number(video, "granularity");
-    minimize_steps_per_object = i.boolean(video, "minimize_steps_per_object");
-    if (i.has_field(video, "perlin_noise")) settings_.perlin_noise = i.boolean(video, "perlin_noise");
-    if (i.has_field(video, "motion_blur")) settings_.motion_blur = i.boolean(video, "motion_blur");
-    if (i.has_field(video, "grain_for_opacity")) settings_.grain_for_opacity = i.boolean(video, "grain_for_opacity");
-    if (i.has_field(video, "extra_grain")) settings_.extra_grain = i.double_number(video, "extra_grain");
-    if (i.has_field(video, "update_positions")) settings_.update_positions = i.boolean(video, "update_positions");
-    if (i.has_field(video, "dithering")) settings_.dithering = i.boolean(video, "dithering");
-    if (i.has_field(video, "min_intermediates")) min_intermediates = i.integer_number(video, "min_intermediates");
-    if (i.has_field(video, "max_intermediates")) max_intermediates = i.integer_number(video, "max_intermediates");
-    if (i.has_field(video, "fast_ff")) fast_ff = i.boolean(video, "fast_ff");
-    if (i.has_field(video, "bg_color")) {
-      auto bg = i.v8_obj(video, "bg_color");
-      job->background_color.r = i.double_number(bg, "r");
-      job->background_color.g = i.double_number(bg, "g");
-      job->background_color.b = i.double_number(bg, "b");
-      job->background_color.a = i.double_number(bg, "a");
-    }
-    if (i.has_field(video, "sample")) {
-      auto sample = i.get(video, "sample").As<v8::Object>();
-      sample_include = i.double_number(sample, "include");  // seconds
-      sample_exclude = i.double_number(sample, "exclude");  // seconds
-      sample_include_current = sample_include * use_fps;
-      sample_exclude_current = sample_exclude * use_fps;
-    }
-    set_rand_seed(seed);
-
-    max_frames = duration * use_fps;
-    metrics_->set_total_frames(max_frames);
-
-    job->width = canvas_w;
-    job->height = canvas_h;
-    job->canvas_w = canvas_w;
-    job->canvas_h = canvas_h;
-    job->scale = i.double_number(video, "scale");
-
-    scalesettings.video_scale = i.double_number(video, "scale");
-    scalesettings.video_scale_next = i.double_number(video, "scale");
-    scalesettings.video_scale_intermediate = i.double_number(video, "scale");
-  });
-}
-
-void generator::init_gradients() {
-  gradients.clear();
-  context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i;
-    auto obj = val.As<v8::Object>();
-    auto gradient_objects = i.v8_obj(obj, "gradients");
-    auto gradient_fields = gradient_objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
-    for (size_t k = 0; k < gradient_fields->Length(); k++) {
-      auto gradient_id = i.get_index(gradient_fields, k);
-      auto positions = i.get(gradient_objects, gradient_id).As<v8::Array>();
-      auto id = v8_str(isolate, gradient_id.As<v8::String>());
-      for (size_t l = 0; l < positions->Length(); l++) {
-        auto position = i.get_index(positions, l).As<v8::Object>();
-        auto pos = i.double_number(position, "position");
-        auto r = i.double_number(position, "r");
-        auto g = i.double_number(position, "g");
-        auto b = i.double_number(position, "b");
-        auto a = i.double_number(position, "a");
-        gradients[id].colors.emplace_back(pos, data::color{r, g, b, a});
-      }
-    }
-  });
-}
-
-void generator::init_textures() {
-  textures.clear();
-  context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i;
-    auto obj = val.As<v8::Object>();
-    if (!i.has_field(obj, "textures")) {
-      i.set_field(obj, "textures", v8::Object::New(isolate));
-    }
-    auto texture_objects = i.v8_obj(obj, "textures");
-    auto texture_fields = texture_objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
-    for (size_t k = 0; k < texture_fields->Length(); k++) {
-      auto texture_id = i.get_index(texture_fields, k);
-      auto texture_settings = i.get(texture_objects, texture_id).As<v8::Object>();
-      auto id = v8_str(isolate, texture_id.As<v8::String>());
-      auto type = i.str(texture_settings, "type");
-      textures[id].size = i.double_number(texture_settings, "size");
-      textures[id].octaves = i.integer_number(texture_settings, "octaves");
-      textures[id].persistence = i.double_number(texture_settings, "persistence");
-      textures[id].percentage = i.double_number(texture_settings, "percentage");
-      textures[id].scale = i.double_number(texture_settings, "scale");
-      auto range = i.v8_array(texture_settings, "range");
-      textures[id].strength = i.double_number(texture_settings, "strength");
-      textures[id].speed = i.double_number(texture_settings, "speed");
-      if (range->Length() == 4) {
-        data::texture::noise_type use_type = data::texture::noise_type::perlin;
-        if (type == "fractal") {
-          use_type = data::texture::noise_type::fractal;
-        } else if (type == "turbulence") {
-          use_type = data::texture::noise_type::turbulence;
-        }
-        textures[id].type = use_type;
-        textures[id].fromX = i.double_number(range, 0);
-        textures[id].begin = i.double_number(range, 1);
-        textures[id].end = i.double_number(range, 2);
-        textures[id].toX = i.double_number(range, 3);
-      }
-    }
-  });
-}
-
-void generator::init_toroidals() {
-  context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i;
-    auto obj = val.As<v8::Object>();
-    if (!i.has_field(obj, "toroidal")) return;
-    auto toroidal_objects = i.v8_obj(obj, "toroidal");
-    auto toroidal_fields = toroidal_objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
-    for (size_t k = 0; k < toroidal_fields->Length(); k++) {
-      auto toroidal_id = i.get_index(toroidal_fields, k);
-      auto toroidal_settings = i.get(toroidal_objects, toroidal_id).As<v8::Object>();
-      auto id = v8_str(isolate, toroidal_id.As<v8::String>());
-      auto type = i.str(toroidal_settings, "type");
-      toroidals[id].width = i.integer_number(toroidal_settings, "width");
-      toroidals[id].height = i.integer_number(toroidal_settings, "height");
-    }
-  });
-}
-
-void generator::init_object_instances() {
+void generator::create_object_instances() {
   // This function is called whenever a scene is set. (once per scene)
   context->enter_object("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     // enter_objects creates a new isolate, using the old gives issues, so we'll recreate
     genctx = std::make_shared<generator_context>(val, scenesettings.current_scene_next);
-
     genctx->set_scene(scenesettings.current_scene_next);
-    // auto& i = genctx->i();
 
     // whenever we switch to a new scene, we'll copy all the object state from the previous scene
     if (scenesettings.current_scene_next > 0) {
       logger(INFO) << "Switching to new scene, copying all state from previous." << std::endl;
-      // auto prev_current_scene = i.get_index(genctx->scenes, scenesettings.current_scene_next - 1);
-      // auto prev_sceneobj = prev_current_scene.As<v8::Object>();
-      // continue from previous
-      //      genctx->instances = i.v8_array(prev_sceneobj, "instances", v8::Array::New(isolate));
-      //      genctx->instances_next = i.v8_array(prev_sceneobj, "instances_next", v8::Array::New(isolate));
-      //      genctx->instances_intermediate = i.v8_array(prev_sceneobj, "instances_intermediate",
-      //      v8::Array::New(isolate)); i.set_field(genctx->current_scene_obj, "instances", genctx->instances);
-      //      i.set_field(genctx->current_scene_obj, "instances_next", genctx->instances_next);
-      //      i.set_field(genctx->current_scene_obj, "instances_intermediate", genctx->instances_intermediate);
       scene_shapes[scenesettings.current_scene_next] = scene_shapes[scenesettings.current_scene_next - 1];
       scene_shapes_next[scenesettings.current_scene_next] = scene_shapes_next[scenesettings.current_scene_next - 1];
       scene_shapes_intermediate[scenesettings.current_scene_next] =
@@ -407,31 +117,6 @@ void generator::init_object_instances() {
     ////util::generator::copy_instances(i, genctx->instances, genctx->instances_next);
     scene_shapes = scene_shapes_next;
     fix_properties(scene_shapes);
-  });
-}
-
-void generator::init_object_definitions() {
-  context->run("var object_definitions = {}");
-  context->enter_object("object_definitions", [this](v8::Isolate* isolate, v8::Local<v8::Value> object_definitions) {
-    // we keep stuff here to avoid overwrites, we might be able to get rid of this in the future
-    // but it's a one-time overhead, so doesn't matter too much.
-    auto defs_storage = object_definitions.As<v8::Object>();
-    context->enter_object("script", [&, this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-      v8_interact i;
-      auto obj = val.As<v8::Object>();
-      auto object_definitions = i.v8_obj(obj, "objects");
-      auto object_definitions_fields = object_definitions->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
-      for (size_t k = 0; k < object_definitions_fields->Length(); k++) {
-        auto object_id = i.get_index(object_definitions_fields, k);
-        auto object_id_str = i.str(object_definitions_fields, k);
-        logger(DEBUG) << "Importing object " << object_id_str << std::endl;
-        auto object_definition = i.get(object_definitions, object_id).As<v8::Object>();
-        i.set_field(defs_storage, object_id, object_definition);
-        auto obj_from_storage = i.get(defs_storage, object_id).As<v8::Object>();
-        auto id = v8_str(isolate, object_id.As<v8::String>());
-        object_definitions_map[id].Reset(isolate, obj_from_storage);
-      }
-    });
   });
 }
 
@@ -505,7 +190,7 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
     auto gradient_dst_id = namespace_ + i.str(gradient_fields, k);
     i.set_field(genctx->gradients, gradient_dst_id, i.get(gradients, gradient_src_id));
   }
-  init_gradients();
+  initializer_.init_gradients();
 
   // import all textures from script
   auto textures = i.v8_obj(tmp, "textures");
@@ -516,7 +201,7 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
       auto texture_dst_id = namespace_ + i.str(texture_fields, k);
       i.set_field(genctx->textures, texture_dst_id, i.get(textures, texture_src_id));
     }
-    init_textures();
+    initializer_.init_textures();
   }
 
   // import all object definitions from script
@@ -600,7 +285,7 @@ void generator::set_scene(size_t scene) {
       scenesettings.current_scene_next > scenesettings.scene_initialized) {
     scenesettings.scene_initialized_previous = scenesettings.scene_initialized;  // in case we need to revert
     scenesettings.scene_initialized = scenesettings.current_scene_next;
-    init_object_instances();
+    create_object_instances();
   }
 }
 
@@ -613,7 +298,7 @@ void generator::set_scene_sub_object(scene_settings& scenesettings, size_t scene
       scenesettings.current_scene_next > scenesettings.scene_initialized) {
     scenesettings.scene_initialized = scenesettings.current_scene_next;
     // TODO: implement:
-    //  init_object_instances();
+    //  create_object_instances();
   }
 }
 
@@ -1392,13 +1077,13 @@ void generator::handle_collision(v8_interact& i,
     };
     auto callback_wrapper = [&]<typename T>(T& shape, int64_t unique_id) {
       if constexpr (std::is_same_v<T, data_staging::circle>) {
-        return handle_time_for_shape(shape, object_bridge_circle, unique_id);
+        return handle_time_for_shape(shape, bridges_.circle(), unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::line>) {
-        return handle_time_for_shape(shape, object_bridge_line, unique_id);
+        return handle_time_for_shape(shape, bridges_.line(), unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::text>) {
-        return handle_time_for_shape(shape, object_bridge_text, unique_id);
+        return handle_time_for_shape(shape, bridges_.text(), unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::script>) {
-        return handle_time_for_shape(shape, object_bridge_script, unique_id);
+        return handle_time_for_shape(shape, bridges_.script(), unique_id);
       }
       // unknown (undefined) objects, are ignored..
     };
@@ -1582,16 +1267,16 @@ void generator::update_time(v8_interact& i,
       meta_visit(
           instance,
           [&](data_staging::circle& c) {
-            handle_time_for_shape(c, object_bridge_circle);
+            handle_time_for_shape(c, bridges_.circle());
           },
           [&](data_staging::line& l) {
-            handle_time_for_shape(l, object_bridge_line);
+            handle_time_for_shape(l, bridges_.line());
           },
           [&](data_staging::text& t) {
-            handle_time_for_shape(t, object_bridge_text);
+            handle_time_for_shape(t, bridges_.text());
           },
           [&](data_staging::script& s) {
-            handle_time_for_shape(s, object_bridge_script);
+            handle_time_for_shape(s, bridges_.script());
           });
     }
   };
@@ -2094,7 +1779,7 @@ generator::_instantiate_object_from_scene(
     c.styling_ref().set_seed(i.integer_number(instance, "seed", 0));
     c.styling_ref().set_blending_type(i.integer_number(instance, "blending_type"));
 
-    initialize(c, object_bridge_circle);
+    initialize(c, bridges_.circle());
 
   } else if (type == "line") {
     data_staging::line c(object_id,
@@ -2112,7 +1797,7 @@ generator::_instantiate_object_from_scene(
 
     c.styling_ref().set_blending_type(i.integer_number(instance, "blending_type"));
 
-    initialize(c, object_bridge_line);
+    initialize(c, bridges_.line());
   } else if (type == "text") {
     data_staging::text t(object_id,
                          counter,
@@ -2132,7 +1817,7 @@ generator::_instantiate_object_from_scene(
 
     t.styling_ref().set_blending_type(i.integer_number(instance, "blending_type"));
 
-    initialize(t, object_bridge_text);
+    initialize(t, bridges_.text());
 
   } else if (type == "script") {
     data_staging::script s(
@@ -2140,7 +1825,7 @@ generator::_instantiate_object_from_scene(
 
     s.meta_ref().set_namespace(object_id + "_");
 
-    initialize(s, object_bridge_script);
+    initialize(s, bridges_.script());
   } else {
     throw std::logic_error(fmt::format("unknown type: {}", type));
   }
@@ -2364,3 +2049,4 @@ void generator::write_back_copy(T& copy) {
     index++;
   }
 }
+}  // namespace interpreter

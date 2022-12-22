@@ -14,19 +14,21 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "v8.h"
 
+namespace interpreter {
 class generator;
+}
 
 template <typename shape_class>
 class object_bridge {
 private:
   std::vector<shape_class*> shape_stack;
-  generator* generator_ = nullptr;
+  interpreter::generator* generator_ = nullptr;
   mutable bool properties_accessed_ = false;
   mutable bool gradients_accessed_ = false;
   std::shared_ptr<v8::Persistent<v8::Object>> instance_ = nullptr;
 
 public:
-  explicit object_bridge(generator* generator);
+  explicit object_bridge(interpreter::generator* generator);
 
   void push_object(shape_class& c);
   void pop_object();

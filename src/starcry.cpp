@@ -177,7 +177,7 @@ void starcry::render_job(
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   if (!gen) {
     context->recreate_isolate_in_this_thread();
-    gen = std::make_shared<generator>(metrics_, context, options().debug);
+    gen = std::make_shared<interpreter::generator>(metrics_, context, options().debug);
   }
 
   bool client_is_nullptr = false;

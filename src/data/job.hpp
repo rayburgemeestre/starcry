@@ -17,30 +17,29 @@ namespace data {
 
 struct job {
   // if you modify these fields, you need to update announce or the added fields won't be transferred..
-  bool same_host;
-  uint32_t width;
-  uint32_t height;
+  uint32_t width = 1920;
+  uint32_t height = 1080;
   double view_x;
   double view_y;
-  uint32_t offset_x;
-  uint32_t offset_y;
-  uint32_t canvas_w;
-  uint32_t canvas_h;
-  size_t job_number;
+  uint32_t offset_x = 0;
+  uint32_t offset_y = 0;
+  uint32_t canvas_w = 1920;
+  uint32_t canvas_h = 1080;
+  size_t job_number = 0;
   uint32_t frame_number;
-  bool rendered;
-  bool last_frame;
+  bool rendered = false;
+  bool last_frame = false;
   uint32_t chunk;
-  uint32_t num_chunks;
+  uint32_t num_chunks = 1;
   data::color background_color;
   // for each rendering pass the list of shapes
   std::vector<std::vector<data::shape>> shapes;
-  double scale;  // deprecated
+  double scale = 1.0;  // deprecated
   std::vector<double> scales;
   uint32_t bitrate;
-  bool compress;
-  bool save_image;
-  bool is_raw;
+  bool compress = false;
+  bool save_image = false;
+  bool is_raw = false;
   std::string output_file;
 
   inline bool operator<(const job &other) const {
@@ -49,8 +48,7 @@ struct job {
 
   template <class Archive>
   void serialize(Archive &ar) {
-    ar(same_host,
-       width,
+    ar(width,
        height,
        view_x,
        view_y,

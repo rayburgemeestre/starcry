@@ -15,7 +15,8 @@
 #include "scalesettings.h"
 #include "scenesettings.h"
 
-#include "generator/object_bridge.h"
+#include "interpreter/bridges.h"
+#include "interpreter/initializer.h"
 
 #include "data/job.hpp"
 #include "data/settings.hpp"
@@ -37,14 +38,13 @@ class step_calculator;
 class metrics;
 class vector2d;
 
-namespace util {
-namespace generator {
-extern int64_t counter;
-}
-}  // namespace util
+namespace interpreter {
 
 class generator {
 private:
+  friend class initializer;
+  friend class bridges;
+
   fps_progress fpsp;
   std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
@@ -53,10 +53,6 @@ private:
   std::vector<std::vector<data_staging::shape_t>> scene_shapes_next;
   std::vector<std::vector<data_staging::shape_t>> instantiated_objects;
   std::vector<std::vector<data_staging::shape_t>> scene_shapes_intermediate;
-  std::shared_ptr<object_bridge<data_staging::circle>> object_bridge_circle = nullptr;
-  std::shared_ptr<object_bridge<data_staging::line>> object_bridge_line = nullptr;
-  std::shared_ptr<object_bridge<data_staging::script>> object_bridge_script = nullptr;
-  std::shared_ptr<object_bridge<data_staging::text>> object_bridge_text = nullptr;
   std::vector<std::reference_wrapper<data_staging::shape_t>> stack;
 
   uint32_t frame_number = 0;
@@ -103,6 +99,9 @@ private:
   std::shared_ptr<generator_context> genctx;
   bool debug_;
 
+  initializer initializer_;
+  bridges bridges_;
+
 public:
   struct time_settings {
     double time;
@@ -115,15 +114,7 @@ public:
 
   void reset_context();
   void init(const std::string& filename, std::optional<double> rand_seed, bool preview, bool caching);
-  void init_context();
-  void init_user_script();
-  void init_job();
-  void init_video_meta_info(std::optional<double> rand_seed, bool preview);
-  void init_gradients();
-  void init_textures();
-  void init_toroidals();
-  void init_object_instances();
-  void init_object_definitions();
+  void create_object_instances();
 
   void instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
                                                      int debug_level = 0,
@@ -245,3 +236,5 @@ private:
   template <typename T>
   void write_back_copy(T& copy);
 };
+
+}  // namespace interpreter

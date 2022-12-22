@@ -5,7 +5,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 
 #include "generator.h"
-#include "generator/object_bridge.h"
+#include "interpreter/object_bridge.h"
 #include "util/v8_interact.hpp"
 
 template <>
@@ -163,7 +163,7 @@ void object_bridge<data_staging::text>::set_seed(int64_t new_value) const {
 }
 
 template <>
-object_bridge<data_staging::text>::object_bridge(generator* generator) : generator_(generator) {
+object_bridge<data_staging::text>::object_bridge(interpreter::generator* generator) : generator_(generator) {
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
   object_bridge_class  // .template ctor<int>()
       .property("level", &object_bridge::get_level)
