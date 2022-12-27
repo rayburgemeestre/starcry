@@ -59,7 +59,8 @@ void copy_to_png(const std::vector<data::color> &source,
 }
 
 std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in, const bool &dithering) {
-  static util::random_generator rand;
+  util::random_generator rand;  // TODO(performance): make this static, in some thread-safe way, just putting static
+                                // gives all kinds of weird errors inside the random class..
   std::vector<uint32_t> pixels_out;
   pixels_out.reserve(pixels_in.size());
 
