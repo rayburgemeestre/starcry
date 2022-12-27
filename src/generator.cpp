@@ -19,6 +19,7 @@
 #include "starcry/metrics.h"
 #include "util/logger.h"
 #include "util/math.h"
+#include "util/memory_usage.hpp"
 #include "util/random.hpp"
 #include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
@@ -420,6 +421,11 @@ bool generator::_generate_frame() {
     job->job_number++;
     job->frame_number++;
     metrics_->complete_job(job->job_number);
+    v8::HeapStatistics hs;
+    context->isolate->GetHeapStatistics(&hs);
+    logger(INFO) << "Memory usage: " << (double(getValue()) / 1024. / 1024.)
+                 << " GB. V8 Heap: " << (hs.total_heap_size() / 1024. / 1024. / 1024.) << " MB." << std::endl;
+
   } catch (std::exception& ex) {
     std::cout << ex.what() << std::endl;
   }
