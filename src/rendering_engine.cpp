@@ -49,6 +49,7 @@ inline int round_to_int(double_type in) {
 #include "data/shape.hpp"
 #include "draw_logic.hpp"
 #include "image.hpp"
+#include "util/image_splitter.hpp"
 #ifndef EMSCRIPTEN
 #ifndef SC_CLIENT
 #include "starcry/metrics.h"
@@ -58,6 +59,7 @@ inline int round_to_int(double_type in) {
 image &rendering_engine::render(size_t thread_num,
                                 size_t job_num,
                                 size_t chunk_num,
+                                size_t num_chunks,
                                 std::shared_ptr<metrics> &metrics,
                                 const data::color &bg_color,
                                 const std::vector<std::vector<data::shape>> &shapes,
@@ -74,6 +76,76 @@ image &rendering_engine::render(size_t thread_num,
                                 bool verbose,
                                 const data::settings &settings,
                                 double debug) {
+  auto _exec = [&](uint32_t width, uint32_t height, uint32_t extra_offset_x, uint32_t extra_offset_y) -> image & {
+    return _render(thread_num,
+                   job_num,
+                   chunk_num,
+                   metrics,
+                   bg_color,
+                   shapes,
+                   view_x,
+                   view_y,
+                   offset_x + extra_offset_x,
+                   offset_y + extra_offset_y,
+                   canvas_w,
+                   canvas_h,
+                   width,
+                   height,
+                   top_scale,
+                   scales,
+                   verbose,
+                   settings,
+                   debug);
+  };
+  // in case -c 1 is specified, we try to 'auto chunk' the image based on number of motion blur frames
+  // the worst-case is having each pixel change, meaning memory usage multiplies the entire image size
+  // times the number of motion blur frames.
+  if (scales.size() == 1 || num_chunks > 1) {
+    return _exec(width, height, 0, 0);
+  }
+
+  if (!cumulative_bitmap) {
+    cumulative_bitmap = std::make_shared<bitmap_wrapper>();
+  }
+
+  auto &bmp = cumulative_bitmap->get(static_cast<int>(width), static_cast<int>(height));
+
+  util::ImageSplitter<uint32_t> imagesplitter{width, height};
+  // This can introduce some overhead, but at least prevents issues with running out of memory
+  // If needed we can make this configurable.
+  const auto rectangles = imagesplitter.split(scales.size() * 4, util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
+
+  auto &bmp_pixels = bmp.pixels();
+  size_t bmp_pixels_index = 0;
+  for (auto &rectangle : rectangles) {
+    auto &tmp = _exec(rectangle.width(), rectangle.height(), rectangle.x(), rectangle.y());
+    auto &pixels = tmp.pixels();
+    std::copy(pixels.begin(), pixels.end(), bmp_pixels.begin() + static_cast<long>(bmp_pixels_index));
+    // std::memcpy(bmp_pixels.data() + bmp_pixels_index, pixels.data(), pixels.size() * sizeof(data::color));
+    bmp_pixels_index += pixels.size();
+  }
+  return bmp;
+}
+
+image &rendering_engine::_render(size_t thread_num,
+                                 size_t job_num,
+                                 size_t chunk_num,
+                                 std::shared_ptr<metrics> &metrics,
+                                 const data::color &bg_color,
+                                 const std::vector<std::vector<data::shape>> &shapes,
+                                 double view_x,
+                                 double view_y,
+                                 uint32_t offset_x,
+                                 uint32_t offset_y,
+                                 uint32_t canvas_w,
+                                 uint32_t canvas_h,
+                                 uint32_t width,
+                                 uint32_t height,
+                                 double top_scale,
+                                 std::vector<double> scales,
+                                 bool verbose,
+                                 const data::settings &settings,
+                                 double debug) {
   if (!draw_logic_) {
     draw_logic_ = std::make_shared<draw_logic::draw_logic>();
   }

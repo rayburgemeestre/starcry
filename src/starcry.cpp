@@ -155,6 +155,7 @@ void starcry::render_job(
   bmp = engine.render(thread_num,
                       job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
                       job.chunk,
+                      job.num_chunks,
                       metrics_,
                       job.background_color,
                       job.shapes,

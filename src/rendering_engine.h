@@ -26,6 +26,7 @@ public:
   image &render(size_t thread_num,
                 size_t job_num,
                 size_t chunk_num,
+                size_t num_chunks,
                 std::shared_ptr<metrics> &metrics,
                 const data::color &bg_color,
                 const std::vector<std::vector<data::shape>> &shapes,
@@ -47,4 +48,26 @@ public:
 
   std::shared_ptr<draw_logic::draw_logic> draw_logic_;
   std::shared_ptr<bitmap_wrapper> bitmap;
+  std::shared_ptr<bitmap_wrapper> cumulative_bitmap;
+
+private:
+  image &_render(size_t thread_num,
+                 size_t job_num,
+                 size_t chunk_num,
+                 std::shared_ptr<metrics> &metrics,
+                 const data::color &bg_color,
+                 const std::vector<std::vector<data::shape>> &shapes,
+                 double view_x,
+                 double view_y,
+                 uint32_t offset_x,
+                 uint32_t offset_y,
+                 uint32_t canvas_w,
+                 uint32_t canvas_h,
+                 uint32_t width,
+                 uint32_t height,
+                 double top_scale,
+                 std::vector<double> scales,
+                 bool verbose,
+                 const data::settings &settings,
+                 double debug);
 };

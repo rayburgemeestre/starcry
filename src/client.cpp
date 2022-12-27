@@ -131,6 +131,7 @@ void render_shapes_to_texture() {
   auto &bmp = engine.render(0,
                             job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
                             job.chunk,
+                            job.num_chunks,
                             tmp,
                             job.background_color,
                             job.shapes,
