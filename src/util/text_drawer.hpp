@@ -40,7 +40,6 @@ private:
       throw std::runtime_error(std::string("could not find font: ") + filename);
     }
 
-    logger(DEBUG) << "loading font: " << filename << std::endl;
     FILE *fontFile = fopen(filename.c_str(), "rb");
     fseek(fontFile, 0, SEEK_END);
     size = ftell(fontFile);
@@ -57,6 +56,7 @@ private:
   }
 
   void allocate_bitmap() {
+    free(bitmap_);
     bitmap_ = (unsigned char *)calloc(bitmap_width_ * bitmap_height_, sizeof(unsigned char));
   }
 
