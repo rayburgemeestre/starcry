@@ -97,6 +97,13 @@ debug:  ## build starcry binary using docker with debug
 	                    make VERBOSE=1 -j $$(nproc) starcry && \
 	                    ln -fs $$PWD/build/compile_commands.json $$PWD/compile_commands.json)
 
+debug-gcc:  ## build starcry binary using docker with debug
+	make debug-clean
+	@$(call make, mkdir -p build && pushd build && CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) \
+	              cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on .. && \
+	              make VERBOSE=1 -j $$(nproc) starcry && \
+	              ln -fs $$PWD/build/compile_commands.json $$PWD/compile_commands.json)
+
 debug-sanitizer:  ## build starcry binary using docker with debug + address sanitizer
 	make debug-clean
 	@$(call make-clang, mkdir -p build && pushd build && ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
@@ -235,8 +242,8 @@ webstorm:
 	podman run --rm --name starcry_webstorm -p 8081:8080 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/webstorm ${HOME}"
 
 profile:  ## run starcry with valgrind's callgrind for profiling
-	#valgrind --tool=callgrind ./build/starcry input/script.js
-	valgrind --tool=callgrind ./build/starcry --no-render --stdout input/test.js
+	valgrind --tool=callgrind ./build/starcry -c 1 input/script.js
+	# valgrind --tool=callgrind ./build/starcry --no-render --stdout input/test.js
 	ls -althrst | tail -n 1
 
 debug-last:
@@ -253,6 +260,10 @@ a:
 b:
 	make build
 	./build/starcry input/greenlines.js --raw
+
+c:
+	make debug
+	gdb --args ./build/starcry --no-gui input/script.js
 
 log:
 	tail -f sc.log | ~/projects/metalogmon/metalogmon ~/projects/metalogmon/scripts/starcry.js
