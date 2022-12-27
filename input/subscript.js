@@ -4,7 +4,7 @@ _ = {
     'test': {
       'type': 'script',
       'file': 'input/test.js',
-      'duration': 1.5,
+      // 'duration': 1.5,
     },
     'blur': {
       'type': 'script',
@@ -31,7 +31,7 @@ _ = {
   'scenes': [
     {
       'name': 'scene1',
-      'duration': 2.0,
+      'duration': 5.0,
       'objects': [
         {'id': 'test', 'x': 0, 'y': 0, 'z': 0, 'scale': 2.},
         {'id': 'blur', 'x': 0, 'y': 0, 'z': 0},

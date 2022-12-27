@@ -98,7 +98,7 @@ _ = {
   'scenes': [
     {
       'name': 'scene1',
-      'duration': 5.0,
+      'duration': 3.0,
       'objects':
           [{'id': 'obj0', 'x': 5, 'y': 0, 'z': 0, 'props': {}}, {'id': 'obj0', 'x': -5, 'y': 0, 'z': 0, 'props': {}}]
     },
