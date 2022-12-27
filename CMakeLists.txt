@@ -52,9 +52,10 @@ endif()
 if (DEBUG)
     message(STATUS "This is a DEBUG build.")
     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        add_definitions("-std=c++20 -O0 -g -stdlib=libstdc++ -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3")
+        # -gdwarf-4 is needed for valgrind, version 5 seens unsupported.
+        add_definitions("-std=c++20 -O0 -g -stdlib=libstdc++ -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3 -gdwarf-4")
     else()
-        add_definitions("-std=c++2a -O0 -g                   -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3 -Wno-unknown-pragmas -Wno-literal-suffix")
+        add_definitions("-std=c++2a -O0 -g                   -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3 -Wno-unknown-pragmas -Wno-literal-suffix -fmudflap -lmudflap")
     endif()
 else()
     message(STATUS "This is a RELEASE build.")
@@ -116,7 +117,10 @@ target_link_libraries(integration_tests PRIVATE -static-libgcc -static-libstdc++
 
 if (SANITIZER)
     # ASAN
-    target_link_libraries(starcry PRIVATE -static-libgcc -static-libstdc++ /usr/lib/llvm-12/lib/clang/12.0.1/lib/linux/libclang_rt.asan-x86_64.a)
+
+    #target_link_libraries(starcry PRIVATE -static-libgcc -static-libstdc++ /usr/lib/llvm-12/lib/clang/12.0.1/lib/linux/libclang_rt.asan-x86_64.a)
+    target_link_libraries(starcry PRIVATE -static-libgcc -static-libstdc++ /usr/lib/llvm-14/lib/clang/14.0.0/lib/linux/libclang_rt.asan-x86_64.a)
+
     # target_link_libraries(starcry -lclang_rt.asan-x86_64)
 else()
     target_link_libraries(starcry PRIVATE -static-libgcc -static-libstdc++)
