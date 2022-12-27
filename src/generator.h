@@ -17,6 +17,7 @@
 
 #include "interpreter/bridges.h"
 #include "interpreter/initializer.h"
+#include "interpreter/scenes.h"
 
 #include "data/job.hpp"
 #include "data/settings.hpp"
@@ -44,6 +45,7 @@ class generator {
 private:
   friend class initializer;
   friend class bridges;
+  friend class scenes;
 
   fps_progress fpsp;
   std::shared_ptr<v8_wrapper> context;
@@ -91,8 +93,6 @@ private:
   bool fast_ff = false;
 
   scale_settings scalesettings;
-  scene_settings scenesettings;
-  std::unordered_map<int64_t, scene_settings> scenesettings_objs;
 
   std::string filename_;
 
@@ -101,14 +101,9 @@ private:
 
   initializer initializer_;
   bridges bridges_;
+  scenes scenes_;
 
 public:
-  struct time_settings {
-    double time;
-    double elapsed;
-    double scene_time;
-  };
-
   explicit generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug = false);
   ~generator() = default;
 
@@ -188,8 +183,6 @@ public:
   scale_settings& get_scale_settings() {
     return scalesettings;
   }
-
-  inline time_settings get_time(scene_settings& settings) const;
 
   std::shared_ptr<v8_wrapper> get_context() const;
 

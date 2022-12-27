@@ -121,8 +121,8 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed, bool pre
       i.recursively_copy_object(video, preview_obj);
     }
 
-    auto& duration = gen_.scenesettings.scenes_duration;
-    auto& durations = gen_.scenesettings.scene_durations;
+    auto& duration = gen_.scenes_.scenesettings.scenes_duration;
+    auto& durations = gen_.scenes_.scenesettings.scene_durations;
     durations.clear();
     auto obj = val.As<v8::Object>();
     auto scenes = i.v8_array(obj, "scenes");

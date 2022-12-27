@@ -41,7 +41,7 @@ void fix_properties(std::vector<std::vector<data_staging::shape_t>>& scene_shape
 }
 
 generator::generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug)
-    : context(context), metrics_(metrics), debug_(debug), initializer_(*this), bridges_(*this) {}
+    : context(context), metrics_(metrics), debug_(debug), initializer_(*this), bridges_(*this), scenes_(*this) {}
 
 void generator::init(const std::string& filename, std::optional<double> rand_seed, bool preview, bool caching) {
   prctl(PR_SET_NAME, "native generator thread");
@@ -61,54 +61,26 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
     genctx = std::make_shared<generator_context>(val, 0);
   });
 
-  scenesettings.scene_initialized = std::numeric_limits<size_t>::max();
-  scenesettings.scene_initialized_previous = std::numeric_limits<size_t>::max();
-
-  // refresh the scene object to get rid of left-over state
-  scene_settings tmp;
-  std::swap(scenesettings, tmp);
-
-  // restore scene durations info in the recreated object
-  scenesettings.scene_durations = tmp.scene_durations;
-  scenesettings.scenes_duration = tmp.scenes_duration;
-
-  // throw away all the scene information for script objects
-  scenesettings_objs.clear();
-
-  // throw away any existing instances from array
-  for (auto& scene_shapes_vec : scene_shapes_next) scene_shapes_vec.clear();
+  scenes_.initialize();
 
   // reset random number generator
   set_rand_seed(rand_seed.value_or(0));
 
   // set_scene requires generator_context to be set
-  set_scene(0);
+  scenes_.set_scene(0);
 
   // all objects added at this point can be blindly appended
-  scene_shapes_next[scenesettings.current_scene_next].insert(
-      std::end(scene_shapes_next[scenesettings.current_scene_next]),
-      std::begin(instantiated_objects[scenesettings.current_scene_next]),
-      std::end(instantiated_objects[scenesettings.current_scene_next]));
-  instantiated_objects[scenesettings.current_scene_next].clear();
+  scenes_.append_instantiated_objects();
 }
 
 void generator::create_object_instances() {
   // This function is called whenever a scene is set. (once per scene)
   context->enter_object("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     // enter_objects creates a new isolate, using the old gives issues, so we'll recreate
-    genctx = std::make_shared<generator_context>(val, scenesettings.current_scene_next);
-    genctx->set_scene(scenesettings.current_scene_next);
+    genctx = std::make_shared<generator_context>(val, scenes_.current());
+    genctx->set_scene(scenes_.current());
 
-    // whenever we switch to a new scene, we'll copy all the object state from the previous scene
-    if (scenesettings.current_scene_next > 0) {
-      logger(INFO) << "Switching to new scene, copying all state from previous." << std::endl;
-      scene_shapes[scenesettings.current_scene_next] = scene_shapes[scenesettings.current_scene_next - 1];
-      scene_shapes_next[scenesettings.current_scene_next] = scene_shapes_next[scenesettings.current_scene_next - 1];
-      scene_shapes_intermediate[scenesettings.current_scene_next] =
-          scene_shapes_intermediate[scenesettings.current_scene_next - 1];
-    } else {
-      logger(DEBUG) << "Stay in existing scene " << scenesettings.current_scene_next << ", not copying." << std::endl;
-    }
+    scenes_.switch_scene();
 
     instantiate_additional_objects_from_new_scene(genctx->scene_objects, 0);
 
@@ -139,7 +111,7 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
   const auto unique_id = i.integer_number(created_instance, "unique_id");
   const auto id = i.str(created_instance, "id");
   const auto namespace_ = created_shape_namespace;
-  logger(DEBUG) << std::string(" ", debug_level) << "Bookkeeping for: " << id << " (namespace: " << namespace_ << ")"
+  logger(DEBUG) << std::string(debug_level, ' ') << "Bookkeeping for: " << id << " (namespace: " << namespace_ << ")"
                 << std::endl;
   i.set_field(created_instance, "namespace", v8_str(i.get_context(), namespace_));
   const auto file = i.str(created_instance, "file");
@@ -164,20 +136,23 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
 
   // process scenes and make the scenes relative, initialize helper objs etc
   auto scenes = i.v8_array(tmp, "scenes");
-  auto& duration = scenesettings_objs[unique_id].scenes_duration;
-  auto& durations = scenesettings_objs[unique_id].scene_durations;
-  durations.clear();
-  for (size_t I = 0; I < scenes->Length(); I++) {
-    auto current_scene = i.get_index(scenes, I);
-    if (!current_scene->IsObject()) continue;
-    auto sceneobj = current_scene.As<v8::Object>();
-    duration += i.double_number(sceneobj, "duration");
-    durations.push_back(i.double_number(sceneobj, "duration"));
+  {
+    auto duration = scenes_.get_duration(unique_id);
+    std::vector<double> durations;
+    for (size_t I = 0; I < scenes->Length(); I++) {
+      auto current_scene = i.get_index(scenes, I);
+      if (!current_scene->IsObject()) continue;
+      auto sceneobj = current_scene.As<v8::Object>();
+      duration += i.double_number(sceneobj, "duration");
+      durations.push_back(i.double_number(sceneobj, "duration"));
+    }
+    std::for_each(durations.begin(), durations.end(), [&duration](double& n) {
+      n /= duration;
+    });
+    scenes_.set_duration(unique_id, duration);
+    scenes_.set_durations(unique_id, durations);
+    scenes_.set_desired_duration(unique_id, specified_duration);
   }
-  std::for_each(durations.begin(), durations.end(), [&duration](double& n) {
-    n /= duration;
-  });
-  scenesettings_objs[unique_id].desired_duration = specified_duration;
 
   // make the scenes a property of the created instance (even though we probably won't need it for now)
   i.set_field(created_instance, "scenes", scenes);  // TODO: remove?
@@ -212,7 +187,7 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
     auto object_dst_id = namespace_ + i.str(objects_fields, k);
     auto object_src = i.get(objects, object_src_id);
     auto object_src_obj = object_src.As<v8::Object>();
-    logger(DEBUG) << std::string(" ", debug_level) << "Importing object " << i.str(objects_fields, k)
+    logger(DEBUG) << std::string(debug_level, ' ') << "Importing object " << i.str(objects_fields, k)
                   << " as: " << object_dst_id << ", from: " << fmt::format("tmp{}", use_index) << " and file: " << file
                   << " , points to: " << i.str(object_src_obj, "file") << std::endl;
 
@@ -225,13 +200,13 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
   }
 
   // make sure we start from the current 'global' time as an offset
-  scenesettings_objs[unique_id].parent_offset = get_time(scenesettings).time;
+  scenes_.scenesettings_objs[unique_id].parent_offset = scenes_.get_time(scenes_.scenesettings).time;
 
   // sub object starts at scene zero
-  set_scene_sub_object(scenesettings_objs[unique_id], 0);
+  scenes_.set_scene_sub_object(unique_id);
 
   // recurse for each object in the "sub" scene
-  auto current_scene = i.get_index(scenes, scenesettings_objs[unique_id].current_scene_next);
+  auto current_scene = i.get_index(scenes, scenes_.scenesettings_objs[unique_id].current_scene_next);
   if (current_scene->IsObject()) {
     auto o = current_scene.As<v8::Object>();
     auto scene_objects = i.v8_array(o, "objects");
@@ -255,12 +230,12 @@ void generator::instantiate_additional_objects_from_new_scene(v8::Persistent<v8:
   if (parent_object)
     meta_callback(*parent_object, [&]<typename T>(const T& shape) {
       namespace_ = shape.meta_cref().namespace_name();
-      logger(DEBUG) << std::string(" ", debug_level)
+      logger(DEBUG) << std::string(debug_level, ' ')
                     << "Instantiating additional objects from new scene for parent object: " << shape.meta_cref().id()
                     << std::endl;
     });
   else {
-    logger(DEBUG) << std::string(" ", debug_level)
+    logger(DEBUG) << std::string(debug_level, ' ')
                   << "Instantiating additional objects from new scene for parent object NULL" << std::endl;
   }
 
@@ -268,37 +243,11 @@ void generator::instantiate_additional_objects_from_new_scene(v8::Persistent<v8:
   for (size_t j = 0; j < scene_objects.Get(i.get_isolate())->Length(); j++) {
     auto scene_obj = i.get_index(scene_objects, j).As<v8::Object>();
     auto scene_obj_id = i.str(scene_obj, "id");
-    logger(DEBUG) << std::string(" ", debug_level) << "Instantiating object id: " << scene_obj_id
+    logger(DEBUG) << std::string(debug_level, ' ') << "Instantiating object id: " << scene_obj_id
                   << " (namespace: " << namespace_ << ")" << std::endl;
 
     auto [created_instance, shape_ref, shape_copy] = _instantiate_object_from_scene(i, scene_obj, parent_object);
     create_bookkeeping_for_script_objects(created_instance, shape_copy, debug_level + 1);
-  }
-}
-
-void generator::set_scene(size_t scene) {
-  if (scenesettings.current_scene_next == std::numeric_limits<size_t>::max())
-    scenesettings.current_scene_next = scene;
-  else
-    scenesettings.current_scene_next = std::max(scenesettings.current_scene_next, scene);
-  if (scenesettings.scene_initialized == std::numeric_limits<size_t>::max() ||
-      scenesettings.current_scene_next > scenesettings.scene_initialized) {
-    scenesettings.scene_initialized_previous = scenesettings.scene_initialized;  // in case we need to revert
-    scenesettings.scene_initialized = scenesettings.current_scene_next;
-    create_object_instances();
-  }
-}
-
-void generator::set_scene_sub_object(scene_settings& scenesettings, size_t scene) {
-  if (scenesettings.current_scene_next == std::numeric_limits<size_t>::max())
-    scenesettings.current_scene_next = scene;
-  else
-    scenesettings.current_scene_next = std::max(scenesettings.current_scene_next, scene);
-  if (scenesettings.scene_initialized == std::numeric_limits<size_t>::max() ||
-      scenesettings.current_scene_next > scenesettings.scene_initialized) {
-    scenesettings.scene_initialized = scenesettings.current_scene_next;
-    // TODO: implement:
-    //  create_object_instances();
   }
 }
 
@@ -359,14 +308,14 @@ bool generator::_generate_frame() {
     metrics_->register_job(job->job_number + 1, job->frame_number, job->chunk, job->num_chunks);
 
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-      genctx = std::make_shared<generator_context>(val, scenesettings.current_scene_next);
+      genctx = std::make_shared<generator_context>(val, scenes_.scenesettings.current_scene_next);
       auto& i = genctx->i();
 
       auto obj = val.As<v8::Object>();
       auto scenes = i.v8_array(obj, "scenes");
       auto video = i.v8_obj(obj, "video");
       // auto objects = i.v8_array(obj, "objects");
-      auto current_scene = i.get_index(scenes, scenesettings.current_scene_next);
+      auto current_scene = i.get_index(scenes, scenes_.scenesettings.current_scene_next);
       if (!current_scene->IsObject()) return;
       // auto sceneobj = current_scene.As<v8::Object>();
 
@@ -404,23 +353,7 @@ bool generator::_generate_frame() {
           qts.clear();
           qts_gravity.clear();
 
-          // initialize scene
-          if (scenesettings.update(get_time(scenesettings).time)) {
-            set_scene(scenesettings.current_scene_next + 1);
-            // all objects added at this point can be blindly appended
-            scene_shapes_next[scenesettings.current_scene_next].insert(
-                std::end(scene_shapes_next[scenesettings.current_scene_next]),
-                std::begin(instantiated_objects[scenesettings.current_scene_next]),
-                std::end(instantiated_objects[scenesettings.current_scene_next]));
-            instantiated_objects[scenesettings.current_scene_next].clear();
-          }
-
-          // initialize scenes for script objects
-          for (auto& [_, settings] : scenesettings_objs) {
-            if (settings.update(get_time(settings).time)) {
-              set_scene_sub_object(settings, settings.current_scene_next + 1);
-            }
-          }
+          scenes_.prepare_scene();
 
           // call next frame event on all objects (TODO: optimize)
           if (stepper.current_step == 0) {
@@ -450,10 +383,8 @@ bool generator::_generate_frame() {
           fix_properties(scene_shapes_intermediate);
 
           scalesettings.update();
-          scenesettings.update();
-          for (auto& iter : scenesettings_objs) {
-            iter.second.update();
-          }
+          scenes_.update();
+
           if (job->shapes.size() != size_t(stepper.max_step)) detected_too_many_steps = true;
           metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
         }
@@ -478,14 +409,11 @@ bool generator::_generate_frame() {
       fix_properties(scene_shapes);
 
       scalesettings.commit();
-      scenesettings.commit();
+      scenes_.commit();
       if (debug_) {
         debug_print_next();
       }
       fpsp.inc();
-      for (auto& [_, scenesetting] : scenesettings_objs) {
-        scenesetting.commit();
-      }
 
       metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
     });
@@ -511,10 +439,7 @@ void generator::revert_all_changes(v8_interact& i) {
   fix_properties(scene_shapes_intermediate);
 
   scalesettings.revert();
-  scenesettings.revert();
-  for (auto& iter : scenesettings_objs) {
-    iter.second.revert();
-  }
+  scenes_.revert();
 }
 
 void generator::revert_position_updates(v8_interact& i) {
@@ -545,13 +470,13 @@ void generator::call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next
 void generator::create_new_mappings() {
   next_instance_map.clear();
   intermediate_map.clear();
-  for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
+  for (auto& abstract_shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
     // Will we just put copies here now??
     meta_callback(abstract_shape, [&]<typename T>(T& shape) {
       next_instance_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
     });
   }
-  for (auto& abstract_shape : scene_shapes_intermediate[scenesettings.current_scene_next]) {
+  for (auto& abstract_shape : scene_shapes_intermediate[scenes_.scenesettings.current_scene_next]) {
     // Will we just put copies here now??
     meta_callback(abstract_shape, [&]<typename T>(T& shape) {
       intermediate_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
@@ -565,7 +490,7 @@ void generator::update_object_positions(v8_interact& i, v8::Local<v8::Object>& v
   int64_t scenesettings_from_object_id = -1;
   int64_t scenesettings_from_object_id_level = -1;
 
-  for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
+  for (auto& abstract_shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
     meta_callback(abstract_shape, [&]<typename T>(T& shape) {
       if constexpr (std::is_same_v<T, data_staging::script>) {
         // TODO: this strategy does not support nested script objects
@@ -578,10 +503,11 @@ void generator::update_object_positions(v8_interact& i, v8::Local<v8::Object>& v
       }
 
       if (scenesettings_from_object_id == -1) {
-        update_time(i, abstract_shape, shape.meta_cref().id(), scenesettings);
+        update_time(i, abstract_shape, shape.meta_cref().id(), scenes_.scenesettings);
       } else {
         // TODO:
-        update_time(i, abstract_shape, shape.meta_cref().id(), scenesettings_objs[scenesettings_from_object_id]);
+        update_time(
+            i, abstract_shape, shape.meta_cref().id(), scenes_.scenesettings_objs[scenesettings_from_object_id]);
       }
 
       scalesettings.video_scale_next = i.double_number(video, "scale");
@@ -641,8 +567,8 @@ void generator::update_object_positions(v8_interact& i, v8::Local<v8::Object>& v
 }
 
 void generator::insert_newly_created_objects() {
-  auto& dest = scene_shapes_next[scenesettings.current_scene_next];
-  auto& source = instantiated_objects[scenesettings.current_scene_next];
+  auto& dest = scene_shapes_next[scenes_.scenesettings.current_scene_next];
+  auto& source = instantiated_objects[scenes_.scenesettings.current_scene_next];
   if (source.empty()) return;
 
   dest.reserve(dest.size() + source.size());
@@ -782,7 +708,7 @@ void generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>
 
   // first pass transitive xy become set
   stack.clear();
-  for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
+  for (auto& abstract_shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& c) {
                             handle_pass1(abstract_shape, c, c.meta_ref());
@@ -800,7 +726,7 @@ void generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>
   }
 
   // second pass depends on knowing transitive xy
-  for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
+  for (auto& abstract_shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& c) {
                             handle_pass2(abstract_shape, c, c.meta_ref());
@@ -863,7 +789,7 @@ void generator::update_object_distances() {
       meta.set_steps(recorded_steps[instance_uid]);
     }
   };
-  for (auto& abstract_shape : scene_shapes_next[scenesettings.current_scene_next]) {
+  for (auto& abstract_shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
     meta_callback(abstract_shape, [&]<typename TP>(TP& shape) {
       handle(abstract_shape, shape.meta_ref());
     });
@@ -1191,47 +1117,6 @@ void generator::handle_gravity(data_staging::circle& instance,
   acceleration.y += force.y;
 }
 
-inline generator::time_settings generator::get_time(scene_settings& scenesettings) const {
-  // Intermediate frames between 0 and 1, for two: [0.5, 1.0]
-  // This will make vibrations look really vibrating, as back and forth will be rendered differently
-  // auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step));
-  // Intermediate frames between 0 and 1, for two: [0.33, 0.66]
-  // This will make vibrations invisible, as back and forth will be rendered the same way
-  // NOTE: The only change is a +1 for max_step count.
-  const auto extra = static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step + 1);
-  // Another fix, to make t= not start at for example -0.002, and run up to 0.995, is to make sure we start counting
-  // at one, instead of zero, because we subtract something to account for intermediate frames
-  // const auto fn = static_cast<double>(job->frame_number - (1.0 - extra));
-  const auto fn = static_cast<double>(job->frame_number - (1.0 - extra) + 1);
-  // Another fix, -1 on max_frames, so that we basically get 1 extra frame, it is often pleasing if the animation has
-  // one final resting frame, f.i., to complete a full rotation. Otherwise you might see motion blur + rotation
-  // stopped at 99.99%.
-  // EDIT: NOTE, this -1 affects the calculation of properly "vibrating" objects with triangular_wave.
-  // See for example the fix I had to make in input/wave.js
-  // const auto t = std::clamp(fn / (max_frames - double(1.)), 0., 1.);
-  // EDIT#2: reverted, to see if it fixes a bug of a possible endlessloop in the generate frame function
-  const auto t = std::clamp(fn / (max_frames), 0., 1.);
-  const auto e = static_cast<double>(1.0) / static_cast<double>(use_fps) / static_cast<double>(stepper.max_step);
-  const auto next_scene_duration = scenesettings.scene_durations[scenesettings.current_scene_next];
-
-  // block for special script type objects
-  if (scenesettings.parent_offset != -1) {
-    const auto desired_duration =
-        scenesettings.desired_duration != -1 ? scenesettings.desired_duration : scenesettings.scenes_duration;
-    const auto perc_of_t = desired_duration / this->scenesettings.scenes_duration;  // e.g. 0.33
-    const auto Tstart = scenesettings.parent_offset;                                // e.g. 0.50
-    const auto Tend = scenesettings.parent_offset + perc_of_t;                      // e.g. 0.83
-    const auto T = (t - Tstart) / (Tend - Tstart);                                  // e.g. 0.91
-    const auto E = e;
-    auto S = std::clamp((T - scenesettings.offset_next) / next_scene_duration, 0., 1.);
-    return time_settings{T, E, S};
-  }
-
-  // block for normal types
-  const auto scene_time = std::clamp((t - scenesettings.offset_next) / next_scene_duration, 0., 1.);
-  return time_settings{t, e, scene_time};
-}
-
 std::shared_ptr<v8_wrapper> generator::get_context() const {
   return context;
 }
@@ -1240,7 +1125,7 @@ void generator::update_time(v8_interact& i,
                             data_staging::shape_t& instance,
                             const std::string& instance_id,
                             scene_settings& scenesettings) {
-  const auto time_settings = get_time(scenesettings);
+  const auto time_settings = scenes_.get_time(scenesettings);
   const auto execute = [&](double scene_time) {
     // Are these still needed?? (EDIT: I don't think it's used)
     // EDIT: during texture rendering we query the shape for the time
@@ -1362,7 +1247,7 @@ void generator::convert_objects_to_render_job(v8_interact& i, step_calculator& s
   //    if (!instance->IsObject()) continue;
   //    convert_object_to_render_job(i, instance, index, sc, video);
   //  }
-  for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
+  for (auto& shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
     convert_object_to_render_job(i, shape, sc, video);
   }
 }
@@ -1575,7 +1460,7 @@ int64_t generator::spawn_object3(data_staging::shape_t& spawner,
     obj1o = &find1->second.get();
   } else {
     // todo; we need a mapping for this...
-    for (auto& newo : instantiated_objects[scenesettings.current_scene_next]) {
+    for (auto& newo : instantiated_objects[scenes_.scenesettings.current_scene_next]) {
       if (auto c = std::get_if<data_staging::circle>(&newo)) {
         if (c->meta_cref().unique_id() == obj1) {
           obj1o = &newo;
@@ -1588,7 +1473,7 @@ int64_t generator::spawn_object3(data_staging::shape_t& spawner,
     obj2o = &find2->second.get();
   } else {
     // todo; we need a mapping for this...
-    for (auto& newo : instantiated_objects[scenesettings.current_scene_next]) {
+    for (auto& newo : instantiated_objects[scenes_.scenesettings.current_scene_next]) {
       if (auto c = std::get_if<data_staging::circle>(&newo)) {
         if (c->meta_cref().unique_id() == obj2) {
           obj2o = &newo;
@@ -1694,8 +1579,8 @@ generator::_instantiate_object_from_scene(
 
   const auto handle = [&]<typename T>(T& c) -> data_staging::shape_t& {
     // we buffer instantiated objects, and will insert in the array later.
-    instantiated_objects[scenesettings.current_scene_next].emplace_back(c);
-    return instantiated_objects[scenesettings.current_scene_next].back();
+    instantiated_objects[scenes_.scenesettings.current_scene_next].emplace_back(c);
+    return instantiated_objects[scenes_.scenesettings.current_scene_next].back();
   };
 
   const auto type = i.str(object_definitions_map[object_id], "type", "");
@@ -1955,7 +1840,7 @@ void generator::debug_print_next() {
                  << ", angle = " << gen.angle() << ", gravity_group=" << beh.gravity_group()
                  << ", texture = " << sty.texture() << std::endl;
   };
-  for (auto& shape : scene_shapes_next[scenesettings.current_scene_next]) {
+  for (auto& shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
     meta_visit(
         shape,
         [&](data_staging::circle& shape) {
@@ -2040,10 +1925,10 @@ void generator::copy_texture_from_object_to_shape(T& source_object,
 template <typename T>
 void generator::write_back_copy(T& copy) {
   size_t index = 0;
-  for (auto& instance : instantiated_objects[scenesettings.current_scene_next]) {
+  for (auto& instance : instantiated_objects[scenes_.scenesettings.current_scene_next]) {
     meta_callback(instance, [&]<typename TS>(TS& shape) {
       if (shape.meta_cref().unique_id() == copy.meta_cref().unique_id()) {
-        instantiated_objects[scenesettings.current_scene_next][index] = copy;
+        instantiated_objects[scenes_.scenesettings.current_scene_next][index] = copy;
       }
     });
     index++;
