@@ -848,6 +848,10 @@ public:
     return motionblur_buffer_;
   }
 
+  std::map<std::string, std::vector<std::shared_ptr<text_drawer>>> &font_ref() {
+    return font_;
+  }
+
 private:
   inline double to_abs_x(double x) {
     return ((x - center_x_) * scale_) - offset_x_ + canvas_w_ / 2;
