@@ -814,9 +814,9 @@ public:
     }
   }
 
-  void capture_pixels(double flag) {
+  void capture_pixels(bool flag) {
     if (flag) {
-      motionblur_buf().clear();
+      motionblur_buffer_.clear();
     }
     flag_ = flag;
   }
