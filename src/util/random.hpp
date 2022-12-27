@@ -5,6 +5,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 #pragma once
 
+#include <fmt/core.h>
 #include <mutex>
 #include <random>
 
@@ -19,7 +20,9 @@ private:
   std::mutex mut;
 
 public:
-  explicit random_generator(double seed = 0) {
+  explicit random_generator() : random_generator(0) {}
+
+  explicit random_generator(double seed) {
     set_seed(seed);
   }
 
@@ -29,9 +32,21 @@ public:
   }
 
   double get() {
-    if (index >= m) {
+    if (index >= n) {
       index = 0;
     }
+    // if (numbers.size() < m) {
+    //   throw std::runtime_error(fmt::format("random_generator::get() numbers.size() < m, {} < {}", numbers.size(),
+    //   m));
+    // }
+    // if (numbers.empty()) {
+    //   throw std::runtime_error("random_generator::get() numbers.empty() == true");
+    // }
+    // // add early exit to prevent out of bounds access
+    // auto sz = numbers.size();
+    // if (index >= sz) {
+    //   throw std::runtime_error(fmt::format("random_generator::get() index >= numbers.size(), {} >= {}", index, sz));
+    // }
     return numbers[index++];
   }
 
@@ -43,8 +58,8 @@ private:
   void initialize() {
     std::scoped_lock lock(mut);
     reset();
-    numbers.resize(n);
-    for (size_t i = 0; i < n; i++) {
+    numbers.resize(m);
+    for (size_t i = 0; i < m; i++) {
       numbers[i] = (mt() / (double)mt.max());
     }
   }
