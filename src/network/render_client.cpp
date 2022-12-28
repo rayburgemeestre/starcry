@@ -14,13 +14,20 @@
 // #include "util/compress_vector.h"
 
 render_client::render_client(const std::string &host) : host(host) {
+  std::string use_host = host, port = PORT;
+  const auto pos = host.find(':');
+  if (pos != std::string::npos) {
+    use_host = host.substr(0, pos);
+    port = host.substr(pos + 1);
+  }
+
   memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
 
   // TODO: do not hard-code this stuff
-  if ((rv = getaddrinfo(host.c_str(), PORT, &hints, &servinfo)) != 0) {
-    // fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+  if ((rv = getaddrinfo(use_host.c_str(), PORT, &hints, &servinfo)) != 0) {
+    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
     // return 1;
     throw std::runtime_error("getaddrinfo");
   }

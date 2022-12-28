@@ -103,7 +103,7 @@ public:
     options.output = !vm.count("no-output");
     options.render = !vm.count("no-render");
     options.notty = vm.count("notty");
-    options.stdout_ = vm.count("stdout");
+    options.stdout_ = vm.count("stdout") || vm.count("client");
     options.compression = vm.count("compression");
     options.rand_seed =
         (rand_seed != std::numeric_limits<double>::max()) ? std::optional<double>(rand_seed) : std::nullopt;

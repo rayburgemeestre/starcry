@@ -519,9 +519,18 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
     if (job_client != nullptr && f && (f->raw_bitmap() || f->raw_image())) {
       auto fun = [&](std::shared_ptr<BitmapHandler> bmp_handler, std::shared_ptr<render_msg> job_msg) {
         std::string buffer;
-        for (const auto &i : job_msg->pixels) {
-          buffer.append((char *)&i, sizeof(i));
-        }
+        if (job_msg->pixels.size())
+          for (const auto &i : job_msg->pixels) {
+            buffer.append((char *)&i, sizeof(i));
+          }
+        else
+          for (const auto &i : job_msg->pixels_raw) {
+            uint32_t pixel = 0;
+            pixel |= (int(i.r * 255) << 16);
+            pixel |= (int(i.g * 255) << 8);
+            pixel |= (int(i.b * 255) << 0);
+            buffer.append((char *)&pixel, sizeof(pixel));
+          }
         bmp_handler->callback(job_client, buffer, job_msg->width, job_msg->height);
       };
       if (webserv) webserv->execute_bitmap(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);

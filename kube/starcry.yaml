@@ -28,7 +28,7 @@ spec:
         image: rayburgemeestre/starcry-no-gui:v6
         command: ["/starcry"]
         #args: ["-i", "--notty"]
-        args: ["-i", "-t", "8", "-c", "8", "--caching", "--notty", "--no-gui", "input/perlin3.js"]
+        args: ["-i", "-t", "0", "-c", "8", "--stdout", "--server", "input/script.js"]
         workingDir: /workdir
 #        volumeMounts:
 #        - mountPath: /workdir
@@ -41,6 +41,32 @@ spec:
 #      - name: workdir-volume
 #        hostPath:
 #          path: /mnt2/NAS/projects/starcry
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starcry-workers
+  namespace: starcry
+spec:
+  selector:
+    matchLabels:
+      app: starcry-workers
+      tier: starcry
+  replicas: 8
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        app: starcry-workers
+        tier: starcry
+    spec:
+      containers:
+      - name: starcrycontainer
+        image: rayburgemeestre/starcry-no-gui:v6
+        command: ["/starcry"]
+        args: ["--client", "starcry"]
+        workingDir: /workdir
+        imagePullPolicy: Always
 ---
 apiVersion: v1
 kind: Service
