@@ -146,22 +146,22 @@ double sut::compare(const std::string& file1, const std::string& file2) {
   return rmse;
 }
 
-// TEST_CASE("Test simple image") {
-//  sut sc;
-//  sc.options.script_file = "input/snowflakes.js";
-//  sc.options.frame_of_interest = 10;
-//  REQUIRE(sc.test_create_image("unittest_001_snowflakes_frame10") == double(0));
-//  sc.options.frame_of_interest = 11;
-//  REQUIRE(sc.test_create_image("unittest_001_snowflakes_frame11") == double(0));
-//  REQUIRE(sc.compare("unittest_001_snowflakes_frame10.png", "unittest_001_snowflakes_frame11.png") != double(0));
-//}
-//
-// TEST_CASE("Test image with noise") {
-//  sut sc;
-//  sc.options.script_file = "input/perlin3.js";
-//  sc.options.frame_of_interest = 10;
-//  REQUIRE(sc.test_create_image("unittest_002_perlin3_frame10") < double(0.05));
-//}
+TEST_CASE("Test simple image") {
+  sut sc;
+  sc.options.script_file = "input/snowflakes.js";
+  sc.options.frame_of_interest = 10;
+  REQUIRE(sc.test_create_image("unittest_001_snowflakes_frame10") == double(0));
+  sc.options.frame_of_interest = 11;
+  REQUIRE(sc.test_create_image("unittest_001_snowflakes_frame11") == double(0));
+  REQUIRE(sc.compare("unittest_001_snowflakes_frame10.png", "unittest_001_snowflakes_frame11.png") != double(0));
+}
+
+TEST_CASE("Test image with noise") {
+  sut sc;
+  sc.options.script_file = "input/perlin3.js";
+  sc.options.frame_of_interest = 10;
+  REQUIRE(sc.test_create_image("unittest_002_perlin3_frame10") < double(0.05));
+}
 
 TEST_CASE("Test simple test video") {
   sut sc;

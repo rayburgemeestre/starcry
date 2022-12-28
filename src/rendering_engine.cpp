@@ -100,7 +100,7 @@ image &rendering_engine::render(size_t thread_num,
   // in case -c 1 is specified, we try to 'auto chunk' the image based on number of motion blur frames
   // the worst-case is having each pixel change, meaning memory usage multiplies the entire image size
   // times the number of motion blur frames.
-  if (scales.size() == 1 || num_chunks > 1) {
+  if (scales.size() <= 1 || num_chunks > 1) {
     return _exec(width, height, 0, 0);
   }
 
