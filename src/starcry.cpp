@@ -517,7 +517,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
     std::swap(job_msg->pixels_raw, pixels_raw);
 
     if (job_client != nullptr && f && (f->raw_bitmap() || f->raw_image())) {
-      auto fun = [&](std::shared_ptr<BitmapHandler> bmp_handler, std::shared_ptr<render_msg> job_msg) {
+      auto fun = [&, width, height](std::shared_ptr<BitmapHandler> bmp_handler, std::shared_ptr<render_msg> job_msg) {
         std::string buffer;
         if (job_msg->pixels.size())
           for (const auto &i : job_msg->pixels) {
@@ -531,7 +531,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
             pixel |= (int(i.b * 255) << 0);
             buffer.append((char *)&pixel, sizeof(pixel));
           }
-        bmp_handler->callback(job_client, buffer, job_msg->width, job_msg->height);
+        bmp_handler->callback(job_client, buffer, width, height);
       };
       if (webserv) webserv->execute_bitmap(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
     }
@@ -703,7 +703,7 @@ void starcry::save_images(std::vector<data::color> &pixels_raw,
                           bool write_32bit_exr,
                           const std::string &output_file) {
   auto filename = fs::path(gen->filename()).stem().string();
-  if (!pixels_raw.empty()) {
+  if (!pixels_raw.empty() && width * height == pixels_raw.size()) {
     // There is 16 BIT, also + Alpha, however, seems to internally still use an 8 bit palette somehow.
     // Will need to figure out in the future how to properly use 16 bit, for now, will focus on fixing the 8 bit
     // version. png::image<png::rgb_pixel_16> image(job.width, job.height);
