@@ -28,7 +28,7 @@ spec:
         image: rayburgemeestre/starcry-no-gui:v6
         command: ["/starcry"]
         #args: ["-i", "--notty"]
-        args: ["-i", "-t", "0", "-c", "8", "--stdout", "--server", "input/script.js"]
+        args: ["-i", "-t", "0", "-c", "8", "--stdout", "--server", "input/test.js"]
         workingDir: /workdir
 #        volumeMounts:
 #        - mountPath: /workdir
@@ -37,6 +37,8 @@ spec:
         ports:
         - containerPort: 18080
           name: http
+        - containerPort: 10000
+          name: internal
 #      volumes:
 #      - name: workdir-volume
 #        hostPath:
@@ -60,6 +62,11 @@ spec:
         app: starcry-workers
         tier: starcry
     spec:
+      initContainers:
+      - name: check-starcry-reachable
+        image: busybox:latest
+        command: ['sh', '-c',
+          'until nc -vz starcry 10000; do echo "Waiting for starcry rendering service"; sleep 2; done;']
       containers:
       - name: starcrycontainer
         image: rayburgemeestre/starcry-no-gui:v6
@@ -81,6 +88,8 @@ spec:
   ports:
   - port: 18080
     name: http
+  - port: 10000
+    name: internal
   selector:
     app: starcry
     tier: starcry
