@@ -70,7 +70,7 @@ bool render_client::poll() {
   bool ret = false;
 
   while (send_buffer.length() > 0) {
-    int n = send(sockfd, send_buffer.get().c_str(), send_buffer.get().size(), 0);
+    int n = send(sockfd, send_buffer.get().c_str(), send_buffer.get().size(), MSG_NOSIGNAL);
     if (n == -1) {
       perror("send");
       return ret;
