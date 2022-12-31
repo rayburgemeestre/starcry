@@ -137,9 +137,6 @@ runtime_deps:  ## install run-time dependencies
 deps: ## install dependencies required for running and building starcry
 	./docs/install_deps.sh
 
-dockerize_deps:
-	./docs/install_dockerize_deps.sh
-
 .PHONY: shell
 shell:  ## start a shell in the starcry build image
 	xhost +
@@ -162,29 +159,11 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 	                    (cp -prv $$PWD/output/report.html out/workdir/web/webroot/report.html || true) && \
 	                    cp -prv $$PWD/input out/workdir/input && \
 	                    strip --strip-debug $$PWD/build/starcry && \
-	                    dockerize --verbose --debug -n -o out --add-file /bin/bash $$PWD/bin/bash \
-						          --add-file $$PWD/docs/fonts/monaco.ttf /workdir/monaco.ttf \
-						          --add-file $$PWD/docs/fonts/monogram.ttf /workdir/monogram.ttf \
-								  --add-file $$PWD/build/starcry /starcry \
-								  /starcry /workdir/input/test.js && \
-	                    mkdir -p out/usr/share/terminfo/x && \
-	                    cp -prv /usr/share/terminfo/x/xterm-16color out/usr/share/terminfo/x/ && \
-	                    mkdir -p out/bin && \
-	                    cp -prv `readlink -f /bin/sh` out/bin/sh && \
-	                    sed -i.bak '2 a ENV TERM=xterm-16color' out/Dockerfile)
-	# first build the non-gui (small) docker image
-	(cd out && ${docker_exe} build . -t docker.io/rayburgemeestre/starcry-no-gui:v`cat ../.version`); \
-	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then \
-	    echo "$$DOCKER_PASSWORD" | $(docker_exe) login -u "$$DOCKER_USERNAME" --password-stdin; \
-	    $(docker_exe) push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version`; \
-	else \
-	    echo not executing podman push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version`; \
-	fi
-	# quick test
-	$(docker_exe) run -it docker.io/rayburgemeestre/starcry:v`cat .version` /starcry --help || true
-	# second build the docker image with gui support
-	@$(call make-clang, sed -i.bak 's/FROM scratch/FROM ubuntu:22.04/g' out/Dockerfile);
-	@$(call make-clang, sed -i.bak '2 a RUN apt update && apt install mesa-common-dev -y && apt clean && apt autoremove -y' out/Dockerfile);
+						cp -prv $$PWD/build/starcry ./out/ && \
+						cp -prv $$PWD/docs/Dockerfile ./out/ && \
+						cp -prv $$PWD/docs/fonts/monaco.ttf ./out/workdir/ && \
+						cp -prv $$PWD/docs/fonts/monogram.ttf ./out/workdir/)
+
 	(cd out && $(docker_exe) build . -t docker.io/rayburgemeestre/starcry:v`cat ../.version`); \
 	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then \
 	    echo "$$DOCKER_PASSWORD" | $(docker_exe) login -u "$$DOCKER_USERNAME" --password-stdin; \
@@ -218,8 +197,8 @@ publish:  ## build from scratch starcry, web, client, docker image. (does not pu
 	make build-web
 	make client
 	make dockerize
-	$(docker_exe) push docker.io/rayburgemeestre/starcry:v`cat .version`
-	$(docker_exe) push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version`
+	$(docker_exe) push docker.io/rayburgemeestre/starcry:v`cat .version` || true
+	# $(docker_exe) push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version` || true
 	echo kubectl apply -f kube/starcry.yaml
 
 #------------
@@ -228,7 +207,7 @@ clion:
 	xhost +
 	mkdir -p /tmp/ccache-root
 	$(docker_exe) rm starcry_clion || true
-	$(docker_exe) run --rm --name starcry_clion -p 18081:18080 -p 10001:10000 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/clion ${HOME}"
+	$(docker_exe) run --rm --name starcry_clion -p 18081:18080 -p 10001:10000 -p 16379:6379 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/clion ${HOME}"
 
 ide_shell:
 	xhost +
