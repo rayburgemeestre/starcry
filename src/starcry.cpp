@@ -28,8 +28,6 @@
 #include "data/video_request.hpp"
 #include "framer.hpp"
 #include "generator.h"
-#include "network/render_client.h"
-#include "network/render_server.h"
 #include "rendering_engine.h"
 #include "sfml_window.h"
 #include "util/image_splitter.hpp"
@@ -37,9 +35,9 @@
 #include "util/logger.h"
 #include "webserver.h"
 
-#include "starcry/client_message_handler.h"
 #include "starcry/metrics.h"
-#include "starcry/server_message_handler.h"
+#include "starcry/redis_client.h"
+#include "starcry/redis_server.h"
 
 // TODO: re-organize this somehow
 #include <sys/prctl.h>
@@ -61,8 +59,6 @@ starcry::starcry(starcry_options &options, std::shared_ptr<v8_wrapper> &context)
       jobs(system->create_queue("jobs", 10)),
       frames(system->create_queue("frames", 10)),
       pe(std::chrono::milliseconds(1000)),
-      server_message_handler_(std::make_shared<server_message_handler>(*this)),
-      client_message_handler_(std::make_shared<client_message_handler>(*this)),
       metrics_(std::make_shared<metrics>(options.notty || options.stdout_,
                                          [this]() {
                                            if (gui) gui->toggle_window();
@@ -628,20 +624,15 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   }
 }
 
-void starcry::setup_server() {
+void starcry::setup_server(const std::string &host) {
   if (options_.gui) gui = std::make_unique<sfml_window>();
 
   system->spawn_consumer<instruction>(
       "generator", std::bind(&starcry::command_to_jobs, this, std::placeholders::_1), cmds);
 
   if (options_.enable_remote_workers) {
-    renderserver = std::make_shared<render_server>(jobs, frames);
-    renderserver->run(std::bind(&client_message_handler::on_client_message,
-                                *client_message_handler_,
-                                std::placeholders::_1,
-                                std::placeholders::_2,
-                                std::placeholders::_3,
-                                std::placeholders::_4));
+    redisserver = std::make_shared<redis_server>(host, *this /*jobs, frames*/);
+    redisserver->run();
   }
 
   for (size_t i = 0; i < options_.num_worker_threads; i++) {
@@ -674,17 +665,11 @@ void starcry::run_server() {
 }
 
 void starcry::run_client(const std::string &host) {
-  render_client client(host);
+  redis_client redisclient(host, *this);
   rendering_engine engine;
   bitmap_wrapper bitmap;
 
-  client.set_message_fun([&](int fd, int type, size_t len, const std::string &msg) {
-    server_message_handler_->on_server_message(client, engine, bitmap, fd, type, len, msg);
-  });
-
-  client.register_me();
-  while (client.poll())
-    ;
+  redisclient.run(bitmap, engine);
 }
 
 const data::viewpoint &starcry::get_viewpoint() const {

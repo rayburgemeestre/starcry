@@ -10,6 +10,9 @@ function(configure_links target)
   # below can be made obsolete if we can get rid of some Joystick related stuff in libsfml-window-s.a
   target_link_libraries(${target} PRIVATE /lib/x86_64-linux-gnu/libudev.so)
 
+  # redis
+  target_link_libraries(${target} PRIVATE /opt/cppse/build/redis-plus-plus/lib/libredis++.a)
+  target_link_libraries(${target} PRIVATE /opt/cppse/build/hiredis/lib/libhiredis.a)
 
   # ffmpeg
   target_link_libraries(${target} PRIVATE /opt/cppse/build/ffmpeg/lib/libswscale.a)

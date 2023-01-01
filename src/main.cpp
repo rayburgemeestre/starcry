@@ -59,8 +59,8 @@ public:
       ("seed", po::value<double>(&rand_seed), "override the random seed used")
       ("num_threads,t", po::value<size_t>(&options.num_worker_threads), "number of local render threads (default 1)")
       ("num_chunks,c", po::value<size_t>(&options.num_chunks), "number of chunks to chop frame into (default 1)")
-      ("server", "start server to allow dynamic renderers (default no)")
-      ("client", po::value<std::string>(&options.host), "start client renderer, connect to host (default localhost)")
+      ("server", po::value<std::string>(&options.host), "start server to allow dynamic renderers (default no)")
+      ("client", po::value<std::string>(&options.host), "start client renderer, connect to host")
       ("no-gui", "disable render to graphical window")
       ("no-output", "disable producing any output (video or stream)")
       ("no-render", "disable all rendering (e.g. for performance testing js)")
@@ -126,7 +126,7 @@ public:
     if (vm.count("client")) {
       sc.run_client(options.host);
     } else {
-      sc.setup_server();
+      sc.setup_server(options.host);
 
       if (!options.interactive) {
         bool is_raw = vm.count("raw");

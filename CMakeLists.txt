@@ -83,6 +83,8 @@ include_directories(
     "/opt/cppse/build/openexr/include/OpenEXR/"
     "/opt/cppse/build/tvision/include/"
     "/opt/cppse/build/inotify-cpp/include/"
+    "/opt/cppse/build/redis-plus-plus/include/"
+    "/opt/cppse/build/hiredis/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/cereal/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/json/include/"

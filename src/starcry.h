@@ -23,12 +23,9 @@ class v8_wrapper;
 class sfml_window;
 class bitmap_wrapper;
 class rendering_engine;
-class render_server;
 class webserver;
 class frame_streamer;
-class render_client;
-class server_message_handler;
-class client_message_handler;
+class redis_server;
 
 namespace interpreter {
 class generator;
@@ -97,8 +94,8 @@ class starcry {
   friend class command_get_shapes;
   friend class command_get_objects;
   friend class command_get_raw_image;
-  friend class server_message_handler;
-  friend class client_message_handler;
+  friend class redis_server;
+  friend class redis_client;
 
 private:
   std::shared_ptr<v8_wrapper> context;
@@ -113,7 +110,7 @@ private:
   std::shared_ptr<queue> cmds;
   std::shared_ptr<queue> jobs;
   std::shared_ptr<queue> frames;
-  std::shared_ptr<render_server> renderserver;
+  std::shared_ptr<redis_server> redisserver;
   std::shared_ptr<sfml_window> gui = nullptr;
   std::shared_ptr<frame_streamer> framer = nullptr;
   std::shared_ptr<webserver> webserv = nullptr;
@@ -122,8 +119,6 @@ private:
   std::map<size_t, std::vector<std::shared_ptr<render_msg>>> buffered_frames;
   size_t current_frame = 1;
   periodic_executor pe;
-  std::shared_ptr<server_message_handler> server_message_handler_;
-  std::shared_ptr<client_message_handler> client_message_handler_;
   std::shared_ptr<metrics> metrics_;
 
   data::viewpoint viewpoint;
@@ -144,7 +139,7 @@ public:
   void add_image_command(std::shared_ptr<data::frame_request> req);
   void add_video_command(std::shared_ptr<data::video_request> req);
 
-  void setup_server();
+  void setup_server(const std::string &host = "");
 
   void run_server();
   void run_client(const std::string &host);

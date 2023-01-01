@@ -30,17 +30,24 @@ spec:
           'until nc -vz redis 6379; do echo "Waiting for redis service"; sleep 2; done;']
       containers:
       - name: starcrycontainer
+        # image: docker.io/rayburgemeestre/build-starcry-ubuntu:22.04
         image: docker.io/rayburgemeestre/starcry:v7
-        command: ["/starcry"]
-        #args: ["-i", "--notty"]
-        args: ["-i", "-t", "0", "-c", "8", "--stdout", "--server", "tcp://redis:6379", "input/test.js"]
+        command: ["/workdir/build/starcry"]
+        args: ["-i", "--no-gui", "-t", "0", "-c", "8", "--stdout", "--server", "tcp://redis:6379", "input/test.js"]
         workingDir: /workdir
-        imagePullPolicy: Always
+        volumeMounts:
+        - mountPath: /workdir
+          name: workdir-volume
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 18080
           name: http
         - containerPort: 10000
           name: internal
+      volumes:
+      - name: workdir-volume
+        hostPath:
+          path: /home/trigen/projects/starcry
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -52,7 +59,7 @@ spec:
     matchLabels:
       app: starcry-workers
       tier: starcry
-  replicas: 2
+  replicas: 1
   revisionHistoryLimit: 2
   template:
     metadata:
@@ -71,11 +78,19 @@ spec:
           'until nc -vz redis 6379; do echo "Waiting for redis service"; sleep 2; done;']
       containers:
       - name: starcrycontainer
+        # image: docker.io/rayburgemeestre/build-starcry-ubuntu:22.04
         image: docker.io/rayburgemeestre/starcry:v7
-        command: ["/starcry"]
+        command: ["/workdir/build/starcry"]
         args: ["--client", "tcp://redis:6379"]
         workingDir: /workdir
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - mountPath: /workdir
+          name: workdir-volume
+      volumes:
+      - name: workdir-volume
+        hostPath:
+          path: /home/trigen/projects/starcry
 ---
 apiVersion: v1
 kind: Service
@@ -162,50 +177,3 @@ spec:
   selector:
     app: redis
     tier: starcry
----
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  annotations:
-    cert-manager.io/issuer: letsencrypt-prod
-    kubernetes.io/ingress.provider: nginx
-    nginx.ingress.kubernetes.io/proxy-body-size: "0"
-    nginx.ingress.kubernetes.io/proxy-buffering: "off"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
-    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
-  name: starcry
-  namespace: starcry
-spec:
-  rules:
-  - host: sc.cppse.nl
-    http:
-      paths:
-      - backend:
-          serviceName: starcry
-          servicePort: 18080
-        path: /
-  tls:
-  - hosts:
-    - sc.cppse.nl
-    secretName: starcry-tls
----
-apiVersion: cert-manager.io/v1alpha2
-kind: Certificate
-metadata:
-  name: starcry
-  namespace: starcry
-spec:
-  acme:
-    config:
-    - domains:
-      - sc.cppse.nl
-      http01:
-        ingress: ""
-        ingressClass: nginx
-  commonName: ""
-  dnsNames:
-  - sc.cppse.nl
-  issuerRef:
-    kind: ClusterIssuer
-    name: letsencrypt-prod
-  secretName: starcry-tls
