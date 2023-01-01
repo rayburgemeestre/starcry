@@ -25,7 +25,7 @@ jobs:
       run: make integration-test
     - name: install npm
       run: sudo apt install -y npm
-    - name: make build_web
-      run: make build_web
+    - name: make build-web
+      run: make build-web
     - name: make dockerize
       run: make dockerize
