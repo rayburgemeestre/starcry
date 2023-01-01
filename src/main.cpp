@@ -4,7 +4,7 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <iostream>
 
 #ifdef __clang__
@@ -170,7 +170,7 @@ public:
   }
 
   static void cleanup_left_over_streaming_files() {
-    namespace fs = std::experimental::filesystem;
+    namespace fs = std::filesystem;
     const fs::path stream_path{"web/webroot/stream"};
     for (const auto &entry : fs::directory_iterator(stream_path)) {
       const auto filename = entry.path().filename().string();

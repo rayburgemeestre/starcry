@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <mutex>
@@ -16,7 +16,7 @@
 #include "v8pp/context.hpp"
 #include "v8pp/function.hpp"
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 /**
  * Header only wrapper around v8pp which provides a simple interface for calling functions,
