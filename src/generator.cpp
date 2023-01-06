@@ -1553,7 +1553,7 @@ generator::_instantiate_object_from_scene(
   }
   auto object_prototype = v8_index_object(i.get_context(), genctx->objects, object_id).template As<v8::Object>();
 
-  logger(DEBUG) << "instantiate_object_from_scene, prototype: " << object_id << std::endl;
+  // logger(DEBUG) << "instantiate_object_from_scene, prototype: " << object_id << std::endl;
 
   // create a new javascript object
   v8::Local<v8::Object> instance = v8::Object::New(isolate);

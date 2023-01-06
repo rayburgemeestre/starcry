@@ -16,30 +16,20 @@ The interface to the user is either the Javascript file or the VueJS based UI.
 
 Create `starcry` alias that uses podman (see docker version below):
 
-    # With X11 support (image +/- 350 MiB)
-    alias starcry='podman run --rm --name starcry -p 18080:18080 -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v6'
+    # image +/- 350 MiB
+    # podman
+    alias starcry='xhost + && podman run --rm --name starcry -p 18080:18080 -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v7'
+    # docker (non-rootless version)
+    alias starcry='xhost + && docker run --rm --name starcry -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v7'
+    # force software rendering
+    alias starcry='xhost + && docker run --rm --name starcry -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --device /dev/dri/card0:/dev/dri/card0 --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v7'
 
-    # Without X11 support (image +/- 50 MiB)
-    alias starcry='podman run --rm --name starcry -p 18080:18080 -i -t -v `pwd`:`pwd` -w `pwd` --entrypoint=/starcry docker.io/rayburgemeestre/starcry-no-gui:v6'
-
-Create `starcry` alias that uses docker (tested only with non-rootless docker):
-
-    alias starcry='xhost + && docker run --rm --name starcry -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v6'
-    alias starcry='xhost + && docker run --rm --name starcry -i -t -v `pwd`:`pwd` -w `pwd` --entrypoint=/starcry docker.io/rayburgemeestre/starcry-no-gui:v6'
-
-Use software rendering in case of OpenGL issues:
-
-    alias starcry='docker run --rm --name starcry -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --device /dev/dri/card0:/dev/dri/card0 --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v6'
-
-Get a test project file:
+Get a test project file and render it:
 
     wget https://raw.githubusercontent.com/rayburgemeestre/starcry/master/input/script.js
-
-Render it:
-
     starcry ./script.js
 
-View the video:
+View the video with `ffplay`, `mpv` or something else:
 
     ffplay output*.h264
 
@@ -54,7 +44,7 @@ View the video:
     make dockerize  # create starcry runtime containers
 
 The executable from the dockerized build will be in `build` and should run on
-Ubuntu 20.04.
+Ubuntu 22.04.
 
 
 ## Architecture
@@ -72,9 +62,10 @@ Ubuntu 20.04.
 - `OpenEXR` - used for writing exr files
 - `tvision` - used for the console UI
 - `inotify-cpp` - used for monitoring changes to loaded js file on disk.
+- `redis` - used for pub/sub between starcry and remote rendering workers
 
 Almost everything is statically linked, resulting in a relatively portable binary.
 
-The Web UI is based on Vue2. Currently the UI is using Buefy, which is not going to support Vue3.
+The Web UI is based on Vue2. Currently, the UI is using Buefy, which is not going to support Vue3.
 
 Currently waiting for Vue3 to become more mature before switching to it.
