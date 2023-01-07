@@ -1844,7 +1844,7 @@ void generator::debug_print_next() {
                  << loc.position_cref().x << "," << loc.position_cref().y << " +" << mov.velocity().x << ","
                  << mov.velocity().y << ", last_collide=" << beh.last_collide() << ", mass=" << gen.mass()
                  << ", angle = " << gen.angle() << ", gravity_group=" << beh.gravity_group()
-                 << ", texture = " << sty.texture() << std::endl;
+                 << ", opacity=" << gen.opacity() << ", texture = " << sty.texture() << std::endl;
   };
   for (auto& shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
     meta_visit(
