@@ -18,7 +18,7 @@ void scale_settings::update() {
 void scale_settings::revert() {
   video_scale_next = video_scale;
   video_scale_intermediate = video_scale;
-  video_scales.clear();
+  reset();
 }
 
 void scale_settings::commit() {
