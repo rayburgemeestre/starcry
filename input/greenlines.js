@@ -48,11 +48,11 @@ _ = {
       'blending_type': blending_type.normal,
       'gradient': 'white',
       'radius': 0.,
-      'pivot': true,
+      // 'pivot': true,
       'radiussize': 0,
-      'props': {'level': 0, 'left': [], 'right': []},
+      'props': {'level': 0},
       'init': function() {
-        if (this.props.level > 5 /* was 3 */) {
+        if (this.props.level > 3) {
           return;
         }
         let n = 12;  // Math.round(rand() * 10);
@@ -80,21 +80,15 @@ _ = {
             'z': 0,
           });
 
-          if (true) {
-            let line = this.spawn3(
-                {
-                  'id': 'line',
-                  // 'scale': 1.0 / this.props.level,
-                  // 'opacity': opac * 0.5,
-                  'x': 0,
-                  'y': 0,
-                  'x2': new_x,
-                  'y2': new_y,
-                  'z': 0,
-                },
-                sub,
-                this.unique_id);
-          }
+          this.spawn2(
+              {
+                'id': 'line',
+                // 'scale': 1.0 / this.props.level,
+                // 'opacity': opac * 0.5,
+                'z': 0,
+              },
+              sub
+          );
         }
       },
       'time': function(t, e, s, tt) {
@@ -124,7 +118,7 @@ _ = {
       'gradient': 'green',
       'radius': 0,
       //'opacity': 0.5,  // / 3.,
-      'opacity': 0.1,  // / 3.,
+      'opacity': 1.0,  // / 3.,
       'radiussize': 2,
       'init': function() {},
       'time': function(t) {},
