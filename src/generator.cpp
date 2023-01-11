@@ -814,6 +814,7 @@ void generator::handle_rotations(data_staging::shape_t& shape) {
     vector2d current;
     vector2d current1;
     vector2d current2;
+    double current_rotation = 0;
     for (size_t i = 0; i <= concrete_shape.meta_cref().level(); i++) {
       meta_callback(stack[i].get(), [&]<typename TP>(TP& parent_shape) {
         if constexpr (std::is_same_v<TP, data_staging::circle>) {
@@ -828,9 +829,10 @@ void generator::handle_rotations(data_staging::shape_t& shape) {
         }
 
         double angle = parent_shape.generic_ref().angle();
+        current_rotation += parent_shape.generic_ref().rotate();
 
         const auto rotate = [&](auto& current, auto& parent) {
-          auto angle1 = angle + get_angle(parent.x, parent.y, current.x, current.y);
+          auto angle1 = current_rotation + angle + get_angle(parent.x, parent.y, current.x, current.y);
           angle1 = std::fmod(angle1, 360.);
           auto rads = angle1 * M_PI / 180.0;
           auto ratio = 1.0;
@@ -1571,6 +1573,23 @@ generator::_instantiate_object_from_scene(
   // instantiate the prototype into newly allocated javascript object
   _instantiate_object(i, scene_object, object_prototype, instance, current_level, parent_object_ns);
 
+  // inherit some fields from parent
+  if (parent_object) {
+    meta_visit(
+        const_cast<data_staging::shape_t&>(*parent_object),
+        [&](data_staging::circle& shape) {
+          i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
+        },
+        [&](data_staging::line& shape) {
+          i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
+        },
+        [&](data_staging::text& shape) {
+          i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
+        },
+        [&](data_staging::script& shape) {
+        });
+  }
+
   // give it a unique id (it already has been assigned a __random_hash__ for debugging purposes
   static int64_t counter = 0;
   i.set_field(instance, "unique_id", v8::Number::New(i.get_isolate(), ++counter));
@@ -1599,6 +1618,7 @@ generator::_instantiate_object_from_scene(
     c.behavior_ref().set_gravity_group(i.str(instance, "gravity_group", ""));
     c.toroidal_ref().set_group(i.str(instance, "toroidal", ""));
     c.generic_ref().set_angle(i.double_number(instance, "angle", 0));
+    c.generic_ref().set_rotate(i.double_number(instance, "rotate", 0));
     c.generic_ref().set_opacity(i.double_number(instance, "opacity", 1));
     c.generic_ref().set_mass(i.double_number(instance, "mass", 1));
     c.generic_ref().set_scale(i.double_number(instance, "scale", 1));
@@ -1818,6 +1838,7 @@ void generator::_instantiate_object_copy_fields(v8_interact& i,
   i.copy_field_if_exists(new_instance, "opacity", scene_obj);
   i.copy_field_if_exists(new_instance, "scale", scene_obj);
   i.copy_field_if_exists(new_instance, "angle", scene_obj);
+  i.copy_field_if_exists(new_instance, "rotate", scene_obj);
   i.copy_field_if_exists(new_instance, "pivot", scene_obj);
   i.copy_field_if_exists(new_instance, "text", scene_obj);
   i.copy_field_if_exists(new_instance, "text_align", scene_obj);
@@ -1844,7 +1865,8 @@ void generator::debug_print_next() {
                  << loc.position_cref().x << "," << loc.position_cref().y << " +" << mov.velocity().x << ","
                  << mov.velocity().y << ", last_collide=" << beh.last_collide() << ", mass=" << gen.mass()
                  << ", angle = " << gen.angle() << ", gravity_group=" << beh.gravity_group()
-                 << ", opacity=" << gen.opacity() << ", texture = " << sty.texture() << std::endl;
+                 << ", opacity=" << gen.opacity() << ", texture = " << sty.texture()
+                 << ", gradient = " << sty.gradient() << std::endl;
   };
   for (auto& shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
     meta_visit(

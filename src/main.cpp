@@ -77,7 +77,10 @@ public:
       ("caching", "enable caching (experimental feature)")
       ("raw,r", "write raw 32-bit EXR frames (default no)")
       ("stdout", "print logger output to stdout (disables ncurses ui)")
-      ("debug", "enable renderer visual debug");
+      ("debug", "enable renderer visual debug")
+      ("concurrent-commands", po::value<int>(&options.concurrent_commands), "max. concurrent commands in queue (default: 10)")
+      ("concurrent-jobs", po::value<int>(&options.concurrent_jobs), "max. concurrent jobs in queue (default: 10)")
+      ("concurrent-frames", po::value<int>(&options.concurrent_frames), "max. concurrent frames in queue (default: 10)");
     // clang-format on
 
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);

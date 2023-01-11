@@ -18,10 +18,17 @@ _ = {
       'type': 'script',
       'file': 'input/subobj.js',
     },
-    'memleak': {
+    'greenlines': {
       'type': 'script',
-      'file': 'input/memory_leak.js',
+      'file': 'input/greenlines.js',
+      'time': function(t, e, s, tt) {
+        this.scale = 1.0 + 0.1 * Math.sin(t * 2 * Math.PI);
+      }
     },
+    //'memleak': {
+    //  'type': 'script',
+    //  'file': 'input/memory_leak.js',
+    //},
     'subscript': {
       'type': 'script',
       'file': 'input/subscript.js',
@@ -45,6 +52,8 @@ _ = {
     'minimize_steps_per_object': false,
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
     'grain_for_opacity': true,
+    'min_intermediates': 10,
+    'max_intermediates': 10,
   },
   'preview': {
     'width': 512,
@@ -59,12 +68,13 @@ _ = {
       'duration': 5.0,
       'objects': [
         {'id': 'split', 'label': 'split', 'x': 0, 'y': -100, 'z': 0},
-        {'id': 'memleak', 'label': 'memleak', 'x': 0, 'y': 0, 'z': 0},
+        // {'id': 'memleak', 'label': 'memleak', 'x': 0, 'y': 0, 'z': 0},
         {'id': 'motion', 'label': 'motion', 'x': 0, 'y': 0, 'z': 0},
         {'id': 'orbit', 'label': 'orbit1', 'x': -500, 'y': 0, 'z': 0},
         {'id': 'orbit', 'label': 'orbit2', 'x': 500, 'y': 0, 'z': 0},
         {'id': 'logo', 'label': 'logo', 'x': 0, 'y': 100, 'z': 0},
         {'id': 'orbitz', 'label': 'orbitz', 'x': 0, 'y': -100, 'z': 0},
+        {'id': 'greenlines', 'label': 'g1', 'x': -100, 'y': -100, 'z': 0},
       ],
     },
     {

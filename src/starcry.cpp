@@ -55,9 +55,9 @@ starcry::starcry(starcry_options &options, std::shared_ptr<v8_wrapper> &context)
       gen(nullptr),
       engines({}),
       system(std::make_shared<pipeline_system>(false)),
-      cmds(system->create_queue("commands", 10)),
-      jobs(system->create_queue("jobs", 10)),
-      frames(system->create_queue("frames", 10)),
+      cmds(system->create_queue("commands", options.concurrent_commands)),
+      jobs(system->create_queue("jobs", options.concurrent_jobs)),
+      frames(system->create_queue("frames", options.concurrent_frames)),
       pe(std::chrono::milliseconds(1000)),
       metrics_(std::make_shared<metrics>(options.notty || options.stdout_,
                                          [this]() {
@@ -461,7 +461,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   std::shared_ptr<data::video_request> v = instr->video_ptr();
   auto type = job_msg->original_job_message->original_instruction->type2;
   bool finished = false;
-  auto job = *job_msg->original_job_message->job;
+  auto &job = *job_msg->original_job_message->job;  // this will allocate a lot of memory if copied
   auto job_client = f ? f->client() : v->client();
   if (options_.level != log_level::silent) {
     const auto frame = job.job_number == std::numeric_limits<size_t>::max() ? 0 : job.job_number;

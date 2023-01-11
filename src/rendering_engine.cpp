@@ -100,7 +100,7 @@ image &rendering_engine::render(size_t thread_num,
   // in case -c 1 is specified, we try to 'auto chunk' the image based on number of motion blur frames
   // the worst-case is having each pixel change, meaning memory usage multiplies the entire image size
   // times the number of motion blur frames.
-  if (scales.size() <= 1 || num_chunks > 1) {
+  if (scales.size() <= 1 && num_chunks > 1) {
     return _exec(width, height, 0, 0);
   }
 
@@ -113,7 +113,10 @@ image &rendering_engine::render(size_t thread_num,
   util::ImageSplitter<uint32_t> imagesplitter{width, height};
   // This can introduce some overhead, but at least prevents issues with running out of memory
   // If needed we can make this configurable.
-  const auto rectangles = imagesplitter.split(scales.size() * 4, util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
+  //  const auto rectangles = imagesplitter.split(std::max(uint32_t(height), uint32_t(scales.size() * 4)),
+  //  util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
+  const auto rectangles =
+      imagesplitter.split(uint32_t(scales.size()), util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
 
   auto &bmp_pixels = bmp.pixels();
   size_t bmp_pixels_index = 0;

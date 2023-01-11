@@ -9,6 +9,7 @@ namespace data_staging {
 class generic {
 private:
   double angle_ = 0;
+  double rotate_ = 0;
   double scale_ = 1.;
   double opacity_ = 1.;
   double mass_ = 1;
@@ -16,6 +17,9 @@ private:
 public:
   double angle() const {
     return angle_;
+  }
+  double rotate() const {
+    return rotate_;
   }
   double scale() const {
     return scale_;
@@ -28,6 +32,9 @@ public:
   }
   void set_angle(double angle) {
     angle_ = angle;
+  }
+  void set_rotate(double rotate) {
+    rotate_ = rotate;
   }
   void set_scale(double scale) {
     scale_ = scale;

@@ -23,6 +23,9 @@ RUN sudo apt-get install -y nodejs
 # IDE needs browser as well sometimes
 RUN sudo apt install -y firefox
 
+# IDE needs bunch of stuff for markdown viewer
+RUN sudo apt install -y libnss3 libnspr4 libatk-bridge2.0-0 libatspi2.0-0
+
 # Integration tests dependencies
 RUN apt install -y imagemagick-6.q16 ffmpeg
 

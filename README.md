@@ -62,7 +62,7 @@ Ubuntu 22.04.
 - `OpenEXR` - used for writing exr files
 - `tvision` - used for the console UI
 - `inotify-cpp` - used for monitoring changes to loaded js file on disk.
-- `redis` - used for pub/sub between starcry and remote rendering workers
+- `Redis` - used for pub/sub between starcry and remote rendering workers
 
 Almost everything is statically linked, resulting in a relatively portable binary.
 

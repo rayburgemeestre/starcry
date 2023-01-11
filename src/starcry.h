@@ -84,6 +84,10 @@ struct starcry_options {
   std::optional<double> rand_seed;
 
   log_level level = log_level::info;
+
+  int concurrent_commands = 10;
+  int concurrent_jobs = 10;
+  int concurrent_frames = 10;
 };
 
 class starcry {

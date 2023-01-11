@@ -27,6 +27,10 @@ private:
 public:
   styling() {
     if (gradients_obj_ == nullptr) {
+      if (v8::Isolate::GetCurrent() == nullptr) {
+        std::cout << "Isolate is null, v8 not loaded, assuming unit tests." << std::endl;
+        return;
+      }
       gradients_obj_ = std::make_shared<v8::Persistent<v8::Array>>();
       (*gradients_obj_).Reset(v8::Isolate::GetCurrent(), v8::Array::New(v8::Isolate::GetCurrent()));
     }

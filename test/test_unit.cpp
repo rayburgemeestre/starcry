@@ -1,8 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "data/color.hpp"
-
 #include "data/gradient.hpp"
+#include "data_staging/shape.hpp"
 
 TEST_CASE( "Blending two colors" ) {
   REQUIRE( blend(data::color{0, 0, 0, 0}, data::color{1, 0, 0, 1}) == data::color{1, 0, 0, 1} );
@@ -212,4 +212,18 @@ TEST_CASE( "Testing frame stepper rewind" ) {
   while (fs.has_next_step()) {
     steps++;
   }
+}
+
+TEST_CASE( "Test size of shape" ) {
+  using namespace data_staging;
+  shape_t a;
+  circle c("circle1", 1000, vector2d{0, 0}, 0, 10.);
+  auto largest_size = sizeof(c);
+  line l("line1", 1000, vector2d{0, 0}, vector2d{10, 10}, 10.);
+  largest_size = std::max(largest_size, sizeof(l));
+  text t("text1", 1000, vector2d{0, 0}, "Hello World", 10., "align", false);
+  largest_size = std::max(largest_size, sizeof(t));
+  script s("script1", 1000, vector2d{0, 0});
+  largest_size = std::max(largest_size, sizeof(s));
+  REQUIRE(sizeof(a) == largest_size + 8 /* bytes */);
 }

@@ -452,7 +452,7 @@ public:
     if (top_y < 0) top_y = 0;
     if (bottom_y > height_) bottom_y = height_;
 
-    for (int current_y = top_y; current_y <= bottom_y; current_y += 1) {
+    for (int current_y = top_y; current_y < bottom_y; current_y += 1) {
       // http://www.mathopenref.com/data::coordintersection.html "When one line is vertical"
       double current_x = 0;
       double intersection_x1 = 0;

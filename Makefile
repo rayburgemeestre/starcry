@@ -47,7 +47,7 @@ all:  ## build all binaries in cmake
 .PHONY: build-gcc
 build-gcc:  ## build starcry binary using docker (with gcc)
 	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which g++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
-	              cmake --build build --target starcry && \
+	              cmake --build build --target starcry -j 4 && \
 	              strip --strip-debug build/starcry)
 
 .PHONY: test

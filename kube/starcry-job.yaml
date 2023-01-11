@@ -1,0 +1,169 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: starcry
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starcry
+  namespace: starcry
+spec:
+  selector:
+    matchLabels:
+      app: starcry
+      tier: starcry
+  replicas: 1
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        app: starcry
+        tier: starcry
+    spec:
+      initContainers:
+      - name: check-redis-reachable
+        image: busybox:latest
+        command: ['sh', '-c',
+          'until nc -vz redis 6379; do echo "Waiting for redis service"; sleep 2; done;']
+      containers:
+      - name: starcrycontainer
+        image: docker.io/rayburgemeestre/starcry:v7
+        command: ["/starcry"]
+        #args: ["-i", "--notty"]
+        args: ["--no-gui", "-t", "0", "-c", "8", "--stdout", "--server", "tcp://redis:6379", "input/script.js", "-o", "/tmp/video.h264"]
+        workingDir: /workdir
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 18080
+          name: http
+        - containerPort: 10000
+          name: internal
+        volumeMounts:
+        - mountPath: /tmp
+          name: workdir-volume
+      volumes:
+      - name: workdir-volume
+        hostPath:
+          path: /home/trigen/projects/starcry
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starcry-workers
+  namespace: starcry
+spec:
+  selector:
+    matchLabels:
+      app: starcry-workers
+      tier: starcry
+  replicas: 10
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        app: starcry-workers
+        tier: starcry
+    spec:
+      initContainers:
+      - name: check-starcry-reachable
+        image: busybox:latest
+        command: ['sh', '-c',
+          'until nc -vz starcry 18080; do echo "Waiting for starcry rendering service"; sleep 2; done;']
+      - name: check-redis-reachable
+        image: busybox:latest
+        command: ['sh', '-c',
+          'until nc -vz redis 6379; do echo "Waiting for redis service"; sleep 2; done;']
+      containers:
+      - name: starcrycontainer
+        image: docker.io/rayburgemeestre/starcry:v7
+        command: ["/starcry"]
+        args: ["--client", "tcp://redis:6379"]
+        workingDir: /workdir
+        imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: starcry
+  namespace: starcry
+  labels:
+    app: starcry
+    tier: starcry
+spec:
+  type: NodePort
+  ports:
+  - port: 18080
+    name: http
+  - port: 10000
+    name: internal
+  selector:
+    app: starcry
+    tier: starcry
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis
+  namespace: starcry
+  labels:
+    app: redis
+    tier: starcry
+spec:
+  containers:
+  - name: redis
+    image: redis:7.0.7
+    command:
+      - redis-server
+      - "/redis-master/redis.conf"
+    env:
+    - name: MASTER
+      value: "true"
+    ports:
+    - containerPort: 6379
+      name: http
+    #resources:
+    #  limits:
+    #    cpu: "0.1"
+    volumeMounts:
+    - mountPath: /redis-master-data
+      name: data
+    - mountPath: /redis-master
+      name: config
+  volumes:
+    - name: data
+      emptyDir: {}
+    - name: config
+      configMap:
+        name: redis-config
+        items:
+        - key: redis-config
+          path: redis.conf
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: starcry
+data:
+  redis-config: |
+    maxmemory 2gb
+    maxmemory-policy allkeys-lru
+    client-output-buffer-limit pubsub 512mb 256mb 120
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: starcry
+  labels:
+    app: redis
+    tier: starcry
+spec:
+  type: NodePort
+  ports:
+  - port: 6379
+    name: http
+  selector:
+    app: redis
+    tier: starcry

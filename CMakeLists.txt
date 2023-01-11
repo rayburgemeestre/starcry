@@ -33,6 +33,7 @@ add_subdirectory(libs/Catch2)
 
 # unittests
 add_executable(tests test/test_unit.cpp)
+target_link_libraries(tests PRIVATE /opt/cppse/build/v8pp/lib/libv8_monolith.a)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")

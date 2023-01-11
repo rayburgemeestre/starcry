@@ -1,7 +1,7 @@
 _ = {
   'gradients': {
     'ce475a6c-2427-420c-85de-6316f3027313': [
-      {'position': 0, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
+      {'position': 0, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
       {'position': 1, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
     ],
     'cd35b59b-bae9-4bef-b689-dcc8720e6be9': [
