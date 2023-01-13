@@ -93,7 +93,6 @@ export default {
       this.update();
     },
     'update': function() {
-      console.log("update");
       if (timer !== false) {
         clearTimeout(timer);
         timer = false;

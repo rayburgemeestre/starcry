@@ -156,7 +156,7 @@ export default {
       menu: '',
       filename: '',
       current_frame : 0,
-      num_chunks : 16,
+      num_chunks : 1,
       max_frames : 250,
       rendering: 0,
       max_queued: 10,
@@ -424,7 +424,9 @@ export default {
       onRuntimeInitialized: function() {
         console.log("Setting Initial Full HD dimensions");
         Module.start(1920, 1080, 1920, 1080);
-      }
+      },
+      print: function(text) { console.log('stdout: ' + text) },
+      printErr: function(text) { console.log('stderr: ' + text) },
     };
     window.addEventListener('resize', this.update_size);
     time1 = setTimeout(this.update_size, 1000);

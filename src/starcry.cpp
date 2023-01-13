@@ -513,7 +513,11 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
     std::swap(job_msg->pixels_raw, pixels_raw);
 
     if (job_client != nullptr && f && (f->raw_bitmap() || f->raw_image())) {
-      auto fun = [&, width, height](std::shared_ptr<BitmapHandler> bmp_handler, std::shared_ptr<render_msg> job_msg) {
+      auto fun = [&](std::shared_ptr<BitmapHandler> bmp_handler,
+                     std::shared_ptr<render_msg> job_msg,
+                     seasocks::WebSocket *job_client,
+                     uint32_t width,
+                     uint32_t height) {
         std::string buffer;
         if (job_msg->pixels.size())
           for (const auto &i : job_msg->pixels) {
@@ -522,42 +526,84 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
         else
           for (const auto &i : job_msg->pixels_raw) {
             uint32_t pixel = 0;
-            pixel |= (int(i.r * 255) << 16);
+            pixel |= (int(i.a * 255) << 24);
+            pixel |= (int(i.b * 255) << 16);
             pixel |= (int(i.g * 255) << 8);
-            pixel |= (int(i.b * 255) << 0);
+            pixel |= (int(i.r * 255) << 0);
             buffer.append((char *)&pixel, sizeof(pixel));
           }
         bmp_handler->callback(job_client, buffer, width, height);
       };
-      if (webserv) webserv->execute_bitmap(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+      if (webserv) {
+        // This code is a little verbose, but somehow I had issues with job_client and other values such as job_client,
+        // not being (properly?) captured. I'm now passing stuff explicitly as parameters. My guess is that for reasons
+        // beyond my understanding I was hitting some undefined behavior issue. And the compiler was optimizing stuff,
+        // that resulted in inconsistent memory. I'm happy after hours of debugging that this more verbose versions
+        // seems to be doing the right thing consistently.
+        webserv->execute_bitmap(
+            [&fun, job_client, width, height](std::shared_ptr<BitmapHandler> bmp_handler,
+                                              std::shared_ptr<render_msg> job_msg) {
+              fun(bmp_handler, job_msg, job_client, width, height);
+            },
+            job_msg);
+      }
     }
 
     if (job_client != nullptr && f && f->compressed_image()) {
-      auto fun = [&](std::shared_ptr<ImageHandler> image_handler, std::shared_ptr<render_msg> job_msg) {
+      auto fun = [&](std::shared_ptr<ImageHandler> image_handler,
+                     std::shared_ptr<render_msg> job_msg,
+                     seasocks::WebSocket *job_client,
+                     uint32_t width,
+                     uint32_t height) {
         image_handler->callback(job_client, job_msg->buffer);
       };
       if (webserv) {
-        webserv->execute_image(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+        webserv->execute_image(
+            [&fun, job_client, width, height](std::shared_ptr<ImageHandler> image_handler,
+                                              std::shared_ptr<render_msg> job_msg) {
+              fun(image_handler, job_msg, job_client, width, height);
+            },
+            job_msg);
       }
     }
 
     if (job_client != nullptr && f && f->metadata_objects()) {
       job_msg->ID = webserv->get_client_id(job_client);
-      auto fun = [&](std::shared_ptr<ObjectsHandler> objects_handler, std::shared_ptr<render_msg> job_msg) {
-        if (objects_handler->_links.find(job_msg->ID) != objects_handler->_links.end()) {
+      auto fun = [&](std::shared_ptr<ObjectsHandler> objects_handler,
+                     std::shared_ptr<render_msg> job_msg,
+                     seasocks::WebSocket *job_client,
+                     uint32_t width,
+                     uint32_t height) {
+        if (objects_handler->_links.contains(job_msg->ID)) {
           auto con = objects_handler->_links[job_msg->ID];  // find con that matches ID this msg is from
           objects_handler->callback(con, job_msg->buffer);
         }
       };
-      if (webserv) webserv->execute_objects(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+      if (webserv) {
+        webserv->execute_objects(
+            [&fun, job_client, width, height](std::shared_ptr<ObjectsHandler> objects_handler,
+                                              std::shared_ptr<render_msg> job_msg) {
+              fun(objects_handler, job_msg, job_client, width, height);
+            },
+            job_msg);
+      }
     }
 
     if (job_client != nullptr && f && f->renderable_shapes()) {
-      auto fun = [&](std::shared_ptr<ShapesHandler> shapes_handler, std::shared_ptr<render_msg> job_msg) {
+      auto fun = [&](std::shared_ptr<ShapesHandler> shapes_handler,
+                     std::shared_ptr<render_msg> job_msg,
+                     seasocks::WebSocket *job_client,
+                     uint32_t width,
+                     uint32_t height) {
         shapes_handler->callback(job_client, job_msg->buffer);
       };
       if (webserv) {
-        webserv->execute_shapes(std::bind(fun, std::placeholders::_1, std::placeholders::_2), job_msg);
+        webserv->execute_shapes(
+            [&fun, job_client, width, height](std::shared_ptr<ShapesHandler> shapes_handler,
+                                              std::shared_ptr<render_msg> job_msg) {
+              fun(shapes_handler, job_msg, job_client, width, height);
+            },
+            job_msg);
       }
     }
 
@@ -573,6 +619,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   }
 
   while (true) {
+    // find frame in buffer
     auto pos = buffered_frames.find(current_frame);
     if (pos == buffered_frames.end()) {
       pos = buffered_frames.find(std::numeric_limits<uint32_t>::max());
@@ -580,42 +627,47 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
         break;
       }
     }
-    if (pos->second.empty()) {
+    // all chunks are present for the frame
+    if (pos->second.size() != pos->second[0]->original_job_message->job->num_chunks) {
       break;
     }
-    if (pos->second.size() == pos->second[0]->original_job_message->job->num_chunks) {
-      std::sort(pos->second.begin(), pos->second.end(), [](const auto &lh, const auto &rh) {
-        return lh->original_job_message->job->chunk < rh->original_job_message->job->chunk;
-      });
 
-      std::vector<uint32_t> pixels;
-      std::vector<data::color> pixels_raw;
-      size_t width = 0;
-      size_t height = 0;
-      bool last_frame = false;
-      size_t frame_number = 0;
-      for (const auto &chunk : pos->second) {
-        pixels.insert(std::end(pixels), std::begin(chunk->pixels), std::end(chunk->pixels));
-        pixels_raw.insert(std::end(pixels_raw), std::begin(chunk->pixels_raw), std::end(chunk->pixels_raw));
-        width = chunk->width;  // width does not need to be accumulated since we split in horizontal slices
-        height += chunk->height;
-        last_frame = chunk->original_job_message->job->last_frame;
-        frame_number = chunk->original_job_message->job->frame_number;
-      }
+    // sort them first
+    std::sort(pos->second.begin(), pos->second.end(), [](const auto &lh, const auto &rh) {
+      return lh->original_job_message->job->chunk < rh->original_job_message->job->chunk;
+    });
 
-      finished = process(width, height, pixels, pixels_raw, last_frame);
+    // constructed full frame data (all chunks combined)
+    // TODO: combine this in a struct
+    std::vector<uint32_t> pixels;
+    std::vector<data::color> pixels_raw;
+    size_t width = 0;
+    size_t height = 0;
+    bool last_frame = false;
+    size_t frame_number = 0;
 
-      if (job.job_number == std::numeric_limits<uint32_t>::max()) {
-        save_images(pixels_raw, width, height, frame_number, true, true, job.output_file);
-        if (job.last_frame) {
-          finished = true;
-        }
-      } else {
-        save_images(pixels_raw, width, height, frame_number, true, true, job.output_file);
-        current_frame++;
+    for (const auto &chunk : pos->second) {
+      pixels.insert(std::end(pixels), std::begin(chunk->pixels), std::end(chunk->pixels));
+      pixels_raw.insert(std::end(pixels_raw), std::begin(chunk->pixels_raw), std::end(chunk->pixels_raw));
+
+      // these don't have to be accumulated
+      width = chunk->width;
+      height = chunk->height;
+
+      last_frame = chunk->original_job_message->job->last_frame;
+      frame_number = chunk->original_job_message->job->frame_number;
+    }
+
+    finished = process(width, height, pixels, pixels_raw, last_frame);
+
+    if (job.job_number == std::numeric_limits<uint32_t>::max()) {
+      save_images(pixels_raw, width, height, frame_number, true, true, job.output_file);
+      if (job.last_frame) {
+        finished = true;
       }
     } else {
-      break;
+      save_images(pixels_raw, width, height, frame_number, true, true, job.output_file);
+      current_frame++;
     }
     buffered_frames.erase(pos);
   }

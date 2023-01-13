@@ -32,6 +32,8 @@
 
 namespace interpreter {
 void fix_properties(std::vector<std::vector<data_staging::shape_t>>& scene_shapes) {
+  // This prevents a massive memory leak. Is fix_properties needed?
+  return;
   for (auto& shapes : scene_shapes) {
     for (auto& shape : shapes) {
       meta_callback(shape, [](auto& the_shape) {
@@ -423,8 +425,11 @@ bool generator::_generate_frame() {
     metrics_->complete_job(job->job_number);
     v8::HeapStatistics hs;
     context->isolate->GetHeapStatistics(&hs);
-    logger(INFO) << "Memory usage: " << (double(getValue()) / 1024. / 1024.)
-                 << " GB. V8 Heap: " << (hs.total_heap_size() / 1024. / 1024. / 1024.) << " MB." << std::endl;
+    const auto total_usage = (double(getValue()) / 1024. / 1024.);
+    const auto v8_usage = (hs.total_heap_size() / 1024. / 1024. / 1024.);
+    logger(INFO) << "Memory usage: " << total_usage << " GB. "
+                 << "V8 Heap: " << v8_usage << " GB. "
+                 << "Other: " << (total_usage - v8_usage) << " GB." << std::endl;
 
   } catch (std::exception& ex) {
     std::cout << ex.what() << std::endl;
@@ -1586,8 +1591,7 @@ generator::_instantiate_object_from_scene(
         [&](data_staging::text& shape) {
           i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
         },
-        [&](data_staging::script& shape) {
-        });
+        [&](data_staging::script& shape) {});
   }
 
   // give it a unique id (it already has been assigned a __random_hash__ for debugging purposes

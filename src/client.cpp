@@ -16,7 +16,6 @@
 #include "rendering_engine.h"
 
 bool initialized = false;
-bool client_is_connected = false;
 std::chrono::high_resolution_clock::time_point begin_time, end_time;
 rendering_engine engine;
 data::job job;
@@ -31,11 +30,10 @@ auto last_received = std::chrono::high_resolution_clock::now();
 auto wake_for = 1000;  // milliseconds
 
 void wake_main_loop() {
-#ifndef EMSCRIPTEN
-  // wake up main loop for 100 ms
+#ifdef EMSCRIPTEN
+  // wake up main loop
   emscripten_resume_main_loop();
   last_received = std::chrono::high_resolution_clock::now();
-  client_is_connected = true;
 #endif
 }
 
@@ -118,7 +116,7 @@ void mainloop(void *arg) {
   // pause mainloop after 100 ms have passed
   const auto current_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> idle = current_time - last_received;
-  if (idle.count() > wake_for && client_is_connected) {
+  if (idle.count() > wake_for) {
     emscripten_pause_main_loop();
   }
 
