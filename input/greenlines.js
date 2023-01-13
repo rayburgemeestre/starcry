@@ -182,8 +182,8 @@ _ = {
     'grain_for_opacity': false,
     'dithering': true,
     //'min_intermediates': 10,
-    'min_intermediates': 100,
-    'max_intermediates': 100,
+    'min_intermediates': 2,
+    'max_intermediates': 2,
     'minimize_steps_per_object': false,  // this guy is interesting to debug!!
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
   },

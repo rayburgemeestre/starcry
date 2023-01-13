@@ -1,14 +1,14 @@
 _ = {
   'gradients': {
-    'ce475a6c-2427-420c-85de-6316f3027313': [
+    'red': [
       {'position': 0, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
       {'position': 1, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
     ],
-    'cd35b59b-bae9-4bef-b689-dcc8720e6be9': [
+    'green': [
       {'position': 0, 'r': 0, 'g': 1, 'b': 0, 'a': 1},
       {'position': 1, 'r': 0, 'g': 1, 'b': 0, 'a': 0},
     ],
-    '64f1da9f-07b2-46bd-8f62-30f9534f0cfd': [
+    'blue': [
       {'position': 0, 'r': 0, 'g': 0, 'b': 1, 'a': 1},
       {'position': 1, 'r': 0, 'g': 0, 'b': 1, 'a': 0},
     ]
@@ -52,9 +52,9 @@ _ = {
       'radius': 100,
       'radiussize': 10.0,
       'gradients': [
-        [1.0, 'ce475a6c-2427-420c-85de-6316f3027313'],
-        [0.0, 'cd35b59b-bae9-4bef-b689-dcc8720e6be9'],
-        [0.0, '64f1da9f-07b2-46bd-8f62-30f9534f0cfd'],
+        [1.0, 'red'],
+        [0.0, 'green'],
+        [0.0, 'blue'],
       ],
       'props': {
         'maxradius': 250.0,
