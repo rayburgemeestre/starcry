@@ -83,7 +83,8 @@ void redis_server::run() {
                 std::exit(1);
               }
               auto related_job = find->second;
-              logger(DEBUG) << "job number and chunk: " << job.job_number << " " << job.chunk << std::endl;
+              logger(DEBUG) << "job number and chunk: " << job.job_number << " " << job.chunk << " " << std::boolalpha
+                            << job.last_frame << std::endl;
 
               if (job.last_frame) recv_last = true;
               // TODO: use separate message for this

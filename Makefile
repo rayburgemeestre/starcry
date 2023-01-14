@@ -36,7 +36,7 @@ help: # with thanks to Ben Rady
 .PHONY: build
 build:  ## build starcry binary using docker (with clang)
 	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
-	                    cmake --build build --target starcry && \
+	                    cmake --build build --target starcry -j 4 && \
 	                    strip --strip-debug build/starcry)
 
 .PHONY: all

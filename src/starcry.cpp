@@ -618,58 +618,80 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
     }
   }
 
-  while (true) {
-    // find frame in buffer
-    auto pos = buffered_frames.find(current_frame);
-    if (pos == buffered_frames.end()) {
-      pos = buffered_frames.find(std::numeric_limits<uint32_t>::max());
-      if (pos == buffered_frames.end()) {
-        break;
+  std::map<size_t, std::vector<std::shared_ptr<render_msg>>>::iterator pos = buffered_frames.end();
+
+  bool flag = buffered_frames.size();
+  while (flag) {
+    const auto process_frame =
+        [this, &process, &finished, &job](std::map<size_t, std::vector<std::shared_ptr<render_msg>>>::iterator pos) {
+          // sort them first
+          std::sort(pos->second.begin(), pos->second.end(), [](const auto &lh, const auto &rh) {
+            return lh->original_job_message->job->chunk < rh->original_job_message->job->chunk;
+          });
+
+          // constructed full frame data (all chunks combined
+          // TODO: combine this in a struct
+          std::vector<uint32_t> pixels;
+          std::vector<data::color> pixels_raw;
+          size_t width = 0;
+          size_t height = 0;
+          bool last_frame = false;
+          size_t frame_number = 0;
+
+          for (const auto &chunk : pos->second) {
+            pixels.insert(std::end(pixels), std::begin(chunk->pixels), std::end(chunk->pixels));
+            pixels_raw.insert(std::end(pixels_raw), std::begin(chunk->pixels_raw), std::end(chunk->pixels_raw));
+
+            // these don't have to be accumulated
+            width = chunk->width;
+            height = chunk->height;
+
+            last_frame = chunk->original_job_message->job->last_frame;
+            frame_number = chunk->original_job_message->job->frame_number;
+          }
+
+          finished = process(width, height, pixels, pixels_raw, last_frame);
+
+          if (job.job_number == std::numeric_limits<uint32_t>::max()) {
+            save_images(pixels_raw, width, height, frame_number, true, true, job.output_file);
+            if (job.last_frame) {
+              finished = true;
+            }
+          } else {
+            save_images(pixels_raw, width, height, frame_number, true, true, job.output_file);
+          }
+          buffered_frames.erase(pos);
+        };
+
+    const auto try_and_call = [this, &process_frame](size_t frame) -> bool {
+      auto pos = buffered_frames.find(frame);
+      if (pos != buffered_frames.end()) {
+        if (pos->second.size() == pos->second[0]->original_job_message->job->num_chunks) {
+          process_frame(pos);
+          return true;
+        }
       }
-    }
-    // all chunks are present for the frame
-    if (pos->second.size() != pos->second[0]->original_job_message->job->num_chunks) {
-      break;
-    }
+      return false;
+    };
 
-    // sort them first
-    std::sort(pos->second.begin(), pos->second.end(), [](const auto &lh, const auto &rh) {
-      return lh->original_job_message->job->chunk < rh->original_job_message->job->chunk;
-    });
-
-    // constructed full frame data (all chunks combined)
-    // TODO: combine this in a struct
-    std::vector<uint32_t> pixels;
-    std::vector<data::color> pixels_raw;
-    size_t width = 0;
-    size_t height = 0;
-    bool last_frame = false;
-    size_t frame_number = 0;
-
-    for (const auto &chunk : pos->second) {
-      pixels.insert(std::end(pixels), std::begin(chunk->pixels), std::end(chunk->pixels));
-      pixels_raw.insert(std::end(pixels_raw), std::begin(chunk->pixels_raw), std::end(chunk->pixels_raw));
-
-      // these don't have to be accumulated
-      width = chunk->width;
-      height = chunk->height;
-
-      last_frame = chunk->original_job_message->job->last_frame;
-      frame_number = chunk->original_job_message->job->frame_number;
-    }
-
-    finished = process(width, height, pixels, pixels_raw, last_frame);
-
-    if (job.job_number == std::numeric_limits<uint32_t>::max()) {
-      save_images(pixels_raw, width, height, frame_number, true, true, job.output_file);
-      if (job.last_frame) {
-        finished = true;
+    if (options().interactive) {
+      flag = false;
+      for (const auto &frame : buffered_frames) {
+        if (try_and_call(frame.first)) {
+          flag = true;
+          break;  // iterator is invalidated potentially
+        }
       }
     } else {
-      save_images(pixels_raw, width, height, frame_number, true, true, job.output_file);
-      current_frame++;
+      // videos have to be explicit about each frame one by one in the correct order
+      if (try_and_call(current_frame)) {
+        current_frame++;
+      }
+      // individual pictures (-f) don't need to be, and can use this sentinel 'max' value.
+      else if (!try_and_call(std::numeric_limits<uint32_t>::max())) {
+        flag = false;
+      }
     }
-    buffered_frames.erase(pos);
   }
   if (finished && webserv) {
     webserv->stop();

@@ -609,12 +609,14 @@ canvas:active {
 /* canvas */
 .column.canvas {
   background-color: black;
+  min-height: calc(500px);
   max-height: calc(100vh - 120px);
   /* uncomment next line for static canvas (for debugging) */
   /* width: 1920px; height: 1080px; */
 }
 .column.canvas canvas {
   position: absolute;
+  min-height: calc(500px);
   width: 100%; max-height: calc(100vh - 120px);
   /* uncomment next line for static canvas (for debugging) */
   /* width: 1920px; height: 1080px; */
