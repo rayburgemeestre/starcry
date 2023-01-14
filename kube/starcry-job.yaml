@@ -28,7 +28,7 @@ spec:
           'until nc -vz redis 6379; do echo "Waiting for redis service"; sleep 2; done;']
       containers:
       - name: starcrycontainer
-        image: docker.io/rayburgemeestre/starcry:v7
+        image: docker.io/rayburgemeestre/starcry:v8
         command: ["/starcry"]
         #args: ["-i", "--notty"]
         args: ["--no-gui", "-t", "0", "-c", "8", "--stdout", "--server", "tcp://redis:6379", "input/script.js", "-o", "/tmp/video.h264"]
@@ -76,7 +76,7 @@ spec:
           'until nc -vz redis 6379; do echo "Waiting for redis service"; sleep 2; done;']
       containers:
       - name: starcrycontainer
-        image: docker.io/rayburgemeestre/starcry:v7
+        image: docker.io/rayburgemeestre/starcry:v8
         command: ["/starcry"]
         args: ["--client", "tcp://redis:6379"]
         workingDir: /workdir
