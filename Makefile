@@ -182,7 +182,7 @@ build-web:  ## build web static files
 	pushd web && npm ci
 	pushd web && npm run build
 
-run_web:  ## run web in development hot-swappable mode
+run-web:  ## run web in development hot-swappable mode
 	pushd web && npm run dev
 
 attach:

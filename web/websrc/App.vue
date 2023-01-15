@@ -550,7 +550,8 @@ export default {
 
 <style>
 html, body, body > div {
-  overflow: hidden;
+  /* overflow: hidden; */
+  margin: 0;
 }
 * {
   font-family: Consolas,monaco,monospace;
@@ -571,15 +572,17 @@ html, body, body > div {
   height: 60px;
   /* some tweaking to get slider and buttons neatly aligned */
   padding: 8px 30px;
+  margin: 0;
 }
 .main-columns {
   min-height: calc(100vh - 60px*2);
-  margin: 0;
+  margin: 0 !important;
   background-color: #333333;
   color: white;
 }
 .extended .main-columns {
   min-height: calc(100vh - 60px * 1);
+  padding: 0;
 }
 .column.is-narrow {
     width: 200px;

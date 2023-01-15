@@ -102,9 +102,9 @@
   display: flex; /* Standard syntax */
 }
 span.info {
-  position: relative;
-  top: -30px;
-  left: 10px;
+  position: absolute;
+  top: calc(100vh - 40px);
+  left: 50px;
   color: black;
 }
 .myslider div {
