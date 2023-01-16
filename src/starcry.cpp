@@ -124,10 +124,23 @@ starcry_options &starcry::options() {
   return options_;
 }
 
+const std::string &starcry::script() {
+  return script_;
+}
+
 void starcry::set_script(const std::string &script) {
   script_ = script;
   if (metrics_) metrics_->set_script(script_);
   if (webserv) webserv->set_script(script_);
+}
+
+void starcry::update_script_contents(const std::string &contents) {
+  if (script_.find(".new") == std::string::npos) {
+    script_ = script_ + ".new";
+  }
+  std::ofstream out(script_);
+  out << contents;
+  out.close();
 }
 
 void starcry::add_image_command(std::shared_ptr<data::frame_request> req) {
@@ -242,7 +255,12 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
 
     const auto &f = cmd_def->frame();
 
-    gen->init(f.script(), options_.rand_seed, f.preview(), features_.caching);
+    try {
+      gen->init(f.script(), options_.rand_seed, f.preview(), features_.caching);
+    } catch (std::runtime_error &err) {
+      logger(DEBUG) << "err = " << err.what() << std::endl;
+      return;
+    }
     gen->fast_forward(f.frame_num());
     gen->generate_frame();
 
@@ -617,8 +635,6 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       current_frame = job.frame_number;
     }
   }
-
-  std::map<size_t, std::vector<std::shared_ptr<render_msg>>>::iterator pos = buffered_frames.end();
 
   bool flag = buffered_frames.size();
   while (flag) {

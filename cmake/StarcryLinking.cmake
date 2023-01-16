@@ -14,6 +14,9 @@ function(configure_links target)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/redis-plus-plus/lib/libredis++.a)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/hiredis/lib/libhiredis.a)
 
+  # vivid
+  target_link_libraries(${target} PRIVATE /opt/cppse/build/vivid/lib/libvivid.a)
+
   # ffmpeg
   target_link_libraries(${target} PRIVATE /opt/cppse/build/ffmpeg/lib/libswscale.a)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/ffmpeg/lib/libavdevice.a)

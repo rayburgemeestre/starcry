@@ -70,7 +70,7 @@
             this.editor.onDidChangeModelContent(event => {
                 const value = this.editor.getValue();
                 if (this.value !== value) {
-                    this.$emit('input', value, event)
+                    this.$emit('input-change', value, event)
                 }
             });
         },
@@ -79,7 +79,7 @@
                 if (this.editor) {
                     if (new_val !== this.editor.getValue()) {
                         this.editor.setValue(new_val);
-                        this.$emit('input', new_val);
+                        this.$emit('input-change', new_val);
                     }
                 }
             },
@@ -109,6 +109,9 @@
                     if (this.emacsMode) this.emacsMode.dispose();
                     document.getElementById(this.name + "_status").innerHTML = '';
                 }
+            },
+            input(a) {
+              console.log(a);
             }
         }
     }

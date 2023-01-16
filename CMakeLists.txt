@@ -86,6 +86,7 @@ include_directories(
     "/opt/cppse/build/inotify-cpp/include/"
     "/opt/cppse/build/redis-plus-plus/include/"
     "/opt/cppse/build/hiredis/include/"
+    "/opt/cppse/build/vivid/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/cereal/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/framer/"
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/json/include/"

@@ -74,7 +74,7 @@
         <scripts-component width="100%" height="100vh - 60px"/>
       </div>
       <div v-if="menu === 'script'" class="column" style="background-color: #c0c0c0; width: 38%;">
-        <editor-component v-model="input_source" name="js" language="javascript" width="100%" height="100vh - 60px"/>
+        <editor-component v-shortkey.avoid v-model="input_source" name="js" language="javascript" width="100%" height="100vh - 60px" @input-change="on_script_update" />
       </div>
       <div v-if="menu === 'objects'" class="column" style="background-color: #c0c0c0; width: 38%; height: calc(100vh - 120px); overflow: scroll;">
         <objects-component v-model="objects" width="100%" height="100vh - 60px"/>
@@ -112,13 +112,13 @@
           <button v-shortkey="['ctrl', 'o']" @shortkey="menu = menu === 'objects' ? '' : 'objects'">_</button>
           <button v-shortkey="['ctrl', 'u']" @shortkey="menu = menu === 'debug' ? '' : 'debug'">_</button>
           <button v-shortkey="['ctrl', 'h']" @shortkey="menu = menu === 'help' ? '' : 'help'">_</button>
-          <button v-shortkey="[',']" @shortkey="prev_frame()">_</button>
-          <button v-shortkey="['.']" @shortkey="next_frame()">_</button>
+          <button v-shortkey="['ctrl', ',']" @shortkey="prev_frame()">_</button>
+          <button v-shortkey="['ctrl', '.']" @shortkey="next_frame()">_</button>
           <button v-shortkey="['shift', 'o']" @shortkey="get_objects()">_</button>
-          <button v-shortkey="['r']" @shortkey="open(filename)">_</button>
-          <button v-shortkey="['m']" @shortkey="toggle_pointer()">_</button>
-          <button v-shortkey="['/']" @shortkey="set_frame(current_frame)">_</button>
-          <button v-shortkey="['t']" @shortkey="toggle_menus()">_</button>
+          <button v-shortkey="['ctrl', 'r']" @shortkey="open(filename)">_</button>
+          <button v-shortkey="['ctrl', 'm']" @shortkey="toggle_pointer()">_</button>
+          <button v-shortkey="['ctrl', '/']" @shortkey="set_frame(current_frame)">_</button>
+          <button v-shortkey="['ctrl', 't']" @shortkey="toggle_menus()">_</button>
         </div>
       </div>
     </div>
@@ -141,6 +141,7 @@ import StarcryAPI from './util/StarcryAPI'
 import JsonWithObjectsParser from './util/JsonWithObjectsParser'
 
 let time1 = null;
+let time2 = null;
 let previous_w = 1920;
 let previous_h = 1080;
 
@@ -402,6 +403,13 @@ export default {
           w = this.$data.video.width * scale,
           h = this.$data.video.height * scale;
       ctx.strokeRect(x, y, w, h);
+    },
+    on_script_update(a, b, c) {
+      this.$data.input_source = a;
+      if (time2) clearTimeout(time2);
+      time2 = setTimeout(function () {
+        this.script_endpoint.send("set " + this.$data.input_source);
+      }.bind(this), 1000);
     }
   },
   watch: {
@@ -491,6 +499,10 @@ export default {
             if (!total_duration)
               total_duration = this.$data.video['duration'];
             this.$data.max_frames = Math.floor(total_duration * this.$data.video['fps']);
+          }
+          else if (buffer[0] === '3') {
+            this.$data.filename = buffer.slice(1);
+            this.log('DEBUG', 'script', 'received work in progress filename', this.$data.filename);
           }
         },
         _ => {

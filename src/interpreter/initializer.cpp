@@ -197,16 +197,28 @@ void initializer::init_gradients() {
     auto gradient_fields = gradient_objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
     for (size_t k = 0; k < gradient_fields->Length(); k++) {
       auto gradient_id = i.get_index(gradient_fields, k);
-      auto positions = i.get(gradient_objects, gradient_id).As<v8::Array>();
+      auto gradient_value = i.get(gradient_objects, gradient_id);
       auto id = v8_str(isolate, gradient_id.As<v8::String>());
-      for (size_t l = 0; l < positions->Length(); l++) {
-        auto position = i.get_index(positions, l).As<v8::Object>();
-        auto pos = i.double_number(position, "position");
-        auto r = i.double_number(position, "r");
-        auto g = i.double_number(position, "g");
-        auto b = i.double_number(position, "b");
-        auto a = i.double_number(position, "a");
-        gen_.gradients[id].colors.emplace_back(pos, data::color{r, g, b, a});
+      if (gradient_value->IsArray()) {
+        auto positions = gradient_value.As<v8::Array>();
+        for (size_t l = 0; l < positions->Length(); l++) {
+          auto position = i.get_index(positions, l).As<v8::Object>();
+          auto pos = i.double_number(position, "position");
+          auto r = i.double_number(position, "r");
+          auto g = i.double_number(position, "g");
+          auto b = i.double_number(position, "b");
+          auto a = i.double_number(position, "a");
+          gen_.gradients[id].colors.emplace_back(pos, data::color{r, g, b, a});
+        }
+      } else if (gradient_value->IsString()) {
+        auto color_string_obj = gradient_value.As<v8::String>();
+        auto color_string = v8_str(isolate, color_string_obj);
+        auto r = std::stoi(color_string.substr(1, 2), nullptr, 16) / 255.;
+        auto g = std::stoi(color_string.substr(3, 2), nullptr, 16) / 255.;
+        auto b = std::stoi(color_string.substr(5, 2), nullptr, 16) / 255.;
+        gen_.gradients[id].colors.emplace_back(0.0, data::color{r, g, b, 1.});
+        gen_.gradients[id].colors.emplace_back(0.9, data::color{r, g, b, 1.});
+        gen_.gradients[id].colors.emplace_back(1.0, data::color{r, g, b, 0.});
       }
     }
   });

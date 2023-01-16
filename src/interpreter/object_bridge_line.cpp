@@ -24,6 +24,11 @@ double object_bridge<data_staging::line>::get_rotate() const {
 }
 
 template <>
+double object_bridge<data_staging::line>::get_hue() const {
+  return shape_stack.back()->styling_ref().hue();
+}
+
+template <>
 double object_bridge<data_staging::line>::get_opacity() const {
   return shape_stack.back()->generic_ref().opacity();
 }
@@ -94,6 +99,11 @@ void object_bridge<data_staging::line>::set_rotate(double rotate) {
 }
 
 template <>
+void object_bridge<data_staging::line>::set_hue(double hue) {
+  shape_stack.back()->styling_ref().set_hue(hue);
+}
+
+template <>
 void object_bridge<data_staging::line>::set_opacity(double opacity) {
   shape_stack.back()->generic_ref().set_opacity(opacity);
 }
@@ -156,6 +166,7 @@ object_bridge<data_staging::line>::object_bridge(interpreter::generator *generat
       .property("unique_id", &object_bridge::get_unique_id, &object_bridge::set_unique_id)
       .property("angle", &object_bridge::get_angle, &object_bridge::set_angle)
       .property("rotate", &object_bridge::get_rotate, &object_bridge::set_rotate)
+      .property("hue", &object_bridge::get_hue, &object_bridge::set_hue)
       .property("opacity", &object_bridge::get_opacity, &object_bridge::set_opacity)
       .property("mass", &object_bridge::get_mass, &object_bridge::set_mass)
       .property("scale", &object_bridge::get_scale, &object_bridge::set_scale)

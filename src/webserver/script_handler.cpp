@@ -53,6 +53,12 @@ void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
       std::ostringstream ss;
       ss << "2" << ifs.rdbuf();
       con->send(ss.str());
+    } else if (cmd == "set") {
+      logger(DEBUG) << "ScriptHandler::onData - " << input << std::endl;
+      sc->update_script_contents(file);
+      std::ostringstream ss;
+      ss << "3" << sc->script();
+      con->send(ss.str());
     }
   } else if (input == "list") {
     logger(DEBUG) << "ScriptHandler::onData - " << input << std::endl;
@@ -76,7 +82,7 @@ void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
       result.push_back(j);
     }
     std::stringstream ss;
-    ss << "3" << result.dump();
+    ss << "4" << result.dump();
     con->send(ss.str());
   }
 }

@@ -138,7 +138,9 @@ public:
   starcry_options &options();
   feature_settings &features();
 
+  const std::string &script();
   void set_script(const std::string &script);
+  void update_script_contents(const std::string &contents);
 
   void add_image_command(std::shared_ptr<data::frame_request> req);
   void add_video_command(std::shared_ptr<data::video_request> req);

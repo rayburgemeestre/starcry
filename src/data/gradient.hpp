@@ -9,6 +9,7 @@
 //#include <caf/meta/type_name.hpp>
 #include "cereal/types/tuple.hpp"
 #include "cereal/types/vector.hpp"
+#include "vivid/vivid.h"
 
 #include "data/color.hpp"
 
@@ -32,10 +33,24 @@ struct gradient {
         double color2_mult = 1.0 - color1_mult;
         color color1 = std::get<1>(colors[counter]);
         color color2 = std::get<1>(colors[counter - 1]);
+        vivid::rgb_t col1 = {
+            (float)color1.r,
+            (float)color1.g,
+            (float)color1.b,
+        };
+        vivid::rgb_t col2 = {
+            (float)color1.r,
+            (float)color1.g,
+            (float)color1.b,
+        };
+        auto lerped = vivid::lerp(col1, col2, color1_mult);
+        return color{lerped.r, lerped.g, lerped.b, (color1.a * color1_mult) + (color2.a * color2_mult)};
+        /*
         return color{(color1.r * color1_mult) + (color2.r * color2_mult),
                      (color1.g * color1_mult) + (color2.g * color2_mult),
                      (color1.b * color1_mult) + (color2.b * color2_mult),
                      (color1.a * color1_mult) + (color2.a * color2_mult)};
+                     */
       } else {
         processed_index = current_idx;
       }

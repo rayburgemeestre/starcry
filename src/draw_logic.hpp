@@ -651,6 +651,25 @@ public:
       clr.b += gradient_opacity * tmp.b;
       clr.a += gradient_opacity * tmp.a;
     }
+
+    vivid::rgb_t col1 = {
+        (float)clr.r,
+        (float)clr.g,
+        (float)clr.b,
+    };
+    auto color1 = vivid::hsl::fromRgb(col1);
+    color1.x += shape.hue / 360.;
+
+    if (color1.x > 1.)
+      color1.x -= 1.;
+    else if (color1.x < 0.)
+      color1.x += 1.;
+
+    col1 = vivid::rgb::fromHsl(color1);
+    clr.r = col1.r;
+    clr.g = col1.g;
+    clr.b = col1.b;
+
     // TODO: another knob for this? "ignore opacity"
     // sometimes gives a fun effect
     // clr.a = 1.0;

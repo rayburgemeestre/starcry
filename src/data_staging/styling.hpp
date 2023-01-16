@@ -23,6 +23,7 @@ private:
   std::vector<std::tuple<double, std::string>> textures_;
   data::blending_type blending_type_ = data::blending_type::normal;
   int64_t seed_;
+  double hue_;
 
 public:
   styling() {
@@ -40,6 +41,13 @@ public:
   }
   data::blending_type blending_type() const {
     return blending_type_;
+  }
+
+  double hue() const {
+    return hue_;
+  }
+  void set_hue(double hue) {
+    hue_ = hue;
   }
 
   void set_gradient(std::string_view gradient) {

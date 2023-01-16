@@ -50,6 +50,7 @@ _ = {
     'obj2': {
       'type': 'circle',
       'radius': 100,
+      'hue': 180.0,
       'radiussize': 10.0,
       'gradients': [
         [1.0, 'red'],
@@ -64,6 +65,7 @@ _ = {
         this.radius = 0;
       },
       'time': function(t, elapsed, s) {
+        this.hue += elapsed * 200;
         this.gradients[0][0] = 1.0 - t;
         this.gradients[2][0] = t;
         switch (s) {

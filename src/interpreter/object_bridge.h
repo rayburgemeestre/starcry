@@ -37,6 +37,7 @@ public:
   int64_t get_unique_id() const;
   double get_angle() const;
   double get_rotate() const;
+  double get_hue() const;
   double get_opacity() const;
   double get_mass() const;
   double get_scale() const;
@@ -63,6 +64,7 @@ public:
   void set_unique_id(int64_t unique_id);
   void set_angle(double angle);
   void set_rotate(double rotate);
+  void set_hue(double hue);
   void set_opacity(double opacity);
   void set_mass(double mass);
   void set_scale(double scale);

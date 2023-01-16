@@ -1323,6 +1323,7 @@ void generator::convert_object_to_render_job(v8_interact& i,
     std::string gradient_id;
     if constexpr (!std::is_same_v<T, data_staging::script>) {
       gradient_id = shape.styling_cref().gradient();
+      new_shape.hue = shape.styling_cref().hue();
     }
 
     if (!gradient_id.empty()) {
@@ -1623,6 +1624,7 @@ generator::_instantiate_object_from_scene(
     c.toroidal_ref().set_group(i.str(instance, "toroidal", ""));
     c.generic_ref().set_angle(i.double_number(instance, "angle", 0));
     c.generic_ref().set_rotate(i.double_number(instance, "rotate", 0));
+    c.styling_ref().set_hue(i.double_number(instance, "hue", 0));
     c.generic_ref().set_opacity(i.double_number(instance, "opacity", 1));
     c.generic_ref().set_mass(i.double_number(instance, "mass", 1));
     c.generic_ref().set_scale(i.double_number(instance, "scale", 1));
@@ -1843,6 +1845,7 @@ void generator::_instantiate_object_copy_fields(v8_interact& i,
   i.copy_field_if_exists(new_instance, "scale", scene_obj);
   i.copy_field_if_exists(new_instance, "angle", scene_obj);
   i.copy_field_if_exists(new_instance, "rotate", scene_obj);
+  i.copy_field_if_exists(new_instance, "hue", scene_obj);
   i.copy_field_if_exists(new_instance, "pivot", scene_obj);
   i.copy_field_if_exists(new_instance, "text", scene_obj);
   i.copy_field_if_exists(new_instance, "text_align", scene_obj);

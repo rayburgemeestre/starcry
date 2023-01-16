@@ -56,6 +56,7 @@ struct shape {
   double seed = 0;
   double scale = 1.;
   double opacity = 1.;
+  double hue = 0.;
 
   int64_t unique_id = 0;
 
@@ -100,6 +101,7 @@ struct shape {
        seed,
        scale,
        opacity,
+       hue,
        unique_id,
        id,
        label,
