@@ -49,7 +49,9 @@ void redis_client::run(bitmap_wrapper &bitmap, rendering_engine &engine) {
       auto msg_type = msg.substr(0, pos);
       auto payload = msg.substr(pos + 1);
 
-      if (msg_type == "REGISTERED") {
+      if (msg_type == "RECONNECT") {
+        redis.publish("REGISTER", my_id_);
+      } else if (msg_type == "REGISTERED") {
         logger(DEBUG) << "REGISTERED CLIENT RESPONSE DATA: " << payload << std::endl;
         // if (len == sizeof(sc.num_queue_per_worker)) {
         //   memcpy(&sc.num_queue_per_worker, data.c_str(), sizeof(sc.num_queue_per_worker));
@@ -104,6 +106,7 @@ void redis_client::run(bitmap_wrapper &bitmap, rendering_engine &engine) {
       }
     });
     sub.subscribe(my_id_);
+    sub.subscribe("RECONNECT");
 
     while (true) {
       try {

@@ -317,6 +317,8 @@ bool generator::_generate_frame() {
       auto obj = val.As<v8::Object>();
       auto scenes = i.v8_array(obj, "scenes");
       auto video = i.v8_obj(obj, "video");
+      if (!video->IsObject()) video = v8::Object::New(isolate);
+
       // auto objects = i.v8_array(obj, "objects");
       auto current_scene = i.get_index(scenes, scenes_.scenesettings.current_scene_next);
       if (!current_scene->IsObject()) return;
@@ -521,7 +523,7 @@ void generator::update_object_positions(v8_interact& i, v8::Local<v8::Object>& v
             i, abstract_shape, shape.meta_cref().id(), scenes_.scenesettings_objs[scenesettings_from_object_id]);
       }
 
-      scalesettings.video_scale_next = i.double_number(video, "scale");
+      scalesettings.video_scale_next = i.double_number(video, "scale", 1.0);
 
       auto angle = shape.generic_cref().angle();
       if (std::isnan(angle)) {

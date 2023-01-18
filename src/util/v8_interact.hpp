@@ -165,6 +165,12 @@ public:
     return tmp->BooleanValue(get_isolate());
   }
 
+  bool boolean(const v8::Local<v8::Object>& obj, const std::string& field, bool default_value) {
+    auto tmp = obj->Get(get_context(), v8_str(get_context(), field)).ToLocalChecked();
+    if (!tmp->IsBoolean()) return default_value;
+    return tmp->BooleanValue(get_isolate());
+  }
+
   //  v8::Maybe<double> maybe_double_number(v8::Local<v8::Object>& obj, const std::string& field) {
   //    return v8_number(obj, field)->NumberValue(get_isolate()->GetCurrentContext());
   //  }

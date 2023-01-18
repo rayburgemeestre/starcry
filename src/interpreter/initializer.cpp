@@ -101,7 +101,8 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed, bool pre
   // "run_array" is a bit of a misnomer, this only invokes the callback once
   gen_.context->run_array("script", [this, &preview, &rand_seed](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i;
-    auto video = v8_index_object(current_context_native(gen_.context), val, "video").As<v8::Object>();
+    auto video_value = v8_index_object(current_context_native(gen_.context), val, "video");
+    auto video = video_value->IsObject() ? video_value.As<v8::Object>() : v8::Object::New(isolate);
     if (preview) {
       v8::Local<v8::Object> preview_obj;
       if (v8_index_object(current_context_native(gen_.context), val, "preview")->IsObject()) {
@@ -141,12 +142,12 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed, bool pre
       n /= duration;
     });
 
-    gen_.use_fps = i.double_number(video, "fps");
-    gen_.canvas_w = i.double_number(video, "width");
-    gen_.canvas_h = i.double_number(video, "height");
+    gen_.use_fps = i.double_number(video, "fps", 25);
+    gen_.canvas_w = i.double_number(video, "width", 1920);
+    gen_.canvas_h = i.double_number(video, "height", 1080);
     gen_.seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
-    gen_.tolerated_granularity = i.double_number(video, "granularity");
-    gen_.minimize_steps_per_object = i.boolean(video, "minimize_steps_per_object");
+    gen_.tolerated_granularity = i.double_number(video, "granularity", 1);
+    gen_.minimize_steps_per_object = i.boolean(video, "minimize_steps_per_object", false);
     auto& settings_ = gen_.settings_;
     if (i.has_field(video, "perlin_noise")) settings_.perlin_noise = i.boolean(video, "perlin_noise");
     if (i.has_field(video, "motion_blur")) settings_.motion_blur = i.boolean(video, "motion_blur");

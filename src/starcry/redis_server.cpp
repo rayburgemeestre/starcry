@@ -116,6 +116,8 @@ void redis_server::run() {
         sub.subscribe("PULL_JOB");
         sub.subscribe("FRAME");
 
+        redis->publish("RECONNECT", "");
+
         while (true) {
           try {
             sub.consume();
