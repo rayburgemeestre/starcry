@@ -52,7 +52,7 @@
       >
         <canvas
           id="canvas2"
-          style="z-index: 1; pointer-events: none /* saved my day */"
+          style="z-index: 1; pointer-events: none; /* saved my day */"
         ></canvas>
         <canvas
           id="canvas"
