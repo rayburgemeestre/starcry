@@ -1,6 +1,4 @@
-<template>
-  SCRIPT: {{ script }}
-</template>
+<template>SCRIPT: {{ script }}</template>
 
 <script lang="ts">
 import { defineComponent } from 'vue';
@@ -10,8 +8,8 @@ export default defineComponent({
   props: {
     script: {
       type: String,
-      required: true
+      required: true,
     },
-  }
+  },
 });
 </script>

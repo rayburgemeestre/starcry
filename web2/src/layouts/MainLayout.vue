@@ -1,12 +1,14 @@
 <template>
   <q-layout view="hHh lpR fFf">
-
     <q-header elevated class="bg-primary text-black" height-hint="98">
       <q-toolbar>
         <q-btn dense flat round icon="menu" @click="toggleLeftDrawer" />
 
         <q-toolbar-title>
-          <img src="sc.png" style="position: relative; top: 10px; left: 10px; height: 40px;">
+          <img
+            src="sc.png"
+            style="position: relative; top: 10px; left: 10px; height: 40px"
+          />
         </q-toolbar-title>
 
         <q-btn dense flat round icon="menu" @click="toggleRightDrawer" />
@@ -21,9 +23,18 @@
       </q-tabs>
     </q-header>
 
-    <q-drawer show-if-above v-model="leftDrawerOpen" side="left" bordered :width="drawerWidth">
+    <q-drawer
+      show-if-above
+      v-model="leftDrawerOpen"
+      side="left"
+      bordered
+      :width="drawerWidth"
+    >
       <router-view />
-      <div v-touch-pan.preserveCursor.prevent.mouse.horizontal="resizeDrawer" class="q-drawer__resizer"></div>
+      <div
+        v-touch-pan.preserveCursor.prevent.mouse.horizontal="resizeDrawer"
+        class="q-drawer__resizer"
+      ></div>
     </q-drawer>
 
     <q-drawer show-if-above v-model="rightDrawerOpen" side="right" bordered>
@@ -31,9 +42,7 @@
       ATTRIBUTES HERE
     </q-drawer>
 
-    <q-page-container>
-      THE CANVAS HERE
-    </q-page-container>
+    <q-page-container> THE CANVAS HERE </q-page-container>
 
     <q-footer elevated class="bg-grey-8 text-white">
       <q-toolbar>
@@ -42,7 +51,6 @@
         </q-toolbar-title>
       </q-toolbar>
     </q-footer>
-
   </q-layout>
 </template>
 
@@ -54,10 +62,10 @@ export default defineComponent({
 
   components: {},
 
-  setup () {
-    const leftDrawerOpen = ref(false)
-    const rightDrawerOpen = ref(false)
-    const script = ref('Hello world')
+  setup() {
+    const leftDrawerOpen = ref(false);
+    const rightDrawerOpen = ref(false);
+    const script = ref('Hello world');
 
     let initialDrawerWidth;
     const drawerWidth = ref(300);
@@ -65,25 +73,25 @@ export default defineComponent({
     return {
       script,
       leftDrawerOpen,
-      toggleLeftDrawer () {
-        leftDrawerOpen.value = !leftDrawerOpen.value
+      toggleLeftDrawer() {
+        leftDrawerOpen.value = !leftDrawerOpen.value;
       },
 
       rightDrawerOpen,
-      toggleRightDrawer () {
-        rightDrawerOpen.value = !rightDrawerOpen.value
+      toggleRightDrawer() {
+        rightDrawerOpen.value = !rightDrawerOpen.value;
       },
 
       drawer: ref(false),
       drawerWidth,
-      resizeDrawer (ev) {
+      resizeDrawer(ev) {
         if (ev.isFirst === true) {
-          initialDrawerWidth = drawerWidth.value
+          initialDrawerWidth = drawerWidth.value;
         }
-        drawerWidth.value = initialDrawerWidth + ev.offset.x
-      }
-    }
-  }
+        drawerWidth.value = initialDrawerWidth + ev.offset.x;
+      },
+    };
+  },
 });
 </script>
 
@@ -99,14 +107,14 @@ export default defineComponent({
 }
 
 .q-drawer__resizer:after {
-                       content: '';
-                       position: absolute;
-                       top: 50%;
-                       height: 30px;
-                       left: -5px;
-                       right: -5px;
-                       transform: translateY(-50%);
-                       background-color: inherit;
-                       border-radius: 4px;
-                     }
+  content: '';
+  position: absolute;
+  top: 50%;
+  height: 30px;
+  left: -5px;
+  right: -5px;
+  transform: translateY(-50%);
+  background-color: inherit;
+  border-radius: 4px;
+}
 </style>

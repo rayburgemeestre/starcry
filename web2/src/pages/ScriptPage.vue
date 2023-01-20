@@ -8,11 +8,11 @@ import MonacoEditor from 'components/MonacoEditor.vue';
 export default defineComponent({
   name: 'ScriptPage',
   components: {
-    MonacoEditor
+    MonacoEditor,
   },
-  setup () {
+  setup() {
     const script = ref('Hello world!');
     return { script };
-  }
+  },
 });
 </script>
