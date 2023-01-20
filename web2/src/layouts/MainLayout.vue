@@ -21,8 +21,9 @@
       </q-tabs>
     </q-header>
 
-    <q-drawer show-if-above v-model="leftDrawerOpen" side="left" bordered>
+    <q-drawer show-if-above v-model="leftDrawerOpen" side="left" bordered :width="drawerWidth">
       <router-view />
+      <div v-touch-pan.preserveCursor.prevent.mouse.horizontal="resizeDrawer" class="q-drawer__resizer"></div>
     </q-drawer>
 
     <q-drawer show-if-above v-model="rightDrawerOpen" side="right" bordered>
@@ -58,6 +59,9 @@ export default defineComponent({
     const rightDrawerOpen = ref(false)
     const script = ref('Hello world')
 
+    let initialDrawerWidth;
+    const drawerWidth = ref(300);
+
     return {
       script,
       leftDrawerOpen,
@@ -68,8 +72,41 @@ export default defineComponent({
       rightDrawerOpen,
       toggleRightDrawer () {
         rightDrawerOpen.value = !rightDrawerOpen.value
+      },
+
+      drawer: ref(false),
+      drawerWidth,
+      resizeDrawer (ev) {
+        if (ev.isFirst === true) {
+          initialDrawerWidth = drawerWidth.value
+        }
+        drawerWidth.value = initialDrawerWidth + ev.offset.x
       }
     }
   }
 });
 </script>
+
+<style>
+.q-drawer__resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -2px;
+  width: 4px;
+  background-color: #b9f0de;
+  cursor: ew-resize;
+}
+
+.q-drawer__resizer:after {
+                       content: '';
+                       position: absolute;
+                       top: 50%;
+                       height: 30px;
+                       left: -5px;
+                       right: -5px;
+                       transform: translateY(-50%);
+                       background-color: inherit;
+                       border-radius: 4px;
+                     }
+</style>
