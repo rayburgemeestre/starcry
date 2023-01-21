@@ -39,11 +39,11 @@ struct gradient {
             (float)color1.b,
         };
         vivid::rgb_t col2 = {
-            (float)color1.r,
-            (float)color1.g,
-            (float)color1.b,
+            (float)color2.r,
+            (float)color2.g,
+            (float)color2.b,
         };
-        auto lerped = vivid::lerp(col1, col2, color1_mult);
+        auto lerped = vivid::lerp(col1, col2, color2_mult);
         return color{lerped.r, lerped.g, lerped.b, (color1.a * color1_mult) + (color2.a * color2_mult)};
         /*
         return color{(color1.r * color1_mult) + (color2.r * color2_mult),

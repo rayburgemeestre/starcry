@@ -31,11 +31,6 @@ find_package(Threads)
 
 add_subdirectory(libs/Catch2)
 
-# unittests
-add_executable(tests test/test_unit.cpp)
-target_link_libraries(tests PRIVATE /opt/cppse/build/v8pp/lib/libv8_monolith.a)
-target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
-
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold")
 else()
@@ -95,6 +90,12 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/libs/stb/"
     "/usr/include/SDL2/"
 )
+
+# unittests
+add_executable(tests test/test_unit.cpp)
+target_link_libraries(tests PRIVATE /opt/cppse/build/v8pp/lib/libv8_monolith.a)
+target_link_libraries(tests PRIVATE /opt/cppse/build/vivid/lib/libvivid.a)
+target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 
 file(GLOB_RECURSE starcry_SOURCES "src/**.cpp" "src/**.hpp"  "src/**.h" "/opt/cppse/build/v8pp/include/v8pp/*.cpp" "libs/piper/src/**")
 list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/client.cpp")
