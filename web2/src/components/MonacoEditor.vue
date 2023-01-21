@@ -1,9 +1,6 @@
 <template>
   <div>
-    <div
-      class="container"
-      :id="name"
-    ></div>
+    <div class="container" :id="name"></div>
     <div class="tags has-addons">
       <!--
       <span class="tag">
@@ -64,7 +61,7 @@ export default defineComponent({
       overviewRulerLanes: 0,
       hideCursorInOverviewRuler: true,
       scrollbar: {
-        vertical: 'hidden'
+        vertical: 'hidden',
       },
       overviewRulerBorder: false,
     });
@@ -82,7 +79,7 @@ export default defineComponent({
 /* this hardcodes styling behavior into this component for our intended purposes */
 .container {
   width: 100%;
-  height: calc(100vh - ( 9.25rem) );
+  height: calc(100vh - (9.25rem));
 }
 
 .q-body--prevent-scroll .container {

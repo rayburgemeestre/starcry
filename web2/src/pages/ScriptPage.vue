@@ -1,8 +1,5 @@
 <template>
-  <monaco-editor
-    name="container"
-    v-model="script"
-  />
+  <monaco-editor name="container" v-model="script" />
 </template>
 
 <script lang="ts">

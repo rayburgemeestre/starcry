@@ -3,14 +3,13 @@
     <q-header elevated class="bg-primary text-black" height-hint="98">
       <q-toolbar>
         <q-btn dense flat round icon="menu" @click="toggleLeftDrawer" />
-
         <q-toolbar-title>
           <img
-            src="sc.png"
+            src="/sc.png"
             style="position: relative; top: 10px; left: 10px; height: 40px"
+            alt="logo"
           />
         </q-toolbar-title>
-
         <q-btn dense flat round icon="menu" @click="toggleRightDrawer" />
       </q-toolbar>
 
@@ -109,34 +108,25 @@ export default defineComponent({
     script_endpoint.connect();
 
     let initialDrawerWidth;
+    let previous_w;
+    let previous_h;
+    let viewpoint_settings = {
+      scale: 1,
+      view_x: 0,
+      view_y: 0,
+      canvas_w: 1920,
+      canvas_h: 1080,
+      offset_x: 0,
+      offset_y: 0,
+    };
     const drawerWidth = ref(300);
 
-    return {
+    let obj = {
       script,
       leftDrawerOpen,
-      toggleLeftDrawer() {
-        leftDrawerOpen.value = !leftDrawerOpen.value;
-        if (window.time1) clearTimeout(window.time1);
-        window.time1 = setTimeout(this.update_size, 1000);
-      },
-
       rightDrawerOpen,
-      toggleRightDrawer() {
-        rightDrawerOpen.value = !rightDrawerOpen.value;
-        if (window.time1) clearTimeout(window.time1);
-        window.time1 = setTimeout(this.update_size, 1000);
-      },
-
       drawer: ref(false),
       drawerWidth,
-      resizeDrawer(ev) {
-        if (ev.isFirst === true) {
-          initialDrawerWidth = drawerWidth.value;
-        }
-        drawerWidth.value = initialDrawerWidth + ev.offset.x;
-        if (window.time1) clearTimeout(window.time1);
-        window.time1 = setTimeout(this.update_size, 1000);
-      },
 
       on_mouse_move: function (e) {
         Module.get_mouse_x(); // force redraw
@@ -163,43 +153,68 @@ export default defineComponent({
         // this.viewpoint_settings.scale = Math.min(Math.max(0., this.viewpoint_settings.scale), 100.);
         // console.log(this.viewpoint_settings.scale);
       },
-      update_size: function () {
-        let cvs = document
-          .getElementById('canvas')
-          .parentNode.getBoundingClientRect();
-        let header = document
-          .querySelector('.q-header')
-          .getBoundingClientRect();
-        let footer = document
-          .querySelector('.q-footer')
-          .getBoundingClientRect();
-        let w = Math.floor(cvs['width']);
-        let h = Math.floor(footer['y'] - header['height']);
-        document.getElementById('canvas').width = w;
-        document.getElementById('canvas').height = h;
-        // if (Math.abs(previous_w - w) < 2 && Math.abs(previous_h - h) < 2) {
-        //   return;
-        // }
-        if (window.time1) clearTimeout(window.time1);
-        window.time1 = setTimeout(this.update_size, 1000);
-        Module.stop();
-        // previous_w = w;
-        // previous_h = h;
-        // start might throw
-        try {
-          // this.$data.viewpoint_settings.canvas_w = w;
-          // this.$data.viewpoint_settings.canvas_h = h;
-          Module.start(w, h, w, h);
-        } catch (e) {
-          console.log(e);
-        }
-        if (Module.last_buffer) {
-          setTimeout(function () {
-            Module.set_texture(Module.last_buffer);
-          }, 10);
-        }
-      },
     };
+    obj.toggleLeftDrawer = function () {
+      leftDrawerOpen.value = !leftDrawerOpen.value;
+      this.update_size_delayed();
+    }.bind(obj);
+
+    obj.toggleRightDrawer = function () {
+      rightDrawerOpen.value = !rightDrawerOpen.value;
+      this.update_size_delayed();
+    }.bind(obj);
+
+    obj.resizeDrawer = function (ev) {
+      if (ev.isFirst === true) {
+        initialDrawerWidth = drawerWidth.value;
+      }
+      drawerWidth.value = initialDrawerWidth + ev.offset.x;
+      this.update_size_delayed();
+    }.bind(obj);
+
+    obj.update_size_delayed = function () {
+      if (window.time1) clearTimeout(window.time1);
+      window.time1 = setTimeout(this.update_size, 100);
+    }.bind(obj);
+
+    obj.update_size = function () {
+      let cvs = document
+        .getElementById('canvas')
+        .parentNode.getBoundingClientRect();
+      let header = document.querySelector('.q-header').getBoundingClientRect();
+      let footer = document.querySelector('.q-footer').getBoundingClientRect();
+      let w = Math.floor(cvs['width']);
+      let h = Math.floor(footer['y'] - header['height']);
+      document.getElementById('canvas').width = w;
+      document.getElementById('canvas').height = h;
+      if (Math.abs(previous_w - w) < 2 && Math.abs(previous_h - h) < 2) {
+        return;
+      }
+      try {
+        Module.stop();
+      } catch (e) {
+        // we'll know soon enough if the thing has crashed...
+        // console.log(e);
+      }
+      previous_w = w;
+      previous_h = h;
+      // start might throw
+      try {
+        viewpoint_settings.canvas_w = w;
+        viewpoint_settings.canvas_h = h;
+        Module.start(w, h, w, h);
+      } catch (e) {
+        // we'll know soon enough if the thing has crashed...
+        // console.log(e);
+      }
+      if (Module.last_buffer) {
+        setTimeout(function () {
+          Module.set_texture(Module.last_buffer);
+        }, 10);
+      }
+    }.bind(obj);
+
+    return obj;
   },
   mounted() {
     window.Module = {
@@ -218,8 +233,7 @@ export default defineComponent({
       },
     };
 
-    window.addEventListener('resize', this.update_size);
-    window.time1 = setTimeout(this.update_size, 1000);
+    this.update_size_delayed();
 
     const s = document.createElement('script');
     s.setAttribute('src', 'client.js');
@@ -229,7 +243,8 @@ export default defineComponent({
 </script>
 
 <style>
-html, body {
+html,
+body {
   overflow: hidden;
 }
 
