@@ -25,6 +25,8 @@
 import { defineComponent } from 'vue';
 import * as monaco from 'monaco-editor';
 
+let editor: monaco.editor.IStandaloneCodeEditor | null = null;
+
 export default defineComponent({
   name: 'MonacoEditor',
   props: {
@@ -54,7 +56,7 @@ export default defineComponent({
     if (!container) {
       return;
     }
-    let editor = monaco.editor.create(container, {
+    editor = monaco.editor.create(container, {
       value: this.value,
       language: this.language,
       automaticLayout: true,
@@ -64,13 +66,22 @@ export default defineComponent({
         vertical: 'hidden',
       },
       overviewRulerBorder: false,
+      theme: 'vs-dark',
     });
-    editor.onDidChangeModelContent((event) => {
-      const value = editor.getValue();
-      if (this.value !== value) {
-        this.$emit('input-change', value, event);
+
+    // editor.onDidChangeModelContent((event: any) => {
+    //   const value = editor?.getValue();
+    //   if (this.value !== value) {
+    //     this.$emit('input-change', value, event);
+    //   }
+    // });
+  },
+  watch: {
+    value(value) {
+      if (editor) {
+        editor.setValue(value);
       }
-    });
+    },
   },
 });
 </script>
