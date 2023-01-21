@@ -826,6 +826,8 @@ void generator::handle_rotations(data_staging::shape_t& shape) {
       meta_callback(stack[i].get(), [&]<typename TP>(TP& parent_shape) {
         if constexpr (std::is_same_v<TP, data_staging::circle>) {
           current = add_vector(current, parent_shape.location_ref().position_ref());
+        } else if constexpr (std::is_same_v<TP, data_staging::text>) {
+          current = add_vector(current, parent_shape.location_ref().position_ref());
         } else if constexpr (std::is_same_v<TP, data_staging::line>) {
           current1 = add_vector(current, parent_shape.line_start_ref().position_ref());
           current2 = add_vector(current, parent_shape.line_end_ref().position_ref());
