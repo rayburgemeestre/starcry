@@ -58,7 +58,7 @@ _ = {
           let line = this.spawn2(
               {
                 'id': 'logo_line',
-                  'gradient': 'white_text',
+                'gradient': 'white_text',
                 'opacity': 0.30,
               },
               newobj);
@@ -87,7 +87,8 @@ _ = {
             'angle': angle,
             'props': {'level': this.props.level + 1}
           });
-          let line = this.spawn2({'id': 'logo_line', 'gradient': 'white_text', 'radiussize': 2.5, 'opacity': 1.0}, newobj);
+          let line =
+              this.spawn2({'id': 'logo_line', 'gradient': 'white_text', 'radiussize': 2.5, 'opacity': 1.0}, newobj);
         }
         for (let i = 0; i < n; i++) {
           let angle = (360. / n) * i;
