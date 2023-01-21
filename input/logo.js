@@ -1,38 +1,17 @@
 _ = {
   'gradients': {
-    'white': [
-      {'position': 0, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
-      {'position': 0.9, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
-      {'position': 1, 'r': 1, 'g': 1, 'b': 1, 'a': 0},
-    ],
-    'black': [
-      {'position': 0, 'r': 0, 'g': 0, 'b': 0, 'a': 1},
-      {'position': 0.9, 'r': 0, 'g': 0, 'b': 0, 'a': 1},
-      {'position': 1, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
-    ],
-    'black_text': [
-      {'position': 0, 'r': 0, 'g': 0, 'b': 0, 'a': 1},
-      {'position': 1, 'r': 0, 'g': 0, 'b': 0, 'a': 0},
-    ],
-    'hue': [
-      {'position': 0, 'r': 0xa2 / 255., 'g': 0x81 / 255., 'b': 0xf7 / 255., 'a': 1},
-      {'position': 1, 'r': 0xc0 / 255., 'g': 0xcc / 255., 'b': 0xff / 255., 'a': 1},
-    ],
-    'red': [
-      {'position': 0.0, 'r': 0xef / 255., 'g': 0x2f / 255., 'b': 0x7e / 255., 'a': 1},
-      {'position': 0.90, 'r': 0xef / 255., 'g': 0x2f / 255., 'b': 0x7e / 255., 'a': 1},
-      {'position': 1, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
-    ],
-    'green': [
-      {'position': 0, 'r': 0xb9 / 255., 'g': 0xf0 / 255., 'b': 0xde / 255., 'a': 1},
-      {'position': 0.9, 'r': 0xb9 / 255., 'g': 0xf0 / 255., 'b': 0xde / 255., 'a': 1},
-      {'position': 1.0, 'r': 0xb9 / 255., 'g': 0xf0 / 255., 'b': 0xde / 255., 'a': 0},
-    ],
+    'white': '#990000',
+    'black': '#000000',
+    'white_text': '#ffffff',
+    'hue': '#ffffff',
+    'red': '#ffffff',
+    'green': '#ffffff',
+    'blue': '#9090ff',
   },
   'objects': {
     'logo_text': {
       'type': 'text',
-      'gradient': 'black_text',
+      'gradient': 'white_text',
       'x': 0,
       'y': 0,
       'text': 'starcry',
@@ -54,7 +33,7 @@ _ = {
     },
     'logo_art': {
       'type': 'circle',
-      'gradient': 'red',
+      'gradient': 'blue',
       'x': 0,
       'y': 0,
       'scale': 0.8,
@@ -79,6 +58,7 @@ _ = {
           let line = this.spawn2(
               {
                 'id': 'logo_line',
+                  'gradient': 'white_text',
                 'opacity': 0.30,
               },
               newobj);
@@ -87,7 +67,7 @@ _ = {
     },
     'logo_art_v2': {
       'type': 'circle',
-      'gradient': 'red',
+      'gradient': 'blue',
       'x': 0,
       'y': 0,
       'radius': 0,
@@ -107,7 +87,7 @@ _ = {
             'angle': angle,
             'props': {'level': this.props.level + 1}
           });
-          let line = this.spawn2({'id': 'logo_line', 'gradient': 'red', 'radiussize': 2.5, 'opacity': 1.0}, newobj);
+          let line = this.spawn2({'id': 'logo_line', 'gradient': 'white_text', 'radiussize': 2.5, 'opacity': 1.0}, newobj);
         }
         for (let i = 0; i < n; i++) {
           let angle = (360. / n) * i;
@@ -137,7 +117,7 @@ _ = {
     },
     'logo_art_v2_sub': {
       'type': 'circle',
-      'gradient': 'white',
+      'gradient': 'blue',
       'blending_type': blending_type.normal,
       'x': 0,
       'y': 0,
@@ -157,7 +137,7 @@ _ = {
     },
     'logo_art_bg_2': {
       'type': 'circle',
-      'gradient': 'red',
+      'gradient': 'white_text',
       'x': 0,
       'y': 0,
       'radius': 128,
@@ -186,7 +166,7 @@ _ = {
     'logo_line': {
       'type': 'line',
       'blending_type': blending_type.normal,
-      'gradient': 'red',
+      'gradient': 'white_text',
       'radius': 0,
       'radiussize': 10,
     },
@@ -201,9 +181,10 @@ _ = {
     'scale': 1.0,
     'rand_seed': 5,
     'granularity': 1,
-    'min_intermediates': 10,
+    'min_intermediates': 1,
+    'max_intermediates': 1,
     'grain_for_opacity': false,
-    'bg_color': {'r': 1., 'g': 1., 'b': 1., 'a': 1},
+    'bg_color': {'r': 0x99 / 255., 'g': 0, 'b': 0, 'a': 1},
     // 'bg_color': {'r': 0xb9 / 255., 'g': 0xf0 / 255., 'b': 0xde / 255., 'a': 1},
     // 'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
   },
@@ -219,7 +200,7 @@ _ = {
         {'id': 'logo_art_v2', 'x': 250, 'y': 0, 'z': 0, 'angle': 180, 'props': {}},
         //{'id': 'logo_text_v2', 'x': 160, 'y': 25, 'z': 0, 'props': {}},
         {'id': 'logo_text', 'x': 160, 'y': 25, 'z': 0, 'props': {}},
-        {'id': 'logo_art_hue', 'x': -250, 'y': 0, 'z': 0, 'props': {}},
+        // {'id': 'logo_art_hue', 'x': -250, 'y': 0, 'z': 0, 'props': {}},
       ]
     },
   ]

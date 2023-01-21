@@ -1,6 +1,6 @@
 <template>
   <q-layout view="hHh lpR fFf">
-    <q-header elevated class="bg-primary text-black" height-hint="98">
+    <q-header elevated class="bg-primary text-white" height-hint="98">
       <q-toolbar>
         <q-btn dense flat round icon="menu" @click="toggleLeftDrawer" />
         <q-toolbar-title>
@@ -89,23 +89,6 @@ export default defineComponent({
     const leftDrawerOpen = ref(false);
     const rightDrawerOpen = ref(false);
     const script = ref('Hello world');
-    const script_endpoint = new StarcryAPI(
-      'script',
-      StarcryAPI.text_type,
-      (msg) => {
-        console.log(msg);
-      },
-      (buffer) => {
-        console.log(buffer);
-      },
-      (_) => {
-        console.log('connected');
-      },
-      (_) => {
-        console.log('disconnected');
-      }
-    );
-    script_endpoint.connect();
 
     let initialDrawerWidth;
     let previous_w;
@@ -254,7 +237,7 @@ body {
   bottom: 0;
   right: -2px;
   width: 4px;
-  background-color: #b9f0de;
+  background-color: #990000;
   cursor: ew-resize;
 }
 
