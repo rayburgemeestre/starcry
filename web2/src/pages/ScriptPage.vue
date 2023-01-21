@@ -2,8 +2,6 @@
   <monaco-editor
     name="container"
     v-model="script"
-    height="100vh"
-    width="100vh"
   />
 </template>
 

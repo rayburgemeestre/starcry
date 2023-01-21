@@ -3,7 +3,6 @@
     <div
       class="container"
       :id="name"
-      :style="{ width: `${width}`, height: `calc(${height} - ( 8rem) )` }"
     ></div>
     <div class="tags has-addons">
       <!--
@@ -52,31 +51,23 @@ export default defineComponent({
       type: String,
       required: false,
     },
-    width: {
-      type: String,
-      required: true,
-    },
-    height: {
-      type: String,
-      required: true,
-    },
   },
   mounted() {
-    let editor = monaco.editor.create(document.getElementById(this.name), {
+    let container = document.getElementById(this.name);
+    if (!container) {
+      return;
+    }
+    let editor = monaco.editor.create(container, {
       value: this.value,
       language: this.language,
       automaticLayout: true,
+      overviewRulerLanes: 0,
+      hideCursorInOverviewRuler: true,
+      scrollbar: {
+        vertical: 'hidden'
+      },
+      overviewRulerBorder: false,
     });
-    /*
-            The themes seem not compatible with the vim style cursor.
-            TODO: investigate how to fix.
-            fetch('/themes/Dawn.json')
-                .then(data => data.json())
-                .then(data => {
-                        monaco.editor.defineTheme('custom', data);
-                        monaco.editor.setTheme('custom');
-                });
-            */
     editor.onDidChangeModelContent((event) => {
       const value = editor.getValue();
       if (this.value !== value) {
@@ -86,3 +77,15 @@ export default defineComponent({
   },
 });
 </script>
+
+<style>
+/* this hardcodes styling behavior into this component for our intended purposes */
+.container {
+  width: 100%;
+  height: calc(100vh - ( 9.25rem) );
+}
+
+.q-body--prevent-scroll .container {
+  height: 100vh;
+}
+</style>

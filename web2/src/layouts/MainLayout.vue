@@ -173,8 +173,8 @@ export default defineComponent({
         let footer = document
           .querySelector('.q-footer')
           .getBoundingClientRect();
-        let w = Math.floor(cvs['width']) - 10;
-        let h = Math.floor(footer['y'] - header['height']) - 10;
+        let w = Math.floor(cvs['width']);
+        let h = Math.floor(footer['y'] - header['height']);
         document.getElementById('canvas').width = w;
         document.getElementById('canvas').height = h;
         // if (Math.abs(previous_w - w) < 2 && Math.abs(previous_h - h) < 2) {
@@ -208,8 +208,7 @@ export default defineComponent({
       })(),
       onRuntimeInitialized: function () {
         console.log('Setting Initial Full HD dimensions');
-        //Module.start(1920, 1080, 1920, 1080);
-        Module.start(100, 100, 100, 100);
+        Module.start(1920, 1080, 1920, 1080);
       },
       print: function (text) {
         console.log('stdout: ' + text);
@@ -230,6 +229,10 @@ export default defineComponent({
 </script>
 
 <style>
+html, body {
+  overflow: hidden;
+}
+
 .q-drawer__resizer {
   position: absolute;
   top: 0;
@@ -254,14 +257,11 @@ export default defineComponent({
 
 canvas {
   position: absolute;
-  /*min-height: calc(500px);*/
-  /*width: 100%; max-height: calc(100vh - 120px);*/
-  /* uncomment next line for static canvas (for debugging) */
-  /* width: 1920px; height: 1080px; */
   left: 0;
   top: 0;
   cursor: none !important;
 }
+
 canvas:active {
   cursor: none !important;
 }
