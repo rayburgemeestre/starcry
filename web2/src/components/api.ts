@@ -25,10 +25,10 @@ export class StarcryAPI {
   constructor(
     endpoint: string,
     type: number,
-    on_status_change: any,
-    on_message: any,
-    on_connected: any,
-    on_disconnected: any
+    on_status_change?: any,
+    on_message?: any,
+    on_connected?: any,
+    on_disconnected?: any
   ) {
     this.endpoint = endpoint;
     this.type = type;
