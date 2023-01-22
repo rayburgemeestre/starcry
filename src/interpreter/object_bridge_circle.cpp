@@ -223,6 +223,7 @@ object_bridge<data_staging::circle>::object_bridge(interpreter::generator* gener
       .function("spawn2", &object_bridge::spawn2)
       .function("spawn3", &object_bridge::spawn3)
       .function("spawn_parent", &object_bridge::spawn_parent)
+      .function("destroy", &object_bridge::destroy)
       .property("seed", &object_bridge::get_seed, &object_bridge::set_seed)
       .property("blending_type", &object_bridge::get_blending_type, &object_bridge::set_blending_type)
       .property("collision_group", &object_bridge::get_collision_group, &object_bridge::set_collision_group)

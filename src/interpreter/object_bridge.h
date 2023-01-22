@@ -99,6 +99,7 @@ public:
   int64_t spawn2(v8::Local<v8::Object> line_obj, int64_t obj1);
   int64_t spawn3(v8::Local<v8::Object> line_obj, int64_t obj1, int64_t obj2);
   int64_t spawn_parent(v8::Local<v8::Object> obj);
+  int64_t destroy();
 
   v8::Persistent<v8::Object>& instance();
 };

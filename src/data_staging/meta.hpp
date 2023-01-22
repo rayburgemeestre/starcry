@@ -22,6 +22,7 @@ private:
   double dist_ = 0;
   int64_t steps_ = 0;
   bool is_pivot_ = false;
+  bool destroyed_ = false;
 
 public:
   meta() = default;
@@ -97,6 +98,14 @@ public:
 
   void set_pivot(bool is_pivot) {
     is_pivot_ = is_pivot;
+  }
+
+  void set_destroyed() {
+    destroyed_ = true;
+  }
+
+  bool is_destroyed() const {
+    return destroyed_;
   }
 };
 

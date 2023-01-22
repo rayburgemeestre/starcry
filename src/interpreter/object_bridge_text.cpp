@@ -208,7 +208,8 @@ object_bridge<data_staging::text>::object_bridge(interpreter::generator* generat
       .property("gradients", &object_bridge::get_gradients_local_ref)
       .function("spawn", &object_bridge::spawn)
       .function("spawn2", &object_bridge::spawn2)
-      .function("spawn3", &object_bridge::spawn3);
+      .function("spawn3", &object_bridge::spawn3)
+      .function("destroy", &object_bridge::destroy);
   instance_ = std::make_shared<v8::Persistent<v8::Object>>();
   (*instance_)
       .Reset(v8::Isolate::GetCurrent(), object_bridge_class.reference_external(v8::Isolate::GetCurrent(), this));

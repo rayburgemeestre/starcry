@@ -5,6 +5,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 
 #include "interpreter/object_bridge.h"
+#include "data_staging/shape.hpp"
 #include "generator.h"
 #include "util/v8_interact.hpp"
 
@@ -62,6 +63,16 @@ template <typename T>
 int64_t object_bridge<T>::spawn_parent(v8::Local<v8::Object> line_obj) {
   data_staging::shape_t var = *shape_stack.back();
   return generator_->spawn_object_at_parent(var, line_obj);
+}
+
+template <typename T>
+int64_t object_bridge<T>::destroy() {
+  data_staging::shape_t var = *shape_stack.back();
+  // this operates on a copy
+  auto ret = generator_->destroy(var);
+  // we swap the copy with the real one, to keep changes (such as set_destroyed())
+  std::swap(std::get<T>(var), *shape_stack.back());
+  return ret;
 }
 
 template <typename T>

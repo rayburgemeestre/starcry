@@ -177,8 +177,9 @@ object_bridge<data_staging::line>::object_bridge(interpreter::generator *generat
       .property("y2", &object_bridge::get_y2, &object_bridge::set_y2)
       .property("z2", &object_bridge::get_z2, &object_bridge::set_z2)
       .property("radiussize", &object_bridge::get_radius_size, &object_bridge::set_radius_size)
-      .property("spawn", &object_bridge::spawn)
-      .property("spawn_parent", &object_bridge::spawn_parent)
+      .function("spawn", &object_bridge::spawn)
+      .function("spawn_parent", &object_bridge::spawn_parent)
+      .function("destroy", &object_bridge::destroy)
       .property("props", &object_bridge::get_properties_local_ref)
       .property("gradients", &object_bridge::get_gradients_local_ref)
       .property("seed", &object_bridge::get_seed, &object_bridge::set_seed);

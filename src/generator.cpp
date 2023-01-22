@@ -1265,7 +1265,13 @@ void generator::convert_objects_to_render_job(v8_interact& i, step_calculator& s
   //    convert_object_to_render_job(i, instance, index, sc, video);
   //  }
   for (auto& shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
-    convert_object_to_render_job(i, shape, sc, video);
+    bool skip = false;
+    meta_callback(shape, [&]<typename T>(const T& shape) {
+      if (shape.meta_cref().is_destroyed()) {
+        skip = true;
+      }
+    });
+    if (!skip) convert_object_to_render_job(i, shape, sc, video);
   }
 }
 
@@ -1276,9 +1282,7 @@ void generator::convert_object_to_render_job(v8_interact& i,
   data::shape new_shape;
 
   const auto initialize = [&]<typename T>(T& shape) {
-    auto level = 0;      // shape.level;
-    auto exists = true;  // !i.has_field(instance, "exists") || i.boolean(instance, "exists");
-    if (!exists) return;
+    auto level = 0;  // shape.level;
     // See if we require this step for this object
     // auto steps = i.integer_number(instance, "steps");
     // if (minimize_steps_per_object && !sc.do_step(steps, stepper.next_step)) {
@@ -1532,6 +1536,16 @@ int64_t generator::spawn_object_at_parent(data_staging::shape_t& spawner, v8::Lo
   auto [created_instance, shape_ref, created_shape_copy] = _instantiate_object_from_scene(i, obj, &((*parent).get()));
   create_bookkeeping_for_script_objects(created_instance, created_shape_copy);
   return i.integer_number(created_instance, "unique_id");
+}
+
+int64_t generator::destroy(data_staging::shape_t& caller) {
+  auto& i = genctx->i();
+  int64_t ret = -1;
+  meta_callback(caller, [&]<typename T>(T& shape) {
+    ret = shape.meta_cref().unique_id();
+    shape.meta_ref().set_destroyed();
+  });
+  return ret;
 }
 
 std::unordered_map<std::string, v8::Persistent<v8::Object>>& generator::get_object_definitions_ref() {
