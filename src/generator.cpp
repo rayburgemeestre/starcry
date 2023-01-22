@@ -410,6 +410,20 @@ bool generator::_generate_frame() {
         revert_position_updates(i);
       }
 
+      // garbage collect destroyed objects
+      for (auto& scenes : scene_shapes_next) {
+        scenes.erase(std::remove_if(scenes.begin(),
+                                    scenes.end(),
+                                    [](auto& shape) {
+                                      bool ret = false;
+                                      meta_callback(shape, [&]<typename T>(T& shape) {
+                                        ret = shape.meta_cref().is_destroyed();
+                                      });
+                                      return ret;
+                                    }),
+                     scenes.end());
+      }
+
       scene_shapes = scene_shapes_next;
       fix_properties(scene_shapes);
 
