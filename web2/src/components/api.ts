@@ -34,8 +34,10 @@ export class StarcryAPI {
     this.type = type;
     this.on_status_change = on_status_change;
     this.on_message = on_message;
-    this.on_connected = on_connected;
-    this.on_disconnected = on_disconnected;
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    this.on_connected = on_connected || function () {};
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    this.on_disconnected = on_disconnected || function () {};
     this.ws = false;
     this.retry = false;
 

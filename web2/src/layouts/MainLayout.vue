@@ -37,8 +37,38 @@
     </q-drawer>
 
     <q-drawer show-if-above v-model="rightDrawerOpen" side="right" bordered>
+      <!--
+      <q-toolbar>
+        <q-btn flat round dense icon="draw" />
+        <q-toolbar-title>&nbsp;</q-toolbar-title>
+      </q-toolbar>
+      -->
       <!-- drawer content -->
-      ATTRIBUTES HERE
+      <br />
+      <q-btn
+        :loading="loading"
+        color="secondary"
+        @click="render_current_frame"
+        style="width: 100%"
+        >Render</q-btn
+      >
+      <br />
+      <br />
+      <q-btn color="secondary" style="width: 50%">Previous</q-btn>
+      <q-btn color="secondary" style="width: 50%">Next</q-btn>
+
+      <div class="q-pa-md">
+        <q-table
+          dense
+          :rows="rows"
+          :columns="columns"
+          row-key="name"
+          :filter="filter"
+          hide-header
+          hide-pagination
+        >
+        </q-table>
+      </div>
     </q-drawer>
 
     <q-page-container>
@@ -58,6 +88,7 @@
           v-on:mousemove="on_mouse_move"
           v-on:mousedown="on_mouse_down"
           v-on:wheel="on_wheel"
+          v-on:touchstart="on_touchstart"
           style="z-index: 0"
         ></canvas>
       </div>
@@ -66,7 +97,11 @@
     <q-footer elevated class="bg-grey-8 text-white">
       <q-toolbar>
         <q-toolbar-title>
-          <div>TIME NAVIGATION HERE</div>
+          <timeline-component
+            v-bind:value="current_frame"
+            v-bind:max_frames="max_frames"
+            v-bind:frames_per_scene="frames_per_scene"
+          />
         </q-toolbar-title>
       </q-toolbar>
     </q-footer>
@@ -75,15 +110,38 @@
 
 <script>
 import { defineComponent, ref } from 'vue';
-import { StarcryAPI } from 'components/api';
+import TimelineComponent from 'components/TimelineComponent.vue';
 import { load_client_data, save_client_data } from 'components/clientstorage';
+import { StarcryAPI } from 'components/api';
 
 save_client_data(load_client_data());
+
+let bitmap_endpoint = new StarcryAPI(
+  'bitmap',
+  StarcryAPI.binary_type,
+  (msg) => {
+    // this.$data.websock_status = msg;
+  },
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  (buffer) => {},
+  (_) => {
+    // this.log('DEBUG', 'bitmap', 'websocket connected', '');
+    // this.$data.connected_bitmap = true;
+  },
+  (_) => {
+    // this.log('DEBUG', 'bitmap', 'websocket disconnected', '');
+    // this.$data.connected_bitmap = false;
+  }
+);
+
+let loading = ref(false);
 
 export default defineComponent({
   name: 'MainLayout',
 
-  components: {},
+  components: {
+    TimelineComponent,
+  },
 
   setup() {
     const leftDrawerOpen = ref(false);
@@ -104,17 +162,62 @@ export default defineComponent({
     };
     const drawerWidth = ref(300);
 
+    const current_frame = ref(1);
+    const max_frames = ref(10);
+    const frames_per_scene = ref([5, 5]);
+
+    const columns = [
+      {
+        name: 'property',
+        align: 'left',
+        field: (row) => row[0],
+        format: (val) => `${val}`,
+        sortable: true,
+      },
+      { name: 'value', align: 'left', field: (row) => row[1], sortable: true },
+    ];
+    let rows = [];
+    for (let v in viewpoint_settings) {
+      rows.push([v, viewpoint_settings[v]]);
+    }
+
     let obj = {
+      loading,
+      current_frame,
+      max_frames,
+      frames_per_scene,
       script,
       leftDrawerOpen,
       rightDrawerOpen,
       drawer: ref(false),
       drawerWidth,
 
+      // table
+      filter: ref(''),
+      columns,
+      rows,
+
+      render_current_frame: function () {
+        loading.value = true;
+        bitmap_endpoint.send(
+          JSON.stringify({
+            filename: 'input/test.js',
+            // frame: current_frame.value,
+            // random frame between 1 and 150
+            frame: Math.floor(Math.random() * 150) + 1,
+            // viewpoint_settings: viewpoint_settings,
+            num_chunks: 1,
+          })
+        );
+      },
+
       on_mouse_move: function (e) {
-        Module.get_mouse_x(); // force redraw
+        window.Module.get_mouse_x(); // force redraw
         // this.$data.viewpoint_settings.view_x = Module.get_mouse_x();
         // this.$data.viewpoint_settings.view_y = Module.get_mouse_y();
+      },
+      on_touchstart: function (e) {
+        window.Module.get_mouse_x(); // force redraw
       },
       on_mouse_down: function (e) {
         // if (e.ctrlKey) {
@@ -221,6 +324,15 @@ export default defineComponent({
     const s = document.createElement('script');
     s.setAttribute('src', 'client.js');
     document.body.appendChild(s);
+
+    bitmap_endpoint.on_message = (buffer) => {
+      window.Module.last_buffer = buffer;
+      window.Module.set_texture(buffer);
+      // this.$data.rendering--;
+      // this.process_queue();
+      loading.value = false;
+    };
+    bitmap_endpoint.connect();
   },
 });
 </script>
