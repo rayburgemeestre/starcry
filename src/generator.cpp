@@ -414,10 +414,28 @@ bool generator::_generate_frame() {
       for (auto& scenes : scene_shapes_next) {
         scenes.erase(std::remove_if(scenes.begin(),
                                     scenes.end(),
-                                    [](auto& shape) {
+                                    [&scenes](auto& shape) {
                                       bool ret = false;
                                       meta_callback(shape, [&]<typename T>(T& shape) {
                                         ret = shape.meta_cref().is_destroyed();
+                                        if (ret) {
+                                          // we should update levels for this about to be erased parent
+                                          // we can do this here because this does not involve removing
+                                          // elements, etc., so we won't invalidate any iterators
+
+                                          // for now we'll just orphan all the objects that are affected
+                                          // let's check only one level for now
+
+                                          // TODO: we should do this recursively..., but this is a nice start
+                                          for (auto& scene_shape : scenes) {
+                                            meta_callback(scene_shape, [&]<typename T2>(T2& shape2) {
+                                              if (shape2.meta_cref().parent_uid() == shape.meta_cref().unique_id()) {
+                                                shape2.meta_ref().set_level(0);
+                                                shape2.meta_ref().set_parent_uid(-1);
+                                              }
+                                            });
+                                          }
+                                        }
                                       });
                                       return ret;
                                     }),
