@@ -23,23 +23,23 @@ _ = {
         this.radiussize += elapsed * 100;
         // this.opacity -= elapsed / 10;
         // if (this.opacity < 0) this.opacity = 0;
-        if (this.radius == 1) return;
-        if (this.radiussize > 100 + 100 * t) {
-          for (let n = 2, i = 0; i < n; i++) {
+        if (this.radius !== 1 && this.radiussize > 200 * Math.random()) {
+          for (let n = 3, i = 0; i < n; i++) {
             let angle = ((360 / n) * i) - 45;
             let vel = angled_velocity(angle);
             this.spawn({
               'id': 'circle',
-              'x': vel[0] * 100,
-              'y': vel[1] * 100,
+              'x': this.x + vel[0] * 100,
+              'y': this.y + vel[1] * 100,
               'z': 0,
-              'velocity': t * 10,
+              'velocity': 10,
               'vel_x': vel[0],
               'vel_y': vel[1],
               'props': {},
               'hue': this.hue + 33 /*, 'rotate': this.rotate + 33*/
             });
             this.radius = 1;  // use as flag, currently this.props is unreliable
+            this.destroy();
           }
         }
       },
