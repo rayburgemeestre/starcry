@@ -8,6 +8,7 @@
 #include <vector>
 
 void output_fun(const std::string& s);
+std::vector<double> angled_velocity(double angle);
 std::vector<double> random_velocity();
 
 void set_rand_seed(double seed);

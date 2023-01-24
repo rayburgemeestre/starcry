@@ -25,6 +25,22 @@ double rand_fun() {
   return rand_.get();
 }
 
+std::vector<double> angled_velocity(double angle) {
+  const auto degrees_to_radian = [](double degrees) {
+    const auto pi = 3.14159265358979323846;
+    return degrees * pi / 180.0;
+  };
+  const auto radian = degrees_to_radian(angle);
+  const auto sine = sin(radian);
+  const auto cosine = cos(radian);
+  const double x = cosine - sine;
+  const double y = sine + cosine;
+  // normalize vector of x and y
+  // const auto length = sqrt(pow(x, 2) + pow(y, 2));
+  // return {x / length, y / length};
+  return {x, y};
+}
+
 std::vector<double> random_velocity() {
   static util::random_generator rand;
   double x = rand.get();

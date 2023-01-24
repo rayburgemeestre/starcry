@@ -28,6 +28,7 @@ void initializer::reset_context() {
 
   gen_.context->add_fun("output", &output_fun);
   gen_.context->add_fun("rand", &rand_fun);
+  gen_.context->add_fun("angled_velocity", &angled_velocity);
   gen_.context->add_fun("random_velocity", &random_velocity);
   gen_.context->add_fun("expf", &expf_fun);
   gen_.context->add_fun("logn", &logn_fun);
