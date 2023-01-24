@@ -486,6 +486,10 @@ export default {
             let p = new JsonWithObjectsParser(buffer.substr(buffer.indexOf('{')));
             this.$data.input_source = buffer;
             this.$data.video = p.parsed()['video'] || {};
+            if (!this.$data.video['scale']) { this.$data.video['scale'] = 1.; }
+            if (!this.$data.video['fps']) { this.$data.video['fps'] = 25; }
+            if (!this.$data.video['width']) { this.$data.video['width'] = 1920; }
+            if (!this.$data.video['height']) { this.$data.video['height'] = 1080; }
             this.$data.preview = p.parsed()['preview'] || {};
             this.$data.viewpoint_settings.scale = this.$data.video['scale'];
             let total_duration = 0;
