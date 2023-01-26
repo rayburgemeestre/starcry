@@ -17,7 +17,7 @@ _ = {
       'init': function() {
         if (this.level > 0) return;
 
-        for (let n = 8, a = 0; a < n; a++) {
+        for (let n = 5, a = 0; a < n; a++) {
           let the_angle = 360 / n * a - (360 / n) + 90;
           let the_angle2 = 360 / n * (a + 1) - (360 / n) + 90;
 
@@ -26,7 +26,7 @@ _ = {
           let dots = 20;
           for (let i = 0; i < dots; i++) {
             let x = 0;
-            let y = i * -20;
+            let y = i * -30;
             var angle = the_angle;
 
             var rads = angle * Math.PI / 180.0;
@@ -55,7 +55,6 @@ _ = {
       'time': function(t, elapsed, s) {
         this.rotate += elapsed * 10;
         this.hue += elapsed * 10;
-        script.video.scale = 1. + t;
       },
     },
     'dot': {
@@ -79,7 +78,6 @@ _ = {
       'radiussize': 1,
       'init': function() {},
       'time': function(t, e, s, tt) {
-        // this.scale = 1. * tt;
       },
     },
   },
