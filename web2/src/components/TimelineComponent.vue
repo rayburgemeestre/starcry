@@ -23,7 +23,14 @@
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
+import { useCounterStore } from 'stores/example-store';
 
+let counter = useCounterStore();
+
+counter.$subscribe((mutation, state) => {
+  console.log(mutation);
+  console.log(state);
+});
 export default defineComponent({
   name: 'TimelineComponent',
   props: {
@@ -42,6 +49,7 @@ export default defineComponent({
   },
   setup() {
     return {
+      counter,
       tick: ref(0),
       max: ref(250),
       hover_value: ref(-1),
