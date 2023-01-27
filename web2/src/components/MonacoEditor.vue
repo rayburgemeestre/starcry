@@ -24,8 +24,11 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import * as monaco from 'monaco-editor';
+import { useScriptStore } from 'stores/script';
 
 let editor: monaco.editor.IStandaloneCodeEditor | null = null;
+
+let script_store = useScriptStore();
 
 export default defineComponent({
   name: 'MonacoEditor',
@@ -69,19 +72,10 @@ export default defineComponent({
       theme: 'vs-dark',
     });
 
-    // editor.onDidChangeModelContent((event: any) => {
-    //   const value = editor?.getValue();
-    //   if (this.value !== value) {
-    //     this.$emit('input-change', value, event);
-    //   }
-    // });
-  },
-  watch: {
-    value(value) {
-      if (editor) {
-        editor.setValue(value);
-      }
-    },
+    editor.onDidChangeModelContent((event: any) => {
+      const value = editor?.getValue();
+      script_store.set_value(value);
+    });
   },
 });
 </script>
