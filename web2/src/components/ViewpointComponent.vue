@@ -14,7 +14,8 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, ref } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useViewpointStore } from 'stores/viewpoint';
 
 const columns = [
@@ -25,14 +26,19 @@ const columns = [
     format: (val) => `${val}`,
     sortable: true,
   },
-  { name: 'value', align: 'left', field: (row) => row[1], sortable: true },
+  {
+    name: 'value',
+    align: 'left',
+    field: (row) => row[1].value,
+    sortable: true,
+  },
 ];
 
-let viewpoint_store = useViewpointStore();
+let viewpoint_store = storeToRefs(useViewpointStore());
 
-let rows = [];
-for (let v in viewpoint_store.$state) {
-  rows.push([v, viewpoint_store[v]]);
+let rows = ref([]);
+for (let v in viewpoint_store) {
+  rows.value.push([v, viewpoint_store[v]]);
 }
 
 export default defineComponent({

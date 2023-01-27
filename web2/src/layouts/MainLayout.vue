@@ -105,6 +105,7 @@ import { StarcryAPI } from 'components/api';
 import { useScriptStore } from 'stores/script';
 import ViewpointComponent from 'components/ViewpointComponent.vue';
 import { append_script_to_body } from 'components/utils';
+import { useViewpointStore } from 'stores/viewpoint';
 
 save_client_data(load_client_data());
 
@@ -142,6 +143,7 @@ export default defineComponent({
     const script = ref('Hello world');
 
     let script_store = useScriptStore();
+    let viewpoint_store = useViewpointStore();
 
     let initialDrawerWidth;
     let previous_w;
@@ -256,8 +258,8 @@ export default defineComponent({
       previous_h = h;
       // start might throw
       try {
-        viewpoint_settings.canvas_w = w;
-        viewpoint_settings.canvas_h = h;
+        viewpoint_store.canvas_w = w;
+        viewpoint_store.canvas_h = h;
         Module.start(w, h, w, h);
       } catch (e) {
         // we'll know soon enough if the thing has crashed...
