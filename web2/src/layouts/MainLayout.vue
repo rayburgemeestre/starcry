@@ -201,16 +201,19 @@ export default defineComponent({
       on_wheel: function (event) {
         event.preventDefault();
         // eslint-disable-next-line @typescript-eslint/no-loss-of-precision
-        let delta = event.deltaY / 1000.;
+        let delta = event.deltaY / 1000;
         if (event.deltaY < 0) {
-          viewpoint_store.scale += delta * -1.;
+          viewpoint_store.scale += delta * -1;
         } else {
           viewpoint_store.scale -= delta;
         }
         // Restrict scale
         // TODO: this 100 needs to come from some constant, or better yet, some actual setting somewhere..
         // eslint-disable-next-line @typescript-eslint/no-loss-of-precision
-        viewpoint_store.scale = Math.min(Math.max(0., viewpoint_store.scale), 100.);
+        viewpoint_store.scale = Math.min(
+          Math.max(0, viewpoint_store.scale),
+          100
+        );
       },
     };
     obj.toggleLeftDrawer = function () {

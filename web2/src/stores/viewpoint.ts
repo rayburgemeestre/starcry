@@ -9,5 +9,12 @@ export const useViewpointStore = defineStore('viewpoint', {
     canvas_h: 1080,
     offset_x: 0,
     offset_y: 0,
+
+    raw: false,
+    preview: false,
+    labels: false,
+    caching: false,
+    debug: false,
+    save: false,
   }),
 });
