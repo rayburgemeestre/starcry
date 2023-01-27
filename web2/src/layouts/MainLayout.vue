@@ -58,6 +58,10 @@
       <q-btn color="secondary" style="width: 50%">Next</q-btn>
 
       <viewpoint-component />
+      <br />
+      <q-btn color="secondary" @click="reset_values" style="width: 100%"
+        >Reset</q-btn
+      >
     </q-drawer>
 
     <q-page-container>
@@ -183,20 +187,24 @@ export default defineComponent({
         );
       },
 
+      reset_values: function () {
+        viewpoint_store.reset();
+      },
+
       on_mouse_move: function (e) {
         window.Module.get_mouse_x(); // force redraw
-        // this.$data.viewpoint_settings.view_x = Module.get_mouse_x();
-        // this.$data.viewpoint_settings.view_y = Module.get_mouse_y();
+        viewpoint_store.view_x = Module.get_mouse_x();
+        viewpoint_store.view_y = Module.get_mouse_y();
       },
       on_touchstart: function (e) {
         window.Module.get_mouse_x(); // force redraw
       },
       on_mouse_down: function (e) {
-        // if (e.ctrlKey) {
-        //   this.$refs.vpc.select();
-        // } else {
-        //   this.render_objects();
-        // }
+        if (e.ctrlKey) {
+          viewpoint_store.select();
+        } else {
+          this.render_objects();
+        }
       },
       on_wheel: function (event) {
         event.preventDefault();

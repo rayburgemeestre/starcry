@@ -36,6 +36,7 @@ const columns = [
   },
 ];
 
+let viewpoint_store_raw = useViewpointStore();
 let viewpoint_store = storeToRefs(useViewpointStore());
 
 let first_load = true;
@@ -114,42 +115,24 @@ export default defineComponent({
       // this.$data.previous_scale = this.$data.scale;
     };
 
-    watch(
-      () => viewpoint_store.scale.value,
-      () => {
-        if (timer !== null) {
-          clearTimeout(timer);
-          timer = null;
+    for (let v in viewpoint_store_raw.$state) {
+      if (v === 'view_x' || v === 'view_y') continue;
+      watch(
+        () => viewpoint_store[v].value,
+        (n) => {
+          console.log('viewpoint_store_raw.$state changed', n, 'v', v);
+          if (timer !== null) {
+            clearTimeout(timer);
+            timer = null;
+          }
+          timer = setTimeout(scheduled_update, 100);
         }
-        timer = setTimeout(scheduled_update, 100);
-      }
-    );
+      );
+    }
 
     return {
       rows,
       columns,
-
-      enable_labels: function () {
-        // this.$data.labels = true;
-      },
-      select: function () {
-        // this.$data.offsetX += this.$data.view_x / this.$data.scale;
-        // this.$data.offsetY += this.$data.view_y / this.$data.scale;
-        // this.update();
-      },
-      reset: function () {
-        // this.$data.scale = 1;
-        // this.$data.viewpoint_settings.scale = 1;
-        // this.$data.offsetX = 0;
-        // this.$data.offsetY = 0;
-        // this.$data.raw = false;
-        // this.$data.preview = false;
-        // this.$data.labels = false;
-        // this.$data.caching = false;
-        // this.$data.debug = false;
-        // this.$data.save = false;
-        // this.update();
-      },
     };
   },
   computed: {},
