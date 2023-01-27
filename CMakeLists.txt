@@ -107,6 +107,8 @@ file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp" "src/perlin.cpp" "src/textu
 add_executable(starcry ${starcry_SOURCES})
 add_executable(sc_client ${sc_client_SOURCES})
 
+target_link_libraries(sc_client PRIVATE /opt/cppse/build/vivid/lib/libvivid.a)
+
 target_compile_definitions(sc_client PUBLIC SC_CLIENT)
 
 # integration tests
