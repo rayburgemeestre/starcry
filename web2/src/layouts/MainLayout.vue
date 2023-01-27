@@ -104,7 +104,7 @@ import { load_client_data, save_client_data } from 'components/clientstorage';
 import { StarcryAPI } from 'components/api';
 import { useScriptStore } from 'stores/script';
 import ViewpointComponent from 'components/ViewpointComponent.vue';
-import {append_script_to_body} from 'components/utils';
+import { append_script_to_body } from 'components/utils';
 
 save_client_data(load_client_data());
 
@@ -293,8 +293,13 @@ export default defineComponent({
         return document.getElementById('canvas');
       })(),
       onRuntimeInitialized: function () {
-        console.log('Setting Initial Full HD dimensions');
-        Module.start(1920, 1080, 1920, 1080);
+        try {
+          // might throw
+          console.log('Setting Initial Full HD dimensions');
+          Module.start(1920, 1080, 1920, 1080);
+        } catch (e) {
+          if (e !== 'unwind') console.error(e);
+        }
       },
       print: function (text) {
         console.log('stdout: ' + text);
@@ -306,7 +311,10 @@ export default defineComponent({
 
     this.update_size_delayed();
 
-    append_script_to_body('client.js');
+    // TODO: no idea why this needs some initial delay, the Module object it waits for should already be there
+    setTimeout(function () {
+      append_script_to_body('client.js');
+    }, 100);
 
     bitmap_endpoint.on_message = (buffer) => {
       window.Module.last_buffer = buffer;

@@ -60,7 +60,7 @@ export default defineComponent({
           // this.$data.input_source = buffer;
           script_store.video = p.parsed()['video'] || {};
           script_store.preview = p.parsed()['preview'] || {};
-          viewpoint_store.scale = script_store.video['scale'] || 1.;
+          viewpoint_store.scale = script_store.video['scale'] || 1;
           let total_duration = 0;
           script_store.frames_per_scene = [];
           for (let scene of p.parsed()['scenes']) {
