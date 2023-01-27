@@ -3,58 +3,71 @@
     <div
       class="myslider"
       style="width: 100%; margin-right: 10px; float: left"
-      :min="0"
+      :min="1"
       @mouseout="mouse_out"
     >
       <div
         v-bind:class="t"
         v-bind:key="index"
+        v-bind:index="index"
         @click="click"
         @mouseover="mouse_over"
         v-for="[index, t] in computed_ticks"
       ></div>
     </div>
     <span class="info"
-      ><span>{{ value }}</span
-      ><span v-if="hover_value != -1"> &lt;= {{ hover_value }} </span></span
+      ><span>{{ script_store.frame }}</span
+      ><span v-if="hover_value !== -1"> &lt;= {{ hover_value }} </span></span
     >
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
+import { useScriptStore } from 'stores/script';
+
+let script_store = useScriptStore();
+
+let tick = 0;
+let max = 250;
+let hover_val = -1;
 
 export default defineComponent({
   name: 'TimelineComponent',
-  props: {
-    value: {
-      type: Number,
-      required: true,
-    },
-    max_frames: {
-      type: Number,
-      required: true,
-    },
-    frames_per_scene: {
-      type: Array,
-      required: true,
-    },
-  },
   setup() {
     return {
-      tick: ref(0),
-      max: ref(250),
-      hover_value: ref(-1),
+      script_store,
+
+      tick: ref(tick),
+      max: ref(max),
+      hover_value: ref(hover_val),
+      play: function () {
+        // this.$parent.play();
+      },
+      stop: function () {
+        // this.$parent.stop();
+      },
+      click: function (e) {
+        let index = e.target.getAttribute('index');
+        script_store.frame = index;
+        this.tick = index;
+      },
+      mouse_over: function (e) {
+        hover_val = e.target.getAttribute('index');
+      },
+      mouse_out: function (e) {
+        hover_val = -1;
+      },
     };
   },
   computed: {
     computed_ticks() {
       let colors = ['one', 'two'];
-      let copy = this.frames_per_scene;
+      let copy = script_store.frames_per_scene;
       let current_scene = copy.shift();
       let color_idx = 0;
       let result = [];
-      for (let i = 0; i < this.max; i++) {
+      for (let i = 1; i < this.max; i++) {
         if (i >= current_scene) {
           current_scene += copy.shift();
           color_idx++;
@@ -70,56 +83,6 @@ export default defineComponent({
     },
   },
 });
-/*
-export default {
-  props: {
-  },
-  data() {
-    return {
-    };
-  },
-  computed: {
-  },
-  methods: {
-    play: function () {
-      this.$parent.play();
-    },
-    stop: function () {
-      this.$parent.stop();
-    },
-    click: function (e) {
-      let index = e.target.getAttribute('index');
-      this.$data.value = index;
-      this.$data.tick = index;
-    },
-    mouse_over: function (e) {
-      let index = e.target.getAttribute('index');
-      this.$data.hover_value = index;
-    },
-    mouse_out: function (e) {
-      this.$data.hover_value = -1;
-    },
-  },
-  watch: {
-    value(new_val) {
-      this.$data.tick = this.$props.value;
-    },
-    max_frames(new_val) {
-      this.$data.max = this.$props.max_frames;
-    },
-    tick: function (frame) {
-      this.$parent.set_frame(frame);
-    },
-    frames_per_scene: function (frames_per_scene) {
-      this.$data.frames_per_scene = frames_per_scene;
-    },
-  },
-  mounted: function () {
-    this.$data.tick = this.$props.value;
-    this.$data.frames_per_scene = this.$props.frames_per_scene;
-  },
-};
-*/
 </script>
 
 <style>

@@ -90,11 +90,7 @@
     <q-footer elevated class="bg-grey-8 text-white">
       <q-toolbar>
         <q-toolbar-title>
-          <timeline-component
-            v-bind:value="current_frame"
-            v-bind:max_frames="max_frames"
-            v-bind:frames_per_scene="frames_per_scene"
-          />
+          <timeline-component />
         </q-toolbar-title>
       </q-toolbar>
     </q-footer>
@@ -154,15 +150,8 @@ export default defineComponent({
     let previous_h;
     const drawerWidth = ref(300);
 
-    const current_frame = ref(1);
-    const max_frames = ref(10);
-    const frames_per_scene = ref([5, 5]);
-
     let obj = {
       loading,
-      current_frame,
-      max_frames,
-      frames_per_scene,
       script,
       leftDrawerOpen,
       rightDrawerOpen,
@@ -180,7 +169,7 @@ export default defineComponent({
             filename: script_store.filename,
             // frame: current_frame.value,
             // random frame between 1 and 150
-            frame: script_store.frame,
+            frame: parseInt(script_store.frame),
             // viewpoint_settings: viewpoint_settings,
             num_chunks: 1,
           })
@@ -337,7 +326,6 @@ export default defineComponent({
       // this.process_queue();
       loading.value = false;
     };
-    bitmap_endpoint.connect();
   },
 });
 </script>
