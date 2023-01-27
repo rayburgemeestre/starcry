@@ -113,6 +113,7 @@ import { defineComponent, ref } from 'vue';
 import TimelineComponent from 'components/TimelineComponent.vue';
 import { load_client_data, save_client_data } from 'components/clientstorage';
 import { StarcryAPI } from 'components/api';
+import { useScriptStore } from 'stores/script';
 
 save_client_data(load_client_data());
 
@@ -147,6 +148,8 @@ export default defineComponent({
     const leftDrawerOpen = ref(false);
     const rightDrawerOpen = ref(false);
     const script = ref('Hello world');
+
+    let script_store = useScriptStore();
 
     let initialDrawerWidth;
     let previous_w;
@@ -196,15 +199,16 @@ export default defineComponent({
       filter: ref(''),
       columns,
       rows,
+      script_store,
 
       render_current_frame: function () {
         loading.value = true;
         bitmap_endpoint.send(
           JSON.stringify({
-            filename: 'input/test.js',
+            filename: script_store.filename,
             // frame: current_frame.value,
             // random frame between 1 and 150
-            frame: Math.floor(Math.random() * 150) + 1,
+            frame: script_store.frame,
             // viewpoint_settings: viewpoint_settings,
             num_chunks: 1,
           })
