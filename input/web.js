@@ -77,8 +77,7 @@ _ = {
       'radius': 0,
       'radiussize': 1,
       'init': function() {},
-      'time': function(t, e, s, tt) {
-      },
+      'time': function(t, e, s, tt) {},
     },
   },
   'video': {
