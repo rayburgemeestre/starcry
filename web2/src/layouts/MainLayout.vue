@@ -57,18 +57,7 @@
       <q-btn color="secondary" style="width: 50%">Previous</q-btn>
       <q-btn color="secondary" style="width: 50%">Next</q-btn>
 
-      <div class="q-pa-md">
-        <q-table
-          dense
-          :rows="rows"
-          :columns="columns"
-          row-key="name"
-          :filter="filter"
-          hide-header
-          hide-pagination
-        >
-        </q-table>
-      </div>
+      <viewpoint-component />
     </q-drawer>
 
     <q-page-container>
@@ -114,6 +103,8 @@ import TimelineComponent from 'components/TimelineComponent.vue';
 import { load_client_data, save_client_data } from 'components/clientstorage';
 import { StarcryAPI } from 'components/api';
 import { useScriptStore } from 'stores/script';
+import ViewpointComponent from 'components/ViewpointComponent.vue';
+import {append_script_to_body} from 'components/utils';
 
 save_client_data(load_client_data());
 
@@ -142,6 +133,7 @@ export default defineComponent({
 
   components: {
     TimelineComponent,
+    ViewpointComponent,
   },
 
   setup() {
@@ -154,35 +146,11 @@ export default defineComponent({
     let initialDrawerWidth;
     let previous_w;
     let previous_h;
-    let viewpoint_settings = {
-      scale: 1,
-      view_x: 0,
-      view_y: 0,
-      canvas_w: 1920,
-      canvas_h: 1080,
-      offset_x: 0,
-      offset_y: 0,
-    };
     const drawerWidth = ref(300);
 
     const current_frame = ref(1);
     const max_frames = ref(10);
     const frames_per_scene = ref([5, 5]);
-
-    const columns = [
-      {
-        name: 'property',
-        align: 'left',
-        field: (row) => row[0],
-        format: (val) => `${val}`,
-        sortable: true,
-      },
-      { name: 'value', align: 'left', field: (row) => row[1], sortable: true },
-    ];
-    let rows = [];
-    for (let v in viewpoint_settings) {
-      rows.push([v, viewpoint_settings[v]]);
-    }
 
     let obj = {
       loading,
@@ -197,8 +165,6 @@ export default defineComponent({
 
       // table
       filter: ref(''),
-      columns,
-      rows,
       script_store,
 
       render_current_frame: function () {
@@ -307,6 +273,21 @@ export default defineComponent({
     return obj;
   },
   mounted() {
+    let module_already_loaded = !!window.Module;
+    if (module_already_loaded) {
+      // stop
+      try {
+        window.Module.stop();
+      } catch (e) {}
+      // update canvas (element could have been recreated by hot reload dev stuff
+      window.Module.canvas = document.getElementById('canvas');
+      // start, will update with correct width, height etc., later.
+      try {
+        window.Module.start(1920, 1080, 1920, 1080);
+      } catch (e) {}
+      return;
+    }
+
     window.Module = {
       canvas: (function () {
         return document.getElementById('canvas');
@@ -325,9 +306,7 @@ export default defineComponent({
 
     this.update_size_delayed();
 
-    const s = document.createElement('script');
-    s.setAttribute('src', 'client.js');
-    document.body.appendChild(s);
+    append_script_to_body('client.js');
 
     bitmap_endpoint.on_message = (buffer) => {
       window.Module.last_buffer = buffer;

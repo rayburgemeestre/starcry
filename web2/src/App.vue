@@ -9,7 +9,7 @@ import { JsonWithObjectsParser } from 'components/json_parser';
 import { create_tree, sort_tree } from 'components/filetree';
 import { useScriptStore } from 'stores/script';
 import { useFilesStore } from 'stores/files';
-import {useViewpointStore} from 'stores/viewpoint';
+import { useViewpointStore } from 'stores/viewpoint';
 
 // temp
 let timeout_script_updates: NodeJS.Timeout | null = null;
@@ -60,7 +60,7 @@ export default defineComponent({
           // this.$data.input_source = buffer;
           script_store.video = p.parsed()['video'] || {};
           script_store.preview = p.parsed()['preview'] || {};
-          viewpoint_store.scale = script_store.video['scale'];
+          viewpoint_store.scale = script_store.video['scale'] || 1.;
           let total_duration = 0;
           script_store.frames_per_scene = [];
           for (let scene of p.parsed()['scenes']) {

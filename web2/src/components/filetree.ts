@@ -14,7 +14,6 @@ export function create_tree(files_list_json_string: string): TreeNode[] {
   const tree: TreeNode[] = [];
   const files: ScriptFile[] = JSON.parse(files_list_json_string);
   for (const file of files) {
-    console.log(file);
     const parts = file.filename.split('/');
     const parents = [];
     for (let i = 0; i < parts.length; i++) {
