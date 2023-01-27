@@ -1,3 +1,5 @@
+import { load_client_data, save_client_data } from 'components/clientstorage';
+
 export interface StarcryAPI {
   endpoint: string;
   type: number;
@@ -40,6 +42,8 @@ export class StarcryAPI {
     this.on_disconnected = on_disconnected || function () {};
     this.ws = false;
     this.retry = false;
+
+    save_client_data(load_client_data());
 
     if (!localStorage.getItem('client-data')) {
       throw 'client-data could not be read from local storage.';

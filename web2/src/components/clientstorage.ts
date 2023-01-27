@@ -8,11 +8,15 @@ function uuidv4() {
 }
 
 export function load_client_data() {
-  return localStorage.getItem('client-data')
-    ? JSON.parse(localStorage.getItem('client-data'))
-    : {
-        ID: uuidv4(),
-      };
+  const new_obj = {
+    ID: uuidv4(),
+  };
+  try {
+    return localStorage.getItem('client-data')
+      ? JSON.parse(localStorage.getItem('client-data'))
+      : new_obj;
+  } catch (e) {}
+  return new_obj;
 }
 
 export function save_client_data(client_data) {

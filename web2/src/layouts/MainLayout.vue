@@ -107,7 +107,8 @@ import ViewpointComponent from 'components/ViewpointComponent.vue';
 import { append_script_to_body } from 'components/utils';
 import { useViewpointStore } from 'stores/viewpoint';
 
-save_client_data(load_client_data());
+// this is not the right place, quasar build generates javascript that tries to read client-data before this has executed
+// save_client_data(load_client_data());
 
 let bitmap_endpoint = new StarcryAPI(
   'bitmap',
