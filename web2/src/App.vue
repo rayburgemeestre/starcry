@@ -9,6 +9,7 @@ import { JsonWithObjectsParser } from 'components/json_parser';
 import { create_tree, sort_tree } from 'components/filetree';
 import { useScriptStore } from 'stores/script';
 import { useFilesStore } from 'stores/files';
+import {useViewpointStore} from 'stores/viewpoint';
 
 // temp
 let timeout_script_updates: NodeJS.Timeout | null = null;
@@ -18,6 +19,7 @@ export default defineComponent({
   setup() {
     let script_store = useScriptStore();
     let files_store = useFilesStore();
+    let viewpoint_store = useViewpointStore();
 
     // user has made changes to the project javascript through the editor
     watch(
@@ -58,7 +60,7 @@ export default defineComponent({
           // this.$data.input_source = buffer;
           script_store.video = p.parsed()['video'] || {};
           script_store.preview = p.parsed()['preview'] || {};
-          // this.$data.viewpoint_settings.scale = this.$data.video['scale'];
+          viewpoint_store.scale = script_store.video['scale'];
           let total_duration = 0;
           script_store.frames_per_scene = [];
           for (let scene of p.parsed()['scenes']) {
