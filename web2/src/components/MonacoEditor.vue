@@ -1,28 +1,17 @@
 <template>
   <div>
     <div class="container" :id="name"></div>
-    <div class="tags has-addons">
-      <!--
-      <span class="tag">
-        <label class="checkbox">
-          <input type="checkbox" v-model="vim_mode" /><span>VIM</span>
-        </label>
-      </span>
-      <span class="tag"
-      ><label class="checkbox">
-          <input type="checkbox" v-model="emacs_mode" /><span
-      >EMACS</span
-      ></label
-      >
-      </span>
-      -->
-      <span class="tag is-primary" :id="`${name}_status`"></span>
+    <div class="tags">
+      <q-checkbox dark v-model="vim_mode" label="vim" color="#990000" />
+      <q-checkbox dark v-model="emacs_mode" label="emacs" color="#990000" />
+      <br />
+      <span class="status" :id="`${name}_status`"></span>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, ref, watch } from 'vue';
 import * as monaco from 'monaco-editor';
 import { useScriptStore } from 'stores/script';
 
@@ -33,6 +22,9 @@ import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
+import { initVimMode } from 'monaco-vim/lib';
+import { hash } from 'components/hash';
+import { EmacsExtension } from 'monaco-emacs';
 
 window.MonacoEnvironment = {
   getWorker(_, label) {
@@ -59,14 +51,6 @@ let script_store = useScriptStore();
 export default defineComponent({
   name: 'MonacoEditor',
   props: {
-    vim_mode: {
-      type: Boolean,
-      default: false,
-    },
-    emacs_mode: {
-      type: Boolean,
-      default: false,
-    },
     name: {
       type: String,
       required: true,
@@ -79,6 +63,12 @@ export default defineComponent({
       type: String,
       required: false,
     },
+  },
+  setup() {
+    return {
+      vim_mode: ref(true),
+      emacs_mode: ref(false),
+    };
   },
   mounted() {
     let container = document.getElementById(this.name);
@@ -102,6 +92,53 @@ export default defineComponent({
       const value = editor?.getValue();
       script_store.set_value(value);
     });
+
+    let vimmode = null;
+    let name = this.name;
+    function toggle_vim_mode(value: boolean) {
+      if (value) {
+        this.emacs_mode = false;
+        vimmode = initVimMode(
+          editor,
+          document.getElementById(name + '_status')
+        );
+      } else {
+        vimmode?.dispose();
+        document.getElementById(name + '_status').innerHTML = '';
+      }
+    }
+    let emacsMode = null;
+    function toggle_emacs_mode(value: boolean) {
+      let statusNode = document.getElementById(name + '_status');
+      if (value) {
+        this.vim_mode = false;
+        emacsMode = new EmacsExtension(editor);
+        emacsMode.onDidMarkChange(function (ev) {
+          statusNode.textContent = ev ? 'Mark Set!' : 'Mark Unset';
+        });
+        emacsMode.onDidChangeKey(function (str) {
+          statusNode.textContent = str;
+        });
+        emacsMode.start();
+      } else {
+        emacsMode?.dispose();
+        document.getElementById(name + '_status').innerHTML = '';
+      }
+    }
+    watch(
+      () => this.vim_mode,
+      function (val) {
+        toggle_vim_mode.bind(this)(val);
+      }.bind(this)
+    );
+    watch(
+      () => this.emacs_mode,
+      function (val) {
+        toggle_emacs_mode.bind(this)(val);
+      }.bind(this)
+    );
+    if (this.vim_mode) toggle_vim_mode.bind(this)(true);
+    if (this.emacs_mode) toggle_emacs_mode.bind(this)(true);
   },
 });
 </script>
@@ -110,10 +147,20 @@ export default defineComponent({
 /* this hardcodes styling behavior into this component for our intended purposes */
 .container {
   width: 100%;
-  height: calc(100vh - (9.25rem));
+  height: calc(100vh - (9.25rem) - 5.5em);
 }
 
 .q-body--prevent-scroll .container {
-  height: 100vh;
+  height: calc(100vh - 5.5em);
+}
+.tags {
+  height: 5.5em;
+  width: 100%;
+}
+.tags .status {
+  font-family: monospace;
+  color: #900;
+  padding-left: 5px;
+  padding-right: 5px;
 }
 </style>
