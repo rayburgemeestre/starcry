@@ -54,6 +54,7 @@ export default defineComponent({
         if (buffer[0] === '1') {
           script_store.filename = buffer.slice(1);
           script_endpoint.send('open ' + script_store.filename);
+          script_store.render_requested_by_user++;
         } else if (buffer[0] === '2') {
           script_store.script = buffer.slice(1);
 

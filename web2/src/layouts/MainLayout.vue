@@ -37,31 +37,7 @@
     </q-drawer>
 
     <q-drawer show-if-above v-model="rightDrawerOpen" side="right" bordered>
-      <!--
-      <q-toolbar>
-        <q-btn flat round dense icon="draw" />
-        <q-toolbar-title>&nbsp;</q-toolbar-title>
-      </q-toolbar>
-      -->
-      <!-- drawer content -->
-      <br />
-      <q-btn
-        :loading="loading"
-        color="secondary"
-        @click="render_current_frame"
-        style="width: 100%"
-        >Render</q-btn
-      >
-      <br />
-      <br />
-      <q-btn color="secondary" style="width: 50%">Previous</q-btn>
-      <q-btn color="secondary" style="width: 50%">Next</q-btn>
-
       <viewpoint-component />
-      <br />
-      <q-btn color="secondary" @click="reset_values" style="width: 100%"
-        >Reset</q-btn
-      >
     </q-drawer>
 
     <q-page-container>
@@ -97,11 +73,9 @@
   </q-layout>
 </template>
 
-<script>
+<script lang="ts">
 import { defineComponent, ref } from 'vue';
 import TimelineComponent from 'components/TimelineComponent.vue';
-import { load_client_data, save_client_data } from 'components/clientstorage';
-import { StarcryAPI } from 'components/api';
 import { useScriptStore } from 'stores/script';
 import ViewpointComponent from 'components/ViewpointComponent.vue';
 import { append_script_to_body } from 'components/utils';
@@ -110,25 +84,7 @@ import { useViewpointStore } from 'stores/viewpoint';
 // this is not the right place, quasar build generates javascript that tries to read client-data before this has executed
 // save_client_data(load_client_data());
 
-let bitmap_endpoint = new StarcryAPI(
-  'bitmap',
-  StarcryAPI.binary_type,
-  (msg) => {
-    // this.$data.websock_status = msg;
-  },
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  (buffer) => {},
-  (_) => {
-    // this.log('DEBUG', 'bitmap', 'websocket connected', '');
-    // this.$data.connected_bitmap = true;
-  },
-  (_) => {
-    // this.log('DEBUG', 'bitmap', 'websocket disconnected', '');
-    // this.$data.connected_bitmap = false;
-  }
-);
-
-let loading = ref(false);
+let my_interval: number = null;
 
 export default defineComponent({
   name: 'MainLayout',
@@ -152,7 +108,6 @@ export default defineComponent({
     const drawerWidth = ref(300);
 
     let obj = {
-      loading,
       script,
       leftDrawerOpen,
       rightDrawerOpen,
@@ -162,24 +117,6 @@ export default defineComponent({
       // table
       filter: ref(''),
       script_store,
-
-      render_current_frame: function () {
-        loading.value = true;
-        bitmap_endpoint.send(
-          JSON.stringify({
-            filename: script_store.filename,
-            // frame: current_frame.value,
-            // random frame between 1 and 150
-            frame: parseInt(script_store.frame),
-            // viewpoint_settings: viewpoint_settings,
-            num_chunks: 1,
-          })
-        );
-      },
-
-      reset_values: function () {
-        viewpoint_store.reset();
-      },
 
       on_mouse_move: function (e) {
         window.Module.get_mouse_x(); // force redraw
@@ -267,6 +204,7 @@ export default defineComponent({
         // we'll know soon enough if the thing has crashed...
         // console.log(e);
       }
+      script_store.render_requested_by_user++;
       if (Module.last_buffer) {
         setTimeout(function () {
           Module.set_texture(Module.last_buffer);
@@ -277,6 +215,7 @@ export default defineComponent({
     return obj;
   },
   mounted() {
+    let viewpoint_store = useViewpointStore();
     let module_already_loaded = !!window.Module;
     if (module_already_loaded) {
       // stop
@@ -287,7 +226,12 @@ export default defineComponent({
       window.Module.canvas = document.getElementById('canvas');
       // start, will update with correct width, height etc., later.
       try {
-        window.Module.start(1920, 1080, 1920, 1080);
+        window.Module.start(
+          viewpoint_store.canvas_w,
+          viewpoint_store.canvas_h,
+          viewpoint_store.canvas_w,
+          viewpoint_store.canvas_h
+        );
       } catch (e) {}
       return;
     }
@@ -300,7 +244,12 @@ export default defineComponent({
         try {
           // might throw
           console.log('Setting Initial Full HD dimensions');
-          Module.start(1920, 1080, 1920, 1080);
+          window.Module.start(
+            viewpoint_store.canvas_w,
+            viewpoint_store.canvas_h,
+            viewpoint_store.canvas_w,
+            viewpoint_store.canvas_h
+          );
         } catch (e) {
           if (e !== 'unwind') console.error(e);
         }
@@ -315,18 +264,16 @@ export default defineComponent({
 
     this.update_size_delayed();
 
+    // schedule function this.update_size_delayed to be called every second
+    if (my_interval) {
+      clearInterval(my_interval);
+    }
+    my_interval = setInterval(this.update_size_delayed, 1000);
+
     // TODO: no idea why this needs some initial delay, the Module object it waits for should already be there
     setTimeout(function () {
       append_script_to_body('client.js');
     }, 100);
-
-    bitmap_endpoint.on_message = (buffer) => {
-      window.Module.last_buffer = buffer;
-      window.Module.set_texture(buffer);
-      // this.$data.rendering--;
-      // this.process_queue();
-      loading.value = false;
-    };
   },
 });
 </script>
