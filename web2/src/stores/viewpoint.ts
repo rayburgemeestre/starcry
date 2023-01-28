@@ -9,6 +9,7 @@ export const useViewpointStore = defineStore('viewpoint', {
     canvas_h: 1080,
     offset_x: 0,
     offset_y: 0,
+    script_hash: '',
 
     raw: false,
     preview: false,

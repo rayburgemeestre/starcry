@@ -177,6 +177,7 @@ function serialize_viewpoint() {
     save: viewpoint_store.save.value,
     canvas_w: viewpoint_store.canvas_w.value,
     canvas_h: viewpoint_store.canvas_h.value,
+    script_hash: viewpoint_store.script_hash.value,
   });
 }
 

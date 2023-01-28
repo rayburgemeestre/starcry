@@ -10,6 +10,7 @@ import { create_tree, sort_tree } from 'components/filetree';
 import { useScriptStore } from 'stores/script';
 import { useFilesStore } from 'stores/files';
 import { useViewpointStore } from 'stores/viewpoint';
+import { hash } from 'components/hash';
 
 // temp
 let timeout_script_updates: NodeJS.Timeout | null = null;
@@ -29,6 +30,9 @@ export default defineComponent({
         timeout_script_updates = setTimeout(
           function () {
             script_endpoint.send('set ' + script_store.script);
+            viewpoint_store.script_hash = hash(script_store.script);
+            // doesn't work, because the viewpoint serialization is not sufficient
+            script_store.render_requested_by_user++;
           }.bind(this),
           1000
         );
