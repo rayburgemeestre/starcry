@@ -224,6 +224,7 @@ void initialize(uint32_t width, uint32_t height, uint32_t canvas_w, uint32_t can
 client_context ctx;
 
 void start(uint32_t width, uint32_t height, uint32_t canvas_w, uint32_t canvas_h) {
+  printf("initializing with: %dx%d, %dx%d\n", (int)width, (int)height, (int)canvas_w, (int)canvas_h);
   initialize(width, height, canvas_w, canvas_h);
 
   SDL_Init(SDL_INIT_VIDEO);

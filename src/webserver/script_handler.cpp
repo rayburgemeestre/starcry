@@ -57,6 +57,7 @@ void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
       logger(DEBUG) << "ScriptHandler::onData - " << input << std::endl;
       sc->update_script_contents(file);
       std::ostringstream ss;
+      // TODO: we can re-use 3 for this, and rename all the others... 1 and 3 are the same.
       ss << "3" << sc->script();
       con->send(ss.str());
     }
