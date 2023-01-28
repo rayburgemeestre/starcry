@@ -11,6 +11,43 @@
       :rows-per-page-options="[100]"
     >
     </q-table>
+    <br />
+    <q-checkbox
+      dark
+      v-model="viewpoint_store_raw.labels"
+      label="Labels"
+      color="#990000"
+    />
+    <q-checkbox
+      dark
+      v-model="viewpoint_store_raw.debug"
+      label="Debug"
+      color="#990000"
+    />
+    <q-checkbox
+      dark
+      v-model="viewpoint_store_raw.raw"
+      label="Raw"
+      color="#990000"
+    />
+    <q-checkbox
+      dark
+      v-model="viewpoint_store_raw.preview"
+      label="Preview"
+      color="#990000"
+    />
+    <q-checkbox
+      dark
+      v-model="viewpoint_store_raw.caching"
+      label="Caching"
+      color="#990000"
+    />
+    <q-checkbox
+      dark
+      v-model="viewpoint_store_raw.save"
+      label="Save"
+      color="#990000"
+    />
   </div>
 </template>
 
@@ -73,7 +110,9 @@ let viewpoint_endpoint = new StarcryAPI(
 
 let rows = ref([]);
 for (let v in viewpoint_store) {
-  rows.value.push([v, viewpoint_store[v]]);
+  // we're already creating checkboxes for booleans manually
+  if (typeof viewpoint_store[v].value !== 'boolean')
+    rows.value.push([v, viewpoint_store[v]]);
 }
 
 let timer: NodeJS.Timeout | null = null;
@@ -133,6 +172,7 @@ export default defineComponent({
     return {
       rows,
       columns,
+      viewpoint_store_raw,
     };
   },
   computed: {},
