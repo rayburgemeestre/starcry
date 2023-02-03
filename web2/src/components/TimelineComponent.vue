@@ -50,7 +50,7 @@ export default defineComponent({
       click: function (e) {
         let index = e.target.getAttribute('index');
         script_store.frame = index;
-        this.tick = index;
+        tick = index;
       },
       mouse_over: function (e) {
         hover_val = e.target.getAttribute('index');
@@ -65,11 +65,14 @@ export default defineComponent({
       let colors = ['one', 'two'];
       let copy = script_store.frames_per_scene;
       let current_scene = copy.shift();
+      let result: any[] = [];
+      if (!current_scene) {
+        return result;
+      }
       let color_idx = 0;
-      let result = [];
       for (let i = 1; i < this.max; i++) {
         if (i >= current_scene) {
-          current_scene += copy.shift();
+          current_scene += copy.shift() as number;
           color_idx++;
           color_idx = color_idx % colors.length;
         }

@@ -1,4 +1,8 @@
 export class JsonWithObjectsParser {
+  private json_str: string;
+  private obj: undefined;
+  private functions: any[];
+
   constructor(json_str: string) {
     this.json_str = json_str;
     this.obj = undefined;
@@ -19,19 +23,19 @@ export class JsonWithObjectsParser {
     let trail = '';
     let in_cpp_comment = false;
     let in_c_comment = false;
-    let in_string = false;
-    let in_function = false;
+    let in_string : string | boolean = false;
+    let in_function : number | boolean = false;
     let brace = 0;
     let bracket = 0;
     let function_num = 0;
-    const functions = [];
+    const functions : string[] = [];
     let function_str = '';
     let previous_char = ' ';
     let previous_char_pos = 0;
     let previous_char2 = ' ';
     let in_blending_type = false;
     for (let i = 0; i < this.json_str.length; i++) {
-      const s = this.json_str[i];
+      const s : string = this.json_str[i];
 
       if (s === '*' && this.json_str.substr(i, '*/'.length) === '*/') {
         in_c_comment = false;
@@ -48,7 +52,7 @@ export class JsonWithObjectsParser {
       }
 
       // skip spaces and tabs, unless inside a comment
-      if (in_string === false && in_function === false) {
+      if (!(in_string as boolean) && !in_function) {
         if (s === ' ' || s === '\t') continue;
       }
       if (in_function !== false) {
@@ -62,7 +66,7 @@ export class JsonWithObjectsParser {
           in_string = s;
         }
       }
-      if (in_function === false) {
+      if (!(in_function as boolean)) {
         if (s === '[') {
           bracket++;
         }
@@ -72,20 +76,20 @@ export class JsonWithObjectsParser {
           if (previous_char === ',') {
             // get rid of the ',', unfortunately quite tedious with javascript.
             if (trail[previous_char_pos - 1] === ',') {
-              if (false)
-                trail =
-                  trail.substr(0, previous_char_pos - 1) +
-                  trail.substr(previous_char_pos);
+              // if (false)
+              //   trail =
+              //     trail.substr(0, previous_char_pos - 1) +
+              //     trail.substr(previous_char_pos);
             }
           }
         }
         if (s === '}') {
           if (previous_char === ',') {
             if (trail[previous_char_pos - 1] === ',') {
-              if (false)
-                trail =
-                  trail.substr(0, previous_char_pos - 1) +
-                  trail.substr(previous_char_pos);
+              // if (false)
+              //   trail =
+              //     trail.substr(0, previous_char_pos - 1) +
+              //     trail.substr(previous_char_pos);
             }
           }
         }
@@ -103,8 +107,7 @@ export class JsonWithObjectsParser {
       }
       //
       if (
-        in_function === false &&
-        s === 'f' &&
+        !(in_function as boolean) && s === 'f' &&
         this.json_str.substr(i, 'function'.length) === 'function'
       ) {
         in_function = brace;
@@ -113,12 +116,12 @@ export class JsonWithObjectsParser {
         function_num++;
       }
       if (!in_string) {
-        if (in_blending_type === true && ',;'.indexOf(s) !== -1) {
+        if (in_blending_type as boolean && ',;'.indexOf(s) !== -1) {
           trail += '"';
           in_blending_type = false;
         }
         if (
-          in_blending_type === false &&
+          !(in_blending_type as boolean) &&
           s === 'b' &&
           this.json_str.substr(i, 'blending_type'.length) === 'blending_type' &&
           previous_char !== '"'
@@ -150,10 +153,9 @@ export class JsonWithObjectsParser {
     // console.log(trail);
     // console.log(functions);
     this.functions = functions;
-    const obj = eval('(function() { return ' + trail + '; })()');
     //
     // let obj = eval('(function() { return ' + this.json_str + '; })()');
-    this.obj = obj;
+    this.obj = eval('(function() { return ' + trail + '; })()');
     // console.log(JSON.parse(trail));
   }
 }

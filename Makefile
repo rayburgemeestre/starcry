@@ -159,7 +159,8 @@ clean:  ## clean build artifacts
 dockerize:  ## dockerize starcry executable in stripped down docker image
 	make build
 	@$(call make-clang, mkdir -p out/workdir/web && \
-	                    cp -prv $$PWD/web/webroot out/workdir/web/webroot && \
+						echo disabled: cp -prv $$PWD/web/webroot out/workdir/web/webroot && \
+	                    cp -prv $$PWD/web2/dist/spa out/workdir/web/webroot && \
 	                    (cp -prv $$PWD/output/report.html out/workdir/web/webroot/report.html || true) && \
 	                    cp -prv $$PWD/input out/workdir/input && \
 	                    strip --strip-debug $$PWD/build/starcry && \
@@ -185,6 +186,7 @@ docker-finalize:
 build-web:  ## build web static files
 	pushd web && npm ci
 	pushd web && npm run build
+	pushd web2 && quasar build
 
 run-web:  ## run web in development hot-swappable mode
 	pushd web && npm run dev

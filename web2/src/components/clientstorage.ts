@@ -12,13 +12,14 @@ export function load_client_data() {
     ID: uuidv4(),
   };
   try {
+    const json_str: string = localStorage.getItem('client-data') as string;
     return localStorage.getItem('client-data')
-      ? JSON.parse(localStorage.getItem('client-data'))
+      ? JSON.parse(json_str)
       : new_obj;
   } catch (e) {}
   return new_obj;
 }
 
-export function save_client_data(client_data) {
+export function save_client_data(client_data: string) {
   localStorage.setItem('client-data', JSON.stringify(client_data));
 }

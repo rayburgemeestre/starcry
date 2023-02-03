@@ -9,7 +9,7 @@ export const useScriptStore = defineStore('script', {
 
     video: {},
     preview: {},
-    frames_per_scene: [],
+    frames_per_scene: [] as number[],
     max_frames: 0,
 
     auto_render: true,
