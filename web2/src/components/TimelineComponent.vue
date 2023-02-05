@@ -66,7 +66,7 @@ export default defineComponent({
       let copy = script_store.frames_per_scene;
       let current_scene = copy.shift();
       let result: any[] = [];
-      if (!current_scene) {
+      if (typeof current_scene == 'undefined') {
         return result;
       }
       let color_idx = 0;
