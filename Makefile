@@ -126,7 +126,8 @@ format:  ## format source code (build at least once first)
 	                    mv -v web/webpack*.js input/ && \
 	                    find ./input -name '*.js' -type f | xargs -I{} -n 1 -P 8 clang-format-14 -i {} && \
 	                    mv -v input/webpack*.js ./web/ && \
-	                    cmake --build build --target clangformat)
+	                    cmake --build build --target clangformat && \
+						pushd web2 && npm run format && popd)
 
 pull:  ## pull the starcry docker build image
 	$(docker_exe) pull docker.io/rayburgemeestre/build-starcry-ubuntu:22.04

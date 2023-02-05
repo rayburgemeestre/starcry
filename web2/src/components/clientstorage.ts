@@ -13,9 +13,7 @@ export function load_client_data() {
   };
   try {
     const json_str: string = localStorage.getItem('client-data') as string;
-    return localStorage.getItem('client-data')
-      ? JSON.parse(json_str)
-      : new_obj;
+    return localStorage.getItem('client-data') ? JSON.parse(json_str) : new_obj;
   } catch (e) {}
   return new_obj;
 }

@@ -23,19 +23,19 @@ export class JsonWithObjectsParser {
     let trail = '';
     let in_cpp_comment = false;
     let in_c_comment = false;
-    let in_string : string | boolean = false;
-    let in_function : number | boolean = false;
+    let in_string: string | boolean = false;
+    let in_function: number | boolean = false;
     let brace = 0;
     let bracket = 0;
     let function_num = 0;
-    const functions : string[] = [];
+    const functions: string[] = [];
     let function_str = '';
     let previous_char = ' ';
     let previous_char_pos = 0;
     let previous_char2 = ' ';
     let in_blending_type = false;
     for (let i = 0; i < this.json_str.length; i++) {
-      const s : string = this.json_str[i];
+      const s: string = this.json_str[i];
 
       if (s === '*' && this.json_str.substr(i, '*/'.length) === '*/') {
         in_c_comment = false;
@@ -107,7 +107,8 @@ export class JsonWithObjectsParser {
       }
       //
       if (
-        !(in_function as boolean) && s === 'f' &&
+        !(in_function as boolean) &&
+        s === 'f' &&
         this.json_str.substr(i, 'function'.length) === 'function'
       ) {
         in_function = brace;
@@ -116,7 +117,7 @@ export class JsonWithObjectsParser {
         function_num++;
       }
       if (!in_string) {
-        if (in_blending_type as boolean && ',;'.indexOf(s) !== -1) {
+        if ((in_blending_type as boolean) && ',;'.indexOf(s) !== -1) {
           trail += '"';
           in_blending_type = false;
         }

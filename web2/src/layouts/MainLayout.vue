@@ -80,6 +80,7 @@ import { useScriptStore } from 'stores/script';
 import ViewpointComponent from 'components/ViewpointComponent.vue';
 import { append_script_to_body } from 'components/utils';
 import { useViewpointStore } from 'stores/viewpoint';
+import { useObjectsStore } from 'stores/objects';
 
 // this is not the right place, quasar build generates javascript that tries to read client-data before this has executed
 // save_client_data(load_client_data());
@@ -132,6 +133,59 @@ export default defineComponent({
         } else {
           this.render_objects();
         }
+      },
+      render_objects: function () {
+        let canvas1 = document.getElementById('canvas') as HTMLCanvasElement;
+        let canvas = document.getElementById('canvas2') as HTMLCanvasElement;
+        [canvas.height, canvas.height] = [canvas1.width, canvas1.height];
+        let ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '15px Monaco';
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'white';
+        let canvas_w = Module.get_canvas_w();
+        let canvas_h = Module.get_canvas_h();
+        let viewpoint_store = useViewpointStore();
+        let scale = viewpoint_store.scale;
+        function squared_dist(num: number, num2: number) {
+          return (num - num2) * (num - num2);
+        }
+        function get_distance(x: number, y: number, x2: number, y2: number) {
+          return Math.sqrt(squared_dist(x, x2) + squared_dist(y, y2));
+        }
+        let objects_store = useObjectsStore();
+        for (let obj of objects_store.objects) {
+          let center_x = viewpoint_store.offset_x;
+          let center_y = viewpoint_store.offset_y;
+          let offset_x = 0;
+          let offset_y = 0;
+          let x = (obj.x - center_x) * scale - offset_x + canvas_w / 2;
+          let y = (obj.y - center_y) * scale - offset_y + canvas_h / 2;
+          let view_x =
+            (viewpoint_store.view_x - canvas_w / 2) / scale + center_x;
+          let view_y =
+            (viewpoint_store.view_y - canvas_h / 2) / scale + center_y;
+          if (get_distance(obj.x, obj.y, view_x, view_y) < 10 / scale) {
+            ctx.fillStyle = 'red';
+          } else {
+            ctx.fillStyle = 'white';
+          }
+          ctx.fillRect(x - 5, y - 5, 10, 10);
+          ctx.fillText(obj.label, x, y);
+          ctx.fillText(obj['#'], x, y + 20);
+          ctx.fillText(obj.id, x, y + 40);
+          ctx.fillText(obj.unique_id, x, y + 60);
+          // ctx.fillText(obj.random_hash, x, y + 80);
+          // ctx.fillText(obj.time, x, y + 100);
+        }
+        // draw the actual canvas of the video
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 2;
+        let x = canvas_w / 2 - (script_store.video.width / 2) * scale,
+          y = canvas_h / 2 - (script_store.video.height / 2) * scale,
+          w = script_store.video.width * scale,
+          h = script_store.video.height * scale;
+        ctx.strokeRect(x, y, w, h);
       },
       on_wheel: function (event) {
         event.preventDefault();
@@ -187,6 +241,8 @@ export default defineComponent({
       if (Math.abs(previous_w - w) < 2 && Math.abs(previous_h - h) < 2) {
         return;
       }
+      document.getElementById('canvas2').width = w;
+      document.getElementById('canvas2').height = h;
       try {
         Module.stop();
       } catch (e) {
