@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { ref } from 'vue';
 
 export const useViewpointStore = defineStore('viewpoint', {
   state: () => ({
@@ -17,6 +18,8 @@ export const useViewpointStore = defineStore('viewpoint', {
     caching: false,
     debug: false,
     save: false,
+
+    viewpoint_updated_by_client: ref(0),
   }),
   actions: {
     select() {

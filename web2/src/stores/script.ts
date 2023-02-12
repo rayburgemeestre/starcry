@@ -14,9 +14,15 @@ export const useScriptStore = defineStore('script', {
 
     auto_render: true,
 
+    texture_w: ref(0),
+    texture_h: ref(0),
+
     // used as event handlers
     value_updated_by_user: ref(0),
-    render_requested_by_user: ref(0),
+    render_requested_by_user: ref(0), // ??
+    render_requested_by_user_v2: ref(0),
+    render_completed_by_server: ref(0),
+    texture_size_updated_by_server: ref(0),
   }),
 
   getters: {},

@@ -25,6 +25,9 @@
     >
     </q-table>
     <br />
+    <q-input v-model.number="viewpoint_store_raw.offset_x" label="offset x" />
+    <q-input v-model.number="viewpoint_store_raw.offset_y" label="offset y" />
+    <br />
     <q-checkbox
       dark
       v-model="viewpoint_store_raw.labels"
@@ -71,6 +74,13 @@
       label="Auto Render"
       color="#990000"
     />
+    <br />
+    <q-btn
+      color="secondary"
+      @click="viewpoint_store_raw.select()"
+      style="width: 100%"
+      >Zoom in to cursor</q-btn
+    >
   </div>
 </template>
 
@@ -140,6 +150,14 @@ let viewpoint_endpoint = new StarcryAPI(
     viewpoint_store.labels.value = buffer['labels'];
     viewpoint_store.caching.value = buffer['caching'];
     viewpoint_store.debug.value = buffer['debug'];
+    script_store.texture_w = buffer['canvas_w'];
+    script_store.texture_h = buffer['canvas_h'];
+
+    if (serialize_viewpoint() != previous_hash) {
+      script_store.render_requested_by_user_v2++;
+    }
+    previous_hash = serialize_viewpoint();
+    console.log('Updating previous hash');
   },
   (_) => {
     if (first_load)
@@ -160,6 +178,8 @@ for (let v in viewpoint_store) {
   if (typeof viewpoint_store[v].value !== 'boolean')
     rows.value.push([v, viewpoint_store[v]]);
 }
+// rows.value.push(['texture_w', script_store_refs.texture_w]);
+// rows.value.push(['texture_h', script_store_refs.texture_h]);
 
 let timer: NodeJS.Timeout | null = null;
 
@@ -191,7 +211,8 @@ export default defineComponent({
       let str = serialize_viewpoint();
       viewpoint_endpoint.send(str);
 
-      script_store.render_requested_by_user++;
+      // no longer used
+      // script_store.render_requested_by_user++;
 
       // // communicate offset_x and offset_y back to parent.
       // this.$parent.set_offset(this.$data.offsetX, this.$data.offsetY);
@@ -223,6 +244,16 @@ export default defineComponent({
         }
       );
     }
+    watch(
+      () => viewpoint_store_raw.viewpoint_updated_by_client,
+      (n) => {
+        if (timer !== null) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        timer = setTimeout(scheduled_update, 100);
+      }
+    );
 
     const obj = {
       loading,
@@ -235,7 +266,6 @@ export default defineComponent({
         viewpoint_store_raw.reset();
       },
       render_current_frame: function () {
-        previous_hash = serialize_viewpoint();
         loading.value = true;
         bitmap_endpoint.send(
           JSON.stringify({
@@ -252,20 +282,37 @@ export default defineComponent({
     // watch render_requested_by_user
     // obj.render_current_frame()
     let timer: NodeJS.Timer | null = null;
-    watch(
-      () => script_store.render_requested_by_user,
-      (n) => {
-        if (!script_store.auto_render) return;
-        if (previous_hash === serialize_viewpoint()) {
-          return;
-        } // nothing new
-        if (timer !== null) {
-          clearTimeout(timer);
-          timer = null;
-        }
-        timer = setTimeout(obj.render_current_frame, 100);
+    let callback1 = (n) => {
+      if (!script_store.auto_render) return;
+      // make sure that we sync the updated viewpoint..
+      if (timer !== null) {
+        clearTimeout(timer);
+        timer = null;
       }
-    );
+      // too fast for the animation
+      //timer = setTimeout(obj.render_current_frame, 100);
+      timer = setTimeout(obj.render_current_frame, 500);
+    };
+    let callback2 = (n) => {
+      if (!script_store.auto_render) return;
+      let canvas_different: boolean =
+        script_store.texture_w !== viewpoint_store_raw.canvas_w ||
+        script_store.texture_h !== viewpoint_store_raw.canvas_h;
+      if (script_store.texture_w === 0 && script_store.texture_h === 0) {
+        canvas_different = false;
+      }
+      if (previous_hash === serialize_viewpoint() && !canvas_different) {
+        return;
+      } // nothing new
+      // make sure that we sync the updated viewpoint..
+      viewpoint_store_raw.viewpoint_updated_by_client++;
+      previous_hash = serialize_viewpoint(); // not really the intention
+    };
+    //watch(() => script_store.render_requested_by_user, callback1 );
+    watch(() => script_store.render_requested_by_user_v2, callback1);
+    // watch(() => script_store.texture_w, callback );
+    // watch(() => script_store.texture_h, callback );
+    watch(() => script_store.texture_size_updated_by_server, callback2);
     return obj;
   },
   mounted() {
@@ -275,6 +322,8 @@ export default defineComponent({
       // this.$data.rendering--;
       // this.process_queue();
       loading.value = false;
+      // allow other listeners to update the canvas2 labels
+      script_store.render_completed_by_server++;
     };
   },
 });
