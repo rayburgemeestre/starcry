@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@quasar/extras": "^1.0.0",
+    "@vueuse/gesture": "^2.0.0-beta.1",
     "axios": "^0.21.1",
     "monaco-editor": "^0.34.1",
     "monaco-emacs": "^0.3.0",
