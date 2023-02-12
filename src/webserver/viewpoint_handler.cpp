@@ -54,6 +54,7 @@ void ViewPointHandler::onData(seasocks::WebSocket *con, const char *data) {
                        json["canvas_w"],
                        json["canvas_h"]};
     sc->set_viewpoint(vp);
+    con->send(json.dump());
   }
 }
 
