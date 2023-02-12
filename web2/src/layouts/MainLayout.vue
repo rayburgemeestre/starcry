@@ -48,16 +48,31 @@
           height: 100%;
         "
       >
+        <div
+          style="
+            position: absolute;
+            z-index: 1000;
+            top: 10px;
+            left: 10px;
+            color: blue;
+          "
+        >
+          DEBUG: {{ debug_text }}
+        </div>
         <canvas
           id="canvas2"
           style="z-index: 1; pointer-events: none; /* saved my day */"
         ></canvas>
         <canvas
           id="canvas"
+          ref="canvas_elem"
           v-on:mousemove="on_mouse_move"
           v-on:mousedown="on_mouse_down"
           v-on:wheel="on_wheel"
           v-on:touchstart="on_touchstart"
+          v-on:touchmove="on_touchmove"
+          v-on:touchend="on_touchend"
+          v-pinch="pinchHandler"
           style="z-index: 0"
         ></canvas>
       </div>
@@ -74,13 +89,17 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, watch } from 'vue';
 import TimelineComponent from 'components/TimelineComponent.vue';
 import { useScriptStore } from 'stores/script';
 import ViewpointComponent from 'components/ViewpointComponent.vue';
 import { append_script_to_body } from 'components/utils';
 import { useViewpointStore } from 'stores/viewpoint';
 import { useObjectsStore } from 'stores/objects';
+import { usePinch } from '@vueuse/gesture';
+
+const canvas_elem = ref();
+let debug_text = ref('');
 
 // this is not the right place, quasar build generates javascript that tries to read client-data before this has executed
 // save_client_data(load_client_data());
@@ -108,7 +127,13 @@ export default defineComponent({
     let previous_h;
     const drawerWidth = ref(300);
 
+    // let holdTimer = null;
+    // let startXY = [];
+
+    // Composable usage
     let obj = {
+      canvas_elem,
+      debug_text,
       script,
       leftDrawerOpen,
       rightDrawerOpen,
@@ -120,12 +145,40 @@ export default defineComponent({
       script_store,
 
       on_mouse_move: function (e) {
-        window.Module.get_mouse_x(); // force redraw
+        viewpoint_store.view_x = Module.get_mouse_x();
+        viewpoint_store.view_y = Module.get_mouse_y();
+      },
+      on_touchmove: function (e) {
         viewpoint_store.view_x = Module.get_mouse_x();
         viewpoint_store.view_y = Module.get_mouse_y();
       },
       on_touchstart: function (e) {
-        window.Module.get_mouse_x(); // force redraw
+        // if (startXY === null) return; // wait till we release the hold
+        // startXY = [window.Module.get_mouse_x(), window.Module.get_mouse_y()];
+        // if (holdTimer !== null) {
+        //   clearTimeout(holdTimer);
+        //   holdTimer = null;
+        // }
+        // holdTimer = setTimeout(function () {
+        //   let nowXY = [window.Module.get_mouse_x(), window.Module.get_mouse_y()];
+        //   // calculate distance between startXY and nowXY coordinates
+        //   let distance = Math.sqrt(
+        //     Math.pow(nowXY[0] - startXY[0], 2) + Math.pow(nowXY[1] - startXY[1], 2)
+        //   );
+        //   debug_text.value = distance;
+        //   if (distance < 30) {
+        //     // if distance is less than 5px it's a center-here click
+        //     viewpoint_store.select();
+        //     startXY = null;
+        //   }
+        //
+        // }, 1000);
+      },
+      on_touchend: function (e) {
+        // debug_text.value = "done";
+        // // release the hold
+        // startXY = [];
+        this.render_objects();
       },
       on_mouse_down: function (e) {
         if (e.ctrlKey) {
@@ -143,8 +196,30 @@ export default defineComponent({
         ctx.font = '15px Monaco';
         ctx.fillStyle = 'white';
         ctx.strokeStyle = 'white';
+
         let canvas_w = Module.get_canvas_w();
         let canvas_h = Module.get_canvas_h();
+        let texture_w = Module.get_texture_w();
+        let texture_h = Module.get_texture_h();
+        ctx.fillText(
+          'canvas: ' +
+            canvas_w +
+            ' x ' +
+            canvas_h +
+            ', texture: ' +
+            texture_w +
+            ' x ' +
+            texture_h,
+          20,
+          20
+        );
+        script_store.texture_w = texture_w;
+        script_store.texture_h = texture_h;
+        console.log(
+          'Updated texture dimensions: ' + texture_w + 'x' + texture_h
+        );
+        script_store.texture_size_updated_by_server++; // make sure our viewpont reacts
+
         let viewpoint_store = useViewpointStore();
         let scale = viewpoint_store.scale;
         function squared_dist(num: number, num2: number) {
@@ -267,6 +342,27 @@ export default defineComponent({
         }, 10);
       }
     }.bind(obj);
+
+    const pinchHandler = ({ offset: [d, a], pinching }) => {
+      const zoom = d / 256;
+      debug_text.value = 1 + zoom;
+      viewpoint_store.scale = 1 + zoom;
+      // set({ zoom: d, rotateZ: a })
+    };
+
+    usePinch(pinchHandler, {
+      domTarget: canvas_elem,
+      eventOptions: {
+        passive: true,
+      },
+    });
+
+    watch(
+      () => script_store.render_completed_by_server,
+      (n) => {
+        obj.render_objects();
+      }
+    );
 
     return obj;
   },
