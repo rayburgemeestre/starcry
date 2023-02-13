@@ -187,6 +187,7 @@ docker-finalize:
 build-web:  ## build web static files
 	pushd web && npm ci
 	pushd web && npm run build
+	pushd web2 && npm ci
 	pushd web2 && quasar build
 
 run-web:  ## run web in development hot-swappable mode
