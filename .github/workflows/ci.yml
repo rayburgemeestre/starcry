@@ -25,6 +25,8 @@ jobs:
       run: make integration-test
     - name: install npm
       run: sudo apt install -y npm
+    - name: install quasar
+      run: sudo npm i -g @quasar/cli
     - name: make build-web
       run: make build-web
     - name: make dockerize
