@@ -238,6 +238,10 @@ debug-last:
 	apport-unpack /var/crash/_home_trigen_projects_starcry_build_starcry.1144.crash dbg
 	gdb ./build/starcry dbg/CoreDump
 
+.PHONY: docs
+docs:  ## build starcry docs
+	pushd docs && doxygen && sphinx-build source output && echo DONE
+
 #------------
 
 a:

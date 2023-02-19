@@ -1,0 +1,3 @@
+pip install breathe
+pip install sphinx_rtd_theme
+pip install sphinx-bootstrap-theme
