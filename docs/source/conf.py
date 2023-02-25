@@ -41,3 +41,9 @@ html_theme = "sphinx_rtd_theme"
 #import sphinx_bootstrap_theme
 #html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 #html_theme = "bootstrap"
+# html_theme_options = {
+#     'collapse_navigation': False,
+#     'navigation_depth': 4,
+#     'sticky_navigation': False,
+# }
+
