@@ -170,7 +170,8 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 						cp -prv $$PWD/build/starcry ./out/ && \
 						cp -prv $$PWD/docs/Dockerfile ./out/ && \
 						cp -prv $$PWD/docs/fonts/monaco.ttf ./out/workdir/ && \
-						cp -prv $$PWD/docs/fonts/monogram.ttf ./out/workdir/)
+						cp -prv $$PWD/docs/fonts/monogram.ttf ./out/workdir/ && \
+						cp -prv $$PWD/docs/output ./out/workdir/web/webroot/docs)
 
 	(cd out && $(docker_exe) build . -t docker.io/rayburgemeestre/starcry:v`cat ../.version`); \
 	if ! [[ -z "$$DOCKER_PASSWORD" ]]; then \
@@ -208,6 +209,7 @@ publish:  ## build from scratch starcry, web, client, docker image. (does not pu
 	make build
 	make build-web
 	make client
+	make docs
 	make dockerize
 	$(docker_exe) push docker.io/rayburgemeestre/starcry:v`cat .version` || true
 	# $(docker_exe) push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version` || true

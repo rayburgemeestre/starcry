@@ -1795,7 +1795,7 @@ generator::_instantiate_object_from_scene(
     shape_copy = (*shape_ref).get();
 
     // call init last, so that objects exist when using 'this' inside init()
-    if (bridge && !no_initialize) {
+    if (bridge) {
       // take a copy as the reference might point to a non-existant instance at some point,
       // for example when other cascading 'init's insert new objects.
       auto copy = std::get<T>((*shape_ref).get());
@@ -1913,7 +1913,6 @@ generator::_instantiate_object_from_scene(
 
     // round x to the nearest 0.25 resolution x, y
     auto& created_instance = instance;
-    auto ret_val = i.integer_number(created_instance, "unique_id");
 
     const auto destroy_shape = [&]() {
       destroy(shape_ref.get());
