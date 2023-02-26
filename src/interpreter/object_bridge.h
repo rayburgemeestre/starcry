@@ -59,6 +59,7 @@ public:
   int64_t get_seed() const;
   std::string get_collision_group() const;
   std::string get_gravity_group() const;
+  std::string get_unique_group() const;
   int64_t get_blending_type() const;
 
   void set_unique_id(int64_t unique_id);
@@ -86,6 +87,7 @@ public:
   void set_seed(int64_t) const;
   void set_collision_group(const std::string& group) const;
   void set_gravity_group(const std::string& group) const;
+  void set_unique_group(const std::string& group) const;
   void set_blending_type(int64_t new_type) const;
 
   v8::Persistent<v8::Object>& get_properties_ref() const;

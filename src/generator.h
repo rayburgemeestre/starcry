@@ -33,6 +33,7 @@
 #include "util/v8_wrapper.hpp"
 
 #include "util/quadtree.h"
+#include "util/unique_group.hpp"
 
 class v8_wrapper;
 class step_calculator;
@@ -82,6 +83,7 @@ private:
 
   std::map<std::string, quadtree> qts;
   std::map<std::string, quadtree> qts_gravity;
+  std::map<std::string, unique_group> unique_groups;
   // TODO: Can we do without copies, please?
   std::unordered_map<int64_t, std::reference_wrapper<data_staging::shape_t>> next_instance_map;
   std::unordered_map<int64_t, std::reference_wrapper<data_staging::shape_t>> intermediate_map;
@@ -200,12 +202,11 @@ private:
 
   std::map<int64_t, std::pair<double, double>> cached_xy;
 
-  std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>
+  std::optional<std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>>
   _instantiate_object_from_scene(
       v8_interact& i,
-      v8::Local<v8::Object>& scene_object,         // object description from scene to be instantiated
-      const data_staging::shape_t* parent_object,  // it's optional parent
-      bool no_initialize = false);
+      v8::Local<v8::Object>& scene_object,          // object description from scene to be instantiated
+      const data_staging::shape_t* parent_object);  // it's optional parent
   void _instantiate_object(v8_interact& i,
                            std::optional<v8::Local<v8::Object>> scene_obj,
                            v8::Local<v8::Object> object_prototype,

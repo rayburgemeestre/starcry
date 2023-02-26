@@ -155,6 +155,8 @@ clean:  ## clean build artifacts
 	rm -f callgrind.out.*
 	rm -f actor_log*.log
 	rm -f web/webroot/stream/stream.m3u8*
+	rm -rf docs/doxygen/*
+	rm -rf docs/output/*
 
 .PHONY: dockerize
 dockerize:  ## dockerize starcry executable in stripped down docker image
@@ -185,10 +187,12 @@ docker-finalize:
 
 
 build-web:  ## build web static files
-	pushd web && npm ci
-	pushd web && npm run build
 	pushd web2 && npm ci
 	pushd web2 && quasar build
+
+build-web-old:
+	pushd web && npm ci
+	pushd web && npm run build
 
 run-web:  ## run web in development hot-swappable mode
 	pushd web && npm run dev

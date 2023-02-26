@@ -89,6 +89,11 @@ std::string object_bridge<data_staging::circle>::get_gravity_group() const {
 }
 
 template <>
+std::string object_bridge<data_staging::circle>::get_unique_group() const {
+  return shape_stack.back()->behavior_ref().unique_group();
+}
+
+template <>
 void object_bridge<data_staging::circle>::set_unique_id(int64_t unique_id) {
   shape_stack.back()->meta_ref().set_unique_id(unique_id);
 }
@@ -198,6 +203,11 @@ void object_bridge<data_staging::circle>::set_gravity_group(const std::string& g
 }
 
 template <>
+void object_bridge<data_staging::circle>::set_unique_group(const std::string& ug) const {
+  return shape_stack.back()->behavior_ref().set_unique_group(ug);
+}
+
+template <>
 object_bridge<data_staging::circle>::object_bridge(interpreter::generator* generator) : generator_(generator) {
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
   object_bridge_class  // .template ctor<int>()
@@ -227,7 +237,8 @@ object_bridge<data_staging::circle>::object_bridge(interpreter::generator* gener
       .property("seed", &object_bridge::get_seed, &object_bridge::set_seed)
       .property("blending_type", &object_bridge::get_blending_type, &object_bridge::set_blending_type)
       .property("collision_group", &object_bridge::get_collision_group, &object_bridge::set_collision_group)
-      .property("gravity_group", &object_bridge::get_gravity_group, &object_bridge::set_gravity_group);
+      .property("gravity_group", &object_bridge::get_gravity_group, &object_bridge::set_gravity_group)
+      .property("unique_group", &object_bridge::get_unique_group, &object_bridge::set_unique_group);
 
   instance_ = std::make_shared<v8::Persistent<v8::Object>>();
   (*instance_)

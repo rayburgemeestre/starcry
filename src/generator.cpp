@@ -31,6 +31,8 @@
 #include "shapes/position.h"
 #include "shapes/rectangle.h"
 
+#include "util/unique_group.hpp"
+
 namespace interpreter {
 void fix_properties(std::vector<std::vector<data_staging::shape_t>>& scene_shapes) {
   // This prevents a massive memory leak. Is fix_properties needed?
@@ -119,8 +121,9 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
                 << std::endl;
   i.set_field(created_instance, "namespace", v8_str(i.get_context(), namespace_));
   const auto file = i.str(created_instance, "file");
-  const auto specified_duration =
-      i.has_field(created_instance, "duration") ? i.double_number(created_instance, "duration") : static_cast<double>(-1);
+  const auto specified_duration = i.has_field(created_instance, "duration")
+                                      ? i.double_number(created_instance, "duration")
+                                      : static_cast<double>(-1);
 
   // read the entire script from disk
   std::ifstream stream(file);
@@ -250,8 +253,11 @@ void generator::instantiate_additional_objects_from_new_scene(v8::Persistent<v8:
     logger(DEBUG) << std::string(debug_level, ' ') << "Instantiating object id: " << scene_obj_id
                   << " (namespace: " << namespace_ << ")" << std::endl;
 
-    auto [created_instance, shape_ref, shape_copy] = _instantiate_object_from_scene(i, scene_obj, parent_object);
-    create_bookkeeping_for_script_objects(created_instance, shape_copy, debug_level + 1);
+    auto instantiated_object = _instantiate_object_from_scene(i, scene_obj, parent_object);
+    if (instantiated_object) {
+      auto [created_instance, shape_ref, shape_copy] = *instantiated_object;
+      create_bookkeeping_for_script_objects(created_instance, shape_copy, debug_level + 1);
+    }
   }
 }
 
@@ -738,6 +744,8 @@ void generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>
         update_object_toroidal(i, shape.toroidal_ref(), x, y);
         const auto collision_group = shape.behavior_cref().collision_group();
         const auto gravity_group = shape.behavior_cref().gravity_group();
+        const auto unique_group = shape.behavior_cref().unique_group();
+
         if (!collision_group.empty()) {
           qts.try_emplace(collision_group,
                           quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
@@ -748,6 +756,19 @@ void generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>
                                   quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
           qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
         }
+        if (!unique_group.empty()) {
+          unique_groups[unique_group].add(x, y);
+        }
+      }
+    }
+    if constexpr (std::is_same_v<T, data_staging::line>) {
+      double x = shape.transitive_line_start_ref().position_ref().x;
+      double y = shape.transitive_line_start_ref().position_ref().y;
+      double x2 = shape.transitive_line_end_ref().position_ref().x;
+      double y2 = shape.transitive_line_end_ref().position_ref().y;
+      const auto unique_group = shape.behavior_cref().unique_group();
+      if (!unique_group.empty()) {
+        unique_groups[unique_group].add(x, y, x2, y2);
       }
     }
   };
@@ -1477,165 +1498,17 @@ std::shared_ptr<data::job> generator::get_job() const {
   return job;
 }
 
-void recursively_build_stack_for_object(auto& new_stack,
-                                        auto& shape,
-                                        auto& next_instance_map,
-                                        std::vector<data_staging::shape_t>& instantiated_objs,
-                                        int level = 0) {
-  meta_callback(shape, [&](const auto& cc) {
-    new_stack.emplace_back(shape);
-    if (cc.meta_cref().level() > 0) {
-      if (next_instance_map.find(cc.meta_cref().parent_uid()) != next_instance_map.end()) {
-          recursively_build_stack_for_object(new_stack,
-                                             next_instance_map.at(cc.meta_cref().parent_uid()).get(),
-                                             next_instance_map,
-                                             instantiated_objs,
-                                             level + 1);
-      } else {
-        for (auto& v : instantiated_objs) {
-          meta_callback(v, [&](const auto& ccc) {
-            if (ccc.meta_cref().unique_id() == cc.meta_cref().parent_uid()) {
-                recursively_build_stack_for_object(new_stack, v, next_instance_map, instantiated_objs, level + 1);
-            }
-          });
-        }
-      }
-    }
-  });
-};
-
 int64_t generator::spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj) {
   auto& i = genctx->i();
 
-  // the optimization does not seem to work in all cases because of initialization ordering
-  bool use_optimization = false;
-  bool no_initialize = false;
-  if (use_optimization) {
-    // we are preventing the call to "init", because we want to have the option to bail out on initializing this object
-    no_initialize = true;
+  auto instantiated_object = _instantiate_object_from_scene(i, obj, &spawner);
+  if (!instantiated_object) {
+    return -1;
   }
-  bool use_dedupe_experimental_feature = false;
-
-  auto [created_instance, shape_ref_unusable, created_shape_copy] =
-      _instantiate_object_from_scene(i, obj, &spawner, no_initialize);
+  auto [created_instance, shape_ref_unusable, created_shape_copy] = *instantiated_object;
   create_bookkeeping_for_script_objects(created_instance, created_shape_copy);
 
-  if (use_dedupe_experimental_feature) {
-    std::vector<std::reference_wrapper<data_staging::shape_t>> new_stack;
-
-    // we cannot trust shape_ref.get() to be valid, since spawning objects can be done recursively, and
-    // this can trigger the underlying datastructure to reallocate memory etc. so we need to retrieve it again
-    int uid = -1;
-    meta_callback(created_shape_copy, [&](const auto& cc) {
-      uid = cc.meta_cref().unique_id();
-    });
-    std::optional<std::reference_wrapper<data_staging::shape_t>> shape_ref_opt;
-    for (auto& v : instantiated_objects[scenes_.scenesettings.current_scene_next]) {
-      meta_callback(v, [&](const auto& ccc) {
-        if (ccc.meta_cref().unique_id() == uid) {
-          shape_ref_opt = v;
-        }
-      });
-    }
-    auto shape_ref = *shape_ref_opt;
-
-      recursively_build_stack_for_object(
-              new_stack, shape_ref.get(), next_instance_map,
-              instantiated_objects[scenes_.scenesettings.current_scene_next]);
-    // reverse new_stack
-    std::reverse(new_stack.begin(), new_stack.end());
-
-    handle_rotations(shape_ref.get(), new_stack);
-
-    // HARDCODED TEST: should move to dedicated logic somewhere
-    bool destroyed = false;
-    static std::set<std::tuple<double, double>> seen;
-    static std::set<std::tuple<double, double, double, double>> seen2;
-    seen.emplace(0, 0);
-    seen2.emplace(0, 0, 0, 0);
-
-    // round x to the nearest 0.25 resolution x, y
-    auto ret_val = i.integer_number(created_instance, "unique_id");
-    auto check3 = [&](auto... args) {
-      auto key = std::make_tuple(args...);
-      std::get<0>(key) = std::round(std::get<0>(key) * 4) / 4;
-      std::get<1>(key) = std::round(std::get<1>(key) * 4) / 4;
-      if (std::get<0>(key) == -0) std::get<0>(key) = 0;
-      if (std::get<1>(key) == -0) std::get<1>(key) = 0;
-      if constexpr (sizeof...(args) == 2) {
-        if (seen.find(key) != seen.end()) {
-          destroy(shape_ref.get());
-          destroyed = true;
-        } else {
-          seen.emplace(key);
-        }
-      }
-      if constexpr (sizeof...(args) == 4) {
-        std::get<2>(key) = std::round(std::get<2>(key) * 4) / 4;
-        std::get<3>(key) = std::round(std::get<3>(key) * 4) / 4;
-        if (std::get<2>(key) == -0) std::get<2>(key) = 0;
-        if (std::get<3>(key) == -0) std::get<3>(key) = 0;
-
-        if (seen2.find(key) != seen2.end()) {
-          destroy(shape_ref.get());
-          destroyed = true;
-        } else {
-          seen2.emplace(key);
-        }
-      }
-    };
-
-    meta_visit(
-        shape_ref.get(),
-        [&](data_staging::circle& c) {
-          check3(c.transitive_location_ref().position_ref().x, c.transitive_location_ref().position_ref().y);
-        },
-        [&](data_staging::line& l) {
-          check3(l.transitive_line_start_ref().position_ref().x,
-                 l.transitive_line_start_ref().position_ref().y,
-                 l.transitive_line_end_ref().position_ref().x,
-                 l.transitive_line_end_ref().position_ref().y);
-        },
-        [&](data_staging::text& t) {
-          check3(t.transitive_location_ref().position_ref().x, t.transitive_location_ref().position_ref().y);
-        },
-        [&](data_staging::script& s) {
-          check3(s.transitive_location_ref().position_ref().x, s.transitive_location_ref().position_ref().y);
-        });
-
-    if (use_optimization && !destroyed) {
-      const auto initialize = [&]<typename T>(const std::string& object_id, T& c, auto& bridge) {
-        if (bridge) {
-          // take a copy as the reference might point to a non-existant instance at some point,
-          // for example when other cascading 'init's insert new objects.
-          auto copy = std::get<T>(shape_ref.get());
-          bridge->push_object(copy);
-          i.call_fun(object_definitions_map[object_id],  // object definition
-                     bridge->instance(),                 // bridged object is "this"
-                     "init");
-          bridge->pop_object();
-          write_back_copy(copy);
-        }
-      };
-      meta_visit(
-          shape_ref.get(),
-          [&](data_staging::circle& c) {
-            initialize(c.meta_cref().id(), c, bridges_.circle());
-          },
-          [&](data_staging::line& l) {
-            initialize(l.meta_cref().id(), l, bridges_.line());
-          },
-          [&](data_staging::text& t) {
-            initialize(t.meta_cref().id(), t, bridges_.text());
-          },
-          [&](data_staging::script& s) {
-            initialize(s.meta_cref().id(), s, bridges_.script());
-          });
-    }
-    return ret_val;
-  }
-  auto ret_val = i.integer_number(created_instance, "unique_id");
-  return ret_val;
+  return i.integer_number(created_instance, "unique_id");
 }
 
 int64_t generator::spawn_object2(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1) {
@@ -1666,7 +1539,11 @@ int64_t generator::spawn_object3(data_staging::shape_t& spawner,
                                  int64_t obj1,
                                  int64_t obj2) {
   auto& i = genctx->i();
-  auto [created_instance, shape_ref, created_shape_copy] = _instantiate_object_from_scene(i, line_obj, &spawner);
+  auto instantiated_object = _instantiate_object_from_scene(i, line_obj, &spawner);
+  if (!instantiated_object) {
+    return -1;
+  }
+  auto [created_instance, shape_ref, created_shape_copy] = *instantiated_object;
   // BEGIN: Temporary code (to try out something
   data_staging::shape_t* obj1o = nullptr;
   data_staging::shape_t* obj2o = nullptr;
@@ -1726,7 +1603,11 @@ int64_t generator::spawn_object_at_parent(data_staging::shape_t& spawner, v8::Lo
   if (!parent) {
     return -1;
   }
-  auto [created_instance, shape_ref, created_shape_copy] = _instantiate_object_from_scene(i, obj, &((*parent).get()));
+  auto instantiated_object = _instantiate_object_from_scene(i, obj, &((*parent).get()));
+  if (!instantiated_object) {
+    return -1;
+  }
+  auto [created_instance, shape_ref, created_shape_copy] = *instantiated_object;
   create_bookkeeping_for_script_objects(created_instance, created_shape_copy);
   return i.integer_number(created_instance, "unique_id");
 }
@@ -1744,12 +1625,38 @@ std::unordered_map<std::string, v8::Persistent<v8::Object>>& generator::get_obje
   return object_definitions_map;
 }
 
-std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>
+void recursively_build_stack_for_object(auto& new_stack,
+                                        auto& shape,
+                                        auto& next_instance_map,
+                                        std::vector<data_staging::shape_t>& instantiated_objs,
+                                        int level = 0) {
+  meta_callback(shape, [&](const auto& cc) {
+    new_stack.emplace_back(shape);
+    if (cc.meta_cref().level() > 0) {
+      if (next_instance_map.find(cc.meta_cref().parent_uid()) != next_instance_map.end()) {
+        recursively_build_stack_for_object(new_stack,
+                                           next_instance_map.at(cc.meta_cref().parent_uid()).get(),
+                                           next_instance_map,
+                                           instantiated_objs,
+                                           level + 1);
+      } else {
+        for (auto& v : instantiated_objs) {
+          meta_callback(v, [&](const auto& ccc) {
+            if (ccc.meta_cref().unique_id() == cc.meta_cref().parent_uid()) {
+              recursively_build_stack_for_object(new_stack, v, next_instance_map, instantiated_objs, level + 1);
+            }
+          });
+        }
+      }
+    }
+  });
+}
+
+std::optional<std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>>
 generator::_instantiate_object_from_scene(
     v8_interact& i,
-    v8::Local<v8::Object>& scene_object,         // object description from scene to be instantiated
-    const data_staging::shape_t* parent_object,  // it's optional parent
-    bool no_initialize) {
+    v8::Local<v8::Object>& scene_object,           // object description from scene to be instantiated
+    const data_staging::shape_t* parent_object) {  // it's optional parent
   v8::Isolate* isolate = i.get_isolate();
 
   int64_t current_level = 0;
@@ -1795,14 +1702,22 @@ generator::_instantiate_object_from_scene(
         const_cast<data_staging::shape_t&>(*parent_object),
         [&](data_staging::circle& shape) {
           i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
+          // this is needed for example, if a scene object defines it, it will be inherited, but only for the first
+          // instantiated object. further spawned child objects will not inherit this by default we may need to do
+          // something like this for more cases..
+          i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
         },
         [&](data_staging::line& shape) {
           i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
+          i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
         },
         [&](data_staging::text& shape) {
           i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
+          i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
         },
-        [&](data_staging::script& shape) {});
+        [&](data_staging::script& shape) {
+          i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
+        });
   }
 
   // give it a unique id (it already has been assigned a __random_hash__ for debugging purposes
@@ -1824,6 +1739,8 @@ generator::_instantiate_object_from_scene(
   };
 
   const auto type = i.str(object_definitions_map[object_id], "type", "");
+  bool check_uniqueness = false;
+  std::string unique_group = "";
 
   const auto initialize = [&]<typename T>(T& c, auto& bridge) {
     c.meta_ref().set_level(current_level);
@@ -1831,6 +1748,9 @@ generator::_instantiate_object_from_scene(
     c.meta_ref().set_pivot(i.boolean(instance, "pivot"));
     c.behavior_ref().set_collision_group(i.str(instance, "collision_group", ""));
     c.behavior_ref().set_gravity_group(i.str(instance, "gravity_group", ""));
+    c.behavior_ref().set_unique_group(i.str(instance, "unique_group", ""));
+    check_uniqueness = c.behavior_ref().unique_group_ref().size();
+    unique_group = c.behavior_ref().unique_group_ref();
     c.toroidal_ref().set_group(i.str(instance, "toroidal", ""));
     c.generic_ref().set_angle(i.double_number(instance, "angle", 0));
     c.generic_ref().set_rotate(i.double_number(instance, "rotate", 0));
@@ -1962,6 +1882,75 @@ generator::_instantiate_object_from_scene(
     throw std::runtime_error("unexpected shape_ref not set to reference");
   }
 
+  if (check_uniqueness) {
+    auto& created_shape_copy = *shape_copy;
+
+    // we cannot trust shape_ref.get() to be valid, since spawning objects can be done recursively, and
+    // this can trigger the underlying datastructure to reallocate memory etc. so we need to retrieve it again
+    int uid = -1;
+    meta_callback(created_shape_copy, [&](const auto& cc) {
+      uid = cc.meta_cref().unique_id();
+    });
+    std::optional<std::reference_wrapper<data_staging::shape_t>> shape_ref_opt;
+    for (auto& v : instantiated_objects[scenes_.scenesettings.current_scene_next]) {
+      meta_callback(v, [&](const auto& ccc) {
+        if (ccc.meta_cref().unique_id() == uid) {
+          shape_ref_opt = v;
+        }
+      });
+    }
+    auto shape_ref = *shape_ref_opt;
+
+    std::vector<std::reference_wrapper<data_staging::shape_t>> new_stack;
+    recursively_build_stack_for_object(
+        new_stack, shape_ref.get(), next_instance_map, instantiated_objects[scenes_.scenesettings.current_scene_next]);
+    // reverse new_stack
+    std::reverse(new_stack.begin(), new_stack.end());
+
+    handle_rotations(shape_ref.get(), new_stack);
+
+    bool destroyed = false;
+
+    // round x to the nearest 0.25 resolution x, y
+    auto& created_instance = instance;
+    auto ret_val = i.integer_number(created_instance, "unique_id");
+
+    const auto destroy_shape = [&]() {
+      destroy(shape_ref.get());
+      destroyed = true;
+    };
+
+    meta_visit(
+        shape_ref.get(),
+        [&](data_staging::circle& c) {
+          unique_groups[unique_group].query(destroy_shape,
+                                            c.transitive_location_ref().position_ref().x,
+                                            c.transitive_location_ref().position_ref().y);
+        },
+        [&](data_staging::line& l) {
+          unique_groups[unique_group].query(destroy_shape,
+                                            l.transitive_line_start_ref().position_ref().x,
+                                            l.transitive_line_start_ref().position_ref().y,
+                                            l.transitive_line_end_ref().position_ref().x,
+                                            l.transitive_line_end_ref().position_ref().y);
+        },
+        [&](data_staging::text& t) {
+          unique_groups[unique_group].query(destroy_shape,
+                                            t.transitive_location_ref().position_ref().x,
+                                            t.transitive_location_ref().position_ref().y);
+        },
+        [&](data_staging::script& s) {
+          unique_groups[unique_group].query(destroy_shape,
+                                            s.transitive_location_ref().position_ref().x,
+                                            s.transitive_location_ref().position_ref().y);
+        });
+
+    if (destroyed) {
+      return std::nullopt;
+    }
+  }
+  // TODO: simply return here some boolean whether or not this guy is part of a uniqueness group
+  // then the caller can do something like If (is_unique) { ... dedupe logic ...  }
   return std::make_tuple(instance, *shape_ref, *shape_copy);
 }
 void generator::_instantiate_object(v8_interact& i,
@@ -2069,6 +2058,7 @@ void generator::_instantiate_object_copy_fields(v8_interact& i,
   i.copy_field_if_exists(new_instance, "duration", scene_obj);
   i.copy_field_if_exists(new_instance, "collision_group", scene_obj);
   i.copy_field_if_exists(new_instance, "gravity_group", scene_obj);
+  i.copy_field_if_exists(new_instance, "unique_group", scene_obj);
 }
 
 void generator::debug_print_next() {

@@ -84,6 +84,11 @@ int64_t object_bridge<data_staging::line>::get_seed() const {
 }
 
 template <>
+std::string object_bridge<data_staging::line>::get_unique_group() const {
+  return shape_stack.back()->behavior_ref().unique_group();
+}
+
+template <>
 void object_bridge<data_staging::line>::set_unique_id(int64_t unique_id) {
   shape_stack.back()->meta_ref().set_unique_id(unique_id);
 }
@@ -159,7 +164,12 @@ void object_bridge<data_staging::line>::set_seed(int64_t new_value) const {
 }
 
 template <>
-object_bridge<data_staging::line>::object_bridge(interpreter::generator *generator) : generator_(generator) {
+void object_bridge<data_staging::line>::set_unique_group(const std::string& ug) const {
+  return shape_stack.back()->behavior_ref().set_unique_group(ug);
+}
+
+template <>
+object_bridge<data_staging::line>::object_bridge(interpreter::generator* generator) : generator_(generator) {
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
   object_bridge_class  // .template ctor<int>()
       .property("level", &object_bridge::get_level)
@@ -182,7 +192,8 @@ object_bridge<data_staging::line>::object_bridge(interpreter::generator *generat
       .function("destroy", &object_bridge::destroy)
       .property("props", &object_bridge::get_properties_local_ref)
       .property("gradients", &object_bridge::get_gradients_local_ref)
-      .property("seed", &object_bridge::get_seed, &object_bridge::set_seed);
+      .property("seed", &object_bridge::get_seed, &object_bridge::set_seed)
+      .property("unique_group", &object_bridge::get_unique_group, &object_bridge::set_unique_group);
   instance_ = std::make_shared<v8::Persistent<v8::Object>>();
   (*instance_)
       .Reset(v8::Isolate::GetCurrent(), object_bridge_class.reference_external(v8::Isolate::GetCurrent(), this));

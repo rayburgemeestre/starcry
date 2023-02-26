@@ -16,7 +16,8 @@ endif()
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 set(CLANGFORMAT_EXECUTABLE clang-format-15)
-set(CMAKE_CXX_CLANG_TIDY clang-tidy-15)
+# clang-tidy makes compilation significantly slower
+# set(CMAKE_CXX_CLANG_TIDY clang-tidy-15)
 set(Boost_USE_STATIC_LIBS ON)
 set(BOOST_ROOT "/opt/cppse/build/boost/")
 

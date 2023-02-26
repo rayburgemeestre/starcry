@@ -13,6 +13,7 @@ class behavior {
 private:
   std::string collision_group_;
   std::string gravity_group_;
+  std::string unique_group_;
 
   int64_t last_collide_ = -1;
   // std::vector<int64_t> last_collide_history_;
@@ -24,11 +25,17 @@ public:
   std::string gravity_group() const {
     return gravity_group_;
   }
+  std::string unique_group() const {
+    return unique_group_;
+  }
   const std::string& collision_group_ref() const {
     return collision_group_;
   }
   const std::string& gravity_group_ref() const {
     return gravity_group_;
+  }
+  const std::string& unique_group_ref() const {
+    return unique_group_;
   }
   int64_t last_collide() const {
     return last_collide_;
@@ -47,6 +54,9 @@ public:
   }
   void set_gravity_group(std::string gravity_group) {
     gravity_group_ = gravity_group;
+  }
+  void set_unique_group(std::string unique_group) {
+    unique_group_ = unique_group;
   }
 };
 }  // namespace data_staging
