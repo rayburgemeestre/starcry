@@ -130,7 +130,8 @@ public:
   void update_object_toroidal(v8_interact& i, data_staging::toroidal& toroidal_data, double& x, double& y);
   void update_object_distances();
   void update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video);
-  void handle_rotations(data_staging::shape_t& instance);
+  void handle_rotations(data_staging::shape_t& shape,
+                        std::vector<std::reference_wrapper<data_staging::shape_t>>& use_stack);
   void handle_collisions(v8_interact& i, data_staging::shape_t& instance);
   void handle_collision(v8_interact& i,
                         data_staging::circle& object_bridge,
@@ -202,9 +203,9 @@ private:
   std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>
   _instantiate_object_from_scene(
       v8_interact& i,
-      v8::Local<v8::Object>& scene_object,        // object description from scene to be instantiated
-      const data_staging::shape_t* parent_object  // it's optional parent
-  );
+      v8::Local<v8::Object>& scene_object,         // object description from scene to be instantiated
+      const data_staging::shape_t* parent_object,  // it's optional parent
+      bool no_initialize = false);
   void _instantiate_object(v8_interact& i,
                            std::optional<v8::Local<v8::Object>> scene_obj,
                            v8::Local<v8::Object> object_prototype,

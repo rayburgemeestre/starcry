@@ -12,6 +12,7 @@
 #include <memory>
 #include <mutex>
 #include <numeric>
+#include <set>
 
 #include "v8pp/module.hpp"
 
@@ -119,7 +120,7 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
   i.set_field(created_instance, "namespace", v8_str(i.get_context(), namespace_));
   const auto file = i.str(created_instance, "file");
   const auto specified_duration =
-      i.has_field(created_instance, "duration") ? i.double_number(created_instance, "duration") : double(-1);
+      i.has_field(created_instance, "duration") ? i.double_number(created_instance, "duration") : static_cast<double>(-1);
 
   // read the entire script from disk
   std::ifstream stream(file);
@@ -365,14 +366,19 @@ bool generator::_generate_frame() {
             // call_next_frame_event(i, next_instances);
           }
 
-          // create mappings
+          // create mappings (object uid -> object ref)
           create_new_mappings();
 
           // handle object movement (velocity added to position)
+          // - velocity
           update_object_positions(i, video);
 
           // handle collisions, gravity and "inherited" objects
           // absolute xy are known after this function call
+          // - rotations, this produces xy absolute values as side-effect
+          // TODO: rotations perhaps should be part of update_positions?
+          // - collisions
+          // - gravity
           update_object_interactions(i, video);
 
           // calculate distance and steps
@@ -722,7 +728,7 @@ void generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>
         stack[meta.level()] = std::ref(abstract_shape);
       }
     }
-    handle_rotations(abstract_shape);
+    handle_rotations(abstract_shape, stack);
 
     if constexpr (std::is_same_v<T, data_staging::circle>) {
       if (shape.radius_size() < 1000 /* todo create property of course */) {
@@ -841,7 +847,8 @@ void generator::update_object_distances() {
   }
 }
 
-void generator::handle_rotations(data_staging::shape_t& shape) {
+void generator::handle_rotations(data_staging::shape_t& shape,
+                                 std::vector<std::reference_wrapper<data_staging::shape_t>>& use_stack) {
   vector2d parent;
   vector2d new_position;
   vector2d new_position2;
@@ -855,7 +862,7 @@ void generator::handle_rotations(data_staging::shape_t& shape) {
     vector2d current2;
     double current_rotation = 0;
     for (size_t i = 0; i <= concrete_shape.meta_cref().level(); i++) {
-      meta_callback(stack[i].get(), [&]<typename TP>(TP& parent_shape) {
+      meta_callback(use_stack[i].get(), [&]<typename TP>(TP& parent_shape) {
         if constexpr (std::is_same_v<TP, data_staging::circle>) {
           current = add_vector(current, parent_shape.location_ref().position_ref());
         } else if constexpr (std::is_same_v<TP, data_staging::text>) {
@@ -1470,11 +1477,165 @@ std::shared_ptr<data::job> generator::get_job() const {
   return job;
 }
 
+void recursively_build_stack_for_object(auto& new_stack,
+                                        auto& shape,
+                                        auto& next_instance_map,
+                                        std::vector<data_staging::shape_t>& instantiated_objs,
+                                        int level = 0) {
+  meta_callback(shape, [&](const auto& cc) {
+    new_stack.emplace_back(shape);
+    if (cc.meta_cref().level() > 0) {
+      if (next_instance_map.find(cc.meta_cref().parent_uid()) != next_instance_map.end()) {
+          recursively_build_stack_for_object(new_stack,
+                                             next_instance_map.at(cc.meta_cref().parent_uid()).get(),
+                                             next_instance_map,
+                                             instantiated_objs,
+                                             level + 1);
+      } else {
+        for (auto& v : instantiated_objs) {
+          meta_callback(v, [&](const auto& ccc) {
+            if (ccc.meta_cref().unique_id() == cc.meta_cref().parent_uid()) {
+                recursively_build_stack_for_object(new_stack, v, next_instance_map, instantiated_objs, level + 1);
+            }
+          });
+        }
+      }
+    }
+  });
+};
+
 int64_t generator::spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj) {
   auto& i = genctx->i();
-  auto [created_instance, shape_ref, created_shape_copy] = _instantiate_object_from_scene(i, obj, &spawner);
+
+  // the optimization does not seem to work in all cases because of initialization ordering
+  bool use_optimization = false;
+  bool no_initialize = false;
+  if (use_optimization) {
+    // we are preventing the call to "init", because we want to have the option to bail out on initializing this object
+    no_initialize = true;
+  }
+  bool use_dedupe_experimental_feature = false;
+
+  auto [created_instance, shape_ref_unusable, created_shape_copy] =
+      _instantiate_object_from_scene(i, obj, &spawner, no_initialize);
   create_bookkeeping_for_script_objects(created_instance, created_shape_copy);
-  return i.integer_number(created_instance, "unique_id");
+
+  if (use_dedupe_experimental_feature) {
+    std::vector<std::reference_wrapper<data_staging::shape_t>> new_stack;
+
+    // we cannot trust shape_ref.get() to be valid, since spawning objects can be done recursively, and
+    // this can trigger the underlying datastructure to reallocate memory etc. so we need to retrieve it again
+    int uid = -1;
+    meta_callback(created_shape_copy, [&](const auto& cc) {
+      uid = cc.meta_cref().unique_id();
+    });
+    std::optional<std::reference_wrapper<data_staging::shape_t>> shape_ref_opt;
+    for (auto& v : instantiated_objects[scenes_.scenesettings.current_scene_next]) {
+      meta_callback(v, [&](const auto& ccc) {
+        if (ccc.meta_cref().unique_id() == uid) {
+          shape_ref_opt = v;
+        }
+      });
+    }
+    auto shape_ref = *shape_ref_opt;
+
+      recursively_build_stack_for_object(
+              new_stack, shape_ref.get(), next_instance_map,
+              instantiated_objects[scenes_.scenesettings.current_scene_next]);
+    // reverse new_stack
+    std::reverse(new_stack.begin(), new_stack.end());
+
+    handle_rotations(shape_ref.get(), new_stack);
+
+    // HARDCODED TEST: should move to dedicated logic somewhere
+    bool destroyed = false;
+    static std::set<std::tuple<double, double>> seen;
+    static std::set<std::tuple<double, double, double, double>> seen2;
+    seen.emplace(0, 0);
+    seen2.emplace(0, 0, 0, 0);
+
+    // round x to the nearest 0.25 resolution x, y
+    auto ret_val = i.integer_number(created_instance, "unique_id");
+    auto check3 = [&](auto... args) {
+      auto key = std::make_tuple(args...);
+      std::get<0>(key) = std::round(std::get<0>(key) * 4) / 4;
+      std::get<1>(key) = std::round(std::get<1>(key) * 4) / 4;
+      if (std::get<0>(key) == -0) std::get<0>(key) = 0;
+      if (std::get<1>(key) == -0) std::get<1>(key) = 0;
+      if constexpr (sizeof...(args) == 2) {
+        if (seen.find(key) != seen.end()) {
+          destroy(shape_ref.get());
+          destroyed = true;
+        } else {
+          seen.emplace(key);
+        }
+      }
+      if constexpr (sizeof...(args) == 4) {
+        std::get<2>(key) = std::round(std::get<2>(key) * 4) / 4;
+        std::get<3>(key) = std::round(std::get<3>(key) * 4) / 4;
+        if (std::get<2>(key) == -0) std::get<2>(key) = 0;
+        if (std::get<3>(key) == -0) std::get<3>(key) = 0;
+
+        if (seen2.find(key) != seen2.end()) {
+          destroy(shape_ref.get());
+          destroyed = true;
+        } else {
+          seen2.emplace(key);
+        }
+      }
+    };
+
+    meta_visit(
+        shape_ref.get(),
+        [&](data_staging::circle& c) {
+          check3(c.transitive_location_ref().position_ref().x, c.transitive_location_ref().position_ref().y);
+        },
+        [&](data_staging::line& l) {
+          check3(l.transitive_line_start_ref().position_ref().x,
+                 l.transitive_line_start_ref().position_ref().y,
+                 l.transitive_line_end_ref().position_ref().x,
+                 l.transitive_line_end_ref().position_ref().y);
+        },
+        [&](data_staging::text& t) {
+          check3(t.transitive_location_ref().position_ref().x, t.transitive_location_ref().position_ref().y);
+        },
+        [&](data_staging::script& s) {
+          check3(s.transitive_location_ref().position_ref().x, s.transitive_location_ref().position_ref().y);
+        });
+
+    if (use_optimization && !destroyed) {
+      const auto initialize = [&]<typename T>(const std::string& object_id, T& c, auto& bridge) {
+        if (bridge) {
+          // take a copy as the reference might point to a non-existant instance at some point,
+          // for example when other cascading 'init's insert new objects.
+          auto copy = std::get<T>(shape_ref.get());
+          bridge->push_object(copy);
+          i.call_fun(object_definitions_map[object_id],  // object definition
+                     bridge->instance(),                 // bridged object is "this"
+                     "init");
+          bridge->pop_object();
+          write_back_copy(copy);
+        }
+      };
+      meta_visit(
+          shape_ref.get(),
+          [&](data_staging::circle& c) {
+            initialize(c.meta_cref().id(), c, bridges_.circle());
+          },
+          [&](data_staging::line& l) {
+            initialize(l.meta_cref().id(), l, bridges_.line());
+          },
+          [&](data_staging::text& t) {
+            initialize(t.meta_cref().id(), t, bridges_.text());
+          },
+          [&](data_staging::script& s) {
+            initialize(s.meta_cref().id(), s, bridges_.script());
+          });
+    }
+    return ret_val;
+  }
+  auto ret_val = i.integer_number(created_instance, "unique_id");
+  return ret_val;
 }
 
 int64_t generator::spawn_object2(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1) {
@@ -1571,7 +1732,6 @@ int64_t generator::spawn_object_at_parent(data_staging::shape_t& spawner, v8::Lo
 }
 
 int64_t generator::destroy(data_staging::shape_t& caller) {
-  auto& i = genctx->i();
   int64_t ret = -1;
   meta_callback(caller, [&]<typename T>(T& shape) {
     ret = shape.meta_cref().unique_id();
@@ -1587,9 +1747,9 @@ std::unordered_map<std::string, v8::Persistent<v8::Object>>& generator::get_obje
 std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>
 generator::_instantiate_object_from_scene(
     v8_interact& i,
-    v8::Local<v8::Object>& scene_object,        // object description from scene to be instantiated
-    const data_staging::shape_t* parent_object  // it's optional parent
-) {
+    v8::Local<v8::Object>& scene_object,         // object description from scene to be instantiated
+    const data_staging::shape_t* parent_object,  // it's optional parent
+    bool no_initialize) {
   v8::Isolate* isolate = i.get_isolate();
 
   int64_t current_level = 0;
@@ -1715,11 +1875,12 @@ generator::_instantiate_object_from_scene(
     shape_copy = (*shape_ref).get();
 
     // call init last, so that objects exist when using 'this' inside init()
-    if (bridge) {
+    if (bridge && !no_initialize) {
       // take a copy as the reference might point to a non-existant instance at some point,
       // for example when other cascading 'init's insert new objects.
       auto copy = std::get<T>((*shape_ref).get());
       bridge->push_object(copy);
+
       i.call_fun(object_definitions_map[object_id],  // object definition
                  bridge->instance(),                 // bridged object is "this"
                  "init");
@@ -1749,22 +1910,22 @@ generator::_instantiate_object_from_scene(
     initialize(c, bridges_.circle());
 
   } else if (type == "line") {
-    data_staging::line c(object_id,
+    data_staging::line l(object_id,
                          counter,
                          vector2d(i.double_number(instance, "x"), i.double_number(instance, "y")),
                          vector2d(i.double_number(instance, "x2"), i.double_number(instance, "y2")),
                          i.double_number(instance, "radiussize"));
 
     // TODO: no logic for end of line
-    c.movement_line_start_ref().set_velocity(i.double_number(instance, "vel_x", 0),
+    l.movement_line_start_ref().set_velocity(i.double_number(instance, "vel_x", 0),
                                              i.double_number(instance, "vel_y", 0),
                                              i.double_number(instance, "velocity", 0));
 
-    c.meta_ref().set_namespace(parent_object_ns);
+    l.meta_ref().set_namespace(parent_object_ns);
 
-    c.styling_ref().set_blending_type(i.integer_number(instance, "blending_type"));
+    l.styling_ref().set_blending_type(i.integer_number(instance, "blending_type"));
 
-    initialize(c, bridges_.line());
+    initialize(l, bridges_.line());
   } else if (type == "text") {
     data_staging::text t(object_id,
                          counter,
