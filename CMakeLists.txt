@@ -5,7 +5,7 @@ if(CCACHE_PROGRAM)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
 endif()
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 project(starcry VERSION 0.2 LANGUAGES CXX)
 
@@ -15,12 +15,13 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-set(CLANGFORMAT_EXECUTABLE clang-format-14)
+set(CLANGFORMAT_EXECUTABLE clang-format-15)
+set(CMAKE_CXX_CLANG_TIDY clang-tidy-15)
 set(Boost_USE_STATIC_LIBS ON)
 set(BOOST_ROOT "/opt/cppse/build/boost/")
 
 include(warnings)
-set_warnings()
+# set_warnings()
 
 include(ClangFormat)
 include(StarcryLinking)
@@ -56,9 +57,9 @@ if (DEBUG)
 else()
     message(STATUS "This is a RELEASE build.")
     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        add_definitions("-std=c++20 -O2 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
+        add_definitions("-std=c++23 -O2 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
     else()
-        add_definitions("-std=c++2a -O2 -funsigned-char                   -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS -Wno-unknown-pragmas -Wno-literal-suffix")
+        add_definitions("-std=c++23 -O2 -funsigned-char                   -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS -Wno-unknown-pragmas -Wno-literal-suffix")
     endif()
 endif()
 
