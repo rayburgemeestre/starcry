@@ -222,21 +222,21 @@ inline int32 Color_HlsToRgb(
   return true;
 }
 
-//#define COLOR_OPAQUE                (0)
-//#define COLOR_TRANSPARENT           (127)
+// #define COLOR_OPAQUE                (0)
+// #define COLOR_TRANSPARENT           (127)
 //
-//#define RGB_SIZE                    (3)
-//#define RGB_BPP                     (24)
-//#define RGB_MAXRED                  (255)
-//#define RGB_MAXGREEN                (255)
-//#define RGB_MAXBLUE                 (255)
+// #define RGB_SIZE                    (3)
+// #define RGB_BPP                     (24)
+// #define RGB_MAXRED                  (255)
+// #define RGB_MAXGREEN                (255)
+// #define RGB_MAXBLUE                 (255)
 //
-//#define ARGB_SIZE                   (4)
-//#define ARGB_BPP                    (32)
-//#define ARGB_MAXALPHA               (127)
-//#define ARGB_MAXRED                 (RGB_MAXRED)
-//#define ARGB_MAXGREEN               (RGB_MAXGREEN)
-//#define ARGB_MAXBLUE                (RGB_MAXBLUE)
+// #define ARGB_SIZE                   (4)
+// #define ARGB_BPP                    (32)
+// #define ARGB_MAXALPHA               (127)
+// #define ARGB_MAXRED                 (RGB_MAXRED)
+// #define ARGB_MAXGREEN               (RGB_MAXGREEN)
+// #define ARGB_MAXBLUE                (RGB_MAXBLUE)
 
 /*********************************************************************/
 
