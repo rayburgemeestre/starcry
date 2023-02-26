@@ -14,7 +14,7 @@ export const useViewpointStore = defineStore('viewpoint', {
 
     raw: false,
     preview: false,
-    labels: false,
+    labels: true,
     caching: false,
     debug: false,
     save: false,
@@ -34,7 +34,7 @@ export const useViewpointStore = defineStore('viewpoint', {
       this.offset_y = 0;
       this.raw = false;
       this.preview = false;
-      this.labels = false;
+      this.labels = true;
       this.caching = false;
       this.debug = false;
       this.save = false;

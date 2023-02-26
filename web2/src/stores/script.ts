@@ -5,7 +5,7 @@ export const useScriptStore = defineStore('script', {
   state: () => ({
     filename: 'input/test.js',
     script: '',
-    frame: 2, // temporary hack until we fix server-side initialization + spawn issue
+    frame: 1,
 
     video: {},
     preview: {},
