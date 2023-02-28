@@ -14,6 +14,8 @@ class initializer {
 public:
   explicit initializer(generator &gen);
 
+  void initialize_all(std::optional<double> rand_seed, bool preview);
+
   void init_context();
   void init_user_script();
   void init_video_meta_info(std::optional<double> rand_seed, bool preview);

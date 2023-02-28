@@ -31,23 +31,19 @@
 #include "shapes/position.h"
 #include "shapes/rectangle.h"
 
+#include "interpreter/fast_forwarder.hpp"
 #include "util/unique_group.hpp"
 
 namespace interpreter {
-void fix_properties(std::vector<std::vector<data_staging::shape_t>>& scene_shapes) {
-  // This prevents a massive memory leak. Is fix_properties needed?
-  return;
-  for (auto& shapes : scene_shapes) {
-    for (auto& shape : shapes) {
-      meta_callback(shape, [](auto& the_shape) {
-        the_shape.properties_ref().reinitialize();
-      });
-    }
-  }
-}
 
 generator::generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug)
-    : context(context), metrics_(metrics), debug_(debug), initializer_(*this), bridges_(*this), scenes_(*this) {}
+    : context(context),
+      metrics_(metrics),
+      debug_(debug),
+      initializer_(*this),
+      bridges_(*this),
+      scenes_(*this),
+      sampler_(*this) {}
 
 void generator::init(const std::string& filename, std::optional<double> rand_seed, bool preview, bool caching) {
   prctl(PR_SET_NAME, "native generator thread");
@@ -55,13 +51,7 @@ void generator::init(const std::string& filename, std::optional<double> rand_see
   job = std::make_shared<data::job>();
   job->frame_number = frame_number;
 
-  initializer_.init_context();
-  initializer_.init_user_script();
-  initializer_.init_video_meta_info(rand_seed, preview);
-  initializer_.init_gradients();
-  initializer_.init_textures();
-  initializer_.init_toroidals();
-  initializer_.init_object_definitions();
+  initializer_.initialize_all(rand_seed, preview);
 
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     genctx = std::make_shared<generator_context>(val, 0);
@@ -92,9 +82,7 @@ void generator::create_object_instances() {
 
     // since this is invoked directly after a scene change, and in the very beginning, make sure this state is part of
     // the instances "current" frame, or reverting (e.g., due to motion blur requirements) will discard all of this.
-    ////util::generator::copy_instances(i, genctx->instances, genctx->instances_next);
     scene_shapes = scene_shapes_next;
-    fix_properties(scene_shapes);
   });
 }
 
@@ -262,52 +250,18 @@ void generator::instantiate_additional_objects_from_new_scene(v8::Persistent<v8:
 }
 
 void generator::fast_forward(int frame_of_interest) {
-  if (fast_ff && frame_of_interest > 2) {
-    int backup_min_intermediates = min_intermediates;
-    int backup_max_intermediates = max_intermediates;
-    min_intermediates = 1;
-    max_intermediates = 1;
-    for (int i = 2; i < frame_of_interest; i++) {
-      generate_frame();
-      metrics_->skip_job(job->job_number);
-    }
-    min_intermediates = backup_min_intermediates;
-    min_intermediates = backup_max_intermediates;
-    // generate frame before with same stepsize
+  fast_forwarder(fast_ff, frame_of_interest, min_intermediates, max_intermediates, [&]() {
     generate_frame();
     metrics_->skip_job(job->job_number);
-  } else if (frame_of_interest > 1) {
-    for (int i = 1; i < frame_of_interest; i++) {
-      generate_frame();
-      metrics_->skip_job(job->job_number);
-    }
-  }
+  });
 }
 
 bool generator::generate_frame() {
-  // no sampling
-  if (sample_include == 0 || sample_exclude == 0) {
-    return _generate_frame();
-  }
-  while (true) {
-    // sampling frames to include
-    if (sample_include_current-- > 0) {
-      return _generate_frame();
-    }
-    // frames to be skipped
-    while (sample_exclude_current-- > 0) {
-      total_skipped_frames++;
-      bool ret = _generate_frame();
-      job->job_number--;
-      if (!ret) {
-        // bail out if we find a last frame
-        return false;
-      }
-    }
-    // reset
-    sample_include_current = sample_include * use_fps;
-    sample_exclude_current = sample_exclude * use_fps;
-  }
+  return sampler_.sample(use_fps, [&](bool skip) {
+    auto ret = _generate_frame();
+    if (skip) job->job_number--;
+    return ret;
+  });
 }
 
 bool generator::_generate_frame() {
@@ -329,15 +283,12 @@ bool generator::_generate_frame() {
       // auto objects = i.v8_array(obj, "objects");
       auto current_scene = i.get_index(scenes, scenes_.scenesettings.current_scene_next);
       if (!current_scene->IsObject()) return;
-      // auto sceneobj = current_scene.As<v8::Object>();
 
       stepper.reset();
       indexes.clear();
       attempt = 0;
       max_dist_found = std::numeric_limits<double>::max();
       scalesettings.reset();
-
-      // util::generator::garbage_collect_erased_objects(i, instances, intermediates, next_instances);
 
       if (min_intermediates > 0.) {
         update_steps(min_intermediates);
@@ -367,11 +318,6 @@ bool generator::_generate_frame() {
 
           scenes_.prepare_scene();
 
-          // call next frame event on all objects (TODO: optimize)
-          if (stepper.current_step == 0) {
-            // call_next_frame_event(i, next_instances);
-          }
-
           // create mappings (object uid -> object ref)
           create_new_mappings();
 
@@ -397,7 +343,6 @@ bool generator::_generate_frame() {
           convert_objects_to_render_job(i, sc, video);
 
           scene_shapes_intermediate = scene_shapes_next;
-          fix_properties(scene_shapes_intermediate);
 
           scalesettings.update();
           scenes_.update();
@@ -455,7 +400,6 @@ bool generator::_generate_frame() {
       }
 
       scene_shapes = scene_shapes_next;
-      fix_properties(scene_shapes);
 
       scalesettings.commit();
       scenes_.commit();
@@ -490,10 +434,7 @@ void generator::revert_all_changes(v8_interact& i) {
 
   // reset next and intermediate instances
   scene_shapes_next = scene_shapes;
-  fix_properties(scene_shapes_next);
-
   scene_shapes_intermediate = scene_shapes;
-  fix_properties(scene_shapes_intermediate);
 
   scalesettings.revert();
   scenes_.revert();
@@ -514,14 +455,6 @@ void generator::revert_position_updates(v8_interact& i) {
   //    i.copy_field(dst2, "x2", src, "x2");
   //    i.copy_field(dst2, "y2", src, "y2");
   //  }
-}
-
-void generator::call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances) {
-  for (size_t j = 0; j < next_instances->Length(); j++) {
-    auto next = i.get_index(next_instances, j).As<v8::Object>();
-    auto on = i.get(next, "on").As<v8::Object>();
-    i.call_fun(on, next, "next_frame");
-  }
 }
 
 void generator::create_new_mappings() {
@@ -615,10 +548,6 @@ void generator::update_object_positions(v8_interact& i, v8::Local<v8::Object>& v
         shape.location_ref().position_ref().x = x;
         shape.location_ref().position_ref().y = y;
       }
-      // Needed?
-      // if (attempt == 1) {
-      //   i.set_field(instance, "steps", v8::Number::New(isolate, 1));
-      // }
     });
   }
 }

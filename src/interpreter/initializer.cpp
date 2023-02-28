@@ -18,6 +18,16 @@ v8::Local<v8::Context> current_context_native(std::shared_ptr<v8_wrapper>& wrapp
 
 initializer::initializer(generator& gen) : gen_(gen) {}
 
+void initializer::initialize_all(std::optional<double> rand_seed, bool preview) {
+  init_context();
+  init_user_script();
+  init_video_meta_info(rand_seed, preview);
+  init_gradients();
+  init_textures();
+  init_toroidals();
+  init_object_definitions();
+}
+
 void initializer::init_context() {
   gen_.context->set_filename(gen_.filename());
   reset_context();
@@ -168,10 +178,8 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed, bool pre
     }
     if (i.has_field(video, "sample")) {
       auto sample = i.get(video, "sample").As<v8::Object>();
-      gen_.sample_include = i.double_number(sample, "include");  // seconds
-      gen_.sample_exclude = i.double_number(sample, "exclude");  // seconds
-      gen_.sample_include_current = gen_.sample_include * gen_.use_fps;
-      gen_.sample_exclude_current = gen_.sample_exclude * gen_.use_fps;
+      gen_.sampler_.set_sample_include(i.double_number(sample, "include"), gen_.use_fps);  // seconds
+      gen_.sampler_.set_sample_exclude(i.double_number(sample, "exclude"), gen_.use_fps);  // seconds
     }
     set_rand_seed(gen_.seed);
 

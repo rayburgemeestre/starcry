@@ -16,6 +16,7 @@
 #include "scenesettings.h"
 
 #include "interpreter/bridges.h"
+#include "interpreter/frame_sampler.h"
 #include "interpreter/initializer.h"
 #include "interpreter/scenes.h"
 
@@ -47,6 +48,7 @@ private:
   friend class initializer;
   friend class bridges;
   friend class scenes;
+  friend class frame_sampler;
 
   fps_progress fpsp;
   std::shared_ptr<v8_wrapper> context;
@@ -75,11 +77,6 @@ private:
   std::unordered_map<int64_t, v8::Local<v8::Object>> parents_stack;
   int attempt = 0;
   double max_dist_found = std::numeric_limits<double>::max();
-  double sample_include = 0.;
-  double sample_exclude = 0.;
-  double sample_include_current = 0.;
-  double sample_exclude_current = 0.;
-  double total_skipped_frames = 0.;
 
   std::map<std::string, quadtree> qts;
   std::map<std::string, quadtree> qts_gravity;
@@ -104,6 +101,7 @@ private:
   initializer initializer_;
   bridges bridges_;
   scenes scenes_;
+  frame_sampler sampler_;
 
 public:
   explicit generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug = false);
@@ -119,13 +117,10 @@ public:
   void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance,
                                              const data_staging::shape_t& created_shape,
                                              int debug_level = 0);
-  void set_scene(size_t scene);
-  static void set_scene_sub_object(scene_settings& scenesettings, size_t scene);
   void fast_forward(int frame_of_interest);
   bool generate_frame();
   void revert_all_changes(v8_interact& i);
   static void revert_position_updates(v8_interact& i);
-  static void call_next_frame_event(v8_interact& i, v8::Local<v8::Array>& next_instances);
   void create_new_mappings();
   void update_object_positions(v8_interact& i, v8::Local<v8::Object>& video);
   void insert_newly_created_objects();
