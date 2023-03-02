@@ -21,6 +21,8 @@ jobs:
       run: make build
     - name: make test
       run: make test
+    - name: make download-integration-test-reference
+      run: make download-integration-test-reference
     - name: make integration-test
       run: make integration-test
     - name: install npm

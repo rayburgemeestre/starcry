@@ -239,6 +239,13 @@ profile:  ## run starcry with valgrind's callgrind for profiling
 	# valgrind --tool=callgrind ./build/starcry --no-render --stdout input/test.js
 	ls -althrst | tail -n 1
 
+download-integration-test-reference:
+	wget https://cppse.nl/reference.tar.gz
+	tar -zxvf reference.tar.gz
+
+upload-integration-test-reference:
+	upload_integration_test_results.sh
+
 debug-last:
 	rm -rf dbg
 	apport-unpack /var/crash/_home_trigen_projects_starcry_build_starcry.1144.crash dbg
