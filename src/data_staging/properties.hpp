@@ -60,7 +60,7 @@ private:
   void init_properties() {
     if (properties_ == nullptr) {
       if (v8::Isolate::GetCurrent() == nullptr) {
-        std::cout << "Isolate is null, v8 not loaded, assuming unit tests." << std::endl;
+        // Isolate is null, v8 not loaded, assuming unit tests.
         return;
       }
       properties_ = std::make_shared<v8::Persistent<v8::Object>>();
