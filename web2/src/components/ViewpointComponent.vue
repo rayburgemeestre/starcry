@@ -27,6 +27,7 @@
     <br />
     <q-input v-model.number="viewpoint_store_raw.offset_x" label="offset x" />
     <q-input v-model.number="viewpoint_store_raw.offset_y" label="offset y" />
+    <q-input v-model.number="script_store.num_chunks" label="num chunks" />
     <br />
     <q-checkbox
       dark
@@ -274,7 +275,7 @@ export default defineComponent({
             // random frame between 1 and 150
             frame: parseInt(script_store.frame),
             // viewpoint_settings: viewpoint_settings,
-            num_chunks: 1,
+            num_chunks: parseInt(script_store.num_chunks),
           })
         );
       },

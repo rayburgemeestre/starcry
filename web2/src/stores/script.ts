@@ -13,6 +13,7 @@ export const useScriptStore = defineStore('script', {
     max_frames: 0,
 
     auto_render: true,
+    num_chunks: 1,
 
     texture_w: ref(0),
     texture_h: ref(0),

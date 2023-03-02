@@ -51,6 +51,8 @@ export default defineComponent({
         let index = e.target.getAttribute('index');
         script_store.frame = index;
         tick = index;
+        // trigger render of this frame
+        script_store.render_requested_by_user_v2++;
       },
       mouse_over: function (e) {
         hover_val = e.target.getAttribute('index');
