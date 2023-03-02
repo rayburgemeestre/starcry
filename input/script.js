@@ -18,13 +18,13 @@ _ = {
       'type': 'script',
       'file': 'input/subobj.js',
     },
-    'greenlines': {
-      'type': 'script',
-      'file': 'input/greenlines.js',
-      'time': function(t, e, s, tt) {
-        this.scale = 1.0 + 0.1 * Math.sin(t * 2 * Math.PI);
-      }
-    },
+    // 'greenlines': {
+    //   'type': 'script',
+    //   'file': 'input/greenlines.js',
+    //   'time': function(t, e, s, tt) {
+    //     this.scale = 1.0 + 0.1 * Math.sin(t * 2 * Math.PI);
+    //   }
+    // },
     //'memleak': {
     //  'type': 'script',
     //  'file': 'input/memory_leak.js',
@@ -74,7 +74,7 @@ _ = {
         {'id': 'orbit', 'label': 'orbit2', 'x': 500, 'y': 0, 'z': 0},
         {'id': 'logo', 'label': 'logo', 'x': 0, 'y': 100, 'z': 0},
         {'id': 'orbitz', 'label': 'orbitz', 'x': 0, 'y': -100, 'z': 0},
-        {'id': 'greenlines', 'label': 'g1', 'x': -100, 'y': -100, 'z': 0},
+        // {'id': 'greenlines', 'label': 'g1', 'x': -100, 'y': -100, 'z': 0},
       ],
     },
     {
