@@ -14,11 +14,19 @@ class initializer {
 public:
   explicit initializer(generator &gen);
 
-  void initialize_all(std::optional<double> rand_seed, bool preview);
+  void initialize_all(std::optional<double> rand_seed,
+                      bool preview,
+                      std::optional<int> width,
+                      std::optional<int> height,
+                      std::optional<double> scale);
 
   void init_context();
   void init_user_script();
-  void init_video_meta_info(std::optional<double> rand_seed, bool preview);
+  void init_video_meta_info(std::optional<double> rand_seed,
+                            bool preview,
+                            std::optional<int> width,
+                            std::optional<int> height,
+                            std::optional<double> scale);
   void init_gradients();
   void init_textures();
   void init_toroidals();

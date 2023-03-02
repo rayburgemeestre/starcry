@@ -108,7 +108,13 @@ public:
   ~generator() = default;
 
   void reset_context();
-  void init(const std::string& filename, std::optional<double> rand_seed, bool preview, bool caching);
+  void init(const std::string& filename,
+            std::optional<double> rand_seed,
+            bool preview,
+            bool caching,
+            std::optional<int> width = std::nullopt,
+            std::optional<int> height = std::nullopt,
+            std::optional<double> scale = std::nullopt);
   void create_object_instances();
 
   void instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
@@ -121,6 +127,7 @@ public:
   bool generate_frame();
   void revert_all_changes(v8_interact& i);
   static void revert_position_updates(v8_interact& i);
+  void cleanup_destroyed_objects();
   void create_new_mappings();
   void update_object_positions(v8_interact& i, v8::Local<v8::Object>& video);
   void insert_newly_created_objects();
@@ -194,8 +201,6 @@ public:
 
 private:
   bool _generate_frame();
-
-  std::map<int64_t, std::pair<double, double>> cached_xy;
 
   std::optional<std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>>
   _instantiate_object_from_scene(

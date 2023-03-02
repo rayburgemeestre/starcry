@@ -18,10 +18,14 @@ v8::Local<v8::Context> current_context_native(std::shared_ptr<v8_wrapper>& wrapp
 
 initializer::initializer(generator& gen) : gen_(gen) {}
 
-void initializer::initialize_all(std::optional<double> rand_seed, bool preview) {
+void initializer::initialize_all(std::optional<double> rand_seed,
+                                 bool preview,
+                                 std::optional<int> width,
+                                 std::optional<int> height,
+                                 std::optional<double> scale) {
   init_context();
   init_user_script();
-  init_video_meta_info(rand_seed, preview);
+  init_video_meta_info(rand_seed, preview, width, height, scale);
   init_gradients();
   init_textures();
   init_toroidals();
@@ -108,94 +112,111 @@ void initializer::init_user_script() {
   gen_.bridges_.init();
 }
 
-void initializer::init_video_meta_info(std::optional<double> rand_seed, bool preview) {
+void initializer::init_video_meta_info(std::optional<double> rand_seed,
+                                       bool preview,
+                                       std::optional<int> width,
+                                       std::optional<int> height,
+                                       std::optional<double> scale) {
   // "run_array" is a bit of a misnomer, this only invokes the callback once
-  gen_.context->run_array("script", [this, &preview, &rand_seed](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    v8_interact i;
-    auto video_value = v8_index_object(current_context_native(gen_.context), val, "video");
-    auto video = video_value->IsObject() ? video_value.As<v8::Object>() : v8::Object::New(isolate);
-    if (preview) {
-      v8::Local<v8::Object> preview_obj;
-      if (v8_index_object(current_context_native(gen_.context), val, "preview")->IsObject()) {
-        preview_obj = v8_index_object(current_context_native(gen_.context), val, "preview").As<v8::Object>();
-      } else {
-        preview_obj = v8::Object::New(isolate);
-      }
-      if (!i.has_field(preview_obj, "width")) {
-        i.set_field(preview_obj, "width", v8::Number::New(isolate, 1920 / 2.));
-      }
-      if (!i.has_field(preview_obj, "height")) {
-        i.set_field(preview_obj, "height", v8::Number::New(isolate, 1080 / 2.));
-      }
-      if (!i.has_field(preview_obj, "max_intermediates")) {
-        i.set_field(preview_obj, "max_intermediates", v8::Number::New(isolate, 5));
-      }
-      i.recursively_copy_object(video, preview_obj);
-    }
+  gen_.context->run_array(
+      "script", [this, &preview, &rand_seed, &width, &height, &scale](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+        v8_interact i;
+        auto video_value = v8_index_object(current_context_native(gen_.context), val, "video");
+        auto video = video_value->IsObject() ? video_value.As<v8::Object>() : v8::Object::New(isolate);
+        if (preview) {
+          v8::Local<v8::Object> preview_obj;
+          if (v8_index_object(current_context_native(gen_.context), val, "preview")->IsObject()) {
+            preview_obj = v8_index_object(current_context_native(gen_.context), val, "preview").As<v8::Object>();
+          } else {
+            preview_obj = v8::Object::New(isolate);
+          }
+          if (!i.has_field(preview_obj, "width")) {
+            i.set_field(preview_obj, "width", v8::Number::New(isolate, 1920 / 2.));
+          }
+          if (!i.has_field(preview_obj, "height")) {
+            i.set_field(preview_obj, "height", v8::Number::New(isolate, 1080 / 2.));
+          }
+          if (!i.has_field(preview_obj, "max_intermediates")) {
+            i.set_field(preview_obj, "max_intermediates", v8::Number::New(isolate, 5));
+          }
+          i.recursively_copy_object(video, preview_obj);
+        }
 
-    auto& duration = gen_.scenes_.scenesettings.scenes_duration;
-    auto& durations = gen_.scenes_.scenesettings.scene_durations;
-    durations.clear();
-    auto obj = val.As<v8::Object>();
-    auto scenes = i.v8_array(obj, "scenes");
-    for (size_t I = 0; I < scenes->Length(); I++) {
-      gen_.scene_shapes.emplace_back();
-      gen_.scene_shapes_next.emplace_back();
-      gen_.scene_shapes_intermediate.emplace_back();
-      gen_.instantiated_objects.emplace_back();
-      auto current_scene = i.get_index(scenes, I);
-      if (!current_scene->IsObject()) continue;
-      auto sceneobj = current_scene.As<v8::Object>();
-      duration += i.double_number(sceneobj, "duration");
-      durations.push_back(i.double_number(sceneobj, "duration"));
-    }
-    std::for_each(durations.begin(), durations.end(), [&duration](double& n) {
-      n /= duration;
-    });
+        auto& duration = gen_.scenes_.scenesettings.scenes_duration;
+        auto& durations = gen_.scenes_.scenesettings.scene_durations;
+        durations.clear();
+        auto obj = val.As<v8::Object>();
+        auto scenes = i.v8_array(obj, "scenes");
+        for (size_t I = 0; I < scenes->Length(); I++) {
+          gen_.scene_shapes.emplace_back();
+          gen_.scene_shapes_next.emplace_back();
+          gen_.scene_shapes_intermediate.emplace_back();
+          gen_.instantiated_objects.emplace_back();
+          auto current_scene = i.get_index(scenes, I);
+          if (!current_scene->IsObject()) continue;
+          auto sceneobj = current_scene.As<v8::Object>();
+          duration += i.double_number(sceneobj, "duration");
+          durations.push_back(i.double_number(sceneobj, "duration"));
+        }
+        std::for_each(durations.begin(), durations.end(), [&duration](double& n) {
+          n /= duration;
+        });
 
-    gen_.use_fps = i.double_number(video, "fps", 25);
-    gen_.canvas_w = i.double_number(video, "width", 1920);
-    gen_.canvas_h = i.double_number(video, "height", 1080);
-    gen_.seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
-    gen_.tolerated_granularity = i.double_number(video, "granularity", 1);
-    gen_.minimize_steps_per_object = i.boolean(video, "minimize_steps_per_object", false);
-    auto& settings_ = gen_.settings_;
-    if (i.has_field(video, "perlin_noise")) settings_.perlin_noise = i.boolean(video, "perlin_noise");
-    if (i.has_field(video, "motion_blur")) settings_.motion_blur = i.boolean(video, "motion_blur");
-    if (i.has_field(video, "grain_for_opacity")) settings_.grain_for_opacity = i.boolean(video, "grain_for_opacity");
-    if (i.has_field(video, "extra_grain")) settings_.extra_grain = i.double_number(video, "extra_grain");
-    if (i.has_field(video, "update_positions")) settings_.update_positions = i.boolean(video, "update_positions");
-    if (i.has_field(video, "dithering")) settings_.dithering = i.boolean(video, "dithering");
-    if (i.has_field(video, "min_intermediates")) gen_.min_intermediates = i.integer_number(video, "min_intermediates");
-    if (i.has_field(video, "max_intermediates")) gen_.max_intermediates = i.integer_number(video, "max_intermediates");
-    if (i.has_field(video, "fast_ff")) gen_.fast_ff = i.boolean(video, "fast_ff");
-    if (i.has_field(video, "bg_color")) {
-      auto bg = i.v8_obj(video, "bg_color");
-      gen_.job->background_color.r = i.double_number(bg, "r");
-      gen_.job->background_color.g = i.double_number(bg, "g");
-      gen_.job->background_color.b = i.double_number(bg, "b");
-      gen_.job->background_color.a = i.double_number(bg, "a");
-    }
-    if (i.has_field(video, "sample")) {
-      auto sample = i.get(video, "sample").As<v8::Object>();
-      gen_.sampler_.set_sample_include(i.double_number(sample, "include"), gen_.use_fps);  // seconds
-      gen_.sampler_.set_sample_exclude(i.double_number(sample, "exclude"), gen_.use_fps);  // seconds
-    }
-    set_rand_seed(gen_.seed);
+        gen_.use_fps = i.double_number(video, "fps", 25);
+        gen_.canvas_w = i.double_number(video, "width", 1920);
+        gen_.canvas_h = i.double_number(video, "height", 1080);
+        if (width && height) {
+          gen_.canvas_w = *width;
+          gen_.canvas_h = *height;
+        }
 
-    gen_.max_frames = duration * gen_.use_fps;
-    gen_.metrics_->set_total_frames(gen_.max_frames);
+        gen_.seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
+        gen_.tolerated_granularity = i.double_number(video, "granularity", 1);
+        gen_.minimize_steps_per_object = i.boolean(video, "minimize_steps_per_object", false);
+        auto& settings_ = gen_.settings_;
+        if (i.has_field(video, "perlin_noise")) settings_.perlin_noise = i.boolean(video, "perlin_noise");
+        if (i.has_field(video, "motion_blur")) settings_.motion_blur = i.boolean(video, "motion_blur");
+        if (i.has_field(video, "grain_for_opacity"))
+          settings_.grain_for_opacity = i.boolean(video, "grain_for_opacity");
+        if (i.has_field(video, "extra_grain")) settings_.extra_grain = i.double_number(video, "extra_grain");
+        if (i.has_field(video, "update_positions")) settings_.update_positions = i.boolean(video, "update_positions");
+        if (i.has_field(video, "dithering")) settings_.dithering = i.boolean(video, "dithering");
+        if (i.has_field(video, "min_intermediates"))
+          gen_.min_intermediates = i.integer_number(video, "min_intermediates");
+        if (i.has_field(video, "max_intermediates"))
+          gen_.max_intermediates = i.integer_number(video, "max_intermediates");
+        if (i.has_field(video, "fast_ff")) gen_.fast_ff = i.boolean(video, "fast_ff");
+        if (i.has_field(video, "bg_color")) {
+          auto bg = i.v8_obj(video, "bg_color");
+          gen_.job->background_color.r = i.double_number(bg, "r");
+          gen_.job->background_color.g = i.double_number(bg, "g");
+          gen_.job->background_color.b = i.double_number(bg, "b");
+          gen_.job->background_color.a = i.double_number(bg, "a");
+        }
+        if (i.has_field(video, "sample")) {
+          auto sample = i.get(video, "sample").As<v8::Object>();
+          gen_.sampler_.set_sample_include(i.double_number(sample, "include"), gen_.use_fps);  // seconds
+          gen_.sampler_.set_sample_exclude(i.double_number(sample, "exclude"), gen_.use_fps);  // seconds
+        }
+        set_rand_seed(gen_.seed);
 
-    gen_.job->width = gen_.canvas_w;
-    gen_.job->height = gen_.canvas_h;
-    gen_.job->canvas_w = gen_.canvas_w;
-    gen_.job->canvas_h = gen_.canvas_h;
-    gen_.job->scale = i.double_number(video, "scale");
+        gen_.max_frames = duration * gen_.use_fps;
+        gen_.metrics_->set_total_frames(gen_.max_frames);
 
-    gen_.scalesettings.video_scale = i.double_number(video, "scale");
-    gen_.scalesettings.video_scale_next = i.double_number(video, "scale");
-    gen_.scalesettings.video_scale_intermediate = i.double_number(video, "scale");
-  });
+        gen_.job->width = gen_.canvas_w;
+        gen_.job->height = gen_.canvas_h;
+        gen_.job->canvas_w = gen_.canvas_w;
+        gen_.job->canvas_h = gen_.canvas_h;
+        double use_scale = i.double_number(video, "scale");
+        if (scale) {
+          use_scale = *scale;
+        }
+        gen_.job->scale = use_scale;
+
+        gen_.scalesettings.video_scale = use_scale;
+        gen_.scalesettings.video_scale_next = use_scale;
+        gen_.scalesettings.video_scale_intermediate = use_scale;
+      });
 }
 
 void initializer::init_gradients() {

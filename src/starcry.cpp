@@ -18,8 +18,6 @@
 #include <ImfHeader.h>
 #include <ImfInputFile.h>
 #include <ImfOutputFile.h>
-#include <ImfStringAttribute.h>
-#include "half.h"
 
 #include "cereal/archives/json.hpp"
 
@@ -193,7 +191,18 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   bool client_is_nullptr = false;
   if (cmd_def->type2 == instruction_type2::video) {
     auto &v = cmd_def->video_ref();
-    gen->init(v.script(), options_.rand_seed, v.preview(), features_.caching);
+    if (viewpoint.canvas_w && viewpoint.canvas_h) {
+      gen->init(v.script(),
+                options_.rand_seed,
+                v.preview(),
+                features_.caching,
+                viewpoint.canvas_w,
+                viewpoint.canvas_h,
+                viewpoint.scale);
+    } else {
+      gen->init(v.script(), options_.rand_seed, v.preview(), features_.caching);
+    }
+
     // Update current_frame if we fast-forward to a different offset frame.
     if (v.offset_frames() > 0) {
       current_frame = v.offset_frames();
@@ -256,7 +265,17 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     const auto &f = cmd_def->frame();
 
     try {
-      gen->init(f.script(), options_.rand_seed, f.preview(), features_.caching);
+      if (viewpoint.canvas_w && viewpoint.canvas_h) {
+        gen->init(f.script(),
+                  options_.rand_seed,
+                  f.preview(),
+                  features_.caching,
+                  viewpoint.canvas_w,
+                  viewpoint.canvas_h,
+                  viewpoint.scale);
+      } else {
+        gen->init(f.script(), options_.rand_seed, f.preview(), features_.caching);
+      }
     } catch (std::runtime_error &err) {
       logger(DEBUG) << "err = " << err.what() << std::endl;
       return;

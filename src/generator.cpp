@@ -45,13 +45,19 @@ generator::generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapp
       scenes_(*this),
       sampler_(*this) {}
 
-void generator::init(const std::string& filename, std::optional<double> rand_seed, bool preview, bool caching) {
+void generator::init(const std::string& filename,
+                     std::optional<double> rand_seed,
+                     bool preview,
+                     bool caching,
+                     std::optional<int> width,
+                     std::optional<int> height,
+                     std::optional<double> scale) {
   prctl(PR_SET_NAME, "native generator thread");
   filename_ = filename;
   job = std::make_shared<data::job>();
   job->frame_number = frame_number;
 
-  initializer_.initialize_all(rand_seed, preview);
+  initializer_.initialize_all(rand_seed, preview, width, height, scale);
 
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     genctx = std::make_shared<generator_context>(val, 0);
@@ -367,37 +373,7 @@ bool generator::_generate_frame() {
         revert_position_updates(i);
       }
 
-      // garbage collect destroyed objects
-      for (auto& scenes : scene_shapes_next) {
-        scenes.erase(std::remove_if(scenes.begin(),
-                                    scenes.end(),
-                                    [&scenes](auto& shape) {
-                                      bool ret = false;
-                                      meta_callback(shape, [&]<typename T>(T& shape) {
-                                        ret = shape.meta_cref().is_destroyed();
-                                        if (ret) {
-                                          // we should update levels for this about to be erased parent
-                                          // we can do this here because this does not involve removing
-                                          // elements, etc., so we won't invalidate any iterators
-
-                                          // for now we'll just orphan all the objects that are affected
-                                          // let's check only one level for now
-
-                                          // TODO: we should do this recursively..., but this is a nice start
-                                          for (auto& scene_shape : scenes) {
-                                            meta_callback(scene_shape, [&]<typename T2>(T2& shape2) {
-                                              if (shape2.meta_cref().parent_uid() == shape.meta_cref().unique_id()) {
-                                                shape2.meta_ref().set_level(0);
-                                                shape2.meta_ref().set_parent_uid(-1);
-                                              }
-                                            });
-                                          }
-                                        }
-                                      });
-                                      return ret;
-                                    }),
-                     scenes.end());
-      }
+      cleanup_destroyed_objects();
 
       scene_shapes = scene_shapes_next;
 
@@ -457,6 +433,39 @@ void generator::revert_position_updates(v8_interact& i) {
   //  }
 }
 
+void generator::cleanup_destroyed_objects() {
+  for (auto& scenes : scene_shapes_next) {
+    scenes.erase(std::remove_if(scenes.begin(),
+                                scenes.end(),
+                                [&scenes](auto& shape) {
+                                  bool ret = false;
+                                  meta_callback(shape, [&]<typename T>(T& shape) {
+                                    ret = shape.meta_cref().is_destroyed();
+                                    if (ret) {
+                                      // we should update levels for this about to be erased parent
+                                      // we can do this here because this does not involve removing
+                                      // elements, etc., so we won't invalidate any iterators
+
+                                      // for now we'll just orphan all the objects that are affected
+                                      // let's check only one level for now
+
+                                      // TODO: we should do this recursively..., but this is a nice start
+                                      for (auto& scene_shape : scenes) {
+                                        meta_callback(scene_shape, [&]<typename T2>(T2& shape2) {
+                                          if (shape2.meta_cref().parent_uid() == shape.meta_cref().unique_id()) {
+                                            shape2.meta_ref().set_level(0);
+                                            shape2.meta_ref().set_parent_uid(-1);
+                                          }
+                                        });
+                                      }
+                                    }
+                                  });
+                                  return ret;
+                                }),
+                 scenes.end());
+  }
+}
+
 void generator::create_new_mappings() {
   next_instance_map.clear();
   intermediate_map.clear();
@@ -475,8 +484,6 @@ void generator::create_new_mappings() {
 }
 
 void generator::update_object_positions(v8_interact& i, v8::Local<v8::Object>& video) {
-  // clear function caching
-  cached_xy.clear();
   int64_t scenesettings_from_object_id = -1;
   int64_t scenesettings_from_object_id_level = -1;
 
@@ -500,7 +507,9 @@ void generator::update_object_positions(v8_interact& i, v8::Local<v8::Object>& v
             i, abstract_shape, shape.meta_cref().id(), scenes_.scenesettings_objs[scenesettings_from_object_id]);
       }
 
-      scalesettings.video_scale_next = i.double_number(video, "scale", 1.0);
+      // TODO: this was an interesting hack..
+      // should not be needed. I don't think scripts should be able to customize the scale for now.
+      // scalesettings.video_scale_next = i.double_number(video, "scale", 1.0);
 
       auto angle = shape.generic_cref().angle();
       if (std::isnan(angle)) {
