@@ -218,11 +218,11 @@ std::string metrics::to_json() {
 metrics::~metrics() {
   notify();
   curses.join();
-  for (const auto &line : _output) {
-    if (line.first <= 32) {
-      std::cout << line.second;
-    }
-  }
+  // for (const auto &line : _output) {
+  //   if (line.first <= 32) {
+  //     std::cout << line.second;
+  //   }
+  // }
 }
 
 void metrics::register_thread(int number, std::string desc) {
