@@ -29,6 +29,10 @@ jobs:
       run: sudo apt install -y npm
     - name: install quasar
       run: sudo npm i -g @quasar/cli
+    - name: install sphinx + breathe + rtd theme
+      run: pip install breathe sphinx_rtd_theme
+    - name: make docs
+      run: make docs
     - name: make build-web
       run: make build-web
     - name: make dockerize
