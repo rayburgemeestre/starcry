@@ -29,6 +29,8 @@ jobs:
       run: sudo apt install -y npm
     - name: install quasar
       run: sudo npm i -g @quasar/cli
+    - name: install doxygen
+      run: apt install -y doxygen
     - name: install sphinx + breathe + rtd theme
       run: pip install breathe sphinx_rtd_theme
     - name: make docs
