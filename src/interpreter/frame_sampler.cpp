@@ -7,7 +7,7 @@
 
 namespace interpreter {
 
-frame_sampler::frame_sampler(generator &gen) : gen_(gen) {}
+frame_sampler::frame_sampler(generator &) {}
 
 bool frame_sampler::sample(size_t use_fps, std::function<bool(bool)> callback) {
   // no sampling
