@@ -21,6 +21,8 @@ public:
 
   void handle_rotations(data_staging::shape_t& shape,
                         std::vector<std::reference_wrapper<data_staging::shape_t>>& use_stack);
+
+  void revert_position_updates();
 };
 
 }  // namespace interpreter

@@ -210,6 +210,10 @@ void scenes::cleanup_destroyed_objects() {
   }
 }
 
+std::vector<data_staging::shape_t>& scenes::shapes_current_scene() {
+  return scene_shapes[scenesettings.current_scene_next];
+}
+
 std::vector<data_staging::shape_t>& scenes::next_shapes_current_scene() {
   return scene_shapes_next[scenesettings.current_scene_next];
 }

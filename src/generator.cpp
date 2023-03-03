@@ -10,12 +10,13 @@
 #include <sys/prctl.h>
 #include <cmath>
 #include <memory>
-#include <mutex>
 #include <numeric>
 #include <set>
 
 #include "v8pp/module.hpp"
 
+#include "data/texture.hpp"
+#include "interpreter/fast_forwarder.hpp"
 #include "scripting.h"
 #include "starcry/metrics.h"
 #include "util/logger.h"
@@ -23,11 +24,6 @@
 #include "util/memory_usage.hpp"
 #include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
-
-#include "data/texture.hpp"
-
-#include "interpreter/fast_forwarder.hpp"
-#include "util/unique_group.hpp"
 
 namespace interpreter {
 
@@ -289,30 +285,19 @@ bool generator::_generate_frame() {
 
           scenes_.prepare_scene();
 
-          // create mappings (object uid -> object ref)
-          create_new_mappings();
+          create_new_mappings();  // object uid -> object ref
 
-          // handle object movement (velocity added to position)
-          // - velocity
-          // deals with time..
-          positioner_.update_object_positions();
+          positioner_.update_object_positions();  // velocity + time
 
-          // - rotations, this produces xy absolute values as side-effect
-          // absolute xy are known after this function call
-          positioner_.update_rotations();
+          positioner_.update_rotations();  // rotate + absolute x,y
 
-          // handle collisions, gravity and "inherited" objects
-          // - collisions
-          // - gravity
-          interactor_.update_interactions();
+          interactor_.update_interactions();  // toroidal, collisions, gravity, dedupe
 
-          // calculate distance and steps
-          update_object_distances();
+          update_object_distances();  // calculate distance and steps
 
           // above update functions could have triggered spawning of new objects
           insert_newly_created_objects();
 
-          // convert javascript to renderable objects
           job_mapper_.convert_objects_to_render_job(sc, video);
 
           scenes_.commit_scene_shapes_intermediates();
@@ -330,14 +315,12 @@ bool generator::_generate_frame() {
             logger(INFO) << "stepper.max_step > max_intermediates -> " << stepper.max_step << " > " << max_intermediates
                          << std::endl;
             std::exit(0);
-            throw std::logic_error(
-                fmt::format("stepper.max_step > max_intermediates ({} > {})", stepper.max_step, max_intermediates));
           }
         }
       }
 
       if (!settings_.update_positions) {
-        revert_position_updates(i);
+        positioner_.revert_position_updates();
       }
 
       scenes_.cleanup_destroyed_objects();
@@ -349,7 +332,6 @@ bool generator::_generate_frame() {
       if (debug_) {
         debug_print_next();
       }
-      fpsp.inc();
 
       metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
     });
@@ -381,23 +363,6 @@ void generator::revert_all_changes(v8_interact& i) {
 
   scalesettings.revert();
   scenes_.revert();
-}
-
-void generator::revert_position_updates(v8_interact& i) {
-  // TODO
-  //  for (size_t j = 0; j < next_instances->Length(); j++) {
-  //    auto src = i.get_index(instances, j).As<v8::Object>();
-  //    auto dst = i.get_index(next_instances, j).As<v8::Object>();
-  //    auto dst2 = i.get_index(intermediates, j).As<v8::Object>();
-  //    i.copy_field(dst, "x", src, "x");
-  //    i.copy_field(dst, "y", src, "y");
-  //    i.copy_field(dst, "x2", src, "x2");
-  //    i.copy_field(dst, "y2", src, "y2");
-  //    i.copy_field(dst2, "x", src, "x");
-  //    i.copy_field(dst2, "y", src, "y");
-  //    i.copy_field(dst2, "x2", src, "x2");
-  //    i.copy_field(dst2, "y2", src, "y2");
-  //  }
 }
 
 void generator::create_new_mappings() {
@@ -641,6 +606,25 @@ double generator::get_max_travel_of_object(data_staging::shape_t& shape_now, dat
 
 std::shared_ptr<data::job> generator::get_job() const {
   return job;
+}
+
+double generator::fps() const {
+  return use_fps;
+}
+int32_t generator::width() const {
+  return canvas_w;
+}
+int32_t generator::height() const {
+  return canvas_h;
+}
+double generator::get_seed() const {
+  return seed;
+}
+data::settings generator::settings() const {
+  return settings_;
+}
+std::string generator::filename() const {
+  return filename_;
 }
 
 int64_t generator::spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj) {

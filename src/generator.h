@@ -30,8 +30,6 @@
 #include "data/toroidal.hpp"
 #include "data_staging/shape.hpp"
 
-#include "core/fps_progress.hpp"
-
 #include "util/frame_stepper.hpp"
 #include "util/generator_context.h"
 #include "util/random.hpp"
@@ -59,7 +57,6 @@ private:
   friend class instantiator;
   friend class job_mapper;
 
-  fps_progress fpsp;
   std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
   std::shared_ptr<data::job> job;
@@ -79,7 +76,6 @@ private:
   std::unordered_map<std::string, data::toroidal> toroidals;
   std::unordered_map<size_t, std::map<int, size_t>> indexes;
   frame_stepper stepper;
-  std::unordered_map<int64_t, v8::Local<v8::Object>> parents_stack;
   int attempt = 0;
   double max_dist_found = std::numeric_limits<double>::max();
 
@@ -130,7 +126,6 @@ public:
   void fast_forward(int frame_of_interest);
   bool generate_frame();
   void revert_all_changes(v8_interact& i);
-  static void revert_position_updates(v8_interact& i);
   void create_new_mappings();
   void insert_newly_created_objects();
   void update_object_distances();
@@ -139,24 +134,13 @@ public:
   static double get_max_travel_of_object(data_staging::shape_t& shape_now, data_staging::shape_t& shape_prev);
 
   std::shared_ptr<data::job> get_job() const;
-  double fps() const {
-    return use_fps;
-  }
-  int32_t width() const {
-    return canvas_w;
-  }
-  int32_t height() const {
-    return canvas_h;
-  }
-  double get_seed() const {
-    return seed;
-  }
-  data::settings settings() const {
-    return settings_;
-  }
-  std::string filename() const {
-    return filename_;
-  }
+
+  double fps() const;
+  int32_t width() const;
+  int32_t height() const;
+  double get_seed() const;
+  data::settings settings() const;
+  std::string filename() const;
 
   int64_t spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
   int64_t spawn_object2(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1);

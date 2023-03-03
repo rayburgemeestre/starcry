@@ -54,6 +54,7 @@ public:
   void reset_scene_shapes_next();
   void reset_scene_shapes_intermediates();
   void cleanup_destroyed_objects();
+  std::vector<data_staging::shape_t>& shapes_current_scene();
   std::vector<data_staging::shape_t>& next_shapes_current_scene();
   std::vector<data_staging::shape_t>& intermediate_shapes_current_scene();
   std::vector<data_staging::shape_t>& instantiated_objects_current_scene();

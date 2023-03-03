@@ -228,4 +228,48 @@ void positioner::handle_rotations(data_staging::shape_t& shape,
       });
 }
 
+void positioner::revert_position_updates() {
+  // Copy all x, y from instances to next and intermediates
+  for (auto& abstract_shape : gen_.scenes_.shapes_current_scene()) {
+    meta_callback(abstract_shape, [&]<typename T>(T& shape) {
+      auto uid = shape.meta_cref().unique_id();
+      if constexpr (std::is_same_v<T, data_staging::line>) {
+        auto& abstract_intermediate = gen_.intermediate_map.at(uid);
+        meta_callback(abstract_intermediate.get(), [&]<typename TT>(TT& intermediate) {
+          if constexpr (std::is_same_v<TT, data_staging::line>) {
+            intermediate.line_start_ref().position_ref().x = shape.line_start_ref().position_ref().x;
+            intermediate.line_start_ref().position_ref().y = shape.line_start_ref().position_ref().y;
+            intermediate.line_end_ref().position_ref().x = shape.line_end_ref().position_ref().x;
+            intermediate.line_end_ref().position_ref().y = shape.line_end_ref().position_ref().y;
+          }
+        });
+        auto& abstract_next = gen_.next_instance_map.at(uid);
+        meta_callback(abstract_next.get(), [&]<typename TT>(TT& next) {
+          if constexpr (std::is_same_v<TT, data_staging::line>) {
+            next.line_start_ref().position_ref().x = shape.line_start_ref().position_ref().x;
+            next.line_start_ref().position_ref().y = shape.line_start_ref().position_ref().y;
+            next.line_end_ref().position_ref().x = shape.line_end_ref().position_ref().x;
+            next.line_end_ref().position_ref().y = shape.line_end_ref().position_ref().y;
+          }
+        });
+      } else {
+        auto& abstract_intermediate = gen_.intermediate_map.at(uid);
+        meta_callback(abstract_intermediate.get(), [&]<typename TT>(TT& intermediate) {
+          if constexpr (!std::is_same_v<TT, data_staging::line>) {
+            intermediate.location_ref().position_ref().x = shape.location_ref().position_ref().x;
+            intermediate.location_ref().position_ref().y = shape.location_ref().position_ref().y;
+          }
+        });
+        auto& abstract_next = gen_.next_instance_map.at(uid);
+        meta_callback(abstract_next.get(), [&]<typename TT>(TT& next) {
+          if constexpr (!std::is_same_v<TT, data_staging::line>) {
+            next.location_ref().position_ref().x = shape.location_ref().position_ref().x;
+            next.location_ref().position_ref().y = shape.location_ref().position_ref().y;
+          }
+        });
+      }
+    });
+  }
+}
+
 }  // namespace interpreter
