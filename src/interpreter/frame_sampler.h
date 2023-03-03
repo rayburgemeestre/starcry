@@ -26,8 +26,6 @@ public:
   }
 
 private:
-  generator &gen_;
-
   double sample_include = 0.;
   double sample_exclude = 0.;
   double sample_include_current = 0.;
