@@ -69,3 +69,7 @@ Almost everything is statically linked, resulting in a relatively portable binar
 The Web UI is based on Vue2. Currently, the UI is using Buefy, which is not going to support Vue3.
 
 Currently waiting for Vue3 to become more mature before switching to it.
+
+## TODO
+
+* Introduce proper v8 javascript <> shape mapper and get rid of v8 code in a lot of places (except for the mappers).

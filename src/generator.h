@@ -18,6 +18,7 @@
 #include "interpreter/bridges.h"
 #include "interpreter/frame_sampler.h"
 #include "interpreter/initializer.h"
+#include "interpreter/instantiator.h"
 #include "interpreter/interactor.h"
 #include "interpreter/positioner.h"
 #include "interpreter/scenes.h"
@@ -54,6 +55,7 @@ private:
   friend class frame_sampler;
   friend class positioner;
   friend class interactor;
+  friend class instantiator;
 
   fps_progress fpsp;
   std::shared_ptr<v8_wrapper> context;
@@ -102,6 +104,7 @@ private:
   frame_sampler sampler_;
   positioner positioner_;
   interactor interactor_;
+  instantiator instantiator_;
 
   util::random_generator rand_;
 
@@ -118,9 +121,6 @@ public:
             std::optional<double> scale = std::nullopt);
   void create_object_instances();
 
-  void instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
-                                                     int debug_level = 0,
-                                                     const data_staging::shape_t* parent_object = nullptr);
   void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance,
                                              const data_staging::shape_t& created_shape,
                                              int debug_level = 0);
@@ -171,22 +171,6 @@ public:
 private:
   bool _generate_frame();
 
-  std::optional<std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>>
-  _instantiate_object_from_scene(
-      v8_interact& i,
-      v8::Local<v8::Object>& scene_object,          // object description from scene to be instantiated
-      const data_staging::shape_t* parent_object);  // it's optional parent
-  void _instantiate_object(v8_interact& i,
-                           std::optional<v8::Local<v8::Object>> scene_obj,
-                           v8::Local<v8::Object> object_prototype,
-                           v8::Local<v8::Object> new_instance,
-                           int64_t level,
-                           const std::string& namespace_);
-
-  void _instantiate_object_copy_fields(v8_interact& i,
-                                       v8::Local<v8::Object> scene_obj,
-                                       v8::Local<v8::Object> new_instance);
-
   void debug_print_next();
 
   template <typename T>
@@ -197,9 +181,6 @@ private:
   void copy_texture_from_object_to_shape(T& source_object,
                                          data::shape& destination_shape,
                                          std::unordered_map<std::string, data::texture>& known_textures_map);
-
-  template <typename T>
-  void write_back_copy(T& copy);
 };
 
 }  // namespace interpreter
