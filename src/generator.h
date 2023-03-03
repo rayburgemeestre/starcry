@@ -18,6 +18,7 @@
 #include "interpreter/bridges.h"
 #include "interpreter/frame_sampler.h"
 #include "interpreter/initializer.h"
+#include "interpreter/interactor.h"
 #include "interpreter/positioner.h"
 #include "interpreter/scenes.h"
 
@@ -52,6 +53,7 @@ private:
   friend class scenes;
   friend class frame_sampler;
   friend class positioner;
+  friend class interactor;
 
   fps_progress fpsp;
   std::shared_ptr<v8_wrapper> context;
@@ -77,9 +79,6 @@ private:
   int attempt = 0;
   double max_dist_found = std::numeric_limits<double>::max();
 
-  std::map<std::string, quadtree> qts;
-  std::map<std::string, quadtree> qts_gravity;
-  std::map<std::string, unique_group> unique_groups;
   // TODO: Can we do without copies, please?
   std::unordered_map<int64_t, std::reference_wrapper<data_staging::shape_t>> next_instance_map;
   std::unordered_map<int64_t, std::reference_wrapper<data_staging::shape_t>> intermediate_map;
@@ -102,6 +101,7 @@ private:
   scenes scenes_;
   frame_sampler sampler_;
   positioner positioner_;
+  interactor interactor_;
 
   util::random_generator rand_;
 
@@ -130,13 +130,10 @@ public:
   void revert_all_changes(v8_interact& i);
   static void revert_position_updates(v8_interact& i);
   void create_new_mappings();
-  void update_object_positions(v8_interact& i, v8::Local<v8::Object>& video);
   void insert_newly_created_objects();
   void update_object_toroidal(v8_interact& i, data_staging::toroidal& toroidal_data, double& x, double& y);
   void update_object_distances();
   void update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video);
-  void handle_rotations(data_staging::shape_t& shape,
-                        std::vector<std::reference_wrapper<data_staging::shape_t>>& use_stack);
   void handle_collisions(v8_interact& i, data_staging::shape_t& instance);
   void handle_collision(v8_interact& i,
                         data_staging::circle& object_bridge,

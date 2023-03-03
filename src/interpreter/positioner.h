@@ -5,16 +5,22 @@
  */
 #pragma once
 
+#include "data_staging/shape.hpp"
+
 namespace interpreter {
-    class generator;
+class generator;
 
-    class positioner {
-    private:
-        generator& gen_;
+class positioner {
+private:
+  generator& gen_;
 
-    public:
-        positioner(generator& gen);
-        void update_object_positions();
-    };
+public:
+  explicit positioner(generator& gen);
+  void update_object_positions();
+  void update_rotations();
+
+  void handle_rotations(data_staging::shape_t& shape,
+                        std::vector<std::reference_wrapper<data_staging::shape_t>>& use_stack);
+};
 
 }  // namespace interpreter

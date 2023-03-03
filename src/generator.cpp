@@ -27,10 +27,6 @@
 
 #include "data/texture.hpp"
 
-#include "shapes/circle.h"
-#include "shapes/position.h"
-#include "shapes/rectangle.h"
-
 #include "interpreter/fast_forwarder.hpp"
 #include "util/unique_group.hpp"
 
@@ -44,7 +40,8 @@ generator::generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapp
       bridges_(*this),
       scenes_(*this),
       sampler_(*this),
-      positioner_(*this) {}
+      positioner_(*this),
+      interactor_(*this) {}
 
 void generator::init(const std::string& filename,
                      std::optional<double> rand_seed,
@@ -320,8 +317,7 @@ bool generator::_generate_frame() {
         bool detected_too_many_steps = false;
         while (stepper.has_next_step() && !detected_too_many_steps) {
           // logger(DEBUG) << "Stepper at step " << stepper.current_step << " out of " << stepper.max_step << std::endl;
-          qts.clear();
-          qts_gravity.clear();
+          interactor_.reset();
 
           scenes_.prepare_scene();
 
@@ -330,15 +326,18 @@ bool generator::_generate_frame() {
 
           // handle object movement (velocity added to position)
           // - velocity
+          // deals with time..
           positioner_.update_object_positions();
 
-          // handle collisions, gravity and "inherited" objects
-          // absolute xy are known after this function call
           // - rotations, this produces xy absolute values as side-effect
-          // TODO: rotations perhaps should be part of update_positions?
+          // absolute xy are known after this function call
+          positioner_.update_rotations();
+
+          // handle collisions, gravity and "inherited" objects
           // - collisions
           // - gravity
-          update_object_interactions(i, video);
+          interactor_.update_interactions();
+          //  update_object_interactions(i, video);
 
           // calculate distance and steps
           update_object_distances();
@@ -553,116 +552,7 @@ void generator::update_object_toroidal(v8_interact& i, data_staging::toroidal& t
   toroidal_data.set_warp_dist(warped_dist);
 }
 
-void generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video) {
-  const auto handle_pass1 = [&]<typename T>(data_staging::shape_t& abstract_shape, T& shape, data_staging::meta& meta) {
-    if (meta.level() >= 0) {
-      if (stack.size() <= meta.level()) {
-        stack.emplace_back(abstract_shape);
-      } else {
-        stack[meta.level()] = std::ref(abstract_shape);
-      }
-    }
-    handle_rotations(abstract_shape, stack);
-
-    if constexpr (std::is_same_v<T, data_staging::circle>) {
-      if (shape.radius_size() < 1000 /* todo create property of course */) {
-        double x = shape.transitive_location_cref().position_cref().x;
-        double y = shape.transitive_location_cref().position_cref().y;
-        // TODO:
-        update_object_toroidal(i, shape.toroidal_ref(), x, y);
-        const auto collision_group = shape.behavior_cref().collision_group();
-        const auto gravity_group = shape.behavior_cref().gravity_group();
-        const auto unique_group = shape.behavior_cref().unique_group();
-
-        if (!collision_group.empty()) {
-          qts.try_emplace(collision_group,
-                          quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
-          qts[collision_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
-        }
-        if (!gravity_group.empty()) {
-          qts_gravity.try_emplace(gravity_group,
-                                  quadtree(rectangle(position(-width() / 2, -height() / 2), width(), height()), 32));
-          qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
-        }
-        if (!unique_group.empty()) {
-          unique_groups[unique_group].add(x, y);
-        }
-      }
-    }
-    if constexpr (std::is_same_v<T, data_staging::line>) {
-      double x = shape.transitive_line_start_ref().position_ref().x;
-      double y = shape.transitive_line_start_ref().position_ref().y;
-      double x2 = shape.transitive_line_end_ref().position_ref().x;
-      double y2 = shape.transitive_line_end_ref().position_ref().y;
-      const auto unique_group = shape.behavior_cref().unique_group();
-      if (!unique_group.empty()) {
-        unique_groups[unique_group].add(x, y, x2, y2);
-      }
-    }
-  };
-
-  const auto handle_pass2 = [&]<typename T>(data_staging::shape_t& abstract_shape, T& shape, data_staging::meta& meta) {
-    handle_collisions(i, abstract_shape);
-    handle_gravity(i, abstract_shape);
-  };
-
-  // first pass transitive xy become set
-  stack.clear();
-  for (auto& abstract_shape : scenes_.next_shapes_current_scene()) {
-    std::visit(overloaded{[](std::monostate) {},
-                          [&](data_staging::circle& c) {
-                            handle_pass1(abstract_shape, c, c.meta_ref());
-                          },
-                          [&](data_staging::line& l) {
-                            handle_pass1(abstract_shape, l, l.meta_ref());
-                          },
-                          [&](data_staging::text& t) {
-                            handle_pass1(abstract_shape, t, t.meta_ref());
-                          },
-                          [&](data_staging::script& s) {
-                            handle_pass1(abstract_shape, s, s.meta_ref());
-                          }},
-               abstract_shape);
-  }
-
-  // second pass depends on knowing transitive xy
-  for (auto& abstract_shape : scenes_.next_shapes_current_scene()) {
-    std::visit(overloaded{[](std::monostate) {},
-                          [&](data_staging::circle& c) {
-                            handle_pass2(abstract_shape, c, c.meta_ref());
-                            for (const auto& cascade_out : c.cascade_out_cref()) {
-                              auto& other = next_instance_map.at(cascade_out.unique_id()).get();
-                              if (auto other_line = std::get_if<data_staging::line>(&other)) {
-                                if (cascade_out.type() == cascade_type::start) {
-                                  other_line->line_start_ref().position_ref().x = c.location_ref().position_cref().x;
-                                  other_line->line_start_ref().position_ref().y = c.location_ref().position_cref().y;
-                                  other_line->transitive_line_start_ref().position_ref().x =
-                                      c.transitive_location_ref().position_cref().x;
-                                  other_line->transitive_line_start_ref().position_ref().y =
-                                      c.transitive_location_ref().position_cref().y;
-                                } else if (cascade_out.type() == cascade_type::end) {
-                                  other_line->line_end_ref().position_ref().x = c.location_ref().position_cref().x;
-                                  other_line->line_end_ref().position_ref().y = c.location_ref().position_cref().y;
-                                  other_line->transitive_line_end_ref().position_ref().x =
-                                      c.transitive_location_ref().position_cref().x;
-                                  other_line->transitive_line_end_ref().position_ref().y =
-                                      c.transitive_location_ref().position_cref().y;
-                                }
-                              }
-                            }
-                          },
-                          [&](data_staging::line& l) {
-                            handle_pass2(abstract_shape, l, l.meta_ref());
-                          },
-                          [&](data_staging::text& t) {
-                            handle_pass2(abstract_shape, t, t.meta_ref());
-                          },
-                          [&](data_staging::script& s) {
-                            handle_pass2(abstract_shape, s, s.meta_ref());
-                          }},
-               abstract_shape);
-  }
-}
+void generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video) {}
 
 void generator::update_object_distances() {
   stepper.reset_current();
@@ -694,332 +584,6 @@ void generator::update_object_distances() {
       handle(abstract_shape, shape.meta_ref());
     });
   }
-}
-
-void generator::handle_rotations(data_staging::shape_t& shape,
-                                 std::vector<std::reference_wrapper<data_staging::shape_t>>& use_stack) {
-  vector2d parent;
-  vector2d new_position;
-  vector2d new_position2;
-  bool pivot_found = false;
-
-  const auto handle = [&]<typename T>(T concrete_shape) {
-    // we'll iterate over all the parents of the current shape, and the shape itself, starting at the top pos_parent.
-    // in case the current shape is at level 3, we iterate over 0, 1, 2, 3.
-    vector2d current;
-    vector2d current1;
-    vector2d current2;
-    double current_rotation = 0;
-    for (size_t i = 0; i <= concrete_shape.meta_cref().level(); i++) {
-      meta_callback(use_stack[i].get(), [&]<typename TP>(TP& parent_shape) {
-        if constexpr (std::is_same_v<TP, data_staging::circle>) {
-          current = add_vector(current, parent_shape.location_ref().position_ref());
-        } else if constexpr (std::is_same_v<TP, data_staging::text>) {
-          current = add_vector(current, parent_shape.location_ref().position_ref());
-        } else if constexpr (std::is_same_v<TP, data_staging::line>) {
-          current1 = add_vector(current, parent_shape.line_start_ref().position_ref());
-          current2 = add_vector(current, parent_shape.line_end_ref().position_ref());
-          current = add_vector(
-              current, {((current1.x - current2.x) / 2) + current2.x, ((current1.y - current2.y) / 2) + current2.y});
-        } else if constexpr (std::is_same_v<TP, data_staging::script>) {
-          current = add_vector(current, parent_shape.location_ref().position_ref());
-        }
-
-        double angle = parent_shape.generic_ref().angle();
-        current_rotation += parent_shape.generic_ref().rotate();
-
-        const auto rotate = [&](auto& current, auto& parent) {
-          auto angle1 = current_rotation + angle + get_angle(parent.x, parent.y, current.x, current.y);
-          angle1 = std::fmod(angle1, 360.);
-          auto rads = angle1 * M_PI / 180.0;
-          auto ratio = 1.0;
-          auto dist = get_distance(parent.x, parent.y, current.x, current.y);
-          auto move = dist * ratio * -1;
-          // now current will be adjusted with the rotation
-          current.x = parent.x + (cos(rads) * move);
-          current.y = parent.y + (sin(rads) * move);
-        };
-
-        if constexpr (std::is_same_v<TP, data_staging::line>) {
-          rotate(current1, parent);
-          rotate(current2, parent);
-          new_position = current1;
-          new_position2 = current2;
-        } else {
-          rotate(current, parent);
-          new_position = current;
-        }
-
-        parent = current;
-
-        if (!pivot_found && parent_shape.meta_cref().is_pivot()) {
-          // skip to the last element in the stack, i - 1 due to i++ every iteration
-          i = concrete_shape.meta_cref().level() - 1;
-          pivot_found = true;
-        }
-      });
-    }
-  };
-
-  meta_visit(
-      shape,
-      [&handle, &new_position](data_staging::circle& c) {
-        handle(c);
-        c.transitive_location_ref().position_ref().x = new_position.x;
-        c.transitive_location_ref().position_ref().y = new_position.y;
-      },
-      [&handle, &new_position, &new_position2](data_staging::line& l) {
-        handle(l);
-        bool skip_start = false, skip_end = false;
-        for (const auto& cascade_in : l.cascades_in()) {
-          if (cascade_in.type() == cascade_type::start) {
-            skip_start = true;
-          }
-          if (cascade_in.type() == cascade_type::end) {
-            skip_end = true;
-          }
-        }
-        if (!skip_start) {
-          l.transitive_line_start_ref().position_ref().x = new_position.x;
-          l.transitive_line_start_ref().position_ref().y = new_position.y;
-        }
-        if (!skip_end) {
-          l.transitive_line_end_ref().position_ref().x = new_position2.x;
-          l.transitive_line_end_ref().position_ref().y = new_position2.y;
-        }
-      },
-      [&handle, &new_position](data_staging::text& t) {
-        handle(t);
-        t.transitive_location_ref().position_ref().x = new_position.x;
-        t.transitive_location_ref().position_ref().y = new_position.y;
-      },
-      [&handle, &new_position](data_staging::script& s) {
-        handle(s);
-        s.transitive_location_ref().position_ref().x = new_position.x;
-        s.transitive_location_ref().position_ref().y = new_position.y;
-      });
-}
-
-void generator::handle_collisions(v8_interact& i, data_staging::shape_t& shape) {
-  // Now do the collision detection part
-  // NOTE: we multiple radius/size * 2.0 since we're not looking up a point, and querying the quadtree does
-  // not check for overlap, but only whether the x,y is inside the specified range. If we don't want to miss
-  // points on the edge of our circle, we need to widen the matching range.
-  // TODO: for different sizes of circle collision detection, we need to somehow adjust the interface to this
-  // lookup somehow.
-  std::vector<point_type> found;
-  try {
-    data_staging::circle& c = std::get<data_staging::circle>(shape);
-    const auto& collision_group = c.behavior_ref().collision_group_ref();
-    if (collision_group.empty() || collision_group == "undefined") {
-      return;
-    }
-    auto x = c.transitive_location_ref().position_ref().x;
-    auto y = c.transitive_location_ref().position_ref().y;
-    auto unique_id = c.meta_cref().unique_id();
-
-    if (c.meta_cref().id() == "balls") return;
-
-    auto radius = c.radius();
-    auto radiussize = c.radius_size();
-
-    qts[collision_group].query(unique_id, circle(position(x, y), radius * 2.0, radiussize * 2.0), found);
-    if (radiussize < 1000 /* todo create property of course */) {
-      for (const auto& collide : found) {
-        const auto unique_id2 = collide.userdata;
-        auto& shape2 = next_instance_map.at(unique_id2);
-        try {
-          data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
-          if (c2.meta_cref().id() != "balls" && c.meta_cref().unique_id() != c2.meta_cref().unique_id()) {
-            handle_collision(i, c, c2, shape, shape2.get());
-          }
-        } catch (std::bad_variant_access const& ex) {
-          // only supporting circles for now
-          return;
-        }
-      }
-    }
-  } catch (std::bad_variant_access const& ex) {
-    // only supporting circles for now
-    return;
-  }
-}
-
-void generator::handle_collision(v8_interact& i,
-                                 data_staging::circle& instance,
-                                 data_staging::circle& instance2,
-                                 data_staging::shape_t& shape,
-                                 data_staging::shape_t& shape2) {
-  auto unique_id = instance.meta_cref().unique_id();
-  auto unique_id2 = instance2.meta_cref().unique_id();
-  auto last_collide = instance.behavior_ref().last_collide();
-
-  auto x = instance.transitive_location_ref().position_cref().x;
-  auto y = instance.transitive_location_ref().position_cref().y;
-
-  auto x2 = instance2.transitive_location_ref().position_cref().x;
-  auto y2 = instance2.transitive_location_ref().position_cref().y;
-
-  auto radius = instance.radius();
-  auto radiussize = instance.radius_size();
-  auto radius2 = instance2.radius();
-  auto radiussize2 = instance2.radius_size();
-  auto mass = instance.generic_cref().mass();
-  auto mass2 = instance2.generic_cref().mass();
-
-  // If the quadtree reported a match, it doesn't mean the objects fully collide
-  circle a(position(x, y), radius, radiussize);
-  circle b(position(x2, y2), radius2, radiussize2);
-  if (!a.overlaps(b)) return;
-
-  // they already collided, no need to let them collide again
-  if (last_collide == unique_id2) return;
-
-  // handle collision
-  auto vel_x = instance.movement_ref().velocity().x;
-  auto vel_y = instance.movement_ref().velocity().y;
-  auto vel_x2 = instance2.movement_ref().velocity().x;
-  auto vel_y2 = instance2.movement_ref().velocity().y;
-
-  const auto normal = unit_vector(subtract_vector(vector2d(x, y), vector2d(x2, y2)));
-  const auto ta = dot_product(vector2d(vel_x, vel_y), normal);
-  const auto tb = dot_product(vector2d(vel_x2, vel_y2), normal);
-  const auto optimized_p = (2.0 * (ta - tb)) / (mass + mass2);  // speed
-
-  // save velocities
-  const auto multiplied_vector = multiply_vector(normal, optimized_p);
-  auto updated_vel1 = subtract_vector(vector2d(vel_x, vel_y), multiply_vector(multiplied_vector, mass2));
-  instance.movement_ref().set_velocity(updated_vel1);
-  auto updated_vel2 = add_vector(vector2d(vel_x2, vel_y2), multiply_vector(multiplied_vector, mass));
-  instance2.movement_ref().set_velocity(updated_vel2);
-
-  // save collision
-  instance.behavior_ref().set_last_collide(unique_id2);
-  instance2.behavior_ref().set_last_collide(unique_id);
-
-  // collide callback
-  auto find = object_definitions_map.find(instance.meta_cref().id());
-  if (find != object_definitions_map.end()) {
-    auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
-    auto handle_time_for_shape = [&](auto& c, auto& object_bridge, auto other_unique_id) {
-      object_bridge->push_object(c);
-      i.call_fun(object_definition, object_bridge->instance(), "collide", other_unique_id);
-      object_bridge->pop_object();
-    };
-    auto callback_wrapper = [&]<typename T>(T& shape, int64_t unique_id) {
-      if constexpr (std::is_same_v<T, data_staging::circle>) {
-        return handle_time_for_shape(shape, bridges_.circle(), unique_id);
-      } else if constexpr (std::is_same_v<T, data_staging::line>) {
-        return handle_time_for_shape(shape, bridges_.line(), unique_id);
-      } else if constexpr (std::is_same_v<T, data_staging::text>) {
-        return handle_time_for_shape(shape, bridges_.text(), unique_id);
-      } else if constexpr (std::is_same_v<T, data_staging::script>) {
-        return handle_time_for_shape(shape, bridges_.script(), unique_id);
-      }
-      // unknown (undefined) objects, are ignored..
-    };
-    meta_callback(shape, [&]<typename T>(T& shape) {
-      callback_wrapper(shape, unique_id2);
-    });
-    meta_callback(shape2, [&]<typename T>(const T& shape) {
-      callback_wrapper(shape, unique_id);
-    });
-  }
-}
-
-void generator::handle_gravity(v8_interact& i, data_staging::shape_t& shape) {
-  try {
-    std::vector<point_type> found;
-    data_staging::circle& c = std::get<data_staging::circle>(shape);
-
-    auto unique_id = c.meta_cref().unique_id();
-    auto gravity_group = c.behavior_ref().gravity_group();
-    if (gravity_group.empty()) {
-      return;
-    }
-
-    if (c.movement_ref().velocity_speed() == 0) return;  // skip this one.
-
-    auto x = c.transitive_location_ref().position_cref().x;
-    auto y = c.transitive_location_ref().position_cref().y;
-
-    auto radius = c.radius();
-    auto radiussize = c.radius_size();
-
-    auto& video = genctx->video_obj;
-    auto G = i.double_number(video, "gravity_G", 1);
-    auto range = i.double_number(video, "gravity_range", 1000);
-    const auto constrain_dist_min = i.double_number(video, "gravity_constrain_dist_min", 5.);
-    const auto constrain_dist_max = i.double_number(video, "gravity_constrain_dist_max", 25.);
-
-    qts_gravity[gravity_group].query(
-        unique_id, circle(position(x, y), range + (radius * 2.0), range + (radiussize * 2.0)), found);
-
-    if (c.radius_size() < 1000 /* todo create property of course */) {
-      vector2d acceleration(0, 0);
-      for (const auto& in_range : found) {
-        const auto unique_id2 = in_range.userdata;
-        auto shape2 = next_instance_map.at(unique_id2);
-        try {
-          data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
-          if (c.meta_cref().unique_id() != c2.meta_cref().unique_id()) {
-            handle_gravity(c, c2, acceleration, G, range, constrain_dist_min, constrain_dist_max);
-          }
-        } catch (std::bad_variant_access const& ex) {
-          // only supporting circles for now
-          return;
-        }
-      }
-      auto vel = add_vector(c.movement_ref().velocity(), acceleration);
-      c.movement_ref().set_velocity(vel);
-    }
-  } catch (std::bad_variant_access const& ex) {
-    // only supporting circles for now
-    return;
-  }
-  //---
-}
-
-void generator::handle_gravity(data_staging::circle& instance,
-                               data_staging::circle& instance2,
-                               vector2d& acceleration,
-                               double G,
-                               double range,
-                               double constrain_dist_min,
-                               double constrain_dist_max) const {
-  // auto unique_id = instance.meta_cref().unique_id();
-  auto x = instance.transitive_location_ref().position_cref().x;
-  auto y = instance.transitive_location_ref().position_cref().y;
-
-  // auto unique_id2 = instance.meta_cref().unique_id();
-  auto x2 = instance2.transitive_location_ref().position_cref().x;
-  auto y2 = instance2.transitive_location_ref().position_cref().y;
-
-  auto radius = instance.radius();
-  auto radiussize = instance.radius_size();
-  auto radius2 = instance2.radius();
-  auto radiussize2 = instance2.radius_size();
-  auto mass = instance.generic_ref().mass();
-  auto mass2 = instance2.generic_ref().mass();
-
-  // If the quadtree reported a match, it doesn't mean the objects fully collide
-  circle a(position(x, y), radius + range, radiussize);
-  circle b(position(x2, y2), radius2 + range, radiussize2);
-  double dist = 0;
-  if (!a.overlaps(b, dist)) return;
-
-  const auto constrained_distance = std::clamp(dist, constrain_dist_min, constrain_dist_max);
-
-  vector2d vec_a(x, y);
-  vector2d vec_b(x2, y2);
-  const auto strength = (G * mass * mass2) / (constrained_distance * constrained_distance);
-  auto force = subtract_vector(vec_b, vec_a);
-  force = unit_vector(force);
-  force = multiply_vector(force, strength / static_cast<double>(stepper.max_step));
-  force = divide_vector(force, mass);
-
-  acceleration.x += force.x;
-  acceleration.y += force.y;
 }
 
 std::shared_ptr<v8_wrapper> generator::get_context() const {
@@ -1735,42 +1299,9 @@ generator::_instantiate_object_from_scene(
     // reverse new_stack
     std::reverse(new_stack.begin(), new_stack.end());
 
-    handle_rotations(shape_ref.get(), new_stack);
+    positioner_.handle_rotations(shape_ref.get(), new_stack);
 
-    bool destroyed = false;
-
-    // round x to the nearest 0.25 resolution x, y
-    // auto& created_instance = instance;
-
-    const auto destroy_shape = [&]() {
-      destroy(shape_ref.get());
-      destroyed = true;
-    };
-
-    meta_visit(
-        shape_ref.get(),
-        [&](data_staging::circle& c) {
-          unique_groups[unique_group].query(destroy_shape,
-                                            c.transitive_location_ref().position_ref().x,
-                                            c.transitive_location_ref().position_ref().y);
-        },
-        [&](data_staging::line& l) {
-          unique_groups[unique_group].query(destroy_shape,
-                                            l.transitive_line_start_ref().position_ref().x,
-                                            l.transitive_line_start_ref().position_ref().y,
-                                            l.transitive_line_end_ref().position_ref().x,
-                                            l.transitive_line_end_ref().position_ref().y);
-        },
-        [&](data_staging::text& t) {
-          unique_groups[unique_group].query(destroy_shape,
-                                            t.transitive_location_ref().position_ref().x,
-                                            t.transitive_location_ref().position_ref().y);
-        },
-        [&](data_staging::script& s) {
-          unique_groups[unique_group].query(destroy_shape,
-                                            s.transitive_location_ref().position_ref().x,
-                                            s.transitive_location_ref().position_ref().y);
-        });
+    bool destroyed = interactor_.destroy_if_duplicate(unique_group, shape_ref.get());
 
     if (destroyed) {
       return std::nullopt;

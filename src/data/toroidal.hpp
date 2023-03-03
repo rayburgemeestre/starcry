@@ -5,13 +5,15 @@
  */
 #pragma once
 
+#include <cstring>
+
 #include "cereal/cereal.hpp"
 
 namespace data {
 
 struct toroidal {
-  int width;
-  int height;
+  int width{};
+  int height{};
 
   toroidal() {}
 
