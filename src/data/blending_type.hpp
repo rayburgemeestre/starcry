@@ -5,6 +5,8 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 #pragma once
 
+#include <string>
+
 namespace data {
 
 // This is not an enum class because it was easier to use this in V8 (or in other words; I didn't know how to use

@@ -55,10 +55,6 @@ private:
   std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
   std::shared_ptr<data::job> job;
-  std::vector<std::vector<data_staging::shape_t>> scene_shapes;
-  std::vector<std::vector<data_staging::shape_t>> scene_shapes_next;
-  std::vector<std::vector<data_staging::shape_t>> instantiated_objects;
-  std::vector<std::vector<data_staging::shape_t>> scene_shapes_intermediate;
   std::vector<std::reference_wrapper<data_staging::shape_t>> stack;
 
   uint32_t frame_number = 0;
@@ -130,7 +126,6 @@ public:
   bool generate_frame();
   void revert_all_changes(v8_interact& i);
   static void revert_position_updates(v8_interact& i);
-  void cleanup_destroyed_objects();
   void create_new_mappings();
   void update_object_positions(v8_interact& i, v8::Local<v8::Object>& video);
   void insert_newly_created_objects();

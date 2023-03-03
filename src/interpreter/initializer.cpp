@@ -152,10 +152,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         auto obj = val.As<v8::Object>();
         auto scenes = i.v8_array(obj, "scenes");
         for (size_t I = 0; I < scenes->Length(); I++) {
-          gen_.scene_shapes.emplace_back();
-          gen_.scene_shapes_next.emplace_back();
-          gen_.scene_shapes_intermediate.emplace_back();
-          gen_.instantiated_objects.emplace_back();
+          gen_.scenes_.add_scene();
           auto current_scene = i.get_index(scenes, I);
           if (!current_scene->IsObject()) continue;
           auto sceneobj = current_scene.As<v8::Object>();

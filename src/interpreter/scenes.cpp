@@ -19,6 +19,13 @@ void scenes::initialize() {
   refresh_scenesettings();
 }
 
+void scenes::add_scene() {
+  scene_shapes.emplace_back();
+  scene_shapes_next.emplace_back();
+  scene_shapes_intermediate.emplace_back();
+  instantiated_objects.emplace_back();
+}
+
 void scenes::refresh_scenesettings() {
   // refresh the scene object to get rid of left-over state
   scene_settings tmp;
@@ -32,7 +39,7 @@ void scenes::refresh_scenesettings() {
   scenesettings_objs.clear();
 
   // throw away any existing instances from array
-  for (auto& scene_shapes_vec : gen_.scene_shapes_next) scene_shapes_vec.clear();
+  for (auto& scene_shapes_vec : scene_shapes_next) scene_shapes_vec.clear();
 }
 
 void scenes::set_scene(size_t scene) {
@@ -52,33 +59,32 @@ void scenes::switch_scene() {
   // whenever we switch to a new scene, we'll copy all the object state from the previous scene
   if (scenesettings.current_scene_next > 0) {
     logger(INFO) << "Switching to new scene, copying all state from previous." << std::endl;
-    gen_.scene_shapes[scenesettings.current_scene_next] = gen_.scene_shapes[scenesettings.current_scene_next - 1];
-    gen_.scene_shapes_next[scenesettings.current_scene_next] =
-        gen_.scene_shapes_next[scenesettings.current_scene_next - 1];
-    gen_.scene_shapes_intermediate[scenesettings.current_scene_next] =
-        gen_.scene_shapes_intermediate[scenesettings.current_scene_next - 1];
+    scene_shapes[scenesettings.current_scene_next] = scene_shapes[scenesettings.current_scene_next - 1];
+    scene_shapes_next[scenesettings.current_scene_next] = scene_shapes_next[scenesettings.current_scene_next - 1];
+    scene_shapes_intermediate[scenesettings.current_scene_next] =
+        scene_shapes_intermediate[scenesettings.current_scene_next - 1];
   } else {
     logger(DEBUG) << "Stay in existing scene " << scenesettings.current_scene_next << ", not copying." << std::endl;
   }
 }
 
 void scenes::append_instantiated_objects() {
-  gen_.scene_shapes_next[scenesettings.current_scene_next].insert(
-      std::end(gen_.scene_shapes_next[scenesettings.current_scene_next]),
-      std::begin(gen_.instantiated_objects[scenesettings.current_scene_next]),
-      std::end(gen_.instantiated_objects[scenesettings.current_scene_next]));
-  gen_.instantiated_objects[scenesettings.current_scene_next].clear();
+  scene_shapes_next[scenesettings.current_scene_next].insert(
+      std::end(scene_shapes_next[scenesettings.current_scene_next]),
+      std::begin(instantiated_objects[scenesettings.current_scene_next]),
+      std::end(instantiated_objects[scenesettings.current_scene_next]));
+  instantiated_objects[scenesettings.current_scene_next].clear();
 }
 
 void scenes::prepare_scene() {
   if (scenesettings.update(get_time(scenesettings).time)) {
     set_scene(scenesettings.current_scene_next + 1);
     // all objects added at this point can be blindly appended
-    gen_.scene_shapes_next[scenesettings.current_scene_next].insert(
-        std::end(gen_.scene_shapes_next[scenesettings.current_scene_next]),
-        std::begin(gen_.instantiated_objects[scenesettings.current_scene_next]),
-        std::end(gen_.instantiated_objects[scenesettings.current_scene_next]));
-    gen_.instantiated_objects[scenesettings.current_scene_next].clear();
+    scene_shapes_next[scenesettings.current_scene_next].insert(
+        std::end(scene_shapes_next[scenesettings.current_scene_next]),
+        std::begin(instantiated_objects[scenesettings.current_scene_next]),
+        std::end(instantiated_objects[scenesettings.current_scene_next]));
+    instantiated_objects[scenesettings.current_scene_next].clear();
   }
 
   // initialize scenes for script objects
@@ -157,6 +163,64 @@ void scenes::revert() {
 }
 
 void scenes::reset() {}
+
+void scenes::commit_scene_shapes() {
+  scene_shapes = scene_shapes_next;
+}
+void scenes::commit_scene_shapes_intermediates() {
+  scene_shapes_intermediate = scene_shapes_next;
+}
+void scenes::reset_scene_shapes_next() {
+  scene_shapes_next = scene_shapes;
+}
+void scenes::reset_scene_shapes_intermediates() {
+  scene_shapes_intermediate = scene_shapes;
+}
+
+void scenes::cleanup_destroyed_objects() {
+  for (auto& scenes : scene_shapes_next) {
+    scenes.erase(std::remove_if(scenes.begin(),
+                                scenes.end(),
+                                [&scenes](auto& shape) {
+                                  bool ret = false;
+                                  meta_callback(shape, [&]<typename T>(T& shape) {
+                                    ret = shape.meta_cref().is_destroyed();
+                                    if (ret) {
+                                      // we should update levels for this about to be erased parent
+                                      // we can do this here because this does not involve removing
+                                      // elements, etc., so we won't invalidate any iterators
+
+                                      // for now we'll just orphan all the objects that are affected
+                                      // let's check only one level for now
+
+                                      // TODO: we should do this recursively..., but this is a nice start
+                                      for (auto& scene_shape : scenes) {
+                                        meta_callback(scene_shape, [&]<typename T2>(T2& shape2) {
+                                          if (shape2.meta_cref().parent_uid() == shape.meta_cref().unique_id()) {
+                                            shape2.meta_ref().set_level(0);
+                                            shape2.meta_ref().set_parent_uid(-1);
+                                          }
+                                        });
+                                      }
+                                    }
+                                  });
+                                  return ret;
+                                }),
+                 scenes.end());
+  }
+}
+
+std::vector<data_staging::shape_t>& scenes::next_shapes_current_scene() {
+  return scene_shapes_next[scenesettings.current_scene_next];
+}
+
+std::vector<data_staging::shape_t>& scenes::intermediate_shapes_current_scene() {
+  return scene_shapes_intermediate[scenesettings.current_scene_next];
+}
+
+std::vector<data_staging::shape_t>& scenes::instantiated_objects_current_scene() {
+  return instantiated_objects[scenesettings.current_scene_next];
+}
 
 double scenes::get_duration(int64_t unique_id) {
   return scenesettings_objs[unique_id].scenes_duration;

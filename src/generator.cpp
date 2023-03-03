@@ -88,7 +88,7 @@ void generator::create_object_instances() {
 
     // since this is invoked directly after a scene change, and in the very beginning, make sure this state is part of
     // the instances "current" frame, or reverting (e.g., due to motion blur requirements) will discard all of this.
-    scene_shapes = scene_shapes_next;
+    scenes_.commit_scene_shapes();
   });
 }
 
@@ -348,7 +348,7 @@ bool generator::_generate_frame() {
           // convert javascript to renderable objects
           convert_objects_to_render_job(i, sc, video);
 
-          scene_shapes_intermediate = scene_shapes_next;
+          scenes_.commit_scene_shapes_intermediates();
 
           scalesettings.update();
           scenes_.update();
@@ -373,9 +373,9 @@ bool generator::_generate_frame() {
         revert_position_updates(i);
       }
 
-      cleanup_destroyed_objects();
+      scenes_.cleanup_destroyed_objects();
 
-      scene_shapes = scene_shapes_next;
+      scenes_.commit_scene_shapes();
 
       scalesettings.commit();
       scenes_.commit();
@@ -409,8 +409,8 @@ void generator::revert_all_changes(v8_interact& i) {
   indexes.clear();
 
   // reset next and intermediate instances
-  scene_shapes_next = scene_shapes;
-  scene_shapes_intermediate = scene_shapes;
+  scenes_.reset_scene_shapes_next();
+  scenes_.reset_scene_shapes_intermediates();
 
   scalesettings.revert();
   scenes_.revert();
@@ -433,49 +433,16 @@ void generator::revert_position_updates(v8_interact& i) {
   //  }
 }
 
-void generator::cleanup_destroyed_objects() {
-  for (auto& scenes : scene_shapes_next) {
-    scenes.erase(std::remove_if(scenes.begin(),
-                                scenes.end(),
-                                [&scenes](auto& shape) {
-                                  bool ret = false;
-                                  meta_callback(shape, [&]<typename T>(T& shape) {
-                                    ret = shape.meta_cref().is_destroyed();
-                                    if (ret) {
-                                      // we should update levels for this about to be erased parent
-                                      // we can do this here because this does not involve removing
-                                      // elements, etc., so we won't invalidate any iterators
-
-                                      // for now we'll just orphan all the objects that are affected
-                                      // let's check only one level for now
-
-                                      // TODO: we should do this recursively..., but this is a nice start
-                                      for (auto& scene_shape : scenes) {
-                                        meta_callback(scene_shape, [&]<typename T2>(T2& shape2) {
-                                          if (shape2.meta_cref().parent_uid() == shape.meta_cref().unique_id()) {
-                                            shape2.meta_ref().set_level(0);
-                                            shape2.meta_ref().set_parent_uid(-1);
-                                          }
-                                        });
-                                      }
-                                    }
-                                  });
-                                  return ret;
-                                }),
-                 scenes.end());
-  }
-}
-
 void generator::create_new_mappings() {
   next_instance_map.clear();
   intermediate_map.clear();
-  for (auto& abstract_shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
+  for (auto& abstract_shape : scenes_.next_shapes_current_scene()) {
     // Will we just put copies here now??
     meta_callback(abstract_shape, [&]<typename T>(T& shape) {
       next_instance_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
     });
   }
-  for (auto& abstract_shape : scene_shapes_intermediate[scenes_.scenesettings.current_scene_next]) {
+  for (auto& abstract_shape : scenes_.intermediate_shapes_current_scene()) {
     // Will we just put copies here now??
     meta_callback(abstract_shape, [&]<typename T>(T& shape) {
       intermediate_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
@@ -487,7 +454,7 @@ void generator::update_object_positions(v8_interact& i, v8::Local<v8::Object>& v
   int64_t scenesettings_from_object_id = -1;
   int64_t scenesettings_from_object_id_level = -1;
 
-  for (auto& abstract_shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
+  for (auto& abstract_shape : scenes_.next_shapes_current_scene()) {
     meta_callback(abstract_shape, [&]<typename T>(T& shape) {
       if constexpr (std::is_same_v<T, data_staging::script>) {
         // TODO: this strategy does not support nested script objects
@@ -562,8 +529,8 @@ void generator::update_object_positions(v8_interact& i, v8::Local<v8::Object>& v
 }
 
 void generator::insert_newly_created_objects() {
-  auto& dest = scene_shapes_next[scenes_.scenesettings.current_scene_next];
-  auto& source = instantiated_objects[scenes_.scenesettings.current_scene_next];
+  auto& dest = scenes_.next_shapes_current_scene();
+  auto& source = scenes_.instantiated_objects_current_scene();
   if (source.empty()) return;
 
   dest.reserve(dest.size() + source.size());
@@ -718,7 +685,7 @@ void generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>
 
   // first pass transitive xy become set
   stack.clear();
-  for (auto& abstract_shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
+  for (auto& abstract_shape : scenes_.next_shapes_current_scene()) {
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& c) {
                             handle_pass1(abstract_shape, c, c.meta_ref());
@@ -736,7 +703,7 @@ void generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>
   }
 
   // second pass depends on knowing transitive xy
-  for (auto& abstract_shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
+  for (auto& abstract_shape : scenes_.next_shapes_current_scene()) {
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& c) {
                             handle_pass2(abstract_shape, c, c.meta_ref());
@@ -799,7 +766,7 @@ void generator::update_object_distances() {
       meta.set_steps(recorded_steps[instance_uid]);
     }
   };
-  for (auto& abstract_shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
+  for (auto& abstract_shape : scenes_.next_shapes_current_scene()) {
     meta_callback(abstract_shape, [&]<typename TP>(TP& shape) {
       handle(abstract_shape, shape.meta_ref());
     });
@@ -1262,7 +1229,7 @@ void generator::convert_objects_to_render_job(v8_interact& i, step_calculator& s
   //    if (!instance->IsObject()) continue;
   //    convert_object_to_render_job(i, instance, index, sc, video);
   //  }
-  for (auto& shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
+  for (auto& shape : scenes_.next_shapes_current_scene()) {
     bool skip = false;
     meta_callback(shape, [&]<typename T>(const T& shape) {
       if (shape.meta_cref().is_destroyed()) {
@@ -1490,7 +1457,7 @@ int64_t generator::spawn_object3(data_staging::shape_t& spawner,
     obj1o = &find1->second.get();
   } else {
     // todo; we need a mapping for this...
-    for (auto& newo : instantiated_objects[scenes_.scenesettings.current_scene_next]) {
+    for (auto& newo : scenes_.instantiated_objects_current_scene()) {
       if (auto c = std::get_if<data_staging::circle>(&newo)) {
         if (c->meta_cref().unique_id() == obj1) {
           obj1o = &newo;
@@ -1503,7 +1470,7 @@ int64_t generator::spawn_object3(data_staging::shape_t& spawner,
     obj2o = &find2->second.get();
   } else {
     // todo; we need a mapping for this...
-    for (auto& newo : instantiated_objects[scenes_.scenesettings.current_scene_next]) {
+    for (auto& newo : scenes_.instantiated_objects_current_scene()) {
       if (auto c = std::get_if<data_staging::circle>(&newo)) {
         if (c->meta_cref().unique_id() == obj2) {
           obj2o = &newo;
@@ -1672,8 +1639,8 @@ generator::_instantiate_object_from_scene(
 
   const auto handle = [&]<typename T>(T& c) -> data_staging::shape_t& {
     // we buffer instantiated objects, and will insert in the array later.
-    instantiated_objects[scenes_.scenesettings.current_scene_next].emplace_back(c);
-    return instantiated_objects[scenes_.scenesettings.current_scene_next].back();
+    scenes_.instantiated_objects_current_scene().emplace_back(c);
+    return scenes_.instantiated_objects_current_scene().back();
   };
 
   const auto type = i.str(object_definitions_map[object_id], "type", "");
@@ -1830,7 +1797,7 @@ generator::_instantiate_object_from_scene(
       uid = cc.meta_cref().unique_id();
     });
     std::optional<std::reference_wrapper<data_staging::shape_t>> shape_ref_opt;
-    for (auto& v : instantiated_objects[scenes_.scenesettings.current_scene_next]) {
+    for (auto& v : scenes_.instantiated_objects_current_scene()) {
       meta_callback(v, [&](const auto& ccc) {
         if (ccc.meta_cref().unique_id() == uid) {
           shape_ref_opt = v;
@@ -1841,7 +1808,7 @@ generator::_instantiate_object_from_scene(
 
     std::vector<std::reference_wrapper<data_staging::shape_t>> new_stack;
     recursively_build_stack_for_object(
-        new_stack, shape_ref.get(), next_instance_map, instantiated_objects[scenes_.scenesettings.current_scene_next]);
+        new_stack, shape_ref.get(), next_instance_map, scenes_.instantiated_objects_current_scene());
     // reverse new_stack
     std::reverse(new_stack.begin(), new_stack.end());
 
@@ -2013,7 +1980,7 @@ void generator::debug_print_next() {
                  << ", opacity=" << gen.opacity() << ", texture = " << sty.texture()
                  << ", gradient = " << sty.gradient() << std::endl;
   };
-  for (auto& shape : scene_shapes_next[scenes_.scenesettings.current_scene_next]) {
+  for (auto& shape : scenes_.next_shapes_current_scene()) {
     meta_visit(
         shape,
         [&](data_staging::circle& shape) {
@@ -2098,10 +2065,10 @@ void generator::copy_texture_from_object_to_shape(T& source_object,
 template <typename T>
 void generator::write_back_copy(T& copy) {
   size_t index = 0;
-  for (auto& instance : instantiated_objects[scenes_.scenesettings.current_scene_next]) {
+  for (auto& instance : scenes_.instantiated_objects_current_scene()) {
     meta_callback(instance, [&]<typename TS>(TS& shape) {
       if (shape.meta_cref().unique_id() == copy.meta_cref().unique_id()) {
-        instantiated_objects[scenes_.scenesettings.current_scene_next][index] = copy;
+        scenes_.instantiated_objects_current_scene()[index] = copy;
       }
     });
     index++;
