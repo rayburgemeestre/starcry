@@ -9,7 +9,15 @@
 // #include <caf/meta/type_name.hpp>
 #include "cereal/types/tuple.hpp"
 #include "cereal/types/vector.hpp"
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-volatile"
+#endif
 #include "vivid/vivid.h"
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 #include "data/color.hpp"
 
