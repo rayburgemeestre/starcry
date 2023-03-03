@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include <unordered_map>
+
 class step_calculator {
 private:
   std::unordered_map<int, std::unordered_map<int, bool>> step_map;

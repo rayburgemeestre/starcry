@@ -20,6 +20,7 @@
 #include "interpreter/initializer.h"
 #include "interpreter/instantiator.h"
 #include "interpreter/interactor.h"
+#include "interpreter/job_mapper.h"
 #include "interpreter/positioner.h"
 #include "interpreter/scenes.h"
 
@@ -56,6 +57,7 @@ private:
   friend class positioner;
   friend class interactor;
   friend class instantiator;
+  friend class job_mapper;
 
   fps_progress fpsp;
   std::shared_ptr<v8_wrapper> context;
@@ -105,6 +107,7 @@ private:
   positioner positioner_;
   interactor interactor_;
   instantiator instantiator_;
+  job_mapper job_mapper_;
 
   util::random_generator rand_;
 
@@ -134,11 +137,6 @@ public:
   void update_time(data_staging::shape_t& object_bridge, const std::string& instance_id, scene_settings& scenesettings);
   int update_steps(double dist);
   static double get_max_travel_of_object(data_staging::shape_t& shape_now, data_staging::shape_t& shape_prev);
-  void convert_objects_to_render_job(v8_interact& i, step_calculator& sc, v8::Local<v8::Object> video);
-  void convert_object_to_render_job(v8_interact& i,
-                                    data_staging::shape_t& shape,
-                                    step_calculator& sc,
-                                    v8::Local<v8::Object> video);
 
   std::shared_ptr<data::job> get_job() const;
   double fps() const {
@@ -172,15 +170,6 @@ private:
   bool _generate_frame();
 
   void debug_print_next();
-
-  template <typename T>
-  void copy_gradient_from_object_to_shape(T& source_object,
-                                          data::shape& destination_shape,
-                                          std::unordered_map<std::string, data::gradient>& known_gradients_map);
-  template <typename T>
-  void copy_texture_from_object_to_shape(T& source_object,
-                                         data::shape& destination_shape,
-                                         std::unordered_map<std::string, data::texture>& known_textures_map);
 };
 
 }  // namespace interpreter
