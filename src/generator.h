@@ -18,6 +18,7 @@
 #include "interpreter/bridges.h"
 #include "interpreter/frame_sampler.h"
 #include "interpreter/initializer.h"
+#include "interpreter/positioner.h"
 #include "interpreter/scenes.h"
 
 #include "data/job.hpp"
@@ -50,6 +51,7 @@ private:
   friend class bridges;
   friend class scenes;
   friend class frame_sampler;
+  friend class positioner;
 
   fps_progress fpsp;
   std::shared_ptr<v8_wrapper> context;
@@ -99,6 +101,7 @@ private:
   bridges bridges_;
   scenes scenes_;
   frame_sampler sampler_;
+  positioner positioner_;
 
   util::random_generator rand_;
 
@@ -148,10 +151,7 @@ public:
                       double range,
                       double constrain_dist_min,
                       double constrain_dist_max) const;
-  void update_time(v8_interact& i,
-                   data_staging::shape_t& object_bridge,
-                   const std::string& instance_id,
-                   scene_settings& scenesettings);
+  void update_time(data_staging::shape_t& object_bridge, const std::string& instance_id, scene_settings& scenesettings);
   int update_steps(double dist);
   static double get_max_travel_of_object(data_staging::shape_t& shape_now, data_staging::shape_t& shape_prev);
   void convert_objects_to_render_job(v8_interact& i, step_calculator& sc, v8::Local<v8::Object> video);

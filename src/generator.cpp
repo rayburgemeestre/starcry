@@ -43,7 +43,8 @@ generator::generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapp
       initializer_(*this),
       bridges_(*this),
       scenes_(*this),
-      sampler_(*this) {}
+      sampler_(*this),
+      positioner_(*this) {}
 
 void generator::init(const std::string& filename,
                      std::optional<double> rand_seed,
@@ -329,7 +330,7 @@ bool generator::_generate_frame() {
 
           // handle object movement (velocity added to position)
           // - velocity
-          update_object_positions(i, video);
+          positioner_.update_object_positions();
 
           // handle collisions, gravity and "inherited" objects
           // absolute xy are known after this function call
@@ -446,84 +447,6 @@ void generator::create_new_mappings() {
     // Will we just put copies here now??
     meta_callback(abstract_shape, [&]<typename T>(T& shape) {
       intermediate_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
-    });
-  }
-}
-
-void generator::update_object_positions(v8_interact& i, v8::Local<v8::Object>& video) {
-  int64_t scenesettings_from_object_id = -1;
-  int64_t scenesettings_from_object_id_level = -1;
-
-  for (auto& abstract_shape : scenes_.next_shapes_current_scene()) {
-    meta_callback(abstract_shape, [&]<typename T>(T& shape) {
-      if constexpr (std::is_same_v<T, data_staging::script>) {
-        // TODO: this strategy does not support nested script objects
-        // TODO: we need to use stack for that
-        scenesettings_from_object_id = shape.meta_cref().unique_id();
-        scenesettings_from_object_id_level = shape.meta_cref().level();
-      } else if (scenesettings_from_object_id_level == shape.meta_cref().level()) {
-        scenesettings_from_object_id = -1;
-        scenesettings_from_object_id_level = -1;
-      }
-
-      if (scenesettings_from_object_id == -1) {
-        update_time(i, abstract_shape, shape.meta_cref().id(), scenes_.scenesettings);
-      } else {
-        // TODO:
-        update_time(
-            i, abstract_shape, shape.meta_cref().id(), scenes_.scenesettings_objs[scenesettings_from_object_id]);
-      }
-
-      // TODO: this was an interesting hack..
-      // should not be needed. I don't think scripts should be able to customize the scale for now.
-      // scalesettings.video_scale_next = i.double_number(video, "scale", 1.0);
-
-      auto angle = shape.generic_cref().angle();
-      if (std::isnan(angle)) {
-        angle = 0.;
-      }
-      double x = 0;
-      double y = 0;
-      double x2 = 0;
-      double y2 = 0;
-      double velocity = 0;
-      double vel_x = 0;
-      double vel_y = 0;
-      double vel_x2 = 0;
-      double vel_y2 = 0;
-      if constexpr (std::is_same_v<T, data_staging::line>) {
-        x = shape.line_start_ref().position_cref().x;
-        y = shape.line_start_ref().position_cref().y;
-        x2 = shape.line_end_ref().position_cref().x;
-        y2 = shape.line_end_ref().position_cref().y;
-        velocity = shape.movement_line_start_ref().velocity_speed();
-        vel_x = shape.movement_line_start_ref().velocity().x;
-        vel_y = shape.movement_line_start_ref().velocity().y;
-        vel_x2 = shape.movement_line_end_ref().velocity().x;
-        vel_y2 = shape.movement_line_end_ref().velocity().y;
-      } else {
-        x = shape.location_cref().position_cref().x;
-        y = shape.location_cref().position_cref().y;
-        velocity = shape.movement_cref().velocity_speed();
-        vel_x = shape.movement_cref().velocity().x;
-        vel_y = shape.movement_cref().velocity().y;
-      }
-
-      velocity /= static_cast<double>(stepper.max_step);
-      x += (vel_x * velocity);
-      y += (vel_y * velocity);
-      x2 += (vel_x2 * velocity);
-      y2 += (vel_y2 * velocity);
-
-      if constexpr (std::is_same_v<T, data_staging::line>) {
-        shape.line_start_ref().position_ref().x = x;
-        shape.line_start_ref().position_ref().y = y;
-        shape.line_end_ref().position_ref().x = x2;
-        shape.line_end_ref().position_ref().y = y2;
-      } else {
-        shape.location_ref().position_ref().x = x;
-        shape.location_ref().position_ref().y = y;
-      }
     });
   }
 }
@@ -1103,10 +1026,10 @@ std::shared_ptr<v8_wrapper> generator::get_context() const {
   return context;
 }
 
-void generator::update_time(v8_interact& i,
-                            data_staging::shape_t& instance,
+void generator::update_time(data_staging::shape_t& instance,
                             const std::string& instance_id,
                             scene_settings& scenesettings) {
+  auto& i = genctx->i();
   const auto time_settings = scenes_.get_time(scenesettings);
   const auto execute = [&](double scene_time) {
     // Are these still needed?? (EDIT: I don't think it's used)
