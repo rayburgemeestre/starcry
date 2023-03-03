@@ -109,7 +109,6 @@ public:
   explicit generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug = false);
   ~generator() = default;
 
-  void reset_context();
   void init(const std::string& filename,
             std::optional<double> rand_seed,
             bool preview,
@@ -131,23 +130,7 @@ public:
   static void revert_position_updates(v8_interact& i);
   void create_new_mappings();
   void insert_newly_created_objects();
-  void update_object_toroidal(v8_interact& i, data_staging::toroidal& toroidal_data, double& x, double& y);
   void update_object_distances();
-  void update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video);
-  void handle_collisions(v8_interact& i, data_staging::shape_t& instance);
-  void handle_collision(v8_interact& i,
-                        data_staging::circle& object_bridge,
-                        data_staging::circle& instance2,
-                        data_staging::shape_t& shape,
-                        data_staging::shape_t& shape2);
-  void handle_gravity(v8_interact& i, data_staging::shape_t& instance);
-  void handle_gravity(data_staging::circle& instance,
-                      data_staging::circle& instance2,
-                      vector2d& acceleration,
-                      double G,
-                      double range,
-                      double constrain_dist_min,
-                      double constrain_dist_max) const;
   void update_time(data_staging::shape_t& object_bridge, const std::string& instance_id, scene_settings& scenesettings);
   int update_steps(double dist);
   static double get_max_travel_of_object(data_staging::shape_t& shape_now, data_staging::shape_t& shape_prev);
@@ -170,9 +153,6 @@ public:
   double get_seed() const {
     return seed;
   }
-  size_t get_max_frames() const {
-    return max_frames;
-  }
   data::settings settings() const {
     return settings_;
   }
@@ -180,17 +160,11 @@ public:
     return filename_;
   }
 
-  scale_settings& get_scale_settings() {
-    return scalesettings;
-  }
-
-  std::shared_ptr<v8_wrapper> get_context() const;
-
   int64_t spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
   int64_t spawn_object2(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1);
   int64_t spawn_object3(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1, int64_t obj2);
   int64_t spawn_object_at_parent(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
-  int64_t destroy(data_staging::shape_t& spawner);
+  static int64_t destroy(data_staging::shape_t& spawner);
 
   std::unordered_map<std::string, v8::Persistent<v8::Object>>& get_object_definitions_ref();
 

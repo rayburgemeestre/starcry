@@ -337,7 +337,6 @@ bool generator::_generate_frame() {
           // - collisions
           // - gravity
           interactor_.update_interactions();
-          //  update_object_interactions(i, video);
 
           // calculate distance and steps
           update_object_distances();
@@ -522,38 +521,6 @@ void generator::insert_newly_created_objects() {
   create_new_mappings();
 }
 
-void generator::update_object_toroidal(v8_interact& i, data_staging::toroidal& toroidal_data, double& x, double& y) {
-  if (toroidal_data.group().empty()) return;
-
-  auto the_width = toroidals[toroidal_data.group()].width;
-  auto the_height = toroidals[toroidal_data.group()].height;
-  auto diff_x = 0;
-  auto diff_y = 0;
-
-  while (x + (the_width / 2) < 0) {
-    x += the_width;
-    diff_x += the_width;
-  }
-  while (y + (the_height / 2) < 0) {
-    y += the_height;
-    diff_y += the_height;
-  }
-  while (x + (the_width / 2) > the_width) {
-    x -= the_width;
-    diff_x -= the_width;
-  }
-  while (y + (the_height / 2) > the_height) {
-    y -= the_height;
-    diff_y -= the_height;
-  }
-  const auto warped_dist = get_distance(0, 0, diff_x, diff_y);
-  toroidal_data.set_warp_width(the_width);
-  toroidal_data.set_warp_height(the_height);
-  toroidal_data.set_warp_dist(warped_dist);
-}
-
-void generator::update_object_interactions(v8_interact& i, v8::Local<v8::Object>& video) {}
-
 void generator::update_object_distances() {
   stepper.reset_current();
   const auto handle = [&](data_staging::shape_t& abstract_shape, data_staging::meta& meta) {
@@ -584,10 +551,6 @@ void generator::update_object_distances() {
       handle(abstract_shape, shape.meta_ref());
     });
   }
-}
-
-std::shared_ptr<v8_wrapper> generator::get_context() const {
-  return context;
 }
 
 void generator::update_time(data_staging::shape_t& instance,
