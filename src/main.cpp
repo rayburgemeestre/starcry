@@ -11,7 +11,14 @@
 #pragma clang diagnostic ignored "-Wc11-extensions"
 #endif  // __clang__
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-builtins"
+#endif
 #include <boost/program_options/options_description.hpp>
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
