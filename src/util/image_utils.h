@@ -11,7 +11,12 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "data/color.hpp"
 
-void copy_to_png(const std::vector<data::color> &source,
+namespace util {
+class random_generator;
+}
+
+void copy_to_png(util::random_generator &rand,
+                 const std::vector<data::color> &source,
                  uint32_t width,
                  uint32_t height,
                  png::image<png::rgba_pixel> &dest,

@@ -66,7 +66,7 @@ void generator::init(const std::string& filename,
   scenes_.initialize();
 
   // reset random number generator
-  set_rand_seed(rand_seed.value_or(0));
+  rand_.set_seed(rand_seed.value_or(0));
 
   // set_scene requires generator_context to be set
   scenes_.set_scene(0);
@@ -1850,7 +1850,7 @@ generator::_instantiate_object_from_scene(
     bool destroyed = false;
 
     // round x to the nearest 0.25 resolution x, y
-    auto& created_instance = instance;
+    // auto& created_instance = instance;
 
     const auto destroy_shape = [&]() {
       destroy(shape_ref.get());

@@ -9,20 +9,20 @@
 #include "util/random.hpp"
 
 #include <iostream>
-#include <random>
+// #include <random>
 
 void output_fun(const std::string& s) {
   logger(INFO) << "script: " << s << std::endl;
 }
 
-static util::random_generator rand_;
+// static util::random_generator rand_;
+//
+// void set_rand_seed(double seed) {
+//   rand_.set_seed(seed);
+// }
 
-void set_rand_seed(double seed) {
-  rand_.set_seed(seed);
-}
-
-double rand_fun() {
-  return rand_.get();
+double rand_fun(util::random_generator& rand) {
+  return rand.get();
 }
 
 std::vector<double> angled_velocity(double angle) {
@@ -41,8 +41,7 @@ std::vector<double> angled_velocity(double angle) {
   return {x, y};
 }
 
-std::vector<double> random_velocity() {
-  static util::random_generator rand;
+std::vector<double> random_velocity(util::random_generator& rand) {
   double x = rand.get();
   double y = 0;
 

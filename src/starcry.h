@@ -18,6 +18,7 @@
 #include "data/viewpoint.hpp"
 
 #include "core/periodic_executor.hpp"
+#include "util/random.hpp"
 
 class v8_wrapper;
 class sfml_window;
@@ -130,6 +131,8 @@ private:
   std::string script_;
   std::unique_ptr<inotify::NotifierBuilder> notifier;
   std::thread notifier_thread;
+
+  util::random_generator rand_;
 
 public:
   starcry(starcry_options &options, std::shared_ptr<v8_wrapper> &context);

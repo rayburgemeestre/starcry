@@ -41,7 +41,15 @@
 #include <sys/prctl.h>
 
 #include <inotify-cpp/FileSystemAdapter.h>
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-builtins"
+#endif
 #include <inotify-cpp/NotifierBuilder.h>
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
@@ -397,7 +405,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   if (job_msg->original_instruction->frame_ptr() && !job_msg->original_instruction->frame_ptr()->client() &&
       f.compressed_image()) {
     png::image<png::rgba_pixel> image(job.width, job.height);
-    copy_to_png(msg->pixels_raw, job.width, job.height, image, gen->settings().dithering);
+    copy_to_png(rand_, msg->pixels_raw, job.width, job.height, image, gen->settings().dithering);
     std::ostringstream ss;
     image.write_stream(ss);
     auto img = ss.str();
@@ -803,7 +811,7 @@ void starcry::save_images(std::vector<data::color> &pixels_raw,
     // version. png::image<png::rgb_pixel_16> image(job.width, job.height);
     if (write_8bit_png) {
       png::image<png::rgba_pixel> image(width, height);
-      copy_to_png(pixels_raw, width, height, image, gen->settings().dithering);
+      copy_to_png(rand_, pixels_raw, width, height, image, gen->settings().dithering);
       if (output_file.size()) {
         image.write(fmt::format("{}.png", output_file));
       } else {

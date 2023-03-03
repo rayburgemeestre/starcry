@@ -372,7 +372,7 @@ void rendering_engine::write_image(image &bmp, int width, int height, std::strin
 #ifndef EMSCRIPTEN
 #ifndef SC_CLIENT
   png::image<png::rgba_pixel> image(width, height);
-  copy_to_png(bmp.pixels(), width, height, image, false);
+  copy_to_png(rand_, bmp.pixels(), width, height, image, false);
   image.write(filename);
 #endif
 #endif

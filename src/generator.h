@@ -30,6 +30,7 @@
 
 #include "util/frame_stepper.hpp"
 #include "util/generator_context.h"
+#include "util/random.hpp"
 #include "util/v8_interact.hpp"
 #include "util/v8_wrapper.hpp"
 
@@ -102,6 +103,8 @@ private:
   bridges bridges_;
   scenes scenes_;
   frame_sampler sampler_;
+
+  util::random_generator rand_;
 
 public:
   explicit generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug = false);

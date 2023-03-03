@@ -7,12 +7,15 @@
 #include <string>
 #include <vector>
 
+namespace util {
+class random_generator;
+}
+
 void output_fun(const std::string& s);
 std::vector<double> angled_velocity(double angle);
-std::vector<double> random_velocity();
+std::vector<double> random_velocity(util::random_generator& rand);
 
-void set_rand_seed(double seed);
-double rand_fun();
+double rand_fun(util::random_generator& rand);
 
 double expf_fun(double v, double factor);
 double logn_fun(double v, double factor);

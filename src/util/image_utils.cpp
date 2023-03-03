@@ -7,12 +7,12 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include "util/image_utils.h"
 #include "util/random.hpp"
 
-void copy_to_png(const std::vector<data::color> &source,
+void copy_to_png(util::random_generator &rand,
+                 const std::vector<data::color> &source,
                  uint32_t width,
                  uint32_t height,
                  png::image<png::rgba_pixel> &dest,
                  bool dithering) {
-  static util::random_generator rand;
   size_t index = 0;
   auto m = std::numeric_limits<uint8_t>::max();
   for (uint32_t y = 0; y < height; y++) {

@@ -41,9 +41,13 @@ void initializer::reset_context() {
   gen_.context->reset();
 
   gen_.context->add_fun("output", &output_fun);
-  gen_.context->add_fun("rand", &rand_fun);
+  gen_.context->add_fun("rand", [&]() {
+    return rand_fun(gen_.rand_);
+  });
   gen_.context->add_fun("angled_velocity", &angled_velocity);
-  gen_.context->add_fun("random_velocity", &random_velocity);
+  gen_.context->add_fun("random_velocity", [&]() {
+    return random_velocity(gen_.rand_);
+  });
   gen_.context->add_fun("expf", &expf_fun);
   gen_.context->add_fun("logn", &logn_fun);
   gen_.context->add_fun("clamp", &math::clamp<double>);
@@ -198,7 +202,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
           gen_.sampler_.set_sample_include(i.double_number(sample, "include"), gen_.use_fps);  // seconds
           gen_.sampler_.set_sample_exclude(i.double_number(sample, "exclude"), gen_.use_fps);  // seconds
         }
-        set_rand_seed(gen_.seed);
+        gen_.rand_.set_seed(gen_.seed);
 
         gen_.max_frames = duration * gen_.use_fps;
         gen_.metrics_->set_total_frames(gen_.max_frames);

@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include "util/random.hpp"
+
 namespace draw_logic {
 class draw_logic;
 }
@@ -70,4 +72,6 @@ private:
                  bool verbose,
                  const data::settings &settings,
                  double debug);
+
+  util::random_generator rand_;
 };
