@@ -68,7 +68,7 @@ public:
       ("num_chunks,c", po::value<size_t>(&options.num_chunks), "number of chunks to chop frame into (default 1)")
       ("server", po::value<std::string>(&options.host), "start server to allow dynamic renderers (default no)")
       ("client", po::value<std::string>(&options.host), "start client renderer, connect to host")
-      ("no-gui", "disable render to graphical window")
+      ("gui", "enable render preview to graphical window")
       ("no-output", "disable producing any output (video or stream)")
       ("no-render", "disable all rendering (e.g. for performance testing js)")
       ("preview", "enable preview settings for fast preview rendering")
@@ -109,7 +109,7 @@ public:
     options.interactive = vm.count("interactive");
     options.preview = vm.count("preview");
     options.enable_remote_workers = vm.count("server");
-    options.gui = !vm.count("no-gui") && !vm.count("interactive");
+    options.gui = vm.count("gui");
     options.output = !vm.count("no-output");
     options.render = !vm.count("no-render");
     options.notty = vm.count("notty");

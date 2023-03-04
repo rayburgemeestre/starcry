@@ -6,6 +6,7 @@
 
 #include "starcry.h"
 
+#include <algorithm>
 #include <cstring>
 #include <sstream>
 
@@ -681,9 +682,23 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
           bool last_frame = false;
           size_t frame_number = 0;
 
-          for (const auto &chunk : pos->second) {
+          size_t reserve_size =
+              std::accumulate(pos->second.begin(), pos->second.end(), size_t(0), [](size_t size, auto &chunk) {
+                return chunk->pixels.size() + size;
+              });
+          size_t reserve_size2 =
+              std::accumulate(pos->second.begin(), pos->second.end(), size_t(0), [](size_t size, auto &chunk) {
+                return chunk->pixels_raw.size() + size;
+              });
+          pixels.reserve(reserve_size);
+          pixels_raw.reserve(reserve_size2);
+          for (auto &chunk : pos->second) {
             pixels.insert(std::end(pixels), std::begin(chunk->pixels), std::end(chunk->pixels));
             pixels_raw.insert(std::end(pixels_raw), std::begin(chunk->pixels_raw), std::end(chunk->pixels_raw));
+            chunk->pixels.clear();
+            chunk->pixels.shrink_to_fit();
+            chunk->pixels_raw.clear();
+            chunk->pixels_raw.shrink_to_fit();
 
             // these don't have to be accumulated
             width = chunk->width;
@@ -805,7 +820,9 @@ void starcry::save_images(std::vector<data::color> &pixels_raw,
                           bool write_32bit_exr,
                           const std::string &output_file) {
   auto filename = fs::path(gen->filename()).stem().string();
-  if (!pixels_raw.empty() && width * height == pixels_raw.size()) {
+  if (!pixels_raw.empty() && (width * height) <= pixels_raw.size()) {
+    // ensure that the height is correct, if this was a chunked rendering, height is lower
+    height = pixels_raw.size() / width;
     // There is 16 BIT, also + Alpha, however, seems to internally still use an 8 bit palette somehow.
     // Will need to figure out in the future how to properly use 16 bit, for now, will focus on fixing the 8 bit
     // version. png::image<png::rgb_pixel_16> image(job.width, job.height);

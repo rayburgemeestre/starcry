@@ -132,6 +132,9 @@ _ = {
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
     'max_intermediates': 10,
     'scale': 1.00,
+    // 'scale': 3.00,
+    // 'width': 10000,
+    // 'height': 10000,
   },
   'scenes': [
     {

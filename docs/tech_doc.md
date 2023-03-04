@@ -188,3 +188,7 @@ The value to use is the number of sub-frames in the frame, so if the image is bl
 
 * For local threads, we can utilize smart pointers to have chunks use the same memory for jobs.
 * Make sure that we are smart about chunking, doesn't make sense if we have already 9GB worth of objects: if the user specified `-c 16` overrule it with `-c 1` with a warning.
+
+## Examples
+
+Rendering large files (e.g., 10000x10000 image), without too much memory usage. Use chunking and a single thread: `starcry input/web.js -t 1 -c 16`
