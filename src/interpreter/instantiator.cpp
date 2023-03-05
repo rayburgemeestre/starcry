@@ -160,22 +160,32 @@ instantiator::instantiate_object_from_scene(
     meta_visit(
         const_cast<data_staging::shape_t&>(*parent_object),
         [&](data_staging::circle& shape) {
-          i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
+          if (i.str(instance, "gradient").empty() && shape.styling_cref().gradient().size()) {
+            i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
+          }
           // this is needed for example, if a scene object defines it, it will be inherited, but only for the first
           // instantiated object. further spawned child objects will not inherit this by default we may need to do
           // something like this for more cases..
-          i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
+          if (i.str(instance, "unique_group").empty() && shape.behavior_cref().unique_group_ref().size())
+            i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
         },
         [&](data_staging::line& shape) {
-          i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
-          i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
+          if (i.str(instance, "gradient").empty() && shape.styling_ref().gradient().size()) {
+            i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
+          }
+          if (i.str(instance, "unique_group").empty() && shape.behavior_cref().unique_group_ref().size())
+            i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
         },
         [&](data_staging::text& shape) {
-          i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
-          i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
+          if (i.str(instance, "gradient").empty() && shape.styling_ref().gradient().size()) {
+            i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
+          }
+          if (i.str(instance, "unique_group").empty() && shape.behavior_cref().unique_group_ref().size())
+            i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
         },
         [&](data_staging::script& shape) {
-          i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
+          if (i.str(instance, "unique_group").empty() && shape.behavior_cref().unique_group_ref().size())
+            i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
         });
   }
 
