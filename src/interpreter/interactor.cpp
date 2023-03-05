@@ -14,6 +14,7 @@ interactor::interactor(generator& gen) : gen_(gen) {}
 void interactor::reset() {
   qts.clear();
   qts_gravity.clear();
+  unique_groups.clear();
 }
 
 void interactor::update_interactions() {
