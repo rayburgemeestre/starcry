@@ -68,7 +68,10 @@ starcry::starcry(starcry_options &options, std::shared_ptr<v8_wrapper> &context)
       pe(std::chrono::milliseconds(1000)),
       metrics_(std::make_shared<metrics>(options.notty || options.stdout_,
                                          [this]() {
-                                           if (gui) gui->toggle_window();
+                                           if (!gui)
+                                             gui = std::make_unique<sfml_window>();
+                                           else
+                                             gui->toggle_window();
                                          })),
       script_(options.script_file),
       notifier(nullptr) {
