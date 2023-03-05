@@ -43,6 +43,7 @@ sfml_window::~sfml_window() {
 
 void sfml_window::add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels) {
   std::unique_lock<std::mutex> lock(mut);
+  canvas_h = pixels.size() / canvas_w;
   cached_canvas_w = canvas_w;
   cached_canvas_h = canvas_h;
   cached_pixels = pixels;

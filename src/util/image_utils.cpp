@@ -119,6 +119,7 @@ std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &p
 }
 
 void pixels_vec_insert_checkers_background(std::vector<uint32_t> &pixels, int width, int height) {
+  height = pixels.size() / width;
   uint8_t *p = (uint8_t *)&pixels[0];
   int x = 0, y = 0;
   bool flag = true;
