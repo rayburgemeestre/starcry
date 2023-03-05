@@ -208,7 +208,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         gen_.job->height = gen_.canvas_h;
         gen_.job->canvas_w = gen_.canvas_w;
         gen_.job->canvas_h = gen_.canvas_h;
-        double use_scale = i.double_number(video, "scale");
+        double use_scale = i.double_number(video, "scale", 1.);
         if (scale) {
           use_scale = *scale;
         }
@@ -249,7 +249,7 @@ void initializer::init_gradients() {
         auto g = std::stoi(color_string.substr(3, 2), nullptr, 16) / 255.;
         auto b = std::stoi(color_string.substr(5, 2), nullptr, 16) / 255.;
         gen_.gradients[id].colors.emplace_back(0.0, data::color{r, g, b, 1.});
-        gen_.gradients[id].colors.emplace_back(0.9, data::color{r, g, b, 1.});
+        gen_.gradients[id].colors.emplace_back(index, data::color{r, g, b, 1.});
         gen_.gradients[id].colors.emplace_back(1.0, data::color{r, g, b, 0.});
       }
     }
