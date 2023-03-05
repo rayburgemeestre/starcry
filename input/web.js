@@ -87,7 +87,7 @@ _ = {
     'line': {
       'type': 'line',
       'blending_type': blending_type.add,
-      'gradient': 'white',
+      'gradient': 'red',
       'radius': 0,
       'radiussize': 1,
       'init': function() {
@@ -105,7 +105,7 @@ _ = {
     'glowing_line': {
       'type': 'line',
       'blending_type': blending_type.add,
-      'gradient': 'white',
+      'gradient': 'red',
       'radius': 0,
       'radiussize': 20,
       'opacity': 0.1,

@@ -84,21 +84,19 @@ _ = {
       ],
       'radius': 0,
       'radiussize': 10.0,
-      'on': {
-        'collide': function(other) {
-          this.gradients[0][0] = 0.0;
-          this.gradients[1][0] = 1.0;
-          return;
-          let obj = this.spawn({
-            'id': 'tempring',
-            'label': 'ring_' + this.label,
-            'x': 0,
-            'y': 0,
-            'z': 0,
-            'radius': this.radiussize,
-            'props': {}
-          });
-        }
+      'collide': function(other) {
+        // this.gradients[0][0] = 0.0;
+        // this.gradients[1][0] = 1.0;
+        // return;
+        this.spawn({
+          'id': 'tempring',
+          'label': 'ring_' + this.label,
+          'x': 0,
+          'y': 0,
+          'z': 0,
+          'radius': this.radiussize,
+          'props': {}
+        });
       },
       'time': function(t, e, s, tt) {
         if (this.gradients[0][0] < 1.0) {
