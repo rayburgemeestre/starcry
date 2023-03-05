@@ -732,10 +732,12 @@ int64_t generator::spawn_object_at_parent(data_staging::shape_t& spawner, v8::Lo
       parent = next_instance_map.at(cc.meta_cref().parent_uid());
     }
   });
-  if (!parent) {
-    return -1;
-  }
-  auto instantiated_object = instantiator_.instantiate_object_from_scene(i, obj, &((*parent).get()));
+  auto instantiated_object = ([&]() {
+    if (!parent) {
+      return instantiator_.instantiate_object_from_scene(i, obj, nullptr);
+    }
+    return instantiator_.instantiate_object_from_scene(i, obj, &((*parent).get()));
+  })();
   if (!instantiated_object) {
     return -1;
   }
@@ -770,7 +772,8 @@ void generator::debug_print_next() {
                  << mov.velocity().y << ", last_collide=" << beh.last_collide() << ", mass=" << gen.mass()
                  << ", angle = " << gen.angle() << ", gravity_group=" << beh.gravity_group()
                  << ", opacity=" << gen.opacity() << ", texture = " << sty.texture()
-                 << ", gradient = " << sty.gradient() << std::endl;
+                 << ", gradient = " << sty.gradient() << ", unique_group = " << beh.unique_group()
+                 << ", destroyed = " << std::boolalpha << meta.is_destroyed() << std::endl;
   };
   for (auto& shape : scenes_.next_shapes_current_scene()) {
     meta_visit(
