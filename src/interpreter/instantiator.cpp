@@ -440,6 +440,13 @@ void instantiator::_instantiate_object(v8_interact& i,
     i.set_field(new_instance, "props", v8::Object::New(i.get_isolate()));
   }
 
+  // Ensure we have some other fields
+  for (auto str : {"x", "y", "x2", "y2"}) {
+    if (!i.has_field(new_instance, str)) {
+      i.set_field(new_instance, str, v8::Number::New(i.get_isolate(), 0));
+    }
+  }
+
   // Copy over scene properties to instance properties
   if (scene_obj) {
     auto props = i.v8_obj(new_instance, "props");
