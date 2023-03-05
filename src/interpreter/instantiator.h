@@ -28,8 +28,9 @@ public:
   std::optional<std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>>
   instantiate_object_from_scene(
       v8_interact& i,
-      v8::Local<v8::Object>& scene_object,          // object description from scene to be instantiated
-      const data_staging::shape_t* parent_object);  // it's optional parent
+      v8::Local<v8::Object>& scene_object,         // object description from scene to be instantiated
+      const data_staging::shape_t* parent_object,  // it's optional parent
+      bool scene_inheritance_has_priority = false);
 
 private:
   void _instantiate_object(v8_interact& i,

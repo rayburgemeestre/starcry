@@ -51,8 +51,8 @@ _ = {
       'duration': 10.0,
       'objects': [
         // {'id': 'dot', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
-        {'id': 'dot', 'x': -400, 'y': 0, 'z': 0, 'props': {}},
-        {'id': 'dot', 'x': 400, 'y': 0, 'z': 0, 'gradient': 'red', 'unique_group': 'group1', 'props': {}},
+        {'id': 'dot', 'x': -400, 'y': 0, 'z': 0},
+        {'id': 'dot', 'x': 400, 'y': 0, 'z': 0, 'gradient': 'red', 'unique_group': 'group1'},
       ]
     },
   ]
