@@ -26,6 +26,9 @@ using shape_t =
 }
 
 void meta_visit(auto& shape, auto&& handle_circle, auto&& handle_line, auto&& handle_text, auto&& handle_script) {
+  if (shape.valueless_by_exception()) {
+    return;
+  }
   std::visit(overloaded{[](std::monostate) {}, handle_circle, handle_line, handle_text, handle_script}, shape);
 }
 
