@@ -333,6 +333,9 @@ bool generator::_generate_frame() {
         debug_print_next();
       }
 
+      // cleanup for next iteration
+      interactor_.reset();
+
       metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
     });
     job->job_number++;
