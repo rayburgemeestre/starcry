@@ -248,6 +248,18 @@ void initializer::init_gradients() {
         auto r = std::stoi(color_string.substr(1, 2), nullptr, 16) / 255.;
         auto g = std::stoi(color_string.substr(3, 2), nullptr, 16) / 255.;
         auto b = std::stoi(color_string.substr(5, 2), nullptr, 16) / 255.;
+        double index = 0.9;
+        if (color_string.length() >= 8 && color_string[7] == '@') {
+          // String is for example '#ffffff@0.9', keep only the 0.9 part
+          try {
+            auto remainder = std::stod(color_string.substr(8));
+            index = std::clamp(remainder, 0.0, 1.0);
+          } catch (const std::invalid_argument& e) {
+            logger(DEBUG) << "Invalid argument: " << e.what() << std::endl;
+          } catch (const std::out_of_range& e) {
+            logger(DEBUG) << "Out of range: " << e.what() << std::endl;
+          }
+        }
         gen_.gradients[id].colors.emplace_back(0.0, data::color{r, g, b, 1.});
         gen_.gradients[id].colors.emplace_back(index, data::color{r, g, b, 1.});
         gen_.gradients[id].colors.emplace_back(1.0, data::color{r, g, b, 0.});
