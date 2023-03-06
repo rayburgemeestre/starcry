@@ -163,11 +163,12 @@ instantiator::instantiate_object_from_scene(
   // inherit some fields from parent
   if (parent_object) {
       meta_callback(const_cast<data_staging::shape_t&>(*parent_object), [&](auto& shape) {
-      if (!scene_inheritance_has_priority) {
-        if (shape.styling_cref().gradient().size())
-          i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
-        if (shape.behavior_cref().unique_group_ref().size())
-          i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
+          if (!scene_inheritance_has_priority) {
+              if (shape.styling_cref().gradient().size())
+                  i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
+              if (shape.behavior_cref().unique_group_ref().size())
+                  i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
+          }
       });
   }
 
