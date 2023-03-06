@@ -136,13 +136,13 @@ std::string metrics::to_json() {
     for (size_t i = first_key; i <= last_key; i++) {
       const auto &job = jobs_[i];
       size_t queued = 0;
-      size_t rendering = 0;
+      // size_t rendering = 0;
       size_t rendered = 0;
       std::chrono::time_point<std::chrono::high_resolution_clock> render_begin = job.chunks[0].render_begin;
       std::chrono::time_point<std::chrono::high_resolution_clock> render_end = job.chunks[0].render_begin;
       for (const auto &chunk : job.chunks) {
         if (chunk.state == job_state::queued) queued++;
-        if (chunk.state == job_state::rendering) rendering++;
+        // if (chunk.state == job_state::rendering) rendering++;
         if (chunk.state == job_state::rendered) rendered++;
         render_begin = std::min(render_begin, chunk.render_begin);
         render_end = std::max(render_end, chunk.render_end);
@@ -440,13 +440,13 @@ void metrics::display(std::function<void(const std::string &)> f1,
   for (size_t i = first_key; i <= last_key; i++) {
     const auto &job = jobs_[i];
     size_t queued = 0;
-    size_t rendering = 0;
+    // size_t rendering = 0;
     size_t rendered = 0;
     std::chrono::time_point<std::chrono::high_resolution_clock> render_begin = job.chunks[0].render_begin;
     std::chrono::time_point<std::chrono::high_resolution_clock> render_end = job.chunks[0].render_begin;
     for (const auto &chunk : job.chunks) {
       if (chunk.state == job_state::queued) queued++;
-      if (chunk.state == job_state::rendering) rendering++;
+      // if (chunk.state == job_state::rendering) rendering++;
       if (chunk.state == job_state::rendered) rendered++;
       render_begin = std::min(render_begin, chunk.render_begin);
       render_end = std::max(render_end, chunk.render_end);
