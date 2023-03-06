@@ -28,6 +28,7 @@
     <q-input v-model.number="viewpoint_store_raw.offset_x" label="offset x" />
     <q-input v-model.number="viewpoint_store_raw.offset_y" label="offset y" />
     <q-input v-model.number="script_store.num_chunks" label="num chunks" />
+    <q-input v-model.number="viewpoint_store_raw.scale" label="scale" />
     <br />
     <q-checkbox
       dark
