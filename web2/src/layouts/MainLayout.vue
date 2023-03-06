@@ -221,7 +221,8 @@ export default defineComponent({
         script_store.texture_size_updated_by_server++; // make sure our viewpont reacts
 
         let viewpoint_store = useViewpointStore();
-        let scale = viewpoint_store.scale;
+        let scale_ratio = canvas_h / 1080.0;
+        let scale = viewpoint_store.scale * scale_ratio;
         function squared_dist(num: number, num2: number) {
           return (num - num2) * (num - num2);
         }
