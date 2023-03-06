@@ -773,7 +773,8 @@ void generator::debug_print_next() {
                  << ", angle = " << gen.angle() << ", gravity_group=" << beh.gravity_group()
                  << ", opacity=" << gen.opacity() << ", texture = " << sty.texture()
                  << ", gradient = " << sty.gradient() << ", unique_group = " << beh.unique_group()
-                 << ", destroyed = " << std::boolalpha << meta.is_destroyed() << std::endl;
+                 << ", destroyed = " << std::boolalpha << meta.is_destroyed() << ", scale = " << gen.scale()
+                 << std::endl;
   };
   for (auto& shape : scenes_.next_shapes_current_scene()) {
     meta_visit(

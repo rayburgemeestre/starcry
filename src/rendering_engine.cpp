@@ -159,9 +159,8 @@ image &rendering_engine::_render(size_t thread_num,
 
   bmp.clear_to_color(bg_color);
 
-  double scale_ratio = (top_scale / 1080.) * canvas_h;  // std::min(canvas_w, canvas_h);
+  double scale_ratio = canvas_h / 1080.;  //(top_scale / 1080.) * canvas_h;  // std::min(canvas_w, canvas_h);
 
-  draw_logic_->scale(top_scale /* * scale_ratio */);
   draw_logic_->canvas_width(canvas_w);
   draw_logic_->canvas_height(canvas_h);
   draw_logic_->height(height);
@@ -232,7 +231,7 @@ image &rendering_engine::_render(size_t thread_num,
         // first one
         double opacity = 1.0;
         const auto scale = scales[scales.size() - 1] /* * scale_ratio */;
-        draw_logic_->scale(top_scale * scale);
+        draw_logic_->scale(scale * scale_ratio);
         bounding_box box;
         switch (shape.type) {
           case data::shape_type::circle:
@@ -315,7 +314,7 @@ image &rendering_engine::_render(size_t thread_num,
           const auto &index = index_data.second;
           const auto &shape = shapes[step][index];
           const auto scale = scales[step] /* * scale_ratio */;
-          draw_logic_->scale(top_scale * scale);
+          draw_logic_->scale(scale * scale_ratio);
           switch (shape.type) {
             case data::shape_type::circle:
               box.update(draw_logic_->render_circle(bmp, shape, opacity, settings));
