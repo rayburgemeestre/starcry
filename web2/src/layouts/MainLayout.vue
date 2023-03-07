@@ -235,6 +235,8 @@ export default defineComponent({
           let center_y = viewpoint_store.offset_y;
           let offset_x = 0;
           let offset_y = 0;
+          // TODO: refactor the way we send objects once more
+
           let x = (obj.x - center_x) * scale - offset_x + canvas_w / 2;
           let y = (obj.y - center_y) * scale - offset_y + canvas_h / 2;
           let view_x =

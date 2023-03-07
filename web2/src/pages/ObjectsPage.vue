@@ -6,7 +6,7 @@
     row-key="#"
     hide-header
     hide-pagination
-    :rows-per-page-options="[100]"
+    :rows-per-page-options="[10000]"
   >
   </q-table>
 </template>
@@ -40,12 +40,18 @@ export default defineComponent({
       let rows = [];
       for (let object of objects) {
         let row = [];
-        for (let property in object) {
-          row.push(object[property]);
+        let found_level = 0;
+        for (let field of object) {
+          let property = field[0];
+          let value = field[1];
+          if (property === 'level') found_level = value;
+          row.push(value);
         }
-        rows.push(row);
+        if (found_level === 0) {
+          rows.push(row);
+        }
       }
-      console.log(rows);
+      // console.log(rows);
       return rows;
     }
     let objects_store = useObjectsStore();
@@ -59,6 +65,16 @@ export default defineComponent({
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       (buffer) => {
         objects_store.objects = buffer;
+        if (buffer.length) {
+          // insert headers as first row in objects_store.objects
+          let headers = [];
+          for (let field of buffer[0]) {
+            headers.push([field[0], field[0]]);
+          }
+          console.log(headers);
+          console.log('OK');
+          objects_store.objects.unshift(headers);
+        }
         // this.render_objects();
       },
       // eslint-disable-next-line @typescript-eslint/no-unused-vars

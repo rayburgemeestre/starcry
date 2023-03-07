@@ -27,6 +27,22 @@ enum class shape_type {
   script,
 };
 
+inline std::string shape_type_to_string(shape_type type) {
+  switch (type) {
+    case shape_type::none:
+      return "none";
+    case shape_type::text:
+      return "text";
+    case shape_type::circle:
+      return "circle";
+    case shape_type::line:
+      return "line";
+    case shape_type::script:
+      return "script";
+  }
+  return "none";
+}
+
 struct shape {
   double time = 0;
   double x = 0;

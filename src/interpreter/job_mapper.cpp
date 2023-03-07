@@ -35,7 +35,7 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
   data::shape new_shape;
 
   const auto initialize = [&]<typename T>(T& shape) {
-    auto level = 0;  // shape.level;
+    auto level = shape.meta_cref().level();
     // See if we require this step for this object
     // auto steps = i.integer_number(instance, "steps");
     // if (minimize_steps_per_object && !sc.do_step(steps, stepper.next_step)) {
@@ -74,7 +74,6 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
 
     new_shape.gradients_.clear();
     new_shape.textures.clear();
-    std::string gradient_id_str;
 
     copy_gradient_from_object_to_shape(shape, new_shape, gen_.gradients);
     copy_texture_from_object_to_shape(shape, new_shape, gen_.textures);
@@ -87,21 +86,25 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
       new_shape.hue = shape.styling_cref().hue();
     }
 
+    new_shape.gradient_id_str = "";
     if (!gradient_id.empty()) {
+      new_shape.gradient_id_str = gradient_id;
       if (new_shape.gradients_.empty()) {
         auto& known_gradients_map = gen_.gradients;
         if (known_gradients_map.contains(gradient_id)) {
           new_shape.gradients_.emplace_back(1.0, known_gradients_map[gradient_id]);
         }
       }
-    }
-
-    if (new_shape.gradients_.empty()) {
+    } else if (new_shape.gradients_.empty()) {
       new_shape.gradients_.emplace_back(1.0, data::gradient{});
       new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
       new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
       new_shape.gradients_[0].second.colors.emplace_back(1.0, data::color{0.0, 0, 0, 1});
+      new_shape.gradient_id_str += "**fallback**";
+    } else {
+      new_shape.gradient_id_str += "**mixed**";
     }
+
     new_shape.z = 0;
     // new_shape.vel_x = vel_x;
     // new_shape.vel_y = vel_y;

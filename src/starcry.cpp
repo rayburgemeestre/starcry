@@ -441,52 +441,31 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
       }
 #endif
       for (const auto &shape : shapes[shapes.size() - 1]) {
-        if (shape.type == data::shape_type::circle) {
-          json circle = {
-              {"index", index},
-              {"unique_id", shape.unique_id},
-              {"id", shape.id},
-              {"label", shape.label.empty() ? shape.id : shape.label},
-              {"level", shape.level},
-              {"gradient", shape.gradient_id_str},
-              {"type", "circle"},
-              {"x", shape.x},
-              {"y", shape.y},
-              {"vel_x", shape.vel_x},
-              {"vel_y", shape.vel_y},
+        // convert shape_type enum to string
+        json shape_json = std::vector<json>{
+            {"type", data::shape_type_to_string(shape.type)},
+            {"index", index},
+            {"unique_id", shape.unique_id},
+            {"id", shape.id},
+            {"label", shape.label.empty() ? shape.id : shape.label},
+            {"level", shape.level},
+            {"gradient", shape.gradient_id_str},
+            {"x", shape.x},
+            {"y", shape.y},
+            {"x2", shape.x2},
+            {"y2", shape.y2},
+            {"vel_x", shape.vel_x},
+            {"vel_y", shape.vel_y},
 #ifdef DEBUG_NUM_SHAPES
-              {"#", nums[shape.unique_id]},
-              {"random_hash", shape.random_hash},
+            {"#", nums[shape.unique_id]},
+            {"random_hash", shape.random_hash},
 #else
-              {"#", -1},
+            {"#", -1},
 #endif
-              {"time", shape.time},
-          };
-          shapes_json.push_back(circle);
-        }
-        if (shape.type == data::shape_type::line) {
-          json line = {
-              {"index", index},
-              {"unique_id", shape.unique_id},
-              {"id", shape.id},
-              {"label", shape.label.empty() ? shape.id : shape.label},
-              {"level", shape.level},
-              {"gradient", shape.gradient_id_str},
-              {"type", "line"},
-              {"x", shape.x},
-              {"y", shape.y},
-              {"x2", shape.x2},
-              {"y2", shape.y2},
-#ifdef DEBUG_NUM_SHAPES
-              {"#", nums[shape.unique_id]},
-              {"random_hash", shape.random_hash},
-#else
-              {"#", -1},
-#endif
-              {"time", shape.time},
-          };
-          shapes_json.push_back(line);
-        }
+            {"time", shape.time},
+        };
+        shapes_json.push_back(shape_json);
+
         // TODO: script type
         index++;
       }
