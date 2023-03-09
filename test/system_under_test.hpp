@@ -53,7 +53,7 @@ double sut::test_create_image(const std::string& image_name) {
     auto vp = sc.get_viewpoint();
     vp.canvas_w = 320;
     vp.canvas_h = 240;
-    vp.scale = 0.7;
+    vp.scale = 1.0;
     sc.set_viewpoint(vp);
     sc.setup_server();
     auto req = std::make_shared<data::frame_request>(options.script_file, options.frame_of_interest, options.num_chunks);
@@ -90,7 +90,7 @@ double sut::test_create_video(const std::string& video_name, int frames, int fps
     auto vp = sc.get_viewpoint();
     vp.canvas_w = 320;
     vp.canvas_h = 240;
-    vp.scale = 0.4;
+    vp.scale = 1.0;
     sc.set_viewpoint(vp);
     sc.setup_server();
     const auto req = std::make_shared<data::video_request>(

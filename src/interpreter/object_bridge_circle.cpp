@@ -79,6 +79,11 @@ int64_t object_bridge<data_staging::circle>::get_blending_type() const {
 }
 
 template <>
+std::string object_bridge<data_staging::circle>::get_gradient() const {
+  return shape_stack.back()->styling_ref().gradient();
+}
+
+template <>
 std::string object_bridge<data_staging::circle>::get_collision_group() const {
   return shape_stack.back()->behavior_ref().gravity_group();
 }
@@ -193,6 +198,11 @@ void object_bridge<data_staging::circle>::set_blending_type(int64_t blending_typ
 }
 
 template <>
+void object_bridge<data_staging::circle>::set_gradient(const std::string& gradient) const {
+  return shape_stack.back()->styling_ref().set_gradient(gradient);
+}
+
+template <>
 void object_bridge<data_staging::circle>::set_collision_group(const std::string& cg) const {
   return shape_stack.back()->behavior_ref().set_collision_group(cg);
 }
@@ -228,6 +238,7 @@ object_bridge<data_staging::circle>::object_bridge(interpreter::generator* gener
       .property("radius", &object_bridge::get_radius, &object_bridge::set_radius)
       .property("radiussize", &object_bridge::get_radius_size, &object_bridge::set_radius_size)
       .property("props", &object_bridge::get_properties_local_ref)
+      .property("gradient", &object_bridge::get_gradient, &object_bridge::set_gradient)
       .property("gradients", &object_bridge::get_gradients_local_ref)
       .function("spawn", &object_bridge::spawn)
       .function("spawn2", &object_bridge::spawn2)

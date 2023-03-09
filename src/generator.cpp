@@ -188,7 +188,7 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
                   << " , points to: " << i.str(object_src_obj, "file") << std::endl;
 
     // also copy all the stuff from the object definition
-    instantiate_object_copy_fields(i, created_instance, object_src_obj);
+    i.recursively_copy_object(created_instance, object_src_obj);
 
     i.set_field(genctx->objects, object_dst_id, object_src);
     auto val = i.get(objects, object_src_id);

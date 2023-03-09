@@ -27,7 +27,12 @@ _ = {
           [0, -stepsize],
         ];
         for (let v of vec) {
-          this.spawn({'id': 'dot', 'x': v[0], 'y': v[1]});
+          // TODO: just passing unique_group always, causes infinite loop somewhere
+          let obj = {'id': 'dot', 'x': v[0], 'y': v[1], 'gradient': this.gradient};
+          if (typeof this.unique_group != 'undefined') {
+            obj['unique_group'] = this.unique_group;
+          }
+          this.spawn(obj);
         }
       },
       'time': function(t, elapsed, s) {

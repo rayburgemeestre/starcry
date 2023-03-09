@@ -36,7 +36,7 @@ help: # with thanks to Ben Rady
 .PHONY: build
 build:  ## build starcry binary using docker (with clang)
 	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
-	                    cmake --build build --target starcry -j 4 && \
+	                    cmake --build build --target starcry -j $$(nproc) && \
 	                    strip --strip-debug build/starcry)
 
 .PHONY: all
@@ -157,6 +157,7 @@ clean:  ## clean build artifacts
 	rm -f web/webroot/stream/stream.m3u8*
 	rm -rf docs/doxygen/*
 	rm -rf docs/output/*
+	rm -rf cmake-build-debug
 
 .PHONY: dockerize
 dockerize:  ## dockerize starcry executable in stripped down docker image

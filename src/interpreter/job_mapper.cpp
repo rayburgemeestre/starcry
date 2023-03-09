@@ -89,7 +89,7 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     new_shape.gradient_id_str = "";
     if (!gradient_id.empty()) {
       new_shape.gradient_id_str = gradient_id;
-      if (new_shape.gradients_.empty()) {
+      if (new_shape.gradients_.empty()) {  // instead of if-statement we can also clear() the array
         auto& known_gradients_map = gen_.gradients;
         if (known_gradients_map.contains(gradient_id)) {
           new_shape.gradients_.emplace_back(1.0, known_gradients_map[gradient_id]);

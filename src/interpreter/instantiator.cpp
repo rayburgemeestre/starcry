@@ -12,41 +12,41 @@ namespace interpreter {
 void instantiate_object_copy_fields(v8_interact& i,
                                     v8::Local<v8::Object> scene_obj,
                                     v8::Local<v8::Object> new_instance) {
-  i.copy_field_if_exists(new_instance, "id", scene_obj);
-  i.copy_field_if_exists(new_instance, "x", scene_obj);
-  i.copy_field_if_exists(new_instance, "y", scene_obj);
-  i.copy_field_if_exists(new_instance, "x2", scene_obj);
-  i.copy_field_if_exists(new_instance, "y2", scene_obj);
-  i.copy_field_if_exists(new_instance, "vel_x", scene_obj);
-  i.copy_field_if_exists(new_instance, "vel_y", scene_obj);
-  i.copy_field_if_exists(new_instance, "vel_x2", scene_obj);
-  i.copy_field_if_exists(new_instance, "vel_y2", scene_obj);
-  i.copy_field_if_exists(new_instance, "velocity", scene_obj);
-  i.copy_field_if_exists(new_instance, "mass", scene_obj);
-  i.copy_field_if_exists(new_instance, "radius", scene_obj);
-  i.copy_field_if_exists(new_instance, "radiussize", scene_obj);
-  i.copy_field_if_exists(new_instance, "gradient", scene_obj);
-  i.copy_field_if_exists(new_instance, "texture", scene_obj);
-  i.copy_field_if_exists(new_instance, "seed", scene_obj);
-  i.copy_field_if_exists(new_instance, "blending_type", scene_obj);
-  i.copy_field_if_exists(new_instance, "opacity", scene_obj);
-  i.copy_field_if_exists(new_instance, "scale", scene_obj);
-  i.copy_field_if_exists(new_instance, "angle", scene_obj);
-  i.copy_field_if_exists(new_instance, "rotate", scene_obj);
-  i.copy_field_if_exists(new_instance, "hue", scene_obj);
-  i.copy_field_if_exists(new_instance, "pivot", scene_obj);
-  i.copy_field_if_exists(new_instance, "text", scene_obj);
-  i.copy_field_if_exists(new_instance, "text_align", scene_obj);
-  i.copy_field_if_exists(new_instance, "text_size", scene_obj);
-  i.copy_field_if_exists(new_instance, "text_fixed", scene_obj);
-  i.copy_field_if_exists(new_instance, "text_font", scene_obj);
-  // this function is also used for parent -> child field inheritence.
-  // for scripts, the 'file' field should never be inherited.
-  // i.copy_field_if_exists(new_instance, "file", scene_obj);
-  i.copy_field_if_exists(new_instance, "duration", scene_obj);
-  i.copy_field_if_exists(new_instance, "collision_group", scene_obj);
-  i.copy_field_if_exists(new_instance, "gravity_group", scene_obj);
-  i.copy_field_if_exists(new_instance, "unique_group", scene_obj);
+  for (auto field : {"id",
+                     "x",
+                     "y",
+                     "x2",
+                     "y2",
+                     "vel_x",
+                     "vel_y",
+                     "vel_x2",
+                     "vel_y2",
+                     "velocity",
+                     "mass",
+                     "radius",
+                     "radiussize",
+                     "gradient",
+                     "gradients",
+                     "texture",
+                     "seed",
+                     "blending_type",
+                     "opacity",
+                     "scale",
+                     "angle",
+                     "rotate",
+                     "hue",
+                     "pivot",
+                     "text",
+                     "text_align",
+                     "text_size",
+                     "text_fixed",
+                     "text_font",
+                     "duration",
+                     "collision_group",
+                     "gravity_group",
+                     "unique_group"}) {
+    i.copy_field_if_exists(new_instance, field, scene_obj);
+  }
 }
 
 void recursively_build_stack_for_object(auto& new_stack,
@@ -103,11 +103,7 @@ void instantiator::instantiate_additional_objects_from_new_scene(v8::Persistent<
     logger(DEBUG) << std::string(debug_level, ' ') << "Instantiating object id: " << scene_obj_id
                   << " (namespace: " << namespace_ << ")" << std::endl;
 
-    /**
-     * when specifying 'scene_inheritance_has_priority' to 'true', that means that we won't
-     * ever overwrite certain fields, such as 'gradient' or 'unique_group' to spawned objects
-     */
-    auto instantiated_object = instantiate_object_from_scene(i, scene_obj, parent_object, true);
+    auto instantiated_object = instantiate_object_from_scene(i, scene_obj, parent_object);
     if (instantiated_object) {
       auto [created_instance, shape_ref, shape_copy] = *instantiated_object;
       gen_.create_bookkeeping_for_script_objects(created_instance, shape_copy, debug_level + 1);
@@ -118,9 +114,8 @@ void instantiator::instantiate_additional_objects_from_new_scene(v8::Persistent<
 std::optional<std::tuple<v8::Local<v8::Object>, std::reference_wrapper<data_staging::shape_t>, data_staging::shape_t>>
 instantiator::instantiate_object_from_scene(
     v8_interact& i,
-    v8::Local<v8::Object>& scene_object,         // object description from scene to be instantiated
-    const data_staging::shape_t* parent_object,  // it's optional parent
-    bool scene_inheritance_has_priority) {
+    v8::Local<v8::Object>& scene_object,           // object description from scene to be instantiated
+    const data_staging::shape_t* parent_object) {  // it's optional parent
   v8::Isolate* isolate = i.get_isolate();
 
   int64_t current_level = 0;
@@ -159,19 +154,6 @@ instantiator::instantiate_object_from_scene(
 
   // instantiate the prototype into newly allocated javascript object
   _instantiate_object(i, scene_object, object_prototype, instance, current_level, parent_object_ns);
-
-  // inherit some fields from parent
-  //  if (parent_object) {
-  //    meta_callback(const_cast<data_staging::shape_t&>(*parent_object), [&](auto& shape) {
-  //      if (!scene_inheritance_has_priority) {
-  //          // dealing with a parent spawning a child, which should inherit explicitly specified fields only
-  //        if (shape.styling_cref().gradient().size())
-  //          i.set_field(instance, "gradient", v8_str(i.get_context(), shape.styling_ref().gradient()));
-  //        if (shape.behavior_cref().unique_group_ref().size())
-  //          i.set_field(instance, "unique_group", v8_str(i.get_context(), shape.behavior_ref().unique_group()));
-  //      }
-  //    });
-  //  }
 
   // give it a unique id (it already has been assigned a __random_hash__ for debugging purposes
   static int64_t counter = 0;
@@ -402,22 +384,6 @@ void instantiator::_instantiate_object(v8_interact& i,
     i.set_field(new_instance, "__random_hash__", v8_str(i.get_context(), rand_str));
   }
   i.set_field(new_instance, "__instance__", v8::Boolean::New(isolate, true));
-
-  // Make sure we deep copy the gradients
-  i.set_field(new_instance, "gradients", v8::Array::New(isolate));
-  auto dest_gradients = i.get(new_instance, "gradients").As<v8::Array>();
-  auto gradients = i.has_field(object_prototype, "gradients") && i.get(object_prototype, "gradients")->IsArray()
-                       ? i.get(object_prototype, "gradients").As<v8::Array>()
-                       : v8::Array::New(i.get_isolate());
-  for (size_t k = 0; k < gradients->Length(); k++) {
-    i.set_field(dest_gradients, k, v8::Array::New(isolate));
-
-    auto gradient = i.get_index(gradients, k).As<v8::Array>();
-    auto dest_gradient = i.get_index(dest_gradients, k).As<v8::Array>();
-    for (size_t l = 0; l < gradient->Length(); l++) {
-      i.set_field(dest_gradient, l, i.get_index(gradient, l));
-    }
-  }
 
   // Ensure we have a props object in the new obj
   if (!i.has_field(new_instance, "props")) {

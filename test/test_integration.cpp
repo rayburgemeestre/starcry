@@ -41,9 +41,9 @@ TEST_CASE("Test dedupe + rotate image") {
   sut sc;
   sc.options.script_file = "input/dupes.js";
   sc.options.frame_of_interest = 1;
-  REQUIRE(sc.test_create_image("unittest_006_dedupe_frame1") <= double(0.05 * fuzziness_allowed));
+  REQUIRE(sc.test_create_image("unittest_006_dupes_frame1") <= double(0.05 * fuzziness_allowed));
   sc.options.frame_of_interest = 2;
-  REQUIRE(sc.test_create_image("unittest_006_dedupe_frame2") <= double(0.05 * fuzziness_allowed));
+  REQUIRE(sc.test_create_image("unittest_006_dupes_frame2") <= double(0.05 * fuzziness_allowed));
 }
 
 TEST_CASE("Test rainbow image") {

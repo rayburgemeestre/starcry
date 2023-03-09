@@ -79,6 +79,11 @@ double object_bridge<data_staging::line>::get_radius_size() const {
 }
 
 template <>
+std::string object_bridge<data_staging::line>::get_gradient() const {
+  return shape_stack.back()->styling_ref().gradient();
+}
+
+template <>
 int64_t object_bridge<data_staging::line>::get_seed() const {
   return shape_stack.back()->styling_ref().seed();
 }
@@ -159,6 +164,11 @@ void object_bridge<data_staging::line>::set_radius_size(double line_width) {
 }
 
 template <>
+void object_bridge<data_staging::line>::set_gradient(const std::string& gradient) const {
+  return shape_stack.back()->styling_ref().set_gradient(gradient);
+}
+
+template <>
 void object_bridge<data_staging::line>::set_seed(int64_t new_value) const {
   return shape_stack.back()->styling_ref().set_seed(new_value);
 }
@@ -191,6 +201,7 @@ object_bridge<data_staging::line>::object_bridge(interpreter::generator* generat
       .function("spawn_parent", &object_bridge::spawn_parent)
       .function("destroy", &object_bridge::destroy)
       .property("props", &object_bridge::get_properties_local_ref)
+      .property("gradient", &object_bridge::get_gradient, &object_bridge::set_gradient)
       .property("gradients", &object_bridge::get_gradients_local_ref)
       .property("seed", &object_bridge::get_seed, &object_bridge::set_seed)
       .property("unique_group", &object_bridge::get_unique_group, &object_bridge::set_unique_group);

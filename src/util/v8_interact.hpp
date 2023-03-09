@@ -458,9 +458,32 @@ public:
     handle_error(dest->SetPrototype(get_isolate()->GetCurrentContext(), source));
   }
 
+  void recursively_fix(v8::Local<v8::Object>& dest_object, v8::Local<v8::Object>& source_object) {
+    // TODO: why is this needed (make deep copy of the gradients)
+    auto isolate = get_isolate();
+    set_field(dest_object, "gradients", v8::Array::New(isolate));
+    auto dest_gradients = get(dest_object, "gradients").template As<v8::Array>();
+    auto gradients = has_field(source_object, "gradients") && get(source_object, "gradients")->IsArray()
+                         ? get(source_object, "gradients").template As<v8::Array>()
+                         : v8::Array::New(get_isolate());
+    for (size_t k = 0; k < gradients->Length(); k++) {
+      set_field(dest_gradients, k, v8::Array::New(isolate));
+
+      auto gradient = get_index(gradients, k).template As<v8::Array>();
+      auto dest_gradient = get_index(dest_gradients, k).template As<v8::Array>();
+      for (size_t l = 0; l < gradient->Length(); l++) {
+        set_field(dest_gradient, l, get_index(gradient, l));
+      }
+    }
+  }
+
+  void recursively_fix(v8::Persistent<v8::Object>& dest_object, v8::Persistent<v8::Object>& source_object) {
+    // noop
+  }
+
   // utils
   template <typename T>
-  void recursively_copy_object(T& dest_object, T& source_object) {
+  void recursively_copy_object(T& dest_object, T& source_object, bool first_level = true) {
     auto isolate = get_isolate();
     auto obj_fields = prop_names(source_object);
     for (size_t k = 0; k < obj_fields->Length(); k++) {
@@ -476,7 +499,7 @@ public:
           if (a_src->IsObject()) {
             auto a_dst = v8::Object::New(isolate);
             auto a_src_obj = a_src.template As<v8::Object>();
-            recursively_copy_object(a_dst, a_src_obj);
+            recursively_copy_object(a_dst, a_src_obj, false);
             call_fun(new_sub_array, "push", a_dst);
           } else {
             call_fun(new_sub_array, "push", a_src);
@@ -486,12 +509,13 @@ public:
       } else if (field_value->IsObject() && !field_value->IsFunction()) {
         v8::Local<v8::Object> new_sub_instance = v8::Object::New(isolate);
         auto tmp = field_value.template As<v8::Object>();
-        recursively_copy_object(new_sub_instance, tmp);
+        recursively_copy_object(new_sub_instance, tmp, false);
         set_field(dest_object, field_name, new_sub_instance);
       } else {
         set_field(dest_object, field_name, field_value);
       }
     }
+    recursively_fix(dest_object, source_object);
   }
 
   void empty_and_resize(v8::Local<v8::Array>& obj, size_t len) {
