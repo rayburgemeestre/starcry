@@ -358,9 +358,9 @@ image &rendering_engine::_render(size_t thread_num,
 #ifndef EMSCRIPTEN
 #ifndef SC_CLIENT
       metrics->set_render_job_object_state(thread_num, job_num, chunk_num, index, metrics::job_state::rendered);
-#endif
-#endif
       index++;
+#endif
+#endif
     }
     return bmp;
   }
