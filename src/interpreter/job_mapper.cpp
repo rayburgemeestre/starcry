@@ -161,6 +161,16 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
         new_shape.y = shape.transitive_location_ref().position_cref().y;
         initialize(shape);
       },
+      [&](data_staging::ellipse& shape) {
+        new_shape.type = data::shape_type::ellipse;
+        new_shape.longest_diameter = shape.longest_diameter();
+        new_shape.shortest_diameter = shape.shortest_diameter();
+        new_shape.rotate = shape.generic_cref().rotate();
+        new_shape.radius_size = shape.radius_size();
+        new_shape.x = shape.transitive_location_ref().position_cref().x;
+        new_shape.y = shape.transitive_location_ref().position_cref().y;
+        initialize(shape);
+      },
       [&](data_staging::line& shape) {
         new_shape.type = data::shape_type::line;
         new_shape.radius = 0;

@@ -70,6 +70,9 @@ void interactor::update_interactions() {
                           [&](data_staging::circle& c) {
                             handle_pass1(abstract_shape, c, c.meta_ref());
                           },
+                          [&](data_staging::ellipse& e) {
+                            handle_pass1(abstract_shape, e, e.meta_ref());
+                          },
                           [&](data_staging::line& l) {
                             handle_pass1(abstract_shape, l, l.meta_ref());
                           },
@@ -108,6 +111,30 @@ void interactor::update_interactions() {
                               }
                             }
                           },
+                          [&](data_staging::ellipse& e) {
+                            // TODO: duplicated code from above with ellipse -> we need to re-use
+                            handle_pass2(abstract_shape, e, e.meta_ref());
+                            for (const auto& cascade_out : e.cascade_out_cref()) {
+                              auto& other = gen_.next_instance_map.at(cascade_out.unique_id()).get();
+                              if (auto other_line = std::get_if<data_staging::line>(&other)) {
+                                if (cascade_out.type() == cascade_type::start) {
+                                  other_line->line_start_ref().position_ref().x = e.location_ref().position_cref().x;
+                                  other_line->line_start_ref().position_ref().y = e.location_ref().position_cref().y;
+                                  other_line->transitive_line_start_ref().position_ref().x =
+                                      e.transitive_location_ref().position_cref().x;
+                                  other_line->transitive_line_start_ref().position_ref().y =
+                                      e.transitive_location_ref().position_cref().y;
+                                } else if (cascade_out.type() == cascade_type::end) {
+                                  other_line->line_end_ref().position_ref().x = e.location_ref().position_cref().x;
+                                  other_line->line_end_ref().position_ref().y = e.location_ref().position_cref().y;
+                                  other_line->transitive_line_end_ref().position_ref().x =
+                                      e.transitive_location_ref().position_cref().x;
+                                  other_line->transitive_line_end_ref().position_ref().y =
+                                      e.transitive_location_ref().position_cref().y;
+                                }
+                              }
+                            }
+                          },
                           [&](data_staging::line& l) {
                             handle_pass2(abstract_shape, l, l.meta_ref());
                           },
@@ -136,6 +163,10 @@ bool interactor::destroy_if_duplicate(const std::string& unique_group, data_stag
       [&](data_staging::circle& c) {
         unique_groups[unique_group].query(
             destroy_shape, c.transitive_location_ref().position_ref().x, c.transitive_location_ref().position_ref().y);
+      },
+      [&](data_staging::ellipse& e) {
+        unique_groups[unique_group].query(
+            destroy_shape, e.transitive_location_ref().position_ref().x, e.transitive_location_ref().position_ref().y);
       },
       [&](data_staging::line& l) {
         unique_groups[unique_group].query(destroy_shape,
@@ -294,6 +325,8 @@ void interactor::handle_collision(data_staging::circle& instance,
     auto callback_wrapper = [&]<typename T>(T& shape, int64_t unique_id) {
       if constexpr (std::is_same_v<T, data_staging::circle>) {
         return handle_time_for_shape(shape, gen_.bridges_.circle(), unique_id);
+      } else if constexpr (std::is_same_v<T, data_staging::ellipse>) {
+        return handle_time_for_shape(shape, gen_.bridges_.ellipse(), unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::line>) {
         return handle_time_for_shape(shape, gen_.bridges_.line(), unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::text>) {

@@ -51,6 +51,8 @@ public:
   double get_y2() const;
   double get_z2() const;
   double get_radius() const;
+  double get_longest_diameter() const;
+  double get_shortest_diameter() const;
   double get_radius_size() const;
   const std::string& get_text() const;
   double get_text_size() const;
@@ -80,6 +82,8 @@ public:
   void set_vel_y(double y);
   void set_velocity(double vel);
   void set_radius(double radius);
+  void set_longest_diameter(double diameter);
+  void set_shortest_diameter(double diameter);
   void set_radius_size(double radiussize);
   void set_text(const std::string& text);
   void set_text_size(double size);

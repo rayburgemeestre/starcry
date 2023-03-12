@@ -23,6 +23,7 @@ enum class shape_type {
   none,
   text,
   circle,
+  ellipse,
   line,
   script,
 };
@@ -35,6 +36,8 @@ inline std::string shape_type_to_string(shape_type type) {
       return "text";
     case shape_type::circle:
       return "circle";
+    case shape_type::ellipse:
+      return "ellipse";
     case shape_type::line:
       return "line";
     case shape_type::script:
@@ -58,6 +61,9 @@ struct shape {
   double g = 0;
   double b = 0;
   double radius = 0;
+  double longest_diameter = 0;
+  double shortest_diameter = 0;
+  double rotate = 0;  // ellipse specific rotation
   double radius_size = 0;
   double text_size = 10;
   std::string text;
@@ -103,6 +109,9 @@ struct shape {
        g,
        b,
        radius,
+       longest_diameter,
+       shortest_diameter,
+       rotate,
        text_size,
        radius_size,
        text,

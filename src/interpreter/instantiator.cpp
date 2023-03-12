@@ -264,6 +264,27 @@ instantiator::instantiate_object_from_scene(
 
     initialize(c, gen_.bridges_.circle());
 
+  } else if (type == "ellipse") {
+    data_staging::ellipse e(object_id,
+                            counter,
+                            vector2d(i.double_number(instance, "x"), i.double_number(instance, "y")),
+                            i.double_number(instance, "longest_diameter", i.double_number(instance, "a")),
+                            i.double_number(instance, "shortest_diameter", i.double_number(instance, "b")),
+                            i.double_number(instance, "radiussize"));
+
+    if (type.empty()) e.generic_ref().set_opacity(0);
+
+    e.movement_ref().set_velocity(i.double_number(instance, "vel_x", 0),
+                                  i.double_number(instance, "vel_y", 0),
+                                  i.double_number(instance, "velocity", 0));
+
+    e.meta_ref().set_namespace(parent_object_ns);
+
+    e.styling_ref().set_seed(i.integer_number(instance, "seed", 0));
+    e.styling_ref().set_blending_type(i.integer_number(instance, "blending_type"));
+
+    initialize(e, gen_.bridges_.ellipse());
+
   } else if (type == "line") {
     data_staging::line l(object_id,
                          counter,

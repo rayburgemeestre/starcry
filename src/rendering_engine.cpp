@@ -237,6 +237,9 @@ image &rendering_engine::_render(size_t thread_num,
           case data::shape_type::circle:
             box = draw_logic_->render_circle(bmp, shape, opacity, settings);
             break;
+          case data::shape_type::ellipse:
+            box = draw_logic_->render_ellipse(bmp, shape, opacity, settings);
+            break;
           case data::shape_type::line:
             draw_logic_->render_line(bmp, shape, opacity, settings);
             break;
@@ -277,6 +280,9 @@ image &rendering_engine::_render(size_t thread_num,
               case data::shape_type::circle:
                 box = draw_logic_->render_circle(bmp, shape, opacity, settings);
                 break;
+              case data::shape_type::ellipse:
+                box = draw_logic_->render_ellipse(bmp, shape, opacity, settings);
+                break;
               case data::shape_type::line:
                 draw_logic_->render_line(bmp, shape, opacity, settings);
                 break;
@@ -291,6 +297,9 @@ image &rendering_engine::_render(size_t thread_num,
             switch (shape.type) {
               case data::shape_type::circle:
                 box.update(draw_logic_->render_circle(bmp, shape, opacity, settings));
+                break;
+              case data::shape_type::ellipse:
+                box.update(draw_logic_->render_ellipse(bmp, shape, opacity, settings));
                 break;
               case data::shape_type::line:
                 draw_logic_->render_line(bmp, shape, opacity, settings);
@@ -318,6 +327,9 @@ image &rendering_engine::_render(size_t thread_num,
           switch (shape.type) {
             case data::shape_type::circle:
               box.update(draw_logic_->render_circle(bmp, shape, opacity, settings));
+              break;
+            case data::shape_type::ellipse:
+              box.update(draw_logic_->render_ellipse(bmp, shape, opacity, settings));
               break;
             case data::shape_type::line:
               draw_logic_->render_line(bmp, shape, opacity, settings);

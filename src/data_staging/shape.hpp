@@ -9,6 +9,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include <variant>
 
 #include "data_staging/circle.hpp"
+#include "data_staging/ellipse.hpp"
 #include "data_staging/line.hpp"
 #include "data_staging/script.hpp"
 #include "data_staging/text.hpp"
@@ -21,15 +22,25 @@ template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace data_staging {
-using shape_t =
-    std::variant<std::monostate, data_staging::circle, data_staging::line, data_staging::text, data_staging::script>;
+using shape_t = std::variant<std::monostate,
+                             data_staging::circle,
+                             data_staging::ellipse,
+                             data_staging::line,
+                             data_staging::text,
+                             data_staging::script>;
 }
 
-void meta_visit(auto& shape, auto&& handle_circle, auto&& handle_line, auto&& handle_text, auto&& handle_script) {
+void meta_visit(auto& shape,
+                auto&& handle_circle,
+                auto&& handle_ellipse,
+                auto&& handle_line,
+                auto&& handle_text,
+                auto&& handle_script) {
   if (shape.valueless_by_exception()) {
     return;
   }
-  std::visit(overloaded{[](std::monostate) {}, handle_circle, handle_line, handle_text, handle_script}, shape);
+  std::visit(overloaded{[](std::monostate) {}, handle_circle, handle_ellipse, handle_line, handle_text, handle_script},
+             shape);
 }
 
 template <typename T>
@@ -38,6 +49,9 @@ void meta_callback(T& shape, auto&& callback) {
       shape,
       [&callback](data_staging::circle& c) {
         callback(c);
+      },
+      [&callback](data_staging::ellipse& e) {
+        callback(e);
       },
       [&callback](data_staging::line& l) {
         callback(l);
@@ -56,6 +70,9 @@ void meta_callback(const T& shape, auto&& callback) {
       shape,
       [&callback](const data_staging::circle& c) {
         callback(c);
+      },
+      [&callback](const data_staging::ellipse& e) {
+        callback(e);
       },
       [&callback](const data_staging::line& l) {
         callback(l);

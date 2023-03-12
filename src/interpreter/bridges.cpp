@@ -10,6 +10,7 @@ bridges::bridges(generator& gen) : gen_(gen) {}
 
 void bridges::init() {
   object_bridge_circle = std::make_shared<object_bridge<data_staging::circle>>(&gen_);
+  object_bridge_ellipse = std::make_shared<object_bridge<data_staging::ellipse>>(&gen_);
   object_bridge_line = std::make_shared<object_bridge<data_staging::line>>(&gen_);
   object_bridge_text = std::make_shared<object_bridge<data_staging::text>>(&gen_);
   object_bridge_script = std::make_shared<object_bridge<data_staging::script>>(&gen_);
@@ -17,6 +18,10 @@ void bridges::init() {
 
 std::shared_ptr<object_bridge<data_staging::circle>>& bridges::circle() {
   return object_bridge_circle;
+}
+
+std::shared_ptr<object_bridge<data_staging::ellipse>>& bridges::ellipse() {
+  return object_bridge_ellipse;
 }
 
 std::shared_ptr<object_bridge<data_staging::line>>& bridges::line() {

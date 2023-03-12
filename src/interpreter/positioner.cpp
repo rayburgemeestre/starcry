@@ -111,6 +111,9 @@ void positioner::update_rotations() {
                           [&](data_staging::circle& c) {
                             handle_pass1(abstract_shape, c, c.meta_ref());
                           },
+                          [&](data_staging::ellipse& e) {
+                            handle_pass1(abstract_shape, e, e.meta_ref());
+                          },
                           [&](data_staging::line& l) {
                             handle_pass1(abstract_shape, l, l.meta_ref());
                           },
@@ -195,6 +198,11 @@ void positioner::handle_rotations(data_staging::shape_t& shape,
         handle(c);
         c.transitive_location_ref().position_ref().x = new_position.x;
         c.transitive_location_ref().position_ref().y = new_position.y;
+      },
+      [&handle, &new_position](data_staging::ellipse& e) {
+        handle(e);
+        e.transitive_location_ref().position_ref().x = new_position.x;
+        e.transitive_location_ref().position_ref().y = new_position.y;
       },
       [&handle, &new_position, &new_position2](data_staging::line& l) {
         handle(l);

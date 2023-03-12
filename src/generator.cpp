@@ -522,6 +522,9 @@ void generator::update_time(data_staging::shape_t& instance,
           [&](data_staging::circle& c) {
             handle_time_for_shape(c, bridges_.circle());
           },
+          [&](data_staging::ellipse& e) {
+            handle_time_for_shape(e, bridges_.ellipse());
+          },
           [&](data_staging::line& l) {
             handle_time_for_shape(l, bridges_.line());
           },
@@ -570,6 +573,10 @@ double generator::get_max_travel_of_object(data_staging::shape_t& shape_now, dat
         xy_now = shape.transitive_location_ref().position_cref();
         radius_now = shape.radius() + shape.radius_size();
       },
+      [&xy_now](data_staging::ellipse& shape) {
+        xy_now = shape.transitive_location_ref().position_cref();
+        // ...
+      },
       [&xy_now, &xy2_now, &compare_xy2](data_staging::line& shape) {
         xy_now = shape.transitive_line_start_ref().position_cref();
         xy2_now = shape.transitive_line_end_ref().position_cref();
@@ -587,6 +594,10 @@ double generator::get_max_travel_of_object(data_staging::shape_t& shape_now, dat
       [&xy_prev, &radius_prev](data_staging::circle& shape) {
         xy_prev = shape.transitive_location_ref().position_cref();
         radius_prev = shape.radius() + shape.radius_size();
+      },
+      [&xy_prev](data_staging::ellipse& shape) {
+        xy_prev = shape.transitive_location_ref().position_cref();
+        // ...
       },
       [&xy_prev, &xy2_prev](data_staging::line& shape) {
         xy_prev = shape.transitive_line_start_ref().position_cref();
@@ -780,6 +791,14 @@ void generator::debug_print_next() {
     meta_visit(
         shape,
         [&](data_staging::circle& shape) {
+          print_meta(shape.meta_ref(),
+                     shape.location_ref(),
+                     shape.movement_ref(),
+                     shape.behavior_ref(),
+                     shape.generic_ref(),
+                     shape.styling_ref());
+        },
+        [&](data_staging::ellipse& shape) {
           print_meta(shape.meta_ref(),
                      shape.location_ref(),
                      shape.movement_ref(),

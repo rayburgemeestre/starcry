@@ -16,6 +16,7 @@ private:
   generator& gen_;
 
   std::shared_ptr<object_bridge<data_staging::circle>> object_bridge_circle = nullptr;
+  std::shared_ptr<object_bridge<data_staging::ellipse>> object_bridge_ellipse = nullptr;
   std::shared_ptr<object_bridge<data_staging::line>> object_bridge_line = nullptr;
   std::shared_ptr<object_bridge<data_staging::script>> object_bridge_script = nullptr;
   std::shared_ptr<object_bridge<data_staging::text>> object_bridge_text = nullptr;
@@ -25,6 +26,7 @@ public:
   void init();
 
   std::shared_ptr<object_bridge<data_staging::circle>>& circle();
+  std::shared_ptr<object_bridge<data_staging::ellipse>>& ellipse();
   std::shared_ptr<object_bridge<data_staging::line>>& line();
   std::shared_ptr<object_bridge<data_staging::script>>& script();
   std::shared_ptr<object_bridge<data_staging::text>>& text();

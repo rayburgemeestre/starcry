@@ -6,6 +6,7 @@
 #pragma once
 
 #include <algorithm>  // for stdmath::clamp
+#include <cmath>
 #include <random>
 
 #include "color_blender.hpp"
@@ -267,6 +268,101 @@ public:
     return box;
   }
 
+  inline bounding_box render_ellipse(image &bmp,
+                                     const data::shape &shape,
+                                     double opacity,
+                                     const data::settings &settings) {
+    bounding_box box;
+    double ellipse_x = to_abs_x(shape.x);
+    double ellipse_y = to_abs_y(shape.y);
+
+    auto a = shape.longest_diameter * scale_ * shape.scale;
+    auto b = shape.shortest_diameter * scale_ * shape.scale;
+
+    // We'll just estimate two circles large and small enough to include the ellipse.
+    // The math for calculating intersections with an ellipse were a bit too complicated for me
+    // at the time of writing (especially since we also need to deal with rotatable ellipses)
+    auto radius = std::max(shape.shortest_diameter, shape.longest_diameter) * scale_ * shape.scale;
+    auto radius_inner = std::min(shape.shortest_diameter, shape.longest_diameter) * scale_ * shape.scale;
+
+    auto radius_size = shape.radius_size * scale_ * shape.scale;
+
+    bool reuse_sqrt = floor(ellipse_x) == ellipse_x && floor(ellipse_y) == ellipse_y;
+
+    // There is a {-1, +1} for compensating rounding that occurs with floating point.
+    int radius_outer_circle = round_to_int(radius + radius_size + 1);
+    int radius_inner_circle = round_to_int(radius_inner - radius_size - 1);
+
+    for (int rel_y = 0; rel_y < radius_outer_circle; rel_y++) {
+      // Below a -1 has been added, due to an off-by-one error that happens only in case objects are
+      // moving at fast(er?) velocity, and becomes noticeable as scanlines if you are rendering with > 1 chunks.
+      // I fixed this here, as well as added - 1 to bottom left and right as "abs_y_bottom - 1".
+      // In the end this was the easier fixed, for some reason extending the radius_outer_circle with more pixels
+      // doesn't have an effect.
+      int abs_y_top = static_cast<int>(ellipse_y - rel_y + 0.5) - 1;
+      int abs_y_bottom = static_cast<int>(ellipse_y + rel_y + 0.5);
+
+      box.update_y(abs_y_top);
+      box.update_y(abs_y_bottom);
+
+      if ((abs_y_top < 0) && (abs_y_bottom > static_cast<int>(height_))) break;
+
+      int hxcl_outer = half_chord_length<decltype(radius_outer_circle), double>(radius_outer_circle, rel_y);
+      int hxcl_inner = 0;
+
+      if (radius_inner_circle >= rel_y)
+        hxcl_inner = half_chord_length<decltype(radius_inner_circle), double>(radius_inner_circle, rel_y);
+
+      for (int rel_x = hxcl_inner; rel_x < hxcl_outer; rel_x++) {
+        int abs_x_left = static_cast<int>(ellipse_x - rel_x + 0.5) - 1;
+        if (abs_x_left > static_cast<int>(width_)) break;
+        int abs_x_right = static_cast<int>(ellipse_x + rel_x + 0.5) - 1;
+        if (abs_x_right < 0) break;
+
+        box.update_x(abs_x_left);
+        box.update_x(abs_x_right);
+
+        if (abs_x_left < 0 && abs_x_right > static_cast<int>(width_)) continue;
+
+        render_ellipse_pixel(
+            bmp, shape, a, b, radius_size, ellipse_x, ellipse_y, abs_x_left, abs_y_top, opacity, settings);
+
+        // bottom left
+        if (rel_y != 0)
+          render_ellipse_pixel(bmp,
+                               shape,
+                               a,
+                               b,
+                               radius_size,
+                               ellipse_x,
+                               ellipse_y,
+                               abs_x_left,
+                               abs_y_bottom - 1,  // workaround for off-by-one error
+                               opacity,
+                               settings);
+
+        // top right
+        if (rel_x != 0)
+          render_ellipse_pixel(
+              bmp, shape, a, b, radius_size, ellipse_x, ellipse_y, abs_x_right, abs_y_top, opacity, settings);
+        // bottom right
+        if (rel_x != 0 && rel_y != 0)
+          render_ellipse_pixel(bmp,
+                               shape,
+                               a,
+                               b,
+                               radius_size,
+                               ellipse_x,
+                               ellipse_y,
+                               abs_x_right,
+                               abs_y_bottom - 1,  // workaround for off-by-one error
+                               opacity,
+                               settings);
+      }
+    }
+    return box;
+  }
+
   inline bounding_box render_text(image &bmp,
                                   const data::shape &shape,
                                   double opacity,
@@ -382,6 +478,49 @@ public:
     }
 
     render_pixel(bmp, shape, posX, posY, absX, absY, Opacity, opacity, settings);
+  }
+
+  void render_ellipse_pixel(image &bmp,
+                            const data::shape &shape,
+                            double a,
+                            double b,
+                            double radiussize,
+                            double posX,
+                            double posY,
+                            int absX,
+                            int absY,
+                            double opacity,
+                            const data::settings &settings) {
+    if (absX < 0 || absY < 0 || absX >= static_cast<int>(width_) || absY >= static_cast<int>(height_)) return;
+
+    // TODO: also move to some utils somewhere, also a duplicate function ..
+    const auto degrees_to_radian = [](double degrees) {
+      const auto pi = 3.14159265358979323846;
+      return degrees * pi / 180.0;
+    };
+
+    // Inverting rotation, personally find 45 degrees rotated to mean clockwise more intuitive
+    double radians = degrees_to_radian(-shape.rotate);
+    double s = std::sin(radians);
+    double c = std::cos(radians);
+    double dx = absX - posX;
+    double dy = absY - posY;
+    double x_rotated = c * dx + s * dy;
+    double y_rotated = c * dy - s * dx;
+    auto n = (x_rotated / a) * (x_rotated / a);
+    auto m = (y_rotated / b) * (y_rotated / b);
+    double distance_from_edge = fabs(sqrt((n + m)) - 1.);
+
+    double maxDist = sqrt((a * a) + (b * b));
+    double test = maxDist / sqrt((radiussize * radiussize) + (radiussize * radiussize));
+    distance_from_edge *= test;
+
+    if (distance_from_edge > 1.) return;
+
+    double intensity = 1.0 - distance_from_edge;
+    double nil = 0;
+    double ful = 1.;
+    bmp.set(absX, absY, intensity, nil, nil, ful);
   }
 
   template <typename blending_type_>

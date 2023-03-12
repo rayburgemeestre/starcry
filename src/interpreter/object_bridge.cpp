@@ -120,6 +120,7 @@ v8::Persistent<v8::Object>& object_bridge<T>::instance() {
 }
 
 template class object_bridge<data_staging::circle>;
+template class object_bridge<data_staging::ellipse>;
 template class object_bridge<data_staging::line>;
 template class object_bridge<data_staging::script>;
 template class object_bridge<data_staging::text>;
