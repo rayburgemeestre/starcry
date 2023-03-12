@@ -1,6 +1,7 @@
 _ = {
   'gradients': {
     'white': '#ffffff@0.0',
+    'red': '#ff0000@0.0',
   },
   'objects': {
     'circle': {
@@ -14,7 +15,7 @@ _ = {
     },
     'ellipse': {
       'type': 'ellipse',
-      'gradient': 'white',
+      'gradient': 'red',
       'x': 0,
       'y': 0,
       'shortest_diameter': 100,

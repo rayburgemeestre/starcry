@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Ellipse Color Demo</title>
+  </head>
+  <body>
+    <canvas id="myCanvas" width="500" height="500"></canvas>
+    <script>
+      const canvas = document.getElementById('myCanvas');
+      const ctx = canvas.getContext('2d');
+
+      const centerX = 200;
+      const centerY = 250;
+      const a = 100;
+      const b = 70;
+      const angle = 45;
+      const angleInRadians = angle * Math.PI / 180;
+      const cosAngle = Math.cos(angleInRadians);
+      const sinAngle = Math.sin(angleInRadians);
+
+      let radiussize = 20;
+
+      for (let x = 0; x < canvas.width; x++) {
+        for (let y = 0; y < canvas.height; y++) {
+          const dx = x - centerX;
+          const dy = y - centerY;
+          const rotatedX = cosAngle * dx + sinAngle * dy;
+          const rotatedY = cosAngle * dy - sinAngle * dx;
+          let distanceFromEdge = Math.abs(Math.sqrt((rotatedX / a) ** 2 + (rotatedY / b) ** 2) - 1);
+          const maxDist = Math.sqrt(a ** 2 + b ** 2);
+          let test = radiussize;
+          test = maxDist / Math.sqrt(test ** 2 + test ** 2);
+          distanceFromEdge = (distanceFromEdge) * test;
+
+          if (distanceFromEdge <= 1) {
+            const intensity = 255 - (distanceFromEdge * 255);
+            ctx.fillStyle = `rgb(${intensity}, ${intensity}, ${intensity})`;
+            ctx.fillRect(x, y, 1, 1);
+          } else {
+            ctx.fillStyle = 'red';
+            ctx.fillRect(x, y, 1, 1);
+          }
+
+        }
+      }
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 100 + radiussize, 0, 2 * Math.PI);
+        ctx.lineWidth = 2;
+      ctx.strokeStyle = 'blue';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 70 - radiussize, 0, 2 * Math.PI);
+      ctx.fillStyle = 'blue';
+        ctx.lineWidth = 2;
+      ctx.strokeStyle = 'blue';
+      ctx.stroke();
+
+    </script>
+  </body>
+</html>
+

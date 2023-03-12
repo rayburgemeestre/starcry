@@ -517,10 +517,11 @@ public:
 
     if (distance_from_edge > 1.) return;
 
-    double intensity = 1.0 - distance_from_edge;
-    double nil = 0;
-    double ful = 1.;
-    bmp.set(absX, absY, intensity, nil, nil, ful);
+    if (shape.gradients_.empty()) {
+      throw std::runtime_error("gradients cannot not be empty");
+    }
+
+    render_pixel(bmp, shape, posX, posY, absX, absY, distance_from_edge, opacity, settings);
   }
 
   template <typename blending_type_>
