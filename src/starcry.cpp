@@ -93,6 +93,10 @@ starcry::~starcry() {
 }
 
 void starcry::configure_inotify() {
+  if (!std::filesystem::exists("input")) {
+    logger(DEBUG) << "path (input) does not exist" << std::endl;
+    return;
+  }
   inotifypp::filesystem::path path("input");
   auto handleNotification = [&](inotify::Notification notification) {
     logger(DEBUG) << "File modified on disk: " << notification.path.string() << std::endl;

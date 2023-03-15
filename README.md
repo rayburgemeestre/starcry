@@ -14,22 +14,16 @@ The interface to the user is either the Javascript file or the VueJS based UI.
 
 ## Quickstart
 
-Create `starcry` alias that uses podman (see docker version below):
+Create `starcry` alias that uses docker (see <a href="docs/docker.md">docker.md</a> for other versions, including with podman)
 
-    # image +/- 350 MiB
-    # podman
-    alias starcry='xhost + && podman run --rm --name starcry -p 18080:18080 -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v8'
-    # docker (non-rootless version)
-    alias starcry='xhost + && docker run --rm --name starcry -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v8'
-    # force software rendering
     alias starcry='xhost + && docker run --rm --name starcry -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --device /dev/dri/card0:/dev/dri/card0 --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v8'
 
-Get a test project file and render it:
+Get a test project file and render it (use `ctrl`+`t` to toggle a preview window):
 
-    wget https://raw.githubusercontent.com/rayburgemeestre/starcry/master/input/script.js
-    starcry ./script.js
+    wget https://raw.githubusercontent.com/rayburgemeestre/starcry/master/input/web.js
+    starcry ./web.js
 
-View the video with `ffplay`, `mpv` or something else:
+View the video with `ffplay`, `mpv` or something else, e.g.:
 
     ffplay output*.h264
 
@@ -41,7 +35,6 @@ View the video with `ffplay`, `mpv` or something else:
     make build      # execute containerized clang build
     make build-gcc  # execute containerized gcc build
     make debug      # execute containerized clang debug build
-    make dockerize  # create starcry runtime containers
 
 The executable from the dockerized build will be in `build` and should run on
 Ubuntu 22.04.
@@ -53,23 +46,20 @@ Ubuntu 22.04.
 - `libs/framer` - ffmpeg wrapper to generate video output.
 - `libffmpeg` + `h264` - dependencies used by framer.
 - `V8` + `v8pp` - used for scripting, starcry is tightly coupled with it.
-- `VueJS` - used for the Web UI
-- `Buefy` - used for the Web UI (vue + bulma)
-- `Seasocks` - used for the Web UI
+- `Quasar` - web UI framework (vue3, pinia, typescript)
+- `Seasocks` - internal web server with websockets support
 - `png++` - used for writing PNG files
 - `fmt` - used for string formatting
 - `SFML` - used for preview window
 - `OpenEXR` - used for writing exr files
-- `tvision` - used for the console UI
+- `tvision` - used for the console UI (TUI)
 - `inotify-cpp` - used for monitoring changes to loaded js file on disk.
 - `Redis` - used for pub/sub between starcry and remote rendering workers
+- `vivid` - color library used for hue etc.
 
 Almost everything is statically linked, resulting in a relatively portable binary.
-
-The Web UI is based on Vue2. Currently, the UI is using Buefy, which is not going to support Vue3.
-
-Currently waiting for Vue3 to become more mature before switching to it.
 
 ## TODO
 
 * Introduce proper v8 javascript <> shape mapper and get rid of v8 code in a lot of places (except for the mappers).
+* Getting rid of the old properties system we have for shapes.
