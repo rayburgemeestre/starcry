@@ -1,6 +1,6 @@
 [![C/C++ CI](https://github.com/rayburgemeestre/starcry/actions/workflows/ci.yml/badge.svg)](https://github.com/rayburgemeestre/starcry/actions/workflows/ci.yml) [![MPL 2.0 License](https://img.shields.io/badge/license-MPL2.0-blue.svg)](http://veldstra.org/2016/12/09/you-should-choose-mpl2-for-your-opensource-project.html)
 
-<img src="https://cppse.nl/sc_logo.png?V3" width="404">
+<img src="https://cppse.nl/sc_logo2.png?V1" width="400">
 
 This is a rendering engine that aims to be a blend between photoshop and
 code-based generative art.
@@ -10,7 +10,7 @@ Javascript engine.
 
 The interface to the user is either the Javascript file or the VueJS based UI.
 
-<img src="https://cppse.nl/sc.png" width="100%">
+<img src="https://cppse.nl/sc2.png" width="100%">
 
 ## Quickstart
 
@@ -39,8 +39,11 @@ View the video with `ffplay`, `mpv` or something else, e.g.:
 The executable from the dockerized build will be in `build` and should run on
 Ubuntu 22.04.
 
-
 ## Architecture
+
+The architecture is only partially documented <a href="docs/tech_doc.md">here</a>.
+
+## Components
 
 - `libs/piper` - a pipeline architecture is used for the main architecture.
 - `libs/framer` - ffmpeg wrapper to generate video output.

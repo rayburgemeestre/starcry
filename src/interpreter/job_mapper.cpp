@@ -93,6 +93,12 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
         auto& known_gradients_map = gen_.gradients;
         if (known_gradients_map.contains(gradient_id)) {
           new_shape.gradients_.emplace_back(1.0, known_gradients_map[gradient_id]);
+        } else {
+          new_shape.gradients_.emplace_back(1.0, data::gradient{});
+          new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
+          new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
+          new_shape.gradients_[0].second.colors.emplace_back(1.0, data::color{0.0, 0, 0, 1});
+          new_shape.gradient_id_str += "**fallback2**";
         }
       }
     } else if (new_shape.gradients_.empty()) {
