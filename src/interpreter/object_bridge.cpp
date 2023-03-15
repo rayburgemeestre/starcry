@@ -42,6 +42,12 @@ void object_bridge<T>::pop_object() {
 }
 
 template <typename T>
+v8::Local<v8::Value> object_bridge<T>::get_attr(v8::Local<v8::String> obj) {
+  data_staging::shape_t var = *shape_stack.back();
+  return generator_->get_attr(var, obj);
+}
+
+template <typename T>
 int64_t object_bridge<T>::spawn(v8::Local<v8::Object> obj) {
   data_staging::shape_t var = *shape_stack.back();
   return generator_->spawn_object(var, obj);

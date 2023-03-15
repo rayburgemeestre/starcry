@@ -44,6 +44,9 @@ void initializer::reset_context() {
   gen_.context->add_fun("rand", [&]() {
     return rand_fun(gen_.rand_);
   });
+  gen_.context->add_fun("attr", [&](v8::Local<v8::String> str) -> v8::Local<v8::Value> {
+    return gen_.global_attrs_.get(v8_str(v8::Isolate::GetCurrent(), str));
+  });
   gen_.context->add_fun("angled_velocity", &angled_velocity);
   gen_.context->add_fun("random_velocity", [&]() {
     return random_velocity(gen_.rand_);

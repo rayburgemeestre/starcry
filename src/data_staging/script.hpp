@@ -10,6 +10,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include <string>
 #include <vector>
 
+#include "data_staging/attrs.hpp"
 #include "data_staging/behavior.hpp"
 #include "data_staging/generic.hpp"
 #include "data_staging/location.hpp"
@@ -34,6 +35,7 @@ private:
   toroidal toroidal_;
   properties properties_;
   styling styling_;
+  attrs attrs_;
 
 public:
   script(std::string id, int64_t unique_id, vector2d position) : meta_(std::move(id), unique_id), location_(position) {}
@@ -43,6 +45,20 @@ public:
   }
   data_staging::meta& meta_ref() {
     return meta_;
+  }
+
+  /**
+   * Attributes data const reference
+   */
+  const attrs& attrs_cref() const {
+    return attrs_;
+  }
+
+  /**
+   * Attributes data reference
+   */
+  data_staging::attrs& attrs_ref() {
+    return attrs_;
   }
   const location& location_cref() const {
     return location_;

@@ -240,6 +240,7 @@ object_bridge<data_staging::circle>::object_bridge(interpreter::generator* gener
       .property("props", &object_bridge::get_properties_local_ref)
       .property("gradient", &object_bridge::get_gradient, &object_bridge::set_gradient)
       .property("gradients", &object_bridge::get_gradients_local_ref)
+      .function("attr", &object_bridge::get_attr)
       .function("spawn", &object_bridge::spawn)
       .function("spawn2", &object_bridge::spawn2)
       .function("spawn3", &object_bridge::spawn3)

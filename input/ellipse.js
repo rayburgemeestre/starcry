@@ -22,6 +22,9 @@ _ = {
       'longest_diameter': 70,
       'radiussize': 20.0,
       'rotate': -45,
+      'time': function(t, e) {
+        this.rotate += e * 50.;
+      }
     },
   },
   'video': {
@@ -44,9 +47,30 @@ _ = {
       'name': 'scene1',
       'duration': 3.0,
       'objects': [
-        {'id': 'ellipse', 'x': 0, 'y': 0, 'z': 0},
-        {'id': 'circle', 'x': 0, 'y': 0, 'z': 0, 'radius': 100 + 20},
-        {'id': 'circle', 'x': 0, 'y': 0, 'z': 0, 'radius': 70 - 20},
+        {
+          'id': 'ellipse',
+          'x': 0,
+          'y': 0,
+          'z': 0,
+          'shortest_diameter': attr('shortest_diameter') || 70,
+          'longest_diameter': attr('longest_diameter') || 100,
+          'radiussize': attr('radiussize') || 20.0,
+          'rotate': attr('rotate') || 45
+        },
+        {
+          'id': 'circle',
+          'x': 0,
+          'y': 0,
+          'z': 0,
+          'radius': (attr('longest_diameter') || 100) + (attr('radiussize') || 20.0)
+        },
+        {
+          'id': 'circle',
+          'x': 0,
+          'y': 0,
+          'z': 0,
+          'radius': (attr('shortest_diameter') || 70) - (attr('radiussize') || 20.0)
+        },
       ]
     },
   ]

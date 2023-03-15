@@ -206,6 +206,7 @@ object_bridge<data_staging::text>::object_bridge(interpreter::generator* generat
       .property("text_fixed", &object_bridge::get_text_fixed, &object_bridge::set_text_fixed)
       .property("props", &object_bridge::get_properties_local_ref)
       .property("gradients", &object_bridge::get_gradients_local_ref)
+      .function("attr", &object_bridge::get_attr)
       .function("spawn", &object_bridge::spawn)
       .function("spawn2", &object_bridge::spawn2)
       .function("spawn3", &object_bridge::spawn3)

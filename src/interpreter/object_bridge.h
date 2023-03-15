@@ -102,6 +102,7 @@ public:
 
   std::vector<std::tuple<double, std::string>>& get_gradients_ref() const;
 
+  v8::Local<v8::Value> get_attr(v8::Local<v8::String> obj);
   int64_t spawn(v8::Local<v8::Object> obj);
   // TODO: rename to spawn_line
   int64_t spawn2(v8::Local<v8::Object> line_obj, int64_t obj1);

@@ -32,12 +32,12 @@ public:
       const data_staging::shape_t* parent_object);  // it's optional parent
 
 private:
-  void _instantiate_object(v8_interact& i,
-                           std::optional<v8::Local<v8::Object>> scene_obj,
-                           v8::Local<v8::Object> object_prototype,
-                           v8::Local<v8::Object> new_instance,
-                           int64_t level,
-                           const std::string& namespace_);
+  static void _instantiate_object(v8_interact& i,
+                                  std::optional<v8::Local<v8::Object>> scene_obj,
+                                  v8::Local<v8::Object> object_prototype,
+                                  v8::Local<v8::Object> new_instance,
+                                  int64_t level,
+                                  const std::string& namespace_);
 
   template <typename T>
   void write_back_copy(T& copy);

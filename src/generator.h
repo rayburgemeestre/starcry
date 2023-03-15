@@ -106,6 +106,7 @@ private:
   job_mapper job_mapper_;
 
   util::random_generator rand_;
+  data_staging::attrs global_attrs_;
 
 public:
   explicit generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug = false);
@@ -141,6 +142,8 @@ public:
   double get_seed() const;
   data::settings settings() const;
   std::string filename() const;
+
+  v8::Local<v8::Value> get_attr(data_staging::shape_t& spawner, v8::Local<v8::String> field);
 
   int64_t spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
   int64_t spawn_object2(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1);

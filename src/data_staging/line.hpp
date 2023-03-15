@@ -13,6 +13,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include <string>
 #include <vector>
 
+#include "data_staging/attrs.hpp"
 #include "data_staging/behavior.hpp"
 #include "data_staging/cascade.hpp"
 #include "data_staging/generic.hpp"
@@ -46,6 +47,8 @@ private:
   std::vector<cascade> cascades_in_;
   std::vector<cascade> cascades_out_;
 
+  attrs attrs_;
+
 public:
   line(std::string id, int64_t unique_id, vector2d line_start, vector2d line_end, double line_width)
       : meta_(std::move(id), unique_id), line_start_(line_start), line_end_(line_end), line_width_(line_width) {}
@@ -55,6 +58,20 @@ public:
   }
   data_staging::meta& meta_ref() {
     return meta_;
+  }
+
+  /**
+   * Attributes data const reference
+   */
+  const attrs& attrs_cref() const {
+    return attrs_;
+  }
+
+  /**
+   * Attributes data reference
+   */
+  data_staging::attrs& attrs_ref() {
+    return attrs_;
   }
   const location& line_start() const {
     return line_start_;

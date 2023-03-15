@@ -641,6 +641,16 @@ std::string generator::filename() const {
   return filename_;
 }
 
+v8::Local<v8::Value> generator::get_attr(data_staging::shape_t& spawner, v8::Local<v8::String> field) {
+  auto& i = genctx->i();
+  const std::string f = v8_str(i.get_isolate(), field);
+  v8::Local<v8::Value> value = v8::Undefined(i.get_isolate());
+  meta_callback(spawner, [&]<typename T>(const T& cc) {
+    value = cc.attrs_cref().get(f);
+  });
+  return value;
+}
+
 int64_t generator::spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj) {
   auto& i = genctx->i();
 

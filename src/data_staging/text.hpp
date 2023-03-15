@@ -10,6 +10,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include "data/texture.hpp"
 #include "util/vector_logic.hpp"
 
+#include "data_staging/attrs.hpp"
 #include "data_staging/behavior.hpp"
 #include "data_staging/cascade.hpp"
 #include "data_staging/generic.hpp"
@@ -46,6 +47,7 @@ private:
   properties properties_;
   std::vector<cascade> cascades_in_;
   std::vector<cascade> cascades_out_;
+  attrs attrs_;
 
 public:
   text(std::string id,
@@ -67,6 +69,20 @@ public:
   }
   data_staging::meta& meta_ref() {
     return meta_;
+  }
+
+  /**
+   * Attributes data const reference
+   */
+  const attrs& attrs_cref() const {
+    return attrs_;
+  }
+
+  /**
+   * Attributes data reference
+   */
+  data_staging::attrs& attrs_ref() {
+    return attrs_;
   }
   const location& location_cref() const {
     return location_;

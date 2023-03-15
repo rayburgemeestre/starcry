@@ -146,6 +146,7 @@ object_bridge<data_staging::script>::object_bridge(interpreter::generator *gener
       .property("vel_y", &object_bridge::get_vel_y, &object_bridge::set_vel_y)
       .property("velocity", &object_bridge::get_velocity, &object_bridge::set_velocity)
       .function("props", &object_bridge::get_properties_local_ref)
+      .function("attr", &object_bridge::get_attr)
       .function("spawn", &object_bridge::spawn)
       .function("spawn2", &object_bridge::spawn2)
       .function("spawn3", &object_bridge::spawn3)

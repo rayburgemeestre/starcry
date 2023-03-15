@@ -25,6 +25,8 @@ void instantiate_object_copy_fields(v8_interact& i,
                      "mass",
                      "radius",
                      "radiussize",
+                     "shortest_diameter",
+                     "longest_diameter",
                      "gradient",
                      "gradients",
                      "texture",
@@ -224,6 +226,28 @@ instantiator::instantiate_object_from_scene(
       }
     }
 
+    if (i.has_field(instance, "attrs")) {
+      auto attrs = i.v8_obj(instance, "attrs");
+      auto obj_fields = i.prop_names(attrs);
+      for (size_t k = 0; k < obj_fields->Length(); k++) {
+        auto field_name = i.get_index(obj_fields, k);
+        auto field_name_str = i.str(obj_fields, k);
+        auto field_value = i.get(attrs, field_name);
+        i.set_field(c.properties_ref().properties_ref(), field_name, field_value);
+        if (field_value->IsString()) {
+          c.attrs_ref().set(field_name_str, v8_str(i.get_isolate(), field_value.As<v8::String>()));
+          if constexpr (std::is_same_v<T, data_staging::script>) {
+            gen_.global_attrs_.set(field_name_str, v8_str(i.get_isolate(), field_value.As<v8::String>()));
+          }
+        } else if (field_value->IsNumber()) {
+          c.attrs_ref().set(field_name_str, field_value.As<v8::Number>()->Value());
+          if constexpr (std::is_same_v<T, data_staging::script>) {
+            gen_.global_attrs_.set(field_name_str, field_value.As<v8::Number>()->Value());
+          }
+        }
+      }
+    }
+
     // the handle function returns a ref, which is all fine, but recursively init
     // may actually invalidate this ref with other inserts.
     shape_ref = std::ref(handle(c));
@@ -411,6 +435,11 @@ void instantiator::_instantiate_object(v8_interact& i,
     i.set_field(new_instance, "props", v8::Object::New(i.get_isolate()));
   }
 
+  // Ensure we have an attrs object in the new obj
+  if (!i.has_field(new_instance, "attrs")) {
+    i.set_field(new_instance, "attrs", v8::Object::New(i.get_isolate()));
+  }
+
   // Ensure we have some other fields
   for (auto str : {"x", "y", "x2", "y2"}) {
     if (!i.has_field(new_instance, str)) {
@@ -431,8 +460,18 @@ void instantiator::_instantiate_object(v8_interact& i,
     }
   }
 
-  auto the_fun = i.get_fun("__spawn__");
-  i.set_fun(new_instance, "spawn", the_fun);
+  // Do the same for attributes
+  if (scene_obj) {
+    auto props = i.v8_obj(new_instance, "attrs");
+    auto scene_props = i.v8_obj(*scene_obj, "attrs");
+    auto obj_fields = i.prop_names(scene_props);
+
+    for (size_t k = 0; k < obj_fields->Length(); k++) {
+      auto field_name = i.get_index(obj_fields, k);
+      auto field_value = i.get(scene_props, field_name);
+      i.set_field(props, field_name, field_value);
+    }
+  }
 }
 
 template <typename T>
