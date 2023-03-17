@@ -66,3 +66,5 @@ Almost everything is statically linked, resulting in a relatively portable binar
 
 * Introduce proper v8 javascript <> shape mapper and get rid of v8 code in a lot of places (except for the mappers).
 * Getting rid of the old properties system we have for shapes.
+* https://varun.ca/noise/#glossy-blobs
+* Move more properties to "base" class object_bridge, some are needless duplication.

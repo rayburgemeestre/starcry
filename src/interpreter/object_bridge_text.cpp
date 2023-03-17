@@ -185,6 +185,7 @@ void object_bridge<data_staging::text>::set_seed(int64_t new_value) const {
 template <>
 object_bridge<data_staging::text>::object_bridge(interpreter::generator* generator) : generator_(generator) {
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
+  // @add_field@
   object_bridge_class  // .template ctor<int>()
       .property("level", &object_bridge::get_level)
       .property("unique_id", &object_bridge::get_unique_id, &object_bridge::set_unique_id)
@@ -206,6 +207,7 @@ object_bridge<data_staging::text>::object_bridge(interpreter::generator* generat
       .property("text_fixed", &object_bridge::get_text_fixed, &object_bridge::set_text_fixed)
       .property("props", &object_bridge::get_properties_local_ref)
       .property("gradients", &object_bridge::get_gradients_local_ref)
+      .property("texture", &object_bridge::get_texture_3d, &object_bridge::set_texture_3d)
       .function("attr", &object_bridge::get_attr)
       .function("spawn", &object_bridge::spawn)
       .function("spawn2", &object_bridge::spawn2)

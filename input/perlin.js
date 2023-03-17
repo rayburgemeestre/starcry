@@ -1,25 +1,23 @@
 _ = {
   'gradients': {
-    'red': [
-      {'position': 0.0, 'r': 1, 'g': 0, 'b': 0, 'a': 1.0},
-      {'position': 1.0, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
-    ],
-    'green': [
-      {'position': 0.0, 'r': 0, 'g': 1, 'b': 0, 'a': 1.0},
-      {'position': 1.0, 'r': 0, 'g': 1, 'b': 0, 'a': 0},
-    ],
-    'blue': [
-      {'position': 0.0, 'r': 0, 'g': 0, 'b': 1, 'a': 1.0},
-      {'position': 1.0, 'r': 0, 'g': 0, 'b': 1, 'a': 0},
-    ],
-    'white2': [
-      {'position': 0.0, 'r': 1, 'g': 1, 'b': 1, 'a': .5},
-      {'position': 0.7, 'r': 1, 'g': 1, 'b': 1, 'a': .5},
-      {'position': 1.0, 'r': 1, 'g': 1, 'b': 1, 'a': 0},
-    ],
+    'red': '#ff0000@0.9',
+    'white': '#ffffff@0.9',
+    'text': '#ff0000@0.0',
   },
   'textures': {
-    'clouds1': {
+    'text0': {
+      'type': 'perlin',
+      'size': 3000.,
+      'octaves': 6,
+      'persistence': 0.50,
+      'percentage': 1.0,
+      'scale': 50.,
+      'range': [0.0, 0.0, 1.0, 1.0],
+      'strength': 1.0,
+      'rotation': 0.0,  // TODO: !
+      'speed': 1.,
+    },
+    'text1': {
       'type': 'perlin',
       'size': 3000.,
       'octaves': 7,
@@ -30,87 +28,79 @@ _ = {
       'strength': 1.0,
       'speed': 1.,
     },
-    'clouds2': {
+    'text2': {
       'type': 'fractal',
       'size': 3000.,
-      'octaves': 2,
-      'persistence': 0.45,
-      'percentage': 0.4,
-      'scale': 10.,
+      'octaves': 3,
+      'persistence': 0.50,
+      'percentage': 0.8,
+      'scale': 75.,
       'range': [0.0, 0.0, 1.0, 1.0],
       'strength': 1.0,
-      'speed': 10.,
+      'speed': 1.,
+    },
+    'text3': {
+      'type': 'turbulence',
+      'size': 3000.,
+      'octaves': 4,
+      'persistence': 0.50,
+      'percentage': 0.8,
+      'scale': 50 / 2,
+      'range': [0.0, 0.0, 1.0, 1.0],
+      'strength': 1.0,
+      'speed': 1.,
+    },
+    'text4': {
+      'type': 'turbulence',
+      'size': 200.,
+      'octaves': 4,
+      'persistence': 0.50,
+      'percentage': 0.8,
+      'scale': 10,
+      'range': [0.0, 0.0, 1.0, 1.0],
+      'strength': 1.0,
+      'speed': 1.,
     },
   },
   'objects': {
     'obj': {
       'type': 'circle',
-      'blending_type': blending_type.hardlight,
-      'gradient': 'white1',
-      //'texture': 'clouds1',
+      'blending_type': blending_type.normal,
+      'gradient': 'white',
       'radius': 0,
-      'radiussize': 100,
+      'radiussize': 200,
       'props': {},
-      'init': function() {},
-      'time': function(t, elapsed) {
-        this.radiussize = logn(t, 10) * 600.;
-      },
-    },
-    'rings': {
-      'radius': 0,
-      'radiussize': 0,
-      'props': {},
-      'x': 0,
-      'y': 150,
       'init': function() {
-        for (var i = 0; i < 30; i++) {
-          var x = i / 50.;
-          var step = expf(x, 10) * 100.;
-          this.spawn({'id': 'ring', 'x': -300, 'y': 150, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}});
-
-          this.spawn({'id': 'ring', 'x': -300, 'y': 150, 'x2': 0, 'y2': -300, 'scale': step, 'z': 0, 'props': {}});
-          this.spawn({'id': 'ring', 'x': 0, 'y': -300, 'x2': 300, 'y2': 150, 'scale': step, 'z': 0, 'props': {}});
-        }
+        this.spawn({
+          'id': 'text',
+          'y': 250,
+          'text': this.attr('text'),
+        });
       },
-      'time': function(t, elapsed) {},
     },
-    'ring': {
-      'type': 'line',
-      'gradient': 'white2',
-      'radiussize': 20,
-      'props': {},
-      'opacity': 1.,
-      'init': function() {},
-      'time': function(t, elapsed) {
-        // this.radiussize = t * 600.;
-        // this.radiussize = 20. - (logn(t, 100) * 15.);
-        this.radiussize = 20. - (logn(t, 10000) * 15.);
-        // this.gradients[0][0] = t;
-        // this.scale = 1.0 + (logn(t, 100) * 1);
-        script.video.scale = script.video.init_scale + (logn(t, 100) * 1);
-      },
-      'blending_type': blending_type.add,
-      'scale': 1.0,
+    'text': {
+      'type': 'text',
+      'gradient': 'text',
+      'text': '',
+      'text_size': 60,
+      'text_align': 'center',
+      'text_fixed': false,
     },
   },
   'video': {
     'fps': 25,
     'width': 1920,
-    'height': 1920,
-    'scale': 0.5 + 1.0,
+    'height': 1080,
+    'scale': 1.0,
     'init_scale': 0.5,
     'rand_seed': 1,
     'granularity': 100,
     'update_positions': false,
-    // 'sample': {
-    //   'include': 1.,  // include one second.
-    //   'exclude': 5.,  // then skip 5 seconds, and so on.
-    // },
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
     'minimize_steps_per_object': false,
-    'grain_for_opacity': true,
-    'min_intermediates': 5,
-    'max_intermediates': 5,
+    'grain_for_opacity': false,
+    'min_intermediates': 1,
+    'max_intermediates': 1,
   },
   'scenes': [{
     'name': 'scene1',
@@ -118,41 +108,64 @@ _ = {
     'objects': [
       {
         'id': 'obj',
-        'x': -300,
-        'y': 75,
+        'x': -600,
+        'y': -250,
         'z': 0,
-        'radius': 0,
-        'radiussize': 0,
-        'texture': 'clouds1',
-        'gradient': 'red',
+        'texture': 'text1',
         'seed': 2,
-        'props': {}
+        'texture_3d': false,
+        'attrs': {'text': 'perlin'}
       },
       {
         'id': 'obj',
         'x': 0,
-        'y': 75,
+        'y': -250,
         'z': 0,
-        'radius': 0,
-        'radiussize': 0,
-        'texture': 'clouds1',
-        'gradient': 'green',
+        'texture': 'text2',
         'seed': 20,
-        'props': {}
+        'texture_3d': false,
+        'attrs': {'text': 'fractal'}
       },
       {
         'id': 'obj',
-        'x': +300,
-        'y': 75,
+        'x': +600,
+        'y': -250,
         'z': 0,
-        'radius': 0,
-        'radiussize': 0,
-        'texture': 'clouds1',
-        'gradient': 'blue',
+        'texture': 'text3',
         'seed': 3,
-        'props': {}
+        'texture_3d': false,
+        'attrs': {'text': 'turbulence'}
       },
-      // {'id': 'rings', 'x': 0, 'y': 75, 'z': 0, 'radius': 0, 'radiussize': 0, 'props': {}},
+      {
+        'id': 'obj',
+        'x': -600,
+        'y': 250,
+        'z': 0,
+        'texture': 'text1',
+        'seed': 2,
+        'texture_3d': true,
+        'attrs': {'text': '3D mapped'}
+      },
+      {
+        'id': 'obj',
+        'x': 0,
+        'y': 250,
+        'z': 0,
+        'texture': 'text2',
+        'seed': 20,
+        'texture_3d': true,
+        'attrs': {'text': '3D mapped'}
+      },
+      {
+        'id': 'obj',
+        'x': +600,
+        'y': 250,
+        'z': 0,
+        'texture': 'text3',
+        'seed': 3,
+        'texture_3d': true,
+        'attrs': {'text': '3D mapped'}
+      },
     ],
   }]
 };

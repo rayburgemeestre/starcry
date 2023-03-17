@@ -67,7 +67,7 @@ void mainloop(void *arg) {
   r2.w = 1;
   r2.h = job.canvas_h;
 
-  SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
+  SDL_SetRenderDrawColor(renderer, 255, 80, 80, 255);
 
 #ifndef EMSCRIPTEN
   render_shapes_to_texture();
@@ -199,12 +199,12 @@ void initialize(uint32_t width, uint32_t height, uint32_t canvas_w, uint32_t can
   color2.g = 0;
   color2.b = 1;
   color2.a = 1.0;
-  gradient.colors.emplace_back(std::make_tuple(0.0, color1));
-  gradient.colors.emplace_back(std::make_tuple(1.0, color2));
+  gradient.colors.emplace_back(0.0, color1);
+  gradient.colors.emplace_back(1.0, color2);
 
 #ifndef EMSCRIPTEN
   data::shape circle;
-  circle.gradients_.push_back(std::make_pair(1.0, gradient));
+  circle.gradients_.emplace_back(1.0, gradient);
   circle.x = 0;
   circle.y = 0;
   circle.z = 0;

@@ -828,17 +828,46 @@ public:
     // auto logn = (maxpow - (pow(2.0, (1.0 - linear) * maxexp))) / max;
     //---
 
+    const auto mapSphereToNoise = [&](double x, double y, double r) -> std::optional<std::pair<double, double>> {
+      const auto imageWidth = r;
+      const auto sineLatitude = x / r;
+      const auto latitude = std::asin(sineLatitude);
+      const auto circleRadius = r * std::cos(latitude);
+      const auto sineLongitude = x / circleRadius;
+      const auto pi = 3.14159265358979323846;
+      if (sineLongitude >= -1.0 && sineLongitude <= 1.0) {
+        const auto longitude = std::asin(sineLongitude) + pi / 2.;
+        const auto noiseX = std::floor((longitude * imageWidth / 1.) / pi);
+        const auto noiseY = std::floor(y);
+        return std::make_pair(noiseX, noiseY);
+      }
+      return std::nullopt;
+    };
+
     // --- perlin noise ---
     double noise = 1.0;
     if (settings.perlin_noise) {
       if (!shape.textures.empty()) {
         noise = 0;
         for (const auto &texture : shape.textures) {
-          noise += math::clamp(
-              texture.second.get(
-                  num, absX - posX, absY - posY, shape.time, scale_, std::isnan(shape.seed) ? 1. : shape.seed),
-              0.0,
-              1.0);
+          if (shape.texture_3d) {
+            double x = absX - posX, y = absY - posY;
+            const auto mapped = mapSphereToNoise(x, y, (shape.radius + shape.radius_size) * 2.);
+            if (mapped) {
+              const auto [x, y] = *mapped;
+              noise += math::clamp(
+                  texture.second.get(num, x, y, shape.time, scale_, std::isnan(shape.seed) ? 1. : shape.seed),
+                  0.0,
+                  1.0);
+            } else {
+              // for debugging purposes (better than silent nothingness being drawn)
+              noise = 1.0;
+            }
+          } else {
+            double x = absX - posX, y = absY - posY;
+            noise += math::clamp(
+                texture.second.get(num, x, y, shape.time, scale_, std::isnan(shape.seed) ? 1. : shape.seed), 0.0, 1.0);
+          }
         }
         noise /= static_cast<double>(shape.textures.size());
       }

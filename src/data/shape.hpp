@@ -47,6 +47,7 @@ inline std::string shape_type_to_string(shape_type type) {
 }
 
 struct shape {
+  // @add_field@
   double time = 0;
   double x = 0;
   double y = 0;
@@ -72,6 +73,7 @@ struct shape {
   std::string text_font;
   std::vector<std::pair<double, gradient>> gradients_;
   std::vector<std::pair<double, texture>> textures;
+  bool texture_3d = false;
   std::string gradient_id_str;
   blending_type blending_ = blending_type::normal;
   std::map<int, size_t> indexes;
@@ -95,6 +97,7 @@ struct shape {
 
   template <class Archive>
   void serialize(Archive &ar) {
+    // @add_field@
     ar(time,
        x,
        y,
@@ -120,6 +123,7 @@ struct shape {
        text_font,
        gradients_,
        textures,
+       texture_3d,
        gradient_id_str,
        blending_,
        indexes,

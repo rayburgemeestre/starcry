@@ -130,6 +130,7 @@ void object_bridge<data_staging::script>::set_velocity(double vel) {
 template <>
 object_bridge<data_staging::script>::object_bridge(interpreter::generator *generator) : generator_(generator) {
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
+  // @add_field@
   object_bridge_class  // .template ctor<int>()
       .property("level", &object_bridge::get_level)
       .property("unique_id", &object_bridge::get_unique_id, &object_bridge::set_unique_id)
@@ -146,6 +147,7 @@ object_bridge<data_staging::script>::object_bridge(interpreter::generator *gener
       .property("vel_y", &object_bridge::get_vel_y, &object_bridge::set_vel_y)
       .property("velocity", &object_bridge::get_velocity, &object_bridge::set_velocity)
       .function("props", &object_bridge::get_properties_local_ref)
+      .property("texture", &object_bridge::get_texture_3d, &object_bridge::set_texture_3d)
       .function("attr", &object_bridge::get_attr)
       .function("spawn", &object_bridge::spawn)
       .function("spawn2", &object_bridge::spawn2)

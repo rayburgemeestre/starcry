@@ -24,6 +24,7 @@ private:
   data::blending_type blending_type_ = data::blending_type::normal;
   int64_t seed_;
   double hue_;
+  bool texture_3d_ = false;
 
 public:
   styling() {
@@ -79,8 +80,16 @@ public:
     return texture_;
   }
 
+  bool texture_3d() const {
+    return texture_3d_;
+  }
+
   void set_texture(std::string_view texture) {
     texture_ = texture;
+  }
+
+  void set_texture_3d(bool value) {
+    texture_3d_ = value;
   }
 
   const decltype(textures_)& get_textures_cref() const {

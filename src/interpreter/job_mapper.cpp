@@ -34,6 +34,7 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
                                               v8::Local<v8::Object> video) {
   data::shape new_shape;
 
+  // @add_field@
   const auto initialize = [&]<typename T>(T& shape) {
     auto level = shape.meta_cref().level();
     // See if we require this step for this object
@@ -77,6 +78,8 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
 
     copy_gradient_from_object_to_shape(shape, new_shape, gen_.gradients);
     copy_texture_from_object_to_shape(shape, new_shape, gen_.textures);
+
+    new_shape.texture_3d = shape.styling_cref().texture_3d();
 
     // temp hack
     std::string namespace_;

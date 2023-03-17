@@ -121,6 +121,18 @@ std::vector<std::tuple<double, std::string>>& object_bridge<T>::get_gradients_re
 }
 
 template <typename T>
+void object_bridge<T>::set_texture_3d(bool value) const {
+  data_staging::shape_t var = *shape_stack.back();
+  return shape_stack.back()->styling_ref().set_texture_3d(value);
+}
+
+template <typename T>
+bool object_bridge<T>::get_texture_3d() const {
+  data_staging::shape_t var = *shape_stack.back();
+  return shape_stack.back()->styling_cref().texture_3d();
+}
+
+template <typename T>
 v8::Persistent<v8::Object>& object_bridge<T>::instance() {
   return *instance_;
 }

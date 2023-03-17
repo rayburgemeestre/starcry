@@ -30,6 +30,16 @@ TEST_CASE("Test complex image") {
   REQUIRE(sc.test_create_image("unittest_005_script_frame1") == double(0));
 }
 
+TEST_CASE("Test different perlin noise functions") {
+  sut sc;
+  sc.options.script_file = "input/perlin.js";
+  sc.options.frame_of_interest = 10;
+  REQUIRE(sc.test_create_image("unittest_00X_perlin_frame10") <= double(0.08 * fuzziness_allowed));
+  sc.options.frame_of_interest = 11;
+  REQUIRE(sc.test_create_image("unittest_00X_perlin_frame11") <= double(0.08 * fuzziness_allowed));
+  REQUIRE(sc.compare("unittest_00X_perlin_frame10.png", "unittest_00X_perlin_frame11.png") > double(0.05));
+}
+
 TEST_CASE("Test image with noise") {
   sut sc;
   sc.options.script_file = "input/perlin3.js";

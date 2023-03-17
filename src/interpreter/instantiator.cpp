@@ -12,6 +12,7 @@ namespace interpreter {
 void instantiate_object_copy_fields(v8_interact& i,
                                     v8::Local<v8::Object> scene_obj,
                                     v8::Local<v8::Object> new_instance) {
+  // @add_field@
   for (auto field : {"id",
                      "x",
                      "y",
@@ -30,6 +31,7 @@ void instantiate_object_copy_fields(v8_interact& i,
                      "gradient",
                      "gradients",
                      "texture",
+                     "texture_3d",
                      "seed",
                      "blending_type",
                      "opacity",
@@ -179,6 +181,7 @@ instantiator::instantiate_object_from_scene(
   bool check_uniqueness = false;
   std::string unique_group = "";
 
+  // @add_field@
   const auto initialize = [&]<typename T>(T& c, auto& bridge) {
     c.meta_ref().set_level(current_level);
     c.meta_ref().set_parent_uid(parent_uid);
@@ -198,6 +201,9 @@ instantiator::instantiate_object_from_scene(
     if constexpr (!std::is_same_v<T, data_staging::script>) {
       if (i.has_field(instance, "texture")) {
         c.styling_ref().set_texture(i.str(instance, "texture"));
+      }
+      if (i.has_field(instance, "texture_3d")) {
+        c.styling_ref().set_texture_3d(i.boolean(instance, "texture_3d"));
       }
       if (i.has_field(instance, "gradient")) {
         c.styling_ref().set_gradient(i.str(instance, "gradient"));
