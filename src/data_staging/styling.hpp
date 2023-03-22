@@ -10,6 +10,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include <vector>
 
 #include "data/blending_type.hpp"
+#include "data/texture_3d.hpp"
 
 #include "util/logger.h"
 
@@ -24,7 +25,7 @@ private:
   data::blending_type blending_type_ = data::blending_type::normal;
   int64_t seed_;
   double hue_;
-  bool texture_3d_ = false;
+  data::texture_3d texture_3d_ = data::texture_3d::raw;
 
 public:
   styling() {
@@ -80,7 +81,7 @@ public:
     return texture_;
   }
 
-  bool texture_3d() const {
+  data::texture_3d texture_3d() const {
     return texture_3d_;
   }
 
@@ -88,7 +89,7 @@ public:
     texture_ = texture;
   }
 
-  void set_texture_3d(bool value) {
+  void set_texture_3d(data::texture_3d value) {
     texture_3d_ = value;
   }
 

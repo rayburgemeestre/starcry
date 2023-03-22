@@ -227,3 +227,12 @@ TEST_CASE( "Test size of shape" ) {
   largest_size = std::max(largest_size, sizeof(s));
   REQUIRE(sizeof(a) == largest_size + 8 /* bytes */);
 }
+
+// sanity check
+TEST_CASE( "Copy of circle shape" ) {
+  data_staging::circle c("test", 1, vector2d{19, 11}, 10., 5.);
+  REQUIRE(c.location_ref().position_ref().x == 19.);
+  auto copy = c;
+  c.location_ref().position_ref().x++;
+  REQUIRE(copy.location_ref().position_ref().x == 19.);
+}

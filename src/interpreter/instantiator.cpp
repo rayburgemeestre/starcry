@@ -203,7 +203,7 @@ instantiator::instantiate_object_from_scene(
         c.styling_ref().set_texture(i.str(instance, "texture"));
       }
       if (i.has_field(instance, "texture_3d")) {
-        c.styling_ref().set_texture_3d(i.boolean(instance, "texture_3d"));
+        c.styling_ref().set_texture_3d(i.integer_number(instance, "texture_3d"));
       }
       if (i.has_field(instance, "gradient")) {
         c.styling_ref().set_gradient(i.str(instance, "gradient"));

@@ -60,6 +60,7 @@ void initializer::reset_context() {
   gen_.context->add_fun("get_angle", &get_angle);
   gen_.context->add_fun("triangular_wave", &triangular_wave);
   gen_.context->add_fun("blending_type_str", &data::blending_type::to_str);
+  gen_.context->add_fun("texture_3d_str", &data::texture_3d::to_str);
   gen_.context->add_fun("exit", &my_exit);
 
   gen_.context->add_include_fun();
@@ -97,6 +98,16 @@ void initializer::reset_context() {
       .const_("color", data::blending_type::color)
       .const_("luminosity", data::blending_type::luminosity);
   gen_.context->context->module("blending_type", consts);
+  v8pp::module consts_2(gen_.context->isolate);
+  consts_2.const_("raw", data::texture_3d::raw)
+      .const_("radial_displacement", data::texture_3d::radial_displacement)
+      .const_("radial_compression", data::texture_3d::radial_compression)
+      .const_("radial_distortion", data::texture_3d::radial_distortion)
+      .const_("radial_scaling", data::texture_3d::radial_scaling)
+      .const_("spherical", data::texture_3d::spherical)
+      .const_("noise_3d_simplex", data::texture_3d::noise_3d_simplex)
+      .const_("noise_3d_coords", data::texture_3d::noise_3d_coords);
+  gen_.context->context->module("texture_3d", consts_2);
 }
 
 void initializer::init_user_script() {

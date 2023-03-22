@@ -16,6 +16,7 @@
 #include "data/blending_type.hpp"
 #include "data/gradient.hpp"
 #include "data/texture.hpp"
+#include "data/texture_3d.hpp"
 
 namespace data {
 
@@ -73,7 +74,7 @@ struct shape {
   std::string text_font;
   std::vector<std::pair<double, gradient>> gradients_;
   std::vector<std::pair<double, texture>> textures;
-  bool texture_3d = false;
+  texture_3d texture_3d = texture_3d::raw;
   std::string gradient_id_str;
   blending_type blending_ = blending_type::normal;
   std::map<int, size_t> indexes;
