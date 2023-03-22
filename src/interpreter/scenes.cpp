@@ -8,6 +8,8 @@
 
 #include "generator.h"
 
+// #define DEBUG2
+
 namespace interpreter {
 
 scenes::scenes(generator& gen) : gen_(gen) {}
@@ -53,6 +55,10 @@ void scenes::set_scene(size_t scene) {
     scenesettings.scene_initialized = scenesettings.current_scene_next;
     gen_.create_object_instances();
   }
+#ifdef DEBUG2
+  logger(DEBUG) << "##[ scenes::set_scene() ]##" << std::endl;
+  gen_.debug_print_all();
+#endif
 }
 
 void scenes::switch_scene() {
@@ -66,6 +72,10 @@ void scenes::switch_scene() {
   } else {
     logger(DEBUG) << "Stay in existing scene " << scenesettings.current_scene_next << ", not copying." << std::endl;
   }
+#ifdef DEBUG2
+  logger(DEBUG) << "##[ scenes::switch_scene() ]##" << std::endl;
+  gen_.debug_print_all();
+#endif
 }
 
 void scenes::append_instantiated_objects() {
@@ -165,16 +175,36 @@ void scenes::revert() {
 void scenes::reset() {}
 
 void scenes::commit_scene_shapes() {
+#ifdef DEBUG2
+  logger(DEBUG) << "##[ scenes::commit_scene_shapes(BEFORE) ]##" << std::endl;
+  gen_.debug_print_all();
+#endif
   scene_shapes = scene_shapes_next;
+#ifdef DEBUG2
+  logger(DEBUG) << "##[ scenes::commit_scene_shapes(AFTER) ]##" << std::endl;
+  gen_.debug_print_all();
+#endif
 }
 void scenes::commit_scene_shapes_intermediates() {
   scene_shapes_intermediate = scene_shapes_next;
+#ifdef DEBUG2
+  logger(DEBUG) << "##[ scenes::commit_scene_shapes_intermediates() ]##" << std::endl;
+  gen_.debug_print_all();
+#endif
 }
 void scenes::reset_scene_shapes_next() {
   scene_shapes_next = scene_shapes;
+#ifdef DEBUG2
+  logger(DEBUG) << "##[ scenes::reset_scene_shapes_next() ]##" << std::endl;
+  gen_.debug_print_all();
+#endif
 }
 void scenes::reset_scene_shapes_intermediates() {
   scene_shapes_intermediate = scene_shapes;
+#ifdef DEBUG2
+  logger(DEBUG) << "##[ scenes::reset_scene_shapes_intermediates() ]##" << std::endl;
+  gen_.debug_print_all();
+#endif
 }
 
 void scenes::cleanup_destroyed_objects() {

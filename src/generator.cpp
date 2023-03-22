@@ -780,7 +780,22 @@ std::unordered_map<std::string, v8::Persistent<v8::Object>>& generator::get_obje
   return object_definitions_map;
 }
 
+void generator::debug_print_all() {
+  logger(DEBUG) << "==[ debug print: next ]==" << std::endl;
+  debug_print(scenes_.next_shapes_current_scene());
+
+  logger(DEBUG) << "==[ debug print: intermediate ]==" << std::endl;
+  debug_print(scenes_.intermediate_shapes_current_scene());
+
+  logger(DEBUG) << "==[ debug print: current ]==" << std::endl;
+  debug_print(scenes_.shapes_current_scene());
+}
+
 void generator::debug_print_next() {
+  debug_print(scenes_.next_shapes_current_scene());
+}
+
+void generator::debug_print(std::vector<data_staging::shape_t>& shapes) {
   const auto print_meta = [](data_staging::meta& meta,
                              data_staging::location& loc,
                              data_staging::movement& mov,
@@ -797,7 +812,7 @@ void generator::debug_print_next() {
                  << ", destroyed = " << std::boolalpha << meta.is_destroyed() << ", scale = " << gen.scale()
                  << std::endl;
   };
-  for (auto& shape : scenes_.next_shapes_current_scene()) {
+  for (auto& shape : shapes) {
     meta_visit(
         shape,
         [&](data_staging::circle& shape) {

@@ -156,7 +156,9 @@ public:
 private:
   bool _generate_frame();
 
+  void debug_print_all();
   void debug_print_next();
+  void debug_print(std::vector<data_staging::shape_t>& shapes);
 };
 
 }  // namespace interpreter
