@@ -110,7 +110,9 @@ _ = {
         let x = radius;
         let y = radius;
         for (let txt of textures) {
+          let texture_offset_x = 0;
           for (let type of perlin_texture_types) {
+            // let [vel_x, vel_y] = random_velocity();
             this.spawn({
               'id': 'obj',
               'x': x - offset_x,
@@ -118,10 +120,16 @@ _ = {
               'z': 0,
               'radiussize': radius,
               'texture': txt,
+              'texture_offset_x': texture_offset_x,
+              'texture_offset_y': 0,
               'seed': 2,
               'texture_3d': type,
-              'attrs': {'text': txt + '@' + texture_3d_str(type)}
+              'attrs': {'text': txt + '@' + texture_3d_str(type)},
+              // 'vel_x': vel_x,
+              // 'vel_y': vel_y,
+              // 'velocity': 1,
             });
+            texture_offset_x += 20
 
             x += radius * 2;
             if (x > (1920 - radius)) {
@@ -141,6 +149,12 @@ _ = {
       'props': {},
       'init': function() {
         let [texture, mode] = this.attr('text').split('@');
+        let child = this.spawn({
+          'id': 'text',
+          'y': 105,
+          'text': '' + this.texture_offset_x + ' x ' + this.texture_offset_y,
+        });
+        this.set_attr('child', child);
         this.spawn({
           'id': 'text',
           'y': 125,
@@ -152,6 +166,13 @@ _ = {
           'text': texture,
         });
       },
+      'time': function(t, e, s, tt) {
+        if (this.texture === 'turbulence') {
+          this.texture_offset_x += 1;
+          // TODO: create a this.set_attr
+          set_attr3(this.attr('child'), 'text', this.texture_offset_x + ' x ' + this.texture_offset_y);
+        }
+      }
     },
     'text': {
       'type': 'text',
@@ -160,6 +181,9 @@ _ = {
       'text_size': 20,
       'text_align': 'center',
       'text_fixed': false,
+      'time': function(t, e, s, T) {
+        if (this.attr('text')) this.text = this.attr('text');
+      }
     },
   },
   'video': {
@@ -170,7 +194,7 @@ _ = {
     'init_scale': 0.5,
     'rand_seed': 1,
     'granularity': 100,
-    'update_positions': false,
+    // 'update_positions': false,
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
     'minimize_steps_per_object': false,
     'grain_for_opacity': false,

@@ -66,7 +66,10 @@ public:
   std::string get_unique_group() const;
   int64_t get_blending_type() const;
   std::string get_gradient() const;
+  std::string get_texture() const;
   data::texture_3d get_texture_3d() const;
+  double get_texture_offset_x() const;
+  double get_texture_offset_y() const;
 
   void set_unique_id(int64_t unique_id);
   void set_angle(double angle);
@@ -98,7 +101,10 @@ public:
   void set_unique_group(const std::string& group) const;
   void set_blending_type(int64_t new_type) const;
   void set_gradient(const std::string& gradient) const;
+  void set_texture(const std::string& value) const;
   void set_texture_3d(data::texture_3d value) const;
+  void set_texture_offset_x(double x) const;
+  void set_texture_offset_y(double y) const;
 
   v8::Persistent<v8::Object>& get_properties_ref() const;
   v8::Local<v8::Object> get_properties_local_ref() const;
@@ -107,6 +113,7 @@ public:
   std::vector<std::tuple<double, std::string>>& get_gradients_ref() const;
 
   v8::Local<v8::Value> get_attr(v8::Local<v8::String> obj);
+  void set_attr(v8::Local<v8::String> key, v8::Local<v8::String> value);
   int64_t spawn(v8::Local<v8::Object> obj);
   // TODO: rename to spawn_line
   int64_t spawn2(v8::Local<v8::Object> line_obj, int64_t obj1);

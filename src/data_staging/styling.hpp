@@ -26,6 +26,8 @@ private:
   int64_t seed_;
   double hue_;
   data::texture_3d texture_3d_ = data::texture_3d::raw;
+  double texture_offset_x_ = 0;
+  double texture_offset_y_ = 0;
 
 public:
   styling() {
@@ -85,12 +87,28 @@ public:
     return texture_3d_;
   }
 
+  double texture_offset_x() const {
+    return texture_offset_x_;
+  }
+
+  double texture_offset_y() const {
+    return texture_offset_y_;
+  }
+
   void set_texture(std::string_view texture) {
     texture_ = texture;
   }
 
   void set_texture_3d(data::texture_3d value) {
     texture_3d_ = value;
+  }
+
+  void set_texture_offset_x(double value) {
+    texture_offset_x_ = value;
+  }
+
+  void set_texture_offset_y(double value) {
+    texture_offset_y_ = value;
   }
 
   const decltype(textures_)& get_textures_cref() const {

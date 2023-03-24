@@ -851,8 +851,8 @@ public:
               const auto r = (shape.radius + shape.radius_size);
               if (const auto mapped = map_radial(absX, absY, posX, posY, r, shape.texture_3d.type())) {
                 auto [x, y] = *mapped;
-                // x -= absX;
-                // y -= absY;
+                x -= absX + shape.texture_offset_x;
+                y -= absY + shape.texture_offset_y;
                 noise += math::clamp(
                     texture.second.get(
                         num, x * 100. / r, y * 100. / r, shape.time, scale_, std::isnan(shape.seed) ? 1. : shape.seed),
@@ -865,8 +865,8 @@ public:
               const auto r = (shape.radius + shape.radius_size);
               if (const auto mapped = map_spherical(absX - posX, absY - posY, r * 2.)) {
                 auto [x, y] = *mapped;
-                // x -= absX;
-                // y -= absY;
+                x += shape.texture_offset_x;
+                y += shape.texture_offset_y;
                 noise += math::clamp(
                     texture.second.get(
                         num, x * 100. / r, y * 100. / r, shape.time, scale_, std::isnan(shape.seed) ? 1. : shape.seed),

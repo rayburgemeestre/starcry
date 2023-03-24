@@ -47,6 +47,28 @@ void initializer::reset_context() {
   gen_.context->add_fun("attr", [&](v8::Local<v8::String> str) -> v8::Local<v8::Value> {
     return gen_.global_attrs_.get(v8_str(v8::Isolate::GetCurrent(), str));
   });
+  gen_.context->add_fun(
+      "set_attr", [&](v8::Local<v8::String> key, v8::Local<v8::String> value) -> v8::Local<v8::Value> {
+        gen_.global_attrs_.set(v8_str(v8::Isolate::GetCurrent(), key), v8_str(v8::Isolate::GetCurrent(), value));
+        return v8::Boolean::New(v8::Isolate::GetCurrent(), true);
+      });
+  gen_.context->add_fun("set_attr3",
+                        [&](v8::Local<v8::String> object_id,
+                            v8::Local<v8::String> key,
+                            v8::Local<v8::String> value) -> v8::Local<v8::Value> {
+                          const auto str = v8_str(v8::Isolate::GetCurrent(), object_id);
+                          const auto object_id_long = std::stoll(str);
+                          bool ret = false;
+                          if (gen_.next_instance_map.contains(object_id_long)) {
+                            auto& object_ref = gen_.next_instance_map.at(object_id_long).get();
+                            meta_callback(object_ref, [&](auto& cc) {
+                              cc.attrs_ref().set(v8_str(v8::Isolate::GetCurrent(), key),
+                                                 v8_str(v8::Isolate::GetCurrent(), value));
+                              ret = true;
+                            });
+                          }
+                          return v8::Boolean::New(v8::Isolate::GetCurrent(), ret);
+                        });
   gen_.context->add_fun("angled_velocity", &angled_velocity);
   gen_.context->add_fun("random_velocity", [&]() {
     return random_velocity(gen_.rand_);

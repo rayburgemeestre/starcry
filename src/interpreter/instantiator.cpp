@@ -32,6 +32,8 @@ void instantiate_object_copy_fields(v8_interact& i,
                      "gradients",
                      "texture",
                      "texture_3d",
+                     "texture_offset_x",
+                     "texture_offset_y",
                      "seed",
                      "blending_type",
                      "opacity",
@@ -204,6 +206,12 @@ instantiator::instantiate_object_from_scene(
       }
       if (i.has_field(instance, "texture_3d")) {
         c.styling_ref().set_texture_3d(i.integer_number(instance, "texture_3d"));
+      }
+      if (i.has_field(instance, "texture_offset_x")) {
+        c.styling_ref().set_texture_offset_x(i.integer_number(instance, "texture_offset_x"));
+      }
+      if (i.has_field(instance, "texture_offset_y")) {
+        c.styling_ref().set_texture_offset_y(i.integer_number(instance, "texture_offset_y"));
       }
       if (i.has_field(instance, "gradient")) {
         c.styling_ref().set_gradient(i.str(instance, "gradient"));

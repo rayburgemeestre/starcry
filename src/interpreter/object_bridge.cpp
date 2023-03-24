@@ -43,8 +43,18 @@ void object_bridge<T>::pop_object() {
 
 template <typename T>
 v8::Local<v8::Value> object_bridge<T>::get_attr(v8::Local<v8::String> obj) {
-  data_staging::shape_t var = *shape_stack.back();
-  return generator_->get_attr(var, obj);
+  auto& cc = *shape_stack.back();
+  v8::Local<v8::Value> f = cc.attrs_ref().get(v8_str(v8::Isolate::GetCurrent(), obj));
+  if (f->IsString()) {
+    return f;
+  }
+  return v8::Undefined(v8::Isolate::GetCurrent());
+}
+
+template <typename T>
+void object_bridge<T>::set_attr(v8::Local<v8::String> key, v8::Local<v8::String> obj) {
+  auto& cc = *shape_stack.back();
+  cc.attrs_ref().set(v8_str(v8::Isolate::GetCurrent(), key), v8_str(v8::Isolate::GetCurrent(), obj));
 }
 
 template <typename T>
@@ -121,15 +131,52 @@ std::vector<std::tuple<double, std::string>>& object_bridge<T>::get_gradients_re
 }
 
 template <typename T>
+void object_bridge<T>::set_texture(const std::string& value) const {
+  data_staging::shape_t var = *shape_stack.back();
+  return shape_stack.back()->styling_ref().set_texture(value);
+}
+
+template <typename T>
 void object_bridge<T>::set_texture_3d(data::texture_3d value) const {
   data_staging::shape_t var = *shape_stack.back();
   return shape_stack.back()->styling_ref().set_texture_3d(value);
 }
 
 template <typename T>
+std::string object_bridge<T>::get_texture() const {
+  data_staging::shape_t var = *shape_stack.back();
+  return shape_stack.back()->styling_cref().texture();
+}
+
+template <typename T>
 data::texture_3d object_bridge<T>::get_texture_3d() const {
   data_staging::shape_t var = *shape_stack.back();
   return shape_stack.back()->styling_cref().texture_3d();
+}
+
+// @add_field@
+template <typename T>
+double object_bridge<T>::get_texture_offset_x() const {
+  data_staging::shape_t var = *shape_stack.back();
+  return shape_stack.back()->styling_cref().texture_offset_x();
+}
+
+template <typename T>
+double object_bridge<T>::get_texture_offset_y() const {
+  data_staging::shape_t var = *shape_stack.back();
+  return shape_stack.back()->styling_cref().texture_offset_y();
+}
+
+template <typename T>
+void object_bridge<T>::set_texture_offset_x(double value) const {
+  data_staging::shape_t var = *shape_stack.back();
+  return shape_stack.back()->styling_ref().set_texture_offset_x(value);
+}
+
+template <typename T>
+void object_bridge<T>::set_texture_offset_y(double value) const {
+  data_staging::shape_t var = *shape_stack.back();
+  return shape_stack.back()->styling_ref().set_texture_offset_y(value);
 }
 
 template <typename T>
