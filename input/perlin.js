@@ -167,7 +167,7 @@ _ = {
         });
       },
       'time': function(t, e, s, tt) {
-        if (this.texture === 'turbulence') {
+        if (s === 0 && this.texture === 'turbulence') {
           this.texture_offset_x += 1;
           // TODO: create a this.set_attr
           set_attr3(this.attr('child'), 'text', this.texture_offset_x + ' x ' + this.texture_offset_y);
@@ -190,6 +190,9 @@ _ = {
     'fps': 25,
     'width': 1920,
     'height': 1080,
+    // TODO: bug with different sizes
+    // 'width': 1920*2,
+    // 'height': 1080*2,
     'scale': 1.0,
     'init_scale': 0.5,
     'rand_seed': 1,
@@ -216,5 +219,11 @@ _ = {
         'attrs': {'text': 'perlin'}
       },
     ],
-  }]
+  },
+    {
+      'name': 'scene2',
+      'duration': 5,
+      'objects': [ ],
+    }
+  ]
 };
