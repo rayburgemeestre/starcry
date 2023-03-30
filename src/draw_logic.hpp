@@ -832,14 +832,22 @@ public:
     // --- perlin noise ---
     double noise = 1.0;
     if (settings.perlin_noise) {
+      // In noise land we don't want scale affecting the textures
+      auto _posX = posX / scale_ / shape.scale;
+      auto _posY = posY / scale_ / shape.scale;
+      auto _absX = absX / scale_ / shape.scale;
+      auto _absY = absY / scale_ / shape.scale;
+      auto _scale_ = 1.;
+      auto _shape_scale = 1.;
+
       if (!shape.textures.empty()) {
         noise = 0;
         for (const auto &texture : shape.textures) {
           switch (shape.texture_3d.type()) {
             case data::texture_3d::raw: {
-              double x = absX - posX, y = absY - posY;
+              double x = _absX - _posX, y = _absY - _posY;
               noise += math::clamp(
-                  texture.second.get(num, x, y, shape.time, scale_, std::isnan(shape.seed) ? 1. : shape.seed),
+                  texture.second.get(num, x, y, shape.time, _scale_, std::isnan(shape.seed) ? 1. : shape.seed),
                   0.0,
                   1.0);
               break;
@@ -848,36 +856,38 @@ public:
             case data::texture_3d::radial_distortion:
             case data::texture_3d::radial_scaling:
             case data::texture_3d::radial_displacement: {
-              const auto r = (shape.radius + shape.radius_size);
-              if (const auto mapped = map_radial(absX, absY, posX, posY, r, shape.texture_3d.type())) {
+              const auto r = (shape.radius + shape.radius_size * _scale_ * _shape_scale);
+              if (const auto mapped = map_radial(_absX, _absY, _posX, _posY, r, shape.texture_3d.type())) {
                 auto [x, y] = *mapped;
-                x -= absX + shape.texture_offset_x;
-                y -= absY + shape.texture_offset_y;
+                x -= _absX + (shape.texture_offset_x * _scale_ * _shape_scale);
+                y -= _absY + (shape.texture_offset_y * _scale_ * _shape_scale);
                 noise += math::clamp(
                     texture.second.get(
-                        num, x * 100. / r, y * 100. / r, shape.time, scale_, std::isnan(shape.seed) ? 1. : shape.seed),
+                        num, x * 100. / r, y * 100. / r, shape.time, _scale_, std::isnan(shape.seed) ? 1. : shape.seed),
                     0.0,
                     1.0);
               }
               break;
             }
             case data::texture_3d::spherical: {
-              const auto r = (shape.radius + shape.radius_size);
-              if (const auto mapped = map_spherical(absX - posX, absY - posY, r * 2.)) {
+              const auto r = (shape.radius + shape.radius_size) * _scale_ * _shape_scale;
+              if (const auto mapped = map_spherical(_absX - _posX, _absY - _posY, r * 2.)) {
                 auto [x, y] = *mapped;
-                x += shape.texture_offset_x;
-                y += shape.texture_offset_y;
+                x += shape.texture_offset_x * _scale_ * _shape_scale;
+                y += shape.texture_offset_y * _scale_ * _shape_scale;
                 noise += math::clamp(
                     texture.second.get(
-                        num, x * 100. / r, y * 100. / r, shape.time, scale_, std::isnan(shape.seed) ? 1. : shape.seed),
+                        num, x * 100. / r, y * 100. / r, shape.time, _scale_, std::isnan(shape.seed) ? 1. : shape.seed),
                     0.0,
                     1.0);
               }
               break;
             }
             case data::texture_3d::noise_3d_simplex: {
-              if (const auto mapped = map_noise(shape, posX, posY, (shape.radius + shape.radius_size) * 1.)) {
-                // map_noise(shape, absX - posX, absY - posY, (shape.radius + shape.radius_size) * 1.)) {
+              // const auto r = (shape.radius + shape.radius_size) * _scale_ * _shape_scale;
+              //  if (const auto mapped = map_noise(shape, _posX, _posY, r * 1.)) {
+              if (const auto mapped =
+                      map_noise(shape, _absX - _posX, _absY - _posY, (shape.radius + shape.radius_size) * 1.)) {
                 const auto [x, y, n] = *mapped;
                 noise += n;
               }
@@ -885,10 +895,10 @@ public:
             }
             case data::texture_3d::noise_3d_coords: {
               if (const auto mapped =
-                      map_noise(shape, absX - posX, absY - posY, (shape.radius + shape.radius_size) * 1.)) {
+                      map_noise(shape, _absX - _posX, _absY - _posY, (shape.radius + shape.radius_size) * 1.)) {
                 const auto [x, y, n] = *mapped;
                 noise += math::clamp(
-                    texture.second.get(num, x, y, shape.time, scale_, std::isnan(shape.seed) ? 1. : shape.seed),
+                    texture.second.get(num, x, y, shape.time, _scale_, std::isnan(shape.seed) ? 1. : shape.seed),
                     0.0,
                     1.0);
               }

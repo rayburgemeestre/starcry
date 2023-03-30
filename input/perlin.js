@@ -190,9 +190,6 @@ _ = {
     'fps': 25,
     'width': 1920,
     'height': 1080,
-    // TODO: bug with different sizes
-    // 'width': 1920*2,
-    // 'height': 1080*2,
     'scale': 1.0,
     'init_scale': 0.5,
     'rand_seed': 1,
@@ -204,26 +201,27 @@ _ = {
     'min_intermediates': 1,
     'max_intermediates': 1,
   },
-  'scenes': [{
-    'name': 'scene1',
-    'duration': 10,
-    'objects': [
-      {
-        'id': 'main',
-        'x': 0,
-        'y': 0,
-        'z': 0,
-        'texture': 'text1',
-        'seed': 2,
-        'texture_3d': texture_3d.disabled,
-        'attrs': {'text': 'perlin'}
-      },
-    ],
-  },
+  'scenes': [
+    {
+      'name': 'scene1',
+      'duration': 10,
+      'objects': [
+        {
+          'id': 'main',
+          'x': 0,
+          'y': 0,
+          'z': 0,
+          'texture': 'text1',
+          'seed': 2,
+          'texture_3d': texture_3d.disabled,
+          'attrs': {'text': 'perlin'}
+        },
+      ],
+    },
     {
       'name': 'scene2',
       'duration': 5,
-      'objects': [ ],
+      'objects': [],
     }
   ]
 };
