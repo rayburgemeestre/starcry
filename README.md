@@ -18,7 +18,7 @@ Create `starcry` alias that uses docker (see <a href="docs/docker.md">docker.md<
 
     alias starcry='xhost + && docker run --rm --name starcry -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --device /dev/dri/card0:/dev/dri/card0 --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v8'
 
-Get a test project file and render it (use `ctrl`+`t` to toggle a preview window):
+Get a test project file and render it (use `ctrl`+`t` to toggle a preview window, or provide `--gui` as an additional parameter):
 
     wget https://raw.githubusercontent.com/rayburgemeestre/starcry/master/input/web.js
     starcry ./web.js
