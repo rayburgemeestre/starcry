@@ -16,6 +16,7 @@
       <q-tabs align="left">
         <q-route-tab to="/files" label="Files" />
         <q-route-tab to="/script" label="Script" />
+        <q-route-tab to="/editor" label="Editor" />
         <q-route-tab to="/objects" label="Objects" />
         <q-route-tab to="/help" label="Help" />
         <q-route-tab to="/debug" label="Debug" />

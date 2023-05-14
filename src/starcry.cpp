@@ -446,7 +446,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 #endif
       for (const auto &shape : shapes[shapes.size() - 1]) {
         // convert shape_type enum to string
-        json shape_json = std::vector<json>{
+        std::map<std::string, nlohmann::json> f = {
             {"type", data::shape_type_to_string(shape.type)},
             {"index", index},
             {"unique_id", shape.unique_id},
@@ -468,6 +468,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 #endif
             {"time", shape.time},
         };
+        json shape_json(f);
         shapes_json.push_back(shape_json);
 
         // TODO: script type

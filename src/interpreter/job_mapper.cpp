@@ -68,6 +68,7 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
 // auto random_hash = i.str(instance, "__random_hash__");
 #endif
 
+    new_shape.unique_id = shape.meta_cref().unique_id();
     // temp
     new_shape.level = level;
     new_shape.time = shape.meta_cref().get_time();
@@ -124,7 +125,6 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     }
     new_shape.scale = scale;
     new_shape.opacity = std::isnan(shape_opacity) ? 1.0 : shape_opacity;
-    // new_shape.unique_id = unique_id;
 #ifdef DEBUG_NUM_SHAPES
     // new_shape.random_hash = random_hash;
 #endif
