@@ -76,6 +76,7 @@ client:  ## build webassembly javascript file using docker
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ --std=c++20 -s WASM=1 -s USE_SDL=2 -O3 --bind \
 	                    -o web/webroot/client.js src/client.cpp src/stb.cpp src/util/logger.cpp \
 	                    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
+	                    -I./libs/json/single_include/ \
 	                    -I/opt/cppse/build/v8pp/include/v8 -I/opt/cppse/build/v8pp/include/ \
 	                    -I/opt/cppse/build/vivid/include/ /opt/cppse/build/vivid/lib/libvivid-em.a \
 	                    -I/opt/cppse/build/fmt/include /opt/cppse/build/fmt/lib/libfmt-em.a \
@@ -92,6 +93,7 @@ client_debug:  ## build webassembly javascript file using docker with debug
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ --std=c++20 -s WASM=1 -s USE_SDL=2 -O3 -g --bind \
 	                    -o web/webroot/client.js src/client.cpp src/stb.cpp \
 	                    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
+	                    -I./libs/json/single_include/ \
 	                    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1)
 
 debug:  ## build starcry binary using docker with debug

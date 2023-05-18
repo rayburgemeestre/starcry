@@ -58,7 +58,7 @@
             color: blue;
           "
         >
-          DEBUG: {{ debug_text }}
+          <!-- DEBUG: {{ debug_text }} -->
         </div>
         <canvas
           id="canvas2"
@@ -320,6 +320,9 @@ export default defineComponent({
       if (Math.abs(previous_w - w) < 2 && Math.abs(previous_h - h) < 2) {
         return;
       }
+
+      script_store.re_render_editor_sidepane++;
+
       document.getElementById('canvas2').width = w;
       document.getElementById('canvas2').height = h;
       try {

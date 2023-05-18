@@ -61,8 +61,9 @@ export default defineComponent({
           script_store.render_requested_by_user++;
         } else if (buffer[0] === '2') {
           script_store.script = buffer.slice(1);
+          script_store.script = buffer.substr(buffer.indexOf('{'));
 
-          let p = new JsonWithObjectsParser(buffer.substr(buffer.indexOf('{')));
+          let p = new JsonWithObjectsParser(script_store.script);
           // this.$data.input_source = buffer;
           script_store.video = p.parsed()['video'] || {};
           script_store.preview = p.parsed()['preview'] || {};
@@ -81,6 +82,8 @@ export default defineComponent({
           script_store.max_frames = Math.floor(
             total_duration * script_store.video['fps']
           );
+          // the editorpane needs to be updated
+          script_store.re_render_editor_sidepane++;
         } else if (buffer[0] === '3') {
           script_store.filename = buffer.slice(1);
         } else if (buffer[0] === '4') {

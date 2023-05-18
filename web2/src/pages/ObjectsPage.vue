@@ -7,10 +7,9 @@ import { defineComponent } from 'vue';
 import ObjectBrowser from 'components/ObjectBrowser.vue';
 export default defineComponent({
   name: 'ObjectsPage',
-  components: {ObjectBrowser},
+  components: { ObjectBrowser },
   setup() {
-    return {
-    };
+    return {};
   },
 });
 </script>

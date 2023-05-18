@@ -267,6 +267,8 @@ void initializer::init_gradients() {
       auto gradient_id = i.get_index(gradient_fields, k);
       auto gradient_value = i.get(gradient_objects, gradient_id);
       auto id = v8_str(isolate, gradient_id.As<v8::String>());
+      // This code is duplicated in client.cpp, because there we are not dealing with V8 Javascript
+      // objects, but nlohmann json objects.
       if (gradient_value->IsArray()) {
         auto positions = gradient_value.As<v8::Array>();
         for (size_t l = 0; l < positions->Length(); l++) {

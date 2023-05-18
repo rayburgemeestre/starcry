@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include "cereal/archives/json.hpp"
+#include "nlohmann/json.hpp"
 
 #include "data/job.hpp"
 #include "data/shape.hpp"
@@ -355,6 +356,33 @@ void toggle_pointer() {
   pointer_state = !pointer_state;
 }
 
+std::vector<int> get_gradient_colors(std::string gradient_definition, int width) {
+  const auto json_obj = nlohmann::json::parse(gradient_definition);
+  data::gradient converter;
+  if (json_obj.is_string()) {
+    const auto gradient_short_hand = json_obj.get<std::string>();
+    // TODO
+  } else {
+    for (const auto color_line : json_obj) {
+      const auto pos = color_line["position"];
+      const auto r = color_line["r"];
+      const auto g = color_line["g"];
+      const auto b = color_line["b"];
+      const auto a = color_line["a"];
+      converter.colors.emplace_back(pos, data::color{r, g, b, a});
+    }
+  }
+  std::vector<int> colors;
+  for (int i = 0; i < width; ++i) {
+    const auto clr = converter.get(i / (double)width);
+    colors.emplace_back(clr.r * 255);
+    colors.emplace_back(clr.g * 255);
+    colors.emplace_back(clr.b * 255);
+    colors.emplace_back(clr.a * 255);
+  }
+  return colors;
+}
+
 int main() {
 #ifndef EMSCRIPTEN
   start(1080, 1080, 1080, 1080);
@@ -364,6 +392,7 @@ int main() {
 
 #ifdef EMSCRIPTEN
 EMSCRIPTEN_BINDINGS(my_module) {
+  emscripten::register_vector<int>("VectorInt");
   emscripten::function("start", &start);
   emscripten::function("stop", &stop);
   emscripten::function("set_shapes", &set_shapes);
@@ -374,6 +403,7 @@ EMSCRIPTEN_BINDINGS(my_module) {
   emscripten::function("get_canvas_h", &get_canvas_h);
   emscripten::function("get_texture_w", &get_texture_w);
   emscripten::function("get_texture_h", &get_texture_h);
+  emscripten::function("get_gradient_colors", &get_gradient_colors);
   emscripten::function("get_scale", &get_scale);
   emscripten::function("toggle_pointer", &toggle_pointer);
 }
