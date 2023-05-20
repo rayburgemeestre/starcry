@@ -361,7 +361,25 @@ std::vector<int> get_gradient_colors(std::string gradient_definition, int width)
   data::gradient converter;
   if (json_obj.is_string()) {
     const auto gradient_short_hand = json_obj.get<std::string>();
-    // TODO
+    auto color_string = gradient_short_hand;
+    auto r = std::stoi(color_string.substr(1, 2), nullptr, 16) / 255.;
+    auto g = std::stoi(color_string.substr(3, 2), nullptr, 16) / 255.;
+    auto b = std::stoi(color_string.substr(5, 2), nullptr, 16) / 255.;
+    double index = 0.9;
+    if (color_string.length() >= 8 && color_string[7] == '@') {
+      // String is for example '#ffffff@0.9', keep only the 0.9 part
+      try {
+        auto remainder = std::stod(color_string.substr(8));
+        index = std::clamp(remainder, 0.0, 1.0);
+      } catch (const std::invalid_argument &e) {
+        logger(DEBUG) << "Invalid argument: " << e.what() << std::endl;
+      } catch (const std::out_of_range &e) {
+        logger(DEBUG) << "Out of range: " << e.what() << std::endl;
+      }
+    }
+    converter.colors.emplace_back(0.0, data::color{r, g, b, 1.});
+    converter.colors.emplace_back(index, data::color{r, g, b, 1.});
+    converter.colors.emplace_back(1.0, data::color{r, g, b, 0.});
   } else {
     for (const auto color_line : json_obj) {
       const auto pos = color_line["position"];
