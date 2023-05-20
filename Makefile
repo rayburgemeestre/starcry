@@ -217,7 +217,11 @@ publish:  ## build from scratch starcry, web, client, docker image. (does not pu
 	make dockerize
 	$(docker_exe) push docker.io/rayburgemeestre/starcry:v`cat .version` || true
 	# $(docker_exe) push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version` || true
-	echo kubectl apply -f kube/starcry.yaml
+	kubectl apply -f kube/starcry.yaml
+	kubectl rollout restart deployment -n starcry starcry
+	kubectl rollout restart deployment -n starcry starcry-workers
+	kubectl rollout restart deployment -n starcry redis
+	echo done
 
 #------------
 
