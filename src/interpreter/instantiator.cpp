@@ -161,8 +161,7 @@ instantiator::instantiate_object_from_scene(
   // instantiate the prototype into newly allocated javascript object
   _instantiate_object(i, scene_object, object_prototype, instance, current_level, parent_object_ns);
 
-  // give it a unique id (it already has been assigned a __random_hash__ for debugging purposes
-  static int64_t counter = 0;
+  // give it a unique id (it already has been assigned a random_hash for debugging purposes
   i.set_field(instance, "unique_id", v8::Number::New(i.get_isolate(), ++counter));
   i.set_field(instance, "parent_uid", v8::Number::New(i.get_isolate(), parent_uid));
 
@@ -188,6 +187,7 @@ instantiator::instantiate_object_from_scene(
     c.meta_ref().set_level(current_level);
     c.meta_ref().set_parent_uid(parent_uid);
     c.meta_ref().set_pivot(i.boolean(instance, "pivot"));
+    c.meta_ref().set_random_hash(i.str(instance, "random_hash"));
     c.behavior_ref().set_collision_group(i.str(instance, "collision_group", ""));
     c.behavior_ref().set_gravity_group(i.str(instance, "gravity_group", ""));
     c.behavior_ref().set_unique_group(i.str(instance, "unique_group", ""));
@@ -414,6 +414,11 @@ instantiator::instantiate_object_from_scene(
   return std::make_tuple(instance, *shape_ref, *shape_copy);
 }
 
+void instantiator::reset_seeds() {
+  rand_.set_seed(0);
+  counter = 0;
+}
+
 void instantiator::_instantiate_object(v8_interact& i,
                                        std::optional<v8::Local<v8::Object>> scene_obj,
                                        v8::Local<v8::Object> object_prototype,
@@ -435,12 +440,10 @@ void instantiator::_instantiate_object(v8_interact& i,
   i.set_field(new_instance, "subobj", v8::Array::New(isolate));
   i.set_field(new_instance, "level", v8::Number::New(isolate, level));
   {
-    static std::mt19937 generator{std::random_device{}()};
-    static std::uniform_int_distribution<int> distribution{'a', 'z'};
     static auto generate_len = 6;
     static std::string rand_str(generate_len, '\0');
-    for (auto& dis : rand_str) dis = distribution(generator);
-    i.set_field(new_instance, "__random_hash__", v8_str(i.get_context(), rand_str));
+    for (auto& dis : rand_str) dis = 'a' + char(rand_.get() * ('z' - 'a'));
+    i.set_field(new_instance, "random_hash", v8_str(i.get_context(), rand_str));
   }
   i.set_field(new_instance, "__instance__", v8::Boolean::New(isolate, true));
 

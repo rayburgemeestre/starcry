@@ -6,6 +6,7 @@
 #pragma once
 
 #include "data_staging/shape.hpp"
+#include "util/random.hpp"
 #include "util/v8_interact.hpp"
 
 namespace interpreter {
@@ -31,17 +32,21 @@ public:
       v8::Local<v8::Object>& scene_object,          // object description from scene to be instantiated
       const data_staging::shape_t* parent_object);  // it's optional parent
 
+  void reset_seeds();
+
 private:
-  static void _instantiate_object(v8_interact& i,
-                                  std::optional<v8::Local<v8::Object>> scene_obj,
-                                  v8::Local<v8::Object> object_prototype,
-                                  v8::Local<v8::Object> new_instance,
-                                  int64_t level,
-                                  const std::string& namespace_);
+  void _instantiate_object(v8_interact& i,
+                           std::optional<v8::Local<v8::Object>> scene_obj,
+                           v8::Local<v8::Object> object_prototype,
+                           v8::Local<v8::Object> new_instance,
+                           int64_t level,
+                           const std::string& namespace_);
 
   template <typename T>
   void write_back_copy(T& copy);
 
   generator& gen_;
+  util::random_generator rand_;
+  int64_t counter = 0;
 };
 }  // namespace interpreter

@@ -37,6 +37,7 @@ public:
 
   int64_t get_level() const;
   int64_t get_unique_id() const;
+  std::string get_random_hash() const;
   double get_angle() const;
   double get_rotate() const;
   double get_hue() const;
@@ -72,6 +73,7 @@ public:
   double get_texture_offset_y() const;
 
   void set_unique_id(int64_t unique_id);
+  void set_random_hash(const std::string& random_hash);
   void set_angle(double angle);
   void set_rotate(double rotate);
   void set_hue(double hue);

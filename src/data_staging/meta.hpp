@@ -16,6 +16,7 @@ private:
   int64_t unique_id_;
   int64_t parent_uid_id_ = -1;
   int64_t level_;
+  std::string random_hash_;
   double time_;
 
   // used for rendering purposes
@@ -106,6 +107,14 @@ public:
 
   bool is_destroyed() const {
     return destroyed_;
+  }
+
+  const std::string& random_hash() const {
+    return random_hash_;
+  }
+
+  void set_random_hash(std::string random_hash) {
+    random_hash_ = random_hash;
   }
 };
 

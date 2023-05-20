@@ -62,11 +62,8 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     // auto text_font = i.has_field(instance, "text_font") ? i.str(instance, "text_font") : "";
 
     // TODO: might not need this param after all
-// auto dist = i.double_number(instance, "__dist__");
-#define DEBUG_NUM_SHAPES
-#ifdef DEBUG_NUM_SHAPES
-// auto random_hash = i.str(instance, "__random_hash__");
-#endif
+    // auto dist = i.double_number(instance, "__dist__");
+    new_shape.random_hash = shape.meta_cref().random_hash();
 
     new_shape.unique_id = shape.meta_cref().unique_id();
     // temp
@@ -125,9 +122,6 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     }
     new_shape.scale = scale;
     new_shape.opacity = std::isnan(shape_opacity) ? 1.0 : shape_opacity;
-#ifdef DEBUG_NUM_SHAPES
-    // new_shape.random_hash = random_hash;
-#endif
     new_shape.seed = seed;
     new_shape.id = shape.meta_cref().id();
     // new_shape.label = label;

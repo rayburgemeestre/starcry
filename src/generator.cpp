@@ -217,6 +217,10 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
   context->run(fmt::format("tmp{} = undefined;", use_index));
 }
 
+void generator::reset_seeds() {
+  instantiator_.reset_seeds();
+}
+
 void generator::fast_forward(int frame_of_interest) {
   fast_forwarder(fast_ff, frame_of_interest, min_intermediates, max_intermediates, [&]() {
     generate_frame();

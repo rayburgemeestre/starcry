@@ -296,6 +296,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       logger(DEBUG) << "err = " << err.what() << std::endl;
       return;
     }
+    gen->reset_seeds();
     gen->fast_forward(f.frame_num());
     gen->generate_frame();
 

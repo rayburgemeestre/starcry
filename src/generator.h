@@ -124,6 +124,7 @@ public:
   void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance,
                                              const data_staging::shape_t& created_shape,
                                              int debug_level = 0);
+  void reset_seeds();
   void fast_forward(int frame_of_interest);
   bool generate_frame();
   void revert_all_changes(v8_interact& i);

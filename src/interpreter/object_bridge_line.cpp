@@ -14,6 +14,11 @@ int64_t object_bridge<data_staging::line>::get_unique_id() const {
 }
 
 template <>
+std::string object_bridge<data_staging::line>::get_random_hash() const {
+  return shape_stack.back()->meta_ref().random_hash();
+}
+
+template <>
 double object_bridge<data_staging::line>::get_angle() const {
   return shape_stack.back()->generic_ref().angle();
 }
@@ -96,6 +101,11 @@ std::string object_bridge<data_staging::line>::get_unique_group() const {
 template <>
 void object_bridge<data_staging::line>::set_unique_id(int64_t unique_id) {
   shape_stack.back()->meta_ref().set_unique_id(unique_id);
+}
+
+template <>
+void object_bridge<data_staging::line>::set_random_hash(const std::string& random_hash) {
+  shape_stack.back()->meta_ref().set_random_hash(random_hash);
 }
 
 template <>
@@ -185,6 +195,7 @@ object_bridge<data_staging::line>::object_bridge(interpreter::generator* generat
   object_bridge_class  // .template ctor<int>()
       .property("level", &object_bridge::get_level)
       .property("unique_id", &object_bridge::get_unique_id, &object_bridge::set_unique_id)
+      .property("random_hash", &object_bridge::get_random_hash, &object_bridge::set_random_hash)
       .property("angle", &object_bridge::get_angle, &object_bridge::set_angle)
       .property("rotate", &object_bridge::get_rotate, &object_bridge::set_rotate)
       .property("hue", &object_bridge::get_hue, &object_bridge::set_hue)

@@ -6,6 +6,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace seasocks {
 class WebSocket;
@@ -30,6 +31,7 @@ private:
 
   bool preview_ = false;
   bool last_frame_ = false;
+  std::vector<int64_t> selected_ids_;
 
 public:
   frame_request(std::string script, int frame_num, int num_chunks)
@@ -61,6 +63,9 @@ public:
   }
   void set_last_frame() {
     last_frame_ = true;
+  }
+  void set_selected_ids(std::vector<int64_t> selected_ids) {
+    selected_ids_ = std::move(selected_ids);
   }
   //////
   const std::string& script() const {
@@ -98,6 +103,9 @@ public:
   }
   bool last_frame() const {
     return last_frame_;
+  }
+  [[nodiscard]] const std::vector<int64_t>& selected_ids() const {
+    return selected_ids_;
   }
 };
 }  // namespace data

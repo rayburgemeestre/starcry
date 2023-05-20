@@ -489,7 +489,7 @@ public:
     for (size_t k = 0; k < obj_fields->Length(); k++) {
       auto field_name = get_index(obj_fields, k);
       auto field_name_str = str(obj_fields, k);
-      if (field_name_str == "__random_hash__") continue;  // do not overwrite
+      if (field_name_str == "random_hash") continue;  // do not overwrite
       auto field_value = get(source_object, field_name);
       if (field_value->IsArray()) {
         v8::Local<v8::Array> new_sub_array = v8::Array::New(isolate);

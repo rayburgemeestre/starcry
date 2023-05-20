@@ -38,7 +38,7 @@ _ = {
               let obj2 = this.subobj[j];
               this.subobj.push(this.spawn({
                 'id': 'line',
-                'label': this.__random_hash__,
+                'label': this.random_hash,
                 'x': obj1.x,
                 'y': obj1.y,
                 'x2': obj2.x,

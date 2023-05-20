@@ -140,6 +140,7 @@ struct shape {
        id,
        label,
        level,
+       random_hash,
        motion_blur,
        warp_width,
        warp_height,
