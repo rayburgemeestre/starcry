@@ -148,7 +148,8 @@ void render_shapes_to_texture() {
                             job.scales,
                             false,
                             settings_,
-                            false /* debug */);
+                            false /* debug */,
+                            {});
   if (texture == nullptr && renderer == nullptr) {
     return;
   }

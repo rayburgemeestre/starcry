@@ -378,7 +378,10 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
     metrics_->render_job(i, job.job_number, job.chunk);
   }
 
-  const auto &selected_ids = job_msg->original_instruction->frame_ptr()->selected_ids();
+  const std::vector<int64_t> selected_ids =
+      job_msg && job_msg->original_instruction && job_msg->original_instruction->frame_ptr()
+          ? job_msg->original_instruction->frame_ptr()->selected_ids()
+          : std::vector<int64_t>{};
   std::vector<int64_t> selected_ids_transitive;
   if (selected_ids.size() > 0) {
     selected_ids_transitive = gen->get_transitive_ids(selected_ids);
