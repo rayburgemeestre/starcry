@@ -44,7 +44,8 @@ public:
                 std::vector<double> scales,
                 bool verbose,
                 const data::settings &settings,
-                double debug);
+                double debug,
+                const std::vector<int64_t> &selected_ids);
 
   void write_image(image &bmp, int width, int height, std::string filename);
 
@@ -71,7 +72,8 @@ private:
                  std::vector<double> scales,
                  bool verbose,
                  const data::settings &settings,
-                 double debug);
+                 double debug,
+                 const std::vector<int64_t> &selected_ids);
 
   util::random_generator rand_;
 };

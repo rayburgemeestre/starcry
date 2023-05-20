@@ -15,7 +15,6 @@
 
 #include "v8pp/module.hpp"
 
-#include "data/texture.hpp"
 #include "interpreter/fast_forwarder.hpp"
 #include "scripting.h"
 #include "starcry/metrics.h"
@@ -860,6 +859,25 @@ void generator::debug_print(std::vector<data_staging::shape_t>& shapes) {
                      shape.styling_ref());
         });
   }
+}
+
+std::vector<int64_t> generator::get_transitive_ids(const std::vector<int64_t>& unique_ids) {
+  std::vector<int64_t> ret = unique_ids;
+  auto queue = unique_ids;
+  while (!queue.empty()) {
+    const auto item = queue.back();
+    queue.pop_back();
+    const auto obj = next_instance_map.at(item).get();
+    meta_callback(obj, [&]<typename T>(const T& cc) {
+      if (cc.meta_cref().level() >= 0) {
+        ret.push_back(cc.meta_cref().parent_uid());
+      }
+      if (cc.meta_cref().level() > 0) {
+        queue.push_back(cc.meta_cref().parent_uid());
+      }
+    });
+  }
+  return ret;
 }
 
 }  // namespace interpreter

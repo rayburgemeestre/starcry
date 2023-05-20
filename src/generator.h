@@ -107,6 +107,7 @@ private:
 
   util::random_generator rand_;
   data_staging::attrs global_attrs_;
+  std::vector<int64_t> selected_ids_;
 
 public:
   explicit generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug = false);
@@ -153,6 +154,7 @@ public:
   static int64_t destroy(data_staging::shape_t& spawner);
 
   std::unordered_map<std::string, v8::Persistent<v8::Object>>& get_object_definitions_ref();
+  std::vector<int64_t> get_transitive_ids(const std::vector<int64_t>& in);
 
 private:
   bool _generate_frame();

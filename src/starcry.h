@@ -159,8 +159,12 @@ public:
 private:
   void configure_inotify();
 
-  void render_job(
-      size_t thread_num, rendering_engine &engine, const data::job &job, image &bmp, const data::settings &settings);
+  void render_job(size_t thread_num,
+                  rendering_engine &engine,
+                  const data::job &job,
+                  image &bmp,
+                  const data::settings &settings,
+                  const std::vector<int64_t> &selected_ids = {});
 
   void command_to_jobs(std::shared_ptr<instruction> cmd_def);
   std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);

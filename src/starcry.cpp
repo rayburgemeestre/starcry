@@ -171,8 +171,12 @@ void starcry::add_video_command(std::shared_ptr<data::video_request> req) {
   cmds->push(std::make_shared<instruction>(req));
 }
 
-void starcry::render_job(
-    size_t thread_num, rendering_engine &engine, const data::job &job, image &bmp, const data::settings &settings) {
+void starcry::render_job(size_t thread_num,
+                         rendering_engine &engine,
+                         const data::job &job,
+                         image &bmp,
+                         const data::settings &settings,
+                         const std::vector<int64_t> &selected_ids) {
   prctl(PR_SET_NAME, fmt::format("sc {} {}/{}", job.frame_number, job.chunk, job.num_chunks).c_str(), NULL, NULL, NULL);
 
   bmp = engine.render(thread_num,
@@ -194,7 +198,8 @@ void starcry::render_job(
                       job.scales,
                       options_.level == log_level::debug,
                       settings,
-                      options_.debug || get_viewpoint().debug);
+                      options_.debug || get_viewpoint().debug,
+                      selected_ids);
 }
 
 // MARK1 transform instruction into job (using generator)
@@ -372,7 +377,14 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   } else {
     metrics_->render_job(i, job.job_number, job.chunk);
   }
-  render_job(i, *engines[i], job, bmp, settings);
+
+  const auto &selected_ids = job_msg->original_instruction->frame_ptr()->selected_ids();
+  std::vector<int64_t> selected_ids_transitive;
+  if (selected_ids.size() > 0) {
+    selected_ids_transitive = gen->get_transitive_ids(selected_ids);
+  }
+
+  render_job(i, *engines[i], job, bmp, settings, selected_ids_transitive);
 
   if (job.job_number == std::numeric_limits<uint32_t>::max()) {
     metrics_->complete_render_job(i, job.frame_number, job.chunk);

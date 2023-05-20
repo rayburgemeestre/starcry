@@ -75,7 +75,8 @@ image &rendering_engine::render(size_t thread_num,
                                 std::vector<double> scales,
                                 bool verbose,
                                 const data::settings &settings,
-                                double debug) {
+                                double debug,
+                                const std::vector<int64_t> &selected_ids) {
   auto _exec = [&](uint32_t width, uint32_t height, uint32_t extra_offset_x, uint32_t extra_offset_y) -> image & {
     return _render(thread_num,
                    job_num,
@@ -95,7 +96,8 @@ image &rendering_engine::render(size_t thread_num,
                    scales,
                    verbose,
                    settings,
-                   debug);
+                   debug,
+                   selected_ids);
   };
   // in case -c 1 is specified, we try to 'auto chunk' the image based on number of motion blur frames
   // the worst-case is having each pixel change, meaning memory usage multiplies the entire image size
@@ -148,7 +150,8 @@ image &rendering_engine::_render(size_t thread_num,
                                  std::vector<double> scales,
                                  bool verbose,
                                  const data::settings &settings,
-                                 double debug) {
+                                 double debug,
+                                 const std::vector<int64_t> &selected_ids) {
   if (!draw_logic_) {
     draw_logic_ = std::make_shared<draw_logic::draw_logic>();
   }
@@ -224,6 +227,13 @@ image &rendering_engine::_render(size_t thread_num,
       metrics->set_render_job_object_state(thread_num, job_num, chunk_num, index, metrics::job_state::rendering);
 #endif
 #endif
+      if (!selected_ids.empty()) {
+        // TODO: selected_ids should be a set, although for now perhaps this is fine, since we're only dealing with
+        // around 3 or 4 items in selected_ids most likely.
+        if (std::find(selected_ids.begin(), selected_ids.end(), shape.unique_id) == selected_ids.end()) {
+          continue;
+        }
+      }
 
       if (!scales.empty()) {
         draw_logic_->capture_pixels(true);
