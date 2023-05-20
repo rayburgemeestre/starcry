@@ -1,5 +1,8 @@
 <template>
-  <div>TODO help page</div>
+  <div><strong>Keyboard shortcuts</strong></div>
+  <ul>
+    <li></li>
+  </ul>
 </template>
 
 <script lang="ts">

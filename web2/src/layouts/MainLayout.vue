@@ -179,16 +179,16 @@ export default defineComponent({
         // debug_text.value = "done";
         // // release the hold
         // startXY = [];
-        this.render_objects();
+        this.render_objects(true);
       },
       on_mouse_down: function (e) {
         if (e.ctrlKey) {
           viewpoint_store.select();
         } else {
-          this.render_objects();
+          this.render_objects(true);
         }
       },
-      render_objects: function () {
+      render_objects: function (update_selected_objects) {
         let canvas1 = document.getElementById('canvas') as HTMLCanvasElement;
         let canvas = document.getElementById('canvas2') as HTMLCanvasElement;
         [canvas.height, canvas.height] = [canvas1.width, canvas1.height];
@@ -231,6 +231,9 @@ export default defineComponent({
           return Math.sqrt(squared_dist(x, x2) + squared_dist(y, y2));
         }
         let objects_store = useObjectsStore();
+        if (update_selected_objects) {
+          script_store.clearSelectedObjects();
+        }
         for (let obj of objects_store.objects) {
           let center_x = viewpoint_store.offset_x;
           let center_y = viewpoint_store.offset_y;
@@ -244,16 +247,22 @@ export default defineComponent({
             (viewpoint_store.view_x - canvas_w / 2) / scale + center_x;
           let view_y =
             (viewpoint_store.view_y - canvas_h / 2) / scale + center_y;
-          if (get_distance(obj.x, obj.y, view_x, view_y) < 10 / scale) {
+          if (
+            get_distance(obj.x, obj.y, view_x, view_y) < 10 / scale ||
+            script_store.selected.includes(obj.unique_id)
+          ) {
             ctx.fillStyle = 'red';
+            if (update_selected_objects) {
+              script_store.addSelectedObject(obj.unique_id);
+            }
           } else {
             ctx.fillStyle = 'white';
           }
           ctx.fillRect(x - 5, y - 5, 10, 10);
           ctx.fillText(obj.label, x, y);
-          ctx.fillText(obj['#'], x, y + 20);
+          ctx.fillText('' + obj['#'], x, y + 20);
           ctx.fillText(obj.id, x, y + 40);
-          ctx.fillText(obj.unique_id, x, y + 60);
+          ctx.fillText('' + obj.unique_id, x, y + 60);
           // ctx.fillText(obj.random_hash, x, y + 80);
           // ctx.fillText(obj.time, x, y + 100);
         }
@@ -282,6 +291,14 @@ export default defineComponent({
           Math.max(0, viewpoint_store.scale),
           100
         );
+      },
+
+      handleKeydown(event) {
+        if (event.ctrlKey && event.key === '/') {
+        } else if (event.ctrlKey && event.key === '.') {
+        } else if (event.ctrlKey && event.key === ',') {
+        } else if (event.altKey && event.key === 'z') {
+        }
       },
     };
     obj.toggleLeftDrawer = function () {
@@ -367,7 +384,7 @@ export default defineComponent({
     watch(
       () => script_store.render_completed_by_server,
       (n) => {
-        obj.render_objects();
+        obj.render_objects(false);
       }
     );
 
@@ -433,6 +450,11 @@ export default defineComponent({
     setTimeout(function () {
       append_script_to_body('client.js');
     }, 100);
+
+    window.addEventListener('keydown', this.handleKeydown);
+  },
+  beforeUnmount() {
+    window.removeEventListener('keydown', this.handleKeydown);
   },
 });
 </script>

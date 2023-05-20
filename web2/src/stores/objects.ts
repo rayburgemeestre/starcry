@@ -1,45 +1,56 @@
 import { defineStore } from 'pinia';
 
+export type ObjectType = {
+  unique_id: number;
+  level: number;
+  label: string;
+  id: string;
+  x: number;
+  y: number;
+  '#': number;
+};
+
 export const useObjectsStore = defineStore('objects', {
   state: () => ({
-    objects: [],
-    selected: [],
+    objects: [] as ObjectType[],
+    selected: [] as number[],
+    lookup: {} as Record<number, number>,
   }),
-
   getters: {},
-
   actions: {
-    addSelected(value) {
+    addSelected(value: number) {
       if (!this.selected.includes(value)) {
         this.selected.push(value);
       }
     },
-    removeSelected(value) {
+    removeSelected(value: number) {
       const index = this.selected.indexOf(value);
       if (index > -1) {
         this.selected.splice(index, 1);
       }
     },
-
-    isSelected(value) {
+    isSelected(value: number) {
       return this.selected.includes(value);
     },
-
-    parentLookup(unique_id) {
-      // TODO: this obviously needs to be persisted, but first let's see if it works.
-      const lookup = {};
+    updateLookupTable() {
       const parentStack = []; // stack to keep track of parents at each level
-
-      for (const obj of this.objects) {
-        if (obj.level > 0) {
-          // only non-root nodes have a parent
-          lookup[obj.unique_id] = parentStack[obj.level - 1];
+      this.lookup = {};
+      try {
+        for (const obj of this.objects) {
+          if (obj.level > 0) {
+            // only non-root nodes have a parent
+            this.lookup[obj.unique_id] = parentStack[obj.level - 1];
+          }
+          // update the current object as the potential parent for the next level
+          parentStack[obj.level] = obj.unique_id;
         }
-
-        // update the current object as the potential parent for the next level
-        parentStack[obj.level] = obj.unique_id;
+      } catch (e) {
+        console.log('Error updating lookup table');
+        console.log(e);
       }
-      return lookup[unique_id];
+    },
+    parentLookup(unique_id: number) {
+      return this.lookup[unique_id];
     },
   },
 });

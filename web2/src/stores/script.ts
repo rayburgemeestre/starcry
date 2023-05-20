@@ -11,6 +11,7 @@ export const useScriptStore = defineStore('script', {
     preview: {},
     frames_per_scene: [] as number[],
     max_frames: 0,
+    selected: [] as number[],
 
     auto_render: true,
     num_chunks: 1,
@@ -33,6 +34,12 @@ export const useScriptStore = defineStore('script', {
     set_value(new_val: string) {
       this.script = new_val;
       this.value_updated_by_user++;
+    },
+    clearSelectedObjects() {
+      this.selected = [];
+    },
+    addSelectedObject(unique_id: number) {
+      this.selected.push(unique_id);
     },
   },
 });

@@ -18,10 +18,33 @@
         <span class="col type">{{ to_utf8_symbol(object['type']) }}</span>
         <span class="col level">{{ object['level'] }}</span>
         <span class="col unique_id">{{ object['unique_id'] }}</span>
+        <span class="col random_hash">{{ object['random_hash'] }}</span>
         <span class="col id">{{ object['id'] }}</span>
         <span class="col gradient">{{ object['gradient'] }}</span>
       </div>
-      <!--<span>{{ object }}</span> -->
+      <div
+        :style="{ marginLeft: object['level'] * 20 + 'px' }"
+        v-if="
+          object['level'] === 0 || objects_store.isSelected(object['unique_id'])
+        "
+        class="item"
+      >
+        <q-table
+          :style="{
+            marginLeft: 25 + object['level'] * 20 + 'px',
+            marginTop: '5px',
+          }"
+          dense
+          :rows="rows(object['unique_id'])"
+          :columns="columns"
+          row-key="name"
+          :filter="filter"
+          hide-header
+          hide-pagination
+          :rows-per-page-options="[100]"
+        >
+        </q-table>
+      </div>
     </div>
   </div>
 </template>
@@ -47,6 +70,7 @@ export default defineComponent({
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       (buffer) => {
         objects_store.objects = buffer;
+        objects_store.updateLookupTable();
       },
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -81,11 +105,37 @@ export default defineComponent({
       objects_store.addSelected(unique_id);
     }
 
+    function rows(unique_id) {
+      // get the object with matching unique_id, from the array
+      let object = objects_store.objects.find(
+        (element) => element.unique_id === unique_id
+      );
+      return Object.entries(object);
+    }
+
+    const columns = [
+      {
+        name: 'property',
+        align: 'left',
+        field: (row) => row[0],
+        format: (val) => `${val}`,
+        sortable: true,
+      },
+      {
+        name: 'value',
+        align: 'left',
+        field: (row) => row[1],
+        sortable: true,
+      },
+    ];
+
     return {
       objects_store,
       to_utf8_symbol,
       click,
       componentKey,
+      rows,
+      columns,
     };
   },
 });
@@ -116,6 +166,10 @@ export default defineComponent({
   padding: 0;
 }
 .col.unique_id {
+  max-width: 60px;
+  padding: 0;
+}
+.col.random_hash {
   max-width: 60px;
   padding: 0;
 }

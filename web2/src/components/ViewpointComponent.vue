@@ -277,6 +277,7 @@ export default defineComponent({
             frame: parseInt(script_store.frame),
             // viewpoint_settings: viewpoint_settings,
             num_chunks: parseInt(script_store.num_chunks),
+            selected: script_store.selected,
           })
         );
       },
