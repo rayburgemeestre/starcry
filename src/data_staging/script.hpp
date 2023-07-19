@@ -37,6 +37,10 @@ private:
   styling styling_;
   attrs attrs_;
 
+  // for gravity and other forces
+  double radius_ = 0.;
+  double radius_size_ = 10.;
+
 public:
   script(std::string id, int64_t unique_id, vector2d position) : meta_(std::move(id), unique_id), location_(position) {}
 
@@ -66,7 +70,16 @@ public:
   data_staging::location& location_ref() {
     return location_;
   }
+  /**
+   * Absolute location data reference
+   */
   data_staging::location& transitive_location_ref() {
+    return transitive_location_;
+  }
+  /**
+   * Absolute location data const reference
+   */
+  const data_staging::location& transitive_location_cref() {
     return transitive_location_;
   }
   const movement& movement_cref() const {
@@ -104,6 +117,33 @@ public:
   }
   data_staging::styling& styling_ref() {
     return styling_;
+  }
+
+  /**
+   * Radius
+   */
+  double radius() const {
+    return radius_;
+  }
+  /**
+   * Radius size
+   */
+  double radius_size() const {
+    return radius_size_;
+  }
+  /**
+   * Set radius
+   * @param radius
+   */
+  void set_radius(double radius) {
+    radius_ = radius;
+  }
+  /**
+   * Set radius size
+   * @param radius_size
+   */
+  void set_radius_size(double radius_size) {
+    radius_size_ = radius_size;
   }
 };
 }  // namespace data_staging

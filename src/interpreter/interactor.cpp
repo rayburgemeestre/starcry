@@ -19,31 +19,29 @@ void interactor::reset() {
 
 void interactor::update_interactions() {
   const auto handle_pass1 = [&]<typename T>(data_staging::shape_t& abstract_shape, T& shape, data_staging::meta& meta) {
-    if constexpr (std::is_same_v<T, data_staging::circle>) {
-      if (shape.radius_size() < 1000 /* todo create property of course */) {
-        double x = shape.transitive_location_cref().position_cref().x;
-        double y = shape.transitive_location_cref().position_cref().y;
-        // TODO:
-        update_object_toroidal(shape.toroidal_ref(), x, y);
-        const auto collision_group = shape.behavior_cref().collision_group();
-        const auto gravity_group = shape.behavior_cref().gravity_group();
-        const auto unique_group = shape.behavior_cref().unique_group();
+    if constexpr (std::is_same_v<T, data_staging::circle> || std::is_same_v<T, data_staging::script>) {
+      double x = shape.transitive_location_cref().position_cref().x;
+      double y = shape.transitive_location_cref().position_cref().y;
+      // TODO:
+      update_object_toroidal(shape.toroidal_ref(), x, y);
+      const auto collision_group = shape.behavior_cref().collision_group();
+      const auto gravity_group = shape.behavior_cref().gravity_group();
+      const auto unique_group = shape.behavior_cref().unique_group();
 
-        if (!collision_group.empty()) {
-          qts.try_emplace(
-              collision_group,
-              quadtree(rectangle(position(-gen_.width() / 2, -gen_.height() / 2), gen_.width(), gen_.height()), 32));
-          qts[collision_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
-        }
-        if (!gravity_group.empty()) {
-          qts_gravity.try_emplace(
-              gravity_group,
-              quadtree(rectangle(position(-gen_.width() / 2, -gen_.height() / 2), gen_.width(), gen_.height()), 32));
-          qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
-        }
-        if (!unique_group.empty()) {
-          unique_groups[unique_group].add(x, y);
-        }
+      if (!collision_group.empty()) {
+        qts.try_emplace(
+            collision_group,
+            quadtree(rectangle(position(-gen_.width() / 2, -gen_.height() / 2), gen_.width(), gen_.height()), 32));
+        qts[collision_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
+      }
+      if (!gravity_group.empty()) {
+        qts_gravity.try_emplace(
+            gravity_group,
+            quadtree(rectangle(position(-gen_.width() / 2, -gen_.height() / 2), gen_.width(), gen_.height()), 32));
+        qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
+      }
+      if (!unique_group.empty()) {
+        unique_groups[unique_group].add(x, y);
       }
     }
     if constexpr (std::is_same_v<T, data_staging::line>) {
@@ -336,19 +334,14 @@ void interactor::handle_collision(data_staging::circle& instance,
       }
       // unknown (undefined) objects, are ignored..
     };
-    meta_callback(shape, [&]<typename T>(T& shape) {
-      callback_wrapper(shape, unique_id2);
-    });
-    meta_callback(shape2, [&]<typename T>(const T& shape) {
-      callback_wrapper(shape, unique_id);
-    });
+    callback_wrapper(shape, unique_id2);
+    callback_wrapper(shape, unique_id);
   }
 }
 
 void interactor::handle_gravity(data_staging::shape_t& shape) {
-  try {
+  const auto handle = [&](auto& c) {
     std::vector<point_type> found;
-    data_staging::circle& c = std::get<data_staging::circle>(shape);
 
     auto unique_id = c.meta_cref().unique_id();
     auto gravity_group = c.behavior_ref().gravity_group();
@@ -374,33 +367,41 @@ void interactor::handle_gravity(data_staging::shape_t& shape) {
     qts_gravity[gravity_group].query(
         unique_id, circle(position(x, y), range + (radius * 2.0), range + (radiussize * 2.0)), found);
 
-    if (c.radius_size() < 1000 /* todo create property of course */) {
-      vector2d acceleration(0, 0);
-      for (const auto& in_range : found) {
-        const auto unique_id2 = in_range.userdata;
-        auto shape2 = gen_.next_instance_map.at(unique_id2);
-        try {
-          data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
-          if (c.meta_cref().unique_id() != c2.meta_cref().unique_id()) {
-            handle_gravity(c, c2, acceleration, G, range, constrain_dist_min, constrain_dist_max);
-          }
-        } catch (std::bad_variant_access const& ex) {
-          // only supporting circles for now
-          return;
-        }
+    vector2d acceleration(0, 0);
+    const auto handle = [&](auto& c, auto& c2) {
+      if (c.meta_cref().unique_id() != c2.meta_cref().unique_id()) {
+        handle_gravity(c, c2, acceleration, G, range, constrain_dist_min, constrain_dist_max);
       }
-      auto vel = add_vector(c.movement_ref().velocity(), acceleration);
-      c.movement_ref().set_velocity(vel);
+    };
+    for (const auto& in_range : found) {
+      const auto unique_id2 = in_range.userdata;
+      auto shape2 = gen_.next_instance_map.at(unique_id2);
+      if (std::holds_alternative<data_staging::circle>(shape2.get())) {
+        data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
+        handle(c, c2);
+      }
+      if (std::holds_alternative<data_staging::script>(shape2.get())) {
+        data_staging::script& c2 = std::get<data_staging::script>(shape2.get());
+        handle(c, c2);
+      }
     }
-  } catch (std::bad_variant_access const& ex) {
-    // only supporting circles for now
-    return;
+    auto vel = add_vector(c.movement_ref().velocity(), acceleration);
+    c.movement_ref().set_velocity(vel);
+  };
+
+  if (std::holds_alternative<data_staging::circle>(shape)) {
+    data_staging::circle& c = std::get<data_staging::circle>(shape);
+    handle(c);
   }
-  //---
+  if (std::holds_alternative<data_staging::script>(shape)) {
+    data_staging::script& c = std::get<data_staging::script>(shape);
+    handle(c);
+  }
 }
 
-void interactor::handle_gravity(data_staging::circle& instance,
-                                data_staging::circle& instance2,
+template <typename T, typename T2>
+void interactor::handle_gravity(T& instance,
+                                T2& instance2,
                                 vector2d& acceleration,
                                 double G,
                                 double range,

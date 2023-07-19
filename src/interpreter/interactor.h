@@ -39,8 +39,9 @@ private:
                         data_staging::shape_t& shape,
                         data_staging::shape_t& shape2);
   void handle_gravity(data_staging::shape_t& instance);
-  void handle_gravity(data_staging::circle& instance,
-                      data_staging::circle& instance2,
+  template <typename T, typename T2>
+  void handle_gravity(T& instance,
+                      T2& instance2,
                       vector2d& acceleration,
                       double G,
                       double range,

@@ -1,10 +1,6 @@
 <template>
   <div :key="componentKey">
-    <div
-      v-for="object in objects_store.objects"
-      :key="object.id"
-      @click="click(this, object.unique_id)"
-    >
+    <div v-for="object in objects_store.objects" :key="object.id">
       <div
         :style="{ marginLeft: object['level'] * 20 + 'px' }"
         v-if="
@@ -15,6 +11,18 @@
         "
         class="item"
       >
+        <span
+          class="col collapse"
+          v-if="objects_store.isSelected(object['unique_id'])"
+          @click="click(this, object.unique_id)"
+          >▼</span
+        >
+        <span
+          class="col expand"
+          v-if="!objects_store.isSelected(object['unique_id'])"
+          @click="click(this, object.unique_id)"
+          >▶</span
+        >
         <span class="col type">{{ to_utf8_symbol(object['type']) }}</span>
         <span class="col level">{{ object['level'] }}</span>
         <span class="col unique_id">{{ object['unique_id'] }}</span>
@@ -24,9 +32,7 @@
       </div>
       <div
         :style="{ marginLeft: object['level'] * 20 + 'px' }"
-        v-if="
-          object['level'] === 0 || objects_store.isSelected(object['unique_id'])
-        "
+        v-if="objects_store.isSelected(object['unique_id'])"
         class="item"
       >
         <q-table
@@ -150,6 +156,12 @@ export default defineComponent({
 .item:first-child {
   margin-top: 10px;
 }
+
+.col.expand,
+.col.collapse {
+  cursor: pointer;
+}
+
 .col {
   background-color: #333333;
   margin-right: 5px;
@@ -175,5 +187,9 @@ export default defineComponent({
 }
 .item:hover .col {
   background-color: rgba(255, 255, 255, 0.28);
+}
+.col.expand:hover,
+.col.collapse:hover {
+  background-color: #990000;
 }
 </style>

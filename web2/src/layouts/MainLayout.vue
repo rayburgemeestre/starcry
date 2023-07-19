@@ -234,6 +234,12 @@ export default defineComponent({
         if (update_selected_objects) {
           script_store.clearSelectedObjects();
         }
+        if (objects_store.objects === null) {
+          return;
+        }
+        if (!viewpoint_store.labels) {
+          return;
+        }
         for (let obj of objects_store.objects) {
           let center_x = viewpoint_store.offset_x;
           let center_y = viewpoint_store.offset_y;
@@ -295,8 +301,16 @@ export default defineComponent({
 
       handleKeydown(event) {
         if (event.ctrlKey && event.key === '/') {
+          script_store.render_requested_by_user_v2++;
+          event.preventDefault();
         } else if (event.ctrlKey && event.key === '.') {
+          script_store.frame++;
+          script_store.render_requested_by_user_v2++;
+          event.preventDefault();
         } else if (event.ctrlKey && event.key === ',') {
+          script_store.frame--;
+          script_store.render_requested_by_user_v2++;
+          event.preventDefault();
         } else if (event.altKey && event.key === 'z') {
         }
       },

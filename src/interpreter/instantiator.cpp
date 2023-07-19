@@ -13,44 +13,44 @@ void instantiate_object_copy_fields(v8_interact& i,
                                     v8::Local<v8::Object> scene_obj,
                                     v8::Local<v8::Object> new_instance) {
   // @add_field@
-  for (auto field : {"id",
-                     "x",
-                     "y",
-                     "x2",
-                     "y2",
-                     "vel_x",
-                     "vel_y",
-                     "vel_x2",
-                     "vel_y2",
-                     "velocity",
-                     "mass",
-                     "radius",
-                     "radiussize",
-                     "shortest_diameter",
-                     "longest_diameter",
+  for (auto field : {"angle",
+                     "blending_type",
+                     "collision_group",
+                     "duration",
                      "gradient",
                      "gradients",
+                     "gravity_group",
+                     "hue",
+                     "id",
+                     "longest_diameter",
+                     "mass",
+                     "opacity",
+                     "pivot",
+                     "radius",
+                     "radiussize",
+                     "rotate",
+                     "scale",
+                     "seed",
+                     "shortest_diameter",
+                     "text",
+                     "text_align",
+                     "text_fixed",
+                     "text_font",
+                     "text_size",
                      "texture",
                      "texture_3d",
                      "texture_offset_x",
                      "texture_offset_y",
-                     "seed",
-                     "blending_type",
-                     "opacity",
-                     "scale",
-                     "angle",
-                     "rotate",
-                     "hue",
-                     "pivot",
-                     "text",
-                     "text_align",
-                     "text_size",
-                     "text_fixed",
-                     "text_font",
-                     "duration",
-                     "collision_group",
-                     "gravity_group",
-                     "unique_group"}) {
+                     "unique_group",
+                     "vel_x",
+                     "vel_x2",
+                     "vel_y",
+                     "vel_y2",
+                     "velocity",
+                     "x",
+                     "x2",
+                     "y",
+                     "y2"}) {
     i.copy_field_if_exists(new_instance, field, scene_obj);
   }
 }
@@ -366,8 +366,15 @@ instantiator::instantiate_object_from_scene(
         object_id, counter, vector2d(i.double_number(instance, "x"), i.double_number(instance, "y")));
 
     s.meta_ref().set_namespace(object_id + "_");
+    s.set_radius(i.double_number(instance, "radius", 0));
+    s.set_radius_size(i.double_number(instance, "radiussize", 0));
+    s.movement_ref().set_velocity(i.double_number(instance, "vel_x", 0),
+                                  i.double_number(instance, "vel_y", 0),
+                                  i.double_number(instance, "velocity", 0));
+    s.generic_ref().set_opacity(i.double_number(instance, "opacity", 1));
 
     initialize(s, gen_.bridges_.script());
+
   } else {
     throw std::logic_error(fmt::format("unknown type: {}", type));
   }
