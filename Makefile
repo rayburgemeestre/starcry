@@ -201,6 +201,9 @@ build-web-old:
 run-web:  ## run web in development hot-swappable mode
 	pushd web && npm run dev
 
+run-web2:  ## run new web in development hot-swappable mode
+	pushd web2 && quasar dev
+
 attach:
 	docker exec -it starcry /bin/bash
 
@@ -227,6 +230,7 @@ publish:  ## build from scratch starcry, web, client, docker image. (does not pu
 
 clion:
 	xhost +
+	sudo sysctl kernel.unprivileged_userns_clone=0
 	mkdir -p /tmp/ccache-root
 	$(docker_exe) rm starcry_clion || true
 	$(docker_exe) run --rm --name starcry_clion -p 18081:18080 -p 10001:10000 -p 16379:6379 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/clion ${HOME}"
