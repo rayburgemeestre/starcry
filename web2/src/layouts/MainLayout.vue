@@ -188,7 +188,7 @@ export default defineComponent({
           this.render_objects(true);
         }
       },
-      render_objects: function (update_selected_objects) {
+      render_objects: function (update_selected_objects: boolean) {
         let canvas1 = document.getElementById('canvas') as HTMLCanvasElement;
         let canvas = document.getElementById('canvas2') as HTMLCanvasElement;
         [canvas.height, canvas.height] = [canvas1.width, canvas1.height];
@@ -240,37 +240,38 @@ export default defineComponent({
         if (!viewpoint_store.labels) {
           return;
         }
-        for (let obj of objects_store.objects) {
-          let center_x = viewpoint_store.offset_x;
-          let center_y = viewpoint_store.offset_y;
-          let offset_x = 0;
-          let offset_y = 0;
-          // TODO: refactor the way we send objects once more
+        let show_all = script_store.selected.length === 0;
+        for (let pass=1; pass<=2; pass++) {
+          for (let obj of objects_store.objects) {
+            let center_x = viewpoint_store.offset_x;
+            let center_y = viewpoint_store.offset_y;
+            let offset_x = 0;
+            let offset_y = 0;
+            let color = '';
+            // TODO: refactor the way we send objects once more
 
-          let x = (obj.x - center_x) * scale - offset_x + canvas_w / 2;
-          let y = (obj.y - center_y) * scale - offset_y + canvas_h / 2;
-          let view_x =
-            (viewpoint_store.view_x - canvas_w / 2) / scale + center_x;
-          let view_y =
-            (viewpoint_store.view_y - canvas_h / 2) / scale + center_y;
-          if (
-            get_distance(obj.x, obj.y, view_x, view_y) < 10 / scale ||
-            script_store.selected.includes(obj.unique_id)
-          ) {
-            ctx.fillStyle = 'red';
-            if (update_selected_objects) {
-              script_store.addSelectedObject(obj.unique_id);
+            let x = (obj.x - center_x) * scale - offset_x + canvas_w / 2;
+            let y = (obj.y - center_y) * scale - offset_y + canvas_h / 2;
+            let view_x =
+              (viewpoint_store.view_x - canvas_w / 2) / scale + center_x;
+            let view_y =
+              (viewpoint_store.view_y - canvas_h / 2) / scale + center_y;
+            if (pass === 2 && script_store.highlighted.includes(obj.unique_id)) {
+              color = 'cyan';
+            } else if (pass === 1 && (get_distance(obj.x, obj.y, view_x, view_y) < 10 / scale || script_store.selected.includes(obj.unique_id))) {
+              color = 'red';
+              if (update_selected_objects) {
+                script_store.addSelectedObject(obj.unique_id);
+                objects_store.onUserSelected(obj.unique_id);
+              }
+            } else if (pass === 1 && show_all) {
+              color = 'white';
             }
-          } else {
-            ctx.fillStyle = 'white';
+            if (color != '') {
+              ctx.fillStyle = color;
+              ctx.fillText('' + obj.unique_id, x, y);
+            }
           }
-          ctx.fillRect(x - 5, y - 5, 10, 10);
-          ctx.fillText(obj.label, x, y);
-          ctx.fillText('' + obj['#'], x, y + 20);
-          ctx.fillText(obj.id, x, y + 40);
-          ctx.fillText('' + obj.unique_id, x, y + 60);
-          // ctx.fillText(obj.random_hash, x, y + 80);
-          // ctx.fillText(obj.time, x, y + 100);
         }
         // draw the actual canvas of the video
         ctx.strokeStyle = 'red';

@@ -103,7 +103,6 @@ export default defineComponent({
           let b = colors.get(i++);
           let a = colors.get(i++) / 255;
           ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
-          console.log('col = ' + ctx.fillStyle);
           ctx.fillRect(x, 0, 1, canvas.height);
           x++;
         }

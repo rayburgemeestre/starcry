@@ -1,38 +1,53 @@
 <template>
+  <div class="q-pa-md">
+    <br />
+    <q-btn color="secondary" style="width: 33.33%" @click="reset()">Reset</q-btn>
+    <q-btn color="secondary" style="width: 33.33%" @click="collapse()">Collapse</q-btn>
+    <q-btn color="secondary" style="width: 33.33%" @click="expand()">Expand</q-btn>
+  </div>
+
   <div :key="componentKey">
     <div v-for="object in objects_store.objects" :key="object.id">
       <div
         :style="{ marginLeft: object['level'] * 20 + 'px' }"
         v-if="
           object['level'] === 0 ||
-          objects_store.isSelected(
-            objects_store.parentLookup(object['unique_id'])
+          objects_store.isSelectedArray(
+            objects_store.parentsLookup(object['unique_id'])
           )
         "
         class="item"
       >
         <span
           class="col collapse"
-          v-if="objects_store.isSelected(object['unique_id'])"
+          v-if="objects_store.isSelected(object['unique_id']) === 1"
           @click="click(this, object.unique_id)"
-          >▼</span
-        >
+        >➔</span>
+        <span
+          class="col collapse"
+          v-if="objects_store.isSelected(object['unique_id']) === 2"
+          @click="click(this, object.unique_id)"
+        >➘</span>
         <span
           class="col expand"
-          v-if="!objects_store.isSelected(object['unique_id'])"
+          v-if="!objects_store.isSelected(object['unique_id']) > 0"
           @click="click(this, object.unique_id)"
-          >▶</span
-        >
+          >&nbsp;</span>
         <span class="col type">{{ to_utf8_symbol(object['type']) }}</span>
-        <span class="col level">{{ object['level'] }}</span>
-        <span class="col unique_id">{{ object['unique_id'] }}</span>
-        <span class="col random_hash">{{ object['random_hash'] }}</span>
+        <span class="col unique_id"
+              :style="{ backgroundColor: scripts_store.highlighted.includes(object['unique_id']) ? 'cyan' : '',
+                        color: scripts_store.highlighted.includes(object['unique_id']) ? 'black' : ''
+                      }"
+              @click="highlight(this, object.unique_id)">{{ object['unique_id'] }}</span>
         <span class="col id">{{ object['id'] }}</span>
         <span class="col gradient">{{ object['gradient'] }}</span>
       </div>
       <div
         :style="{ marginLeft: object['level'] * 20 + 'px' }"
-        v-if="objects_store.isSelected(object['unique_id'])"
+        v-if="objects_store.isSelected(object['unique_id']) === 1 &&
+          objects_store.isSelectedArray(
+            objects_store.parentsLookup(object['unique_id'])
+          )"
         class="item"
       >
         <q-table
@@ -58,6 +73,7 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
 import { useObjectsStore } from 'stores/objects';
+import { useScriptStore } from 'stores/script';
 import { StarcryAPI } from 'components/api';
 export default defineComponent({
   // name: 'ComponentName'
@@ -66,6 +82,8 @@ export default defineComponent({
   setup() {
     const componentKey = ref(0);
     let objects_store = useObjectsStore();
+    let scripts_store = useScriptStore();
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const objects_endpoint = new StarcryAPI(
       'objects',
@@ -104,11 +122,37 @@ export default defineComponent({
     }
 
     function click(source_elem, unique_id) {
-      if (objects_store.isSelected(unique_id)) {
-        objects_store.removeSelected(unique_id);
+      const selected = objects_store.isSelected(unique_id);
+      if (selected === 1) {
+        return;
+      } else if (selected === 2) {
+        objects_store.removeImpliedSelected(unique_id);
         return;
       }
-      objects_store.addSelected(unique_id);
+      objects_store.addImpliedSelected(unique_id);
+    }
+
+    function highlight(source_elem, unique_id) {
+      scripts_store.highlightObject(unique_id);
+      scripts_store.render_completed_by_server++;
+    }
+
+    function select(source_elem, unique_id) {
+      scripts_store.addSelectedObject(unique_id);
+    }
+
+    function reset() {
+      objects_store.reset();
+      scripts_store.reset();
+      return;
+    }
+
+    function collapse() {
+      return;
+    }
+
+    function expand() {
+      return;
     }
 
     function rows(unique_id) {
@@ -137,11 +181,17 @@ export default defineComponent({
 
     return {
       objects_store,
+      scripts_store,
       to_utf8_symbol,
       click,
+      highlight,
+      select,
       componentKey,
       rows,
       columns,
+      reset,
+      collapse,
+      expand,
     };
   },
 });
@@ -163,6 +213,8 @@ export default defineComponent({
 }
 
 .col {
+  font-family: monospace;
+  font-size: 0.8em;
   background-color: #333333;
   margin-right: 5px;
   padding-left: 2px;
@@ -173,15 +225,7 @@ export default defineComponent({
   margin-left: 10px;
   padding: 0;
 }
-.col.level {
-  max-width: 10px;
-  padding: 0;
-}
 .col.unique_id {
-  max-width: 60px;
-  padding: 0;
-}
-.col.random_hash {
   max-width: 60px;
   padding: 0;
 }

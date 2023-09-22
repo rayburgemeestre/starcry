@@ -12,6 +12,7 @@ export const useScriptStore = defineStore('script', {
     frames_per_scene: [] as number[],
     max_frames: 0,
     selected: [] as number[],
+    highlighted: [] as number[],
 
     auto_render: true,
     num_chunks: 1,
@@ -41,5 +42,16 @@ export const useScriptStore = defineStore('script', {
     addSelectedObject(unique_id: number) {
       this.selected.push(unique_id);
     },
+    highlightObject(unique_id: number) {
+      const index = this.highlighted.indexOf(unique_id);
+      if (index === -1) {
+        this.highlighted.push(unique_id);
+      } else {
+        this.highlighted.splice(index, 1);
+      }
+    },
+    reset() {
+      this.selected = [];
+    }
   },
 });
