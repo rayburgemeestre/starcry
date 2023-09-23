@@ -101,7 +101,7 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
           new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
           new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
           new_shape.gradients_[0].second.colors.emplace_back(1.0, data::color{0.0, 0, 0, 1});
-          new_shape.gradient_id_str += "**fallback2**";
+          new_shape.gradient_id_str += "[white:2]";
         }
       }
     } else if (new_shape.gradients_.empty()) {
@@ -109,9 +109,9 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
       new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
       new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
       new_shape.gradients_[0].second.colors.emplace_back(1.0, data::color{0.0, 0, 0, 1});
-      new_shape.gradient_id_str += "**fallback**";
+      new_shape.gradient_id_str += "[white:1]";
     } else {
-      new_shape.gradient_id_str += "**mixed**";
+      new_shape.gradient_id_str += "[mixed]";
     }
 
     new_shape.z = 0;
