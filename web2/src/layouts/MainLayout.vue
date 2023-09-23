@@ -231,9 +231,6 @@ export default defineComponent({
           return Math.sqrt(squared_dist(x, x2) + squared_dist(y, y2));
         }
         let objects_store = useObjectsStore();
-        if (update_selected_objects) {
-          script_store.clearSelectedObjects();
-        }
         if (objects_store.objects === null) {
           return;
         }
@@ -241,7 +238,7 @@ export default defineComponent({
           return;
         }
         let show_all = script_store.selected.length === 0;
-        for (let pass=1; pass<=2; pass++) {
+        for (let pass = 1; pass <= 2; pass++) {
           for (let obj of objects_store.objects) {
             let center_x = viewpoint_store.offset_x;
             let center_y = viewpoint_store.offset_y;
@@ -252,13 +249,30 @@ export default defineComponent({
 
             let x = (obj.x - center_x) * scale - offset_x + canvas_w / 2;
             let y = (obj.y - center_y) * scale - offset_y + canvas_h / 2;
+            let obj_x = obj.x;
+            let obj_y = obj.y;
+            if (obj.type === 'line') {
+              let x2 = (obj.x2 - center_x) * scale - offset_x + canvas_w / 2;
+              let y2 = (obj.y2 - center_y) * scale - offset_y + canvas_h / 2;
+              x = (x + x2) / 2.0;
+              y = (y + y2) / 2.0;
+              obj_x = (obj_x + obj.x2) / 2.0;
+              obj_y = (obj_y + obj.y2) / 2.0;
+            }
             let view_x =
               (viewpoint_store.view_x - canvas_w / 2) / scale + center_x;
             let view_y =
               (viewpoint_store.view_y - canvas_h / 2) / scale + center_y;
-            if (pass === 2 && script_store.highlighted.includes(obj.unique_id)) {
+            if (
+              pass === 2 &&
+              script_store.highlighted.includes(obj.unique_id)
+            ) {
               color = 'cyan';
-            } else if (pass === 1 && (get_distance(obj.x, obj.y, view_x, view_y) < 10 / scale || script_store.selected.includes(obj.unique_id))) {
+            } else if (
+              pass === 1 &&
+              (get_distance(obj_x, obj_y, view_x, view_y) < 10 / scale ||
+                script_store.selected.includes(obj.unique_id))
+            ) {
               color = 'red';
               if (update_selected_objects) {
                 script_store.addSelectedObject(obj.unique_id);

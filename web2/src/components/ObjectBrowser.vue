@@ -1,53 +1,96 @@
 <template>
   <div class="q-pa-md">
     <br />
-    <q-btn color="secondary" style="width: 33.33%" @click="reset()">Reset</q-btn>
-    <q-btn color="secondary" style="width: 33.33%" @click="collapse()">Collapse</q-btn>
-    <q-btn color="secondary" style="width: 33.33%" @click="expand()">Expand</q-btn>
+    <q-btn color="secondary" style="width: 33.33%" @click="reset()"
+      >Reset</q-btn
+    >
+    <q-btn
+      color="secondary"
+      style="width: 33.33%"
+      @click="toggle_expand(true)"
+      v-if="state === 'expand'"
+      >Collapse</q-btn
+    >
+    <q-btn
+      color="secondary"
+      style="width: 33.33%"
+      @click="toggle_expand(false)"
+      v-if="state !== 'expand'"
+      >Expand</q-btn
+    >
+    <q-btn color="secondary" style="width: 33.33%" @click="filtering()"
+      >Filter</q-btn
+    >
   </div>
 
   <div :key="componentKey">
+    state: {{ state }}, filter: {{ filter_selected }}
     <div v-for="object in objects_store.objects" :key="object.id">
       <div
         :style="{ marginLeft: object['level'] * 20 + 'px' }"
-        v-if="
-          object['level'] === 0 ||
-          objects_store.isSelectedArray(
-            objects_store.parentsLookup(object['unique_id'])
-          )
-        "
+        v-if="object['level'] === 0 || show_object(object['unique_id'])"
         class="item"
       >
         <span
           class="col collapse"
-          v-if="objects_store.isSelected(object['unique_id']) === 1"
-          @click="click(this, object.unique_id)"
-        >➔</span>
+          v-if="show_icon(object['unique_id'], 1)"
+          @click="expand_icon_click(this, object.unique_id)"
+          >➔</span
+        >
         <span
           class="col collapse"
-          v-if="objects_store.isSelected(object['unique_id']) === 2"
-          @click="click(this, object.unique_id)"
-        >➘</span>
+          v-if="show_icon(object['unique_id'], 2)"
+          @click="expand_icon_click(this, object.unique_id)"
+          >➘</span
+        >
+        <span
+          class="col collapse"
+          v-if="show_icon(object['unique_id'], 3)"
+          @click="expand_icon_click(this, object.unique_id)"
+          >➘➘</span
+        >
         <span
           class="col expand"
-          v-if="!objects_store.isSelected(object['unique_id']) > 0"
-          @click="click(this, object.unique_id)"
-          >&nbsp;</span>
-        <span class="col type">{{ to_utf8_symbol(object['type']) }}</span>
-        <span class="col unique_id"
-              :style="{ backgroundColor: scripts_store.highlighted.includes(object['unique_id']) ? 'cyan' : '',
-                        color: scripts_store.highlighted.includes(object['unique_id']) ? 'black' : ''
-                      }"
-              @click="highlight(this, object.unique_id)">{{ object['unique_id'] }}</span>
+          v-if="show_icon(object['unique_id'], 0)"
+          @click="expand_icon_click(this, object.unique_id)"
+          >&nbsp;</span
+        >
+        <span
+          class="col type"
+          :style="{
+            backgroundColor:
+              objects_store.isSelected(object['unique_id']) === 1 ? 'red' : '',
+            color:
+              objects_store.isSelected(object['unique_id']) === 1
+                ? 'black'
+                : '',
+          }"
+          @click="user_select(this, object.unique_id)"
+          >{{ to_utf8_symbol(object['type']) }}</span
+        >
+        <span
+          class="col unique_id"
+          :style="{
+            backgroundColor: scripts_store.highlighted.includes(
+              object['unique_id']
+            )
+              ? 'cyan'
+              : '',
+            color: scripts_store.highlighted.includes(object['unique_id'])
+              ? 'black'
+              : '',
+          }"
+          @click="highlight(this, object.unique_id)"
+          >{{ object['unique_id'] }}</span
+        >
         <span class="col id">{{ object['id'] }}</span>
         <span class="col gradient">{{ object['gradient'] }}</span>
       </div>
       <div
         :style="{ marginLeft: object['level'] * 20 + 'px' }"
-        v-if="objects_store.isSelected(object['unique_id']) === 1 &&
-          objects_store.isSelectedArray(
-            objects_store.parentsLookup(object['unique_id'])
-          )"
+        v-if="
+          show_icon(object['unique_id'], 1) && show_object(object['unique_id'])
+        "
         class="item"
       >
         <q-table
@@ -83,6 +126,8 @@ export default defineComponent({
     const componentKey = ref(0);
     let objects_store = useObjectsStore();
     let scripts_store = useScriptStore();
+    let state = ref('');
+    let filter_selected = ref(false);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const objects_endpoint = new StarcryAPI(
@@ -121,15 +166,18 @@ export default defineComponent({
       }
     }
 
-    function click(source_elem, unique_id) {
+    function expand_icon_click(source_elem, unique_id) {
       const selected = objects_store.isSelected(unique_id);
       if (selected === 1) {
         return;
       } else if (selected === 2) {
-        objects_store.removeImpliedSelected(unique_id);
+        objects_store.addGuiSelected(unique_id);
+        return;
+      } else if (selected === 3) {
+        objects_store.removeGuiSelected(unique_id);
         return;
       }
-      objects_store.addImpliedSelected(unique_id);
+      objects_store.addGuiSelected(unique_id);
     }
 
     function highlight(source_elem, unique_id) {
@@ -137,8 +185,14 @@ export default defineComponent({
       scripts_store.render_completed_by_server++;
     }
 
-    function select(source_elem, unique_id) {
-      scripts_store.addSelectedObject(unique_id);
+    function user_select(source_elem, unique_id) {
+      if (objects_store.isSelected(unique_id) === 1) {
+        scripts_store.removeSelectedObject(unique_id);
+        objects_store.onUserDeSelected(unique_id);
+      } else {
+        scripts_store.addSelectedObject(unique_id);
+        objects_store.onUserSelected(unique_id);
+      }
     }
 
     function reset() {
@@ -147,12 +201,17 @@ export default defineComponent({
       return;
     }
 
-    function collapse() {
-      return;
+    function toggle_expand(collapse: boolean) {
+      if (collapse) {
+        objects_store.reset_gui();
+        state.value = '';
+      } else {
+        state.value = 'expand';
+      }
     }
 
-    function expand() {
-      return;
+    function filtering() {
+      filter_selected.value = !filter_selected.value;
     }
 
     function rows(unique_id) {
@@ -179,19 +238,37 @@ export default defineComponent({
       },
     ];
 
+    function show_object(unique_id: number) {
+      if (filter_selected.value) {
+        return objects_store.isSelected(unique_id) !== 0;
+      }
+      return (
+        objects_store.isSelectedArray(objects_store.parentsLookup(unique_id)) ||
+        state.value === 'expand'
+      );
+    }
+
+    function show_icon(unique_id: number, expected: number) {
+      return objects_store.isSelected(unique_id) === expected;
+    }
+
     return {
       objects_store,
       scripts_store,
       to_utf8_symbol,
-      click,
+      expand_icon_click,
       highlight,
-      select,
+      user_select,
       componentKey,
       rows,
       columns,
       reset,
-      collapse,
-      expand,
+      toggle_expand,
+      state,
+      filtering,
+      filter_selected,
+      show_object,
+      show_icon,
     };
   },
 });

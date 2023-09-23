@@ -42,6 +42,12 @@ export const useScriptStore = defineStore('script', {
     addSelectedObject(unique_id: number) {
       this.selected.push(unique_id);
     },
+    removeSelectedObject(unique_id: number) {
+      const index = this.selected.indexOf(unique_id);
+      if (index > -1) {
+        this.selected.splice(index, 1);
+      }
+    },
     highlightObject(unique_id: number) {
       const index = this.highlighted.indexOf(unique_id);
       if (index === -1) {
@@ -52,6 +58,6 @@ export const useScriptStore = defineStore('script', {
     },
     reset() {
       this.selected = [];
-    }
+    },
   },
 });

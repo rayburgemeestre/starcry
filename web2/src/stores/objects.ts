@@ -13,37 +13,32 @@ export type ObjectType = {
 export const useObjectsStore = defineStore('objects', {
   state: () => ({
     objects: [] as ObjectType[],
-    selected: [] as number[],
+    // selections explicitly made by user (e.g., by clicking on objects)
+    user_selected: [] as number[],
+    // parents of user selected items (they are "implied" selected)
     implied_selected: [] as number[],
+    // overrides from the GUI (e.g., toggle expand/collapse)
+    gui_implied_selected: [] as number[],
     lookup: {} as Record<number, number>,
   }),
   getters: {},
   actions: {
-    addSelected(value: number) {
-      if (!this.selected.includes(value)) {
-        this.selected.push(value);
+    addGuiSelected(value: number) {
+      if (!this.gui_implied_selected.includes(value)) {
+        this.gui_implied_selected.push(value);
       }
     },
-    addImpliedSelected(value: number) {
-     if (!this.implied_selected.includes(value)) {
-        this.implied_selected.push(value);
-      }
-    },
-    removeSelected(value: number) {
-      const index = this.selected.indexOf(value);
+    removeGuiSelected(value: number) {
+      const index = this.gui_implied_selected.indexOf(value);
       if (index > -1) {
-        this.selected.splice(index, 1);
-      }
-    },
-    removeImpliedSelected(value: number) {
-      const index = this.implied_selected.indexOf(value);
-      if (index > -1) {
-        this.implied_selected.splice(index, 1);
+        this.gui_implied_selected.splice(index, 1);
       }
     },
     isSelected(value: number) {
-      if (this.selected.includes(value)) {
+      if (this.user_selected.includes(value)) {
         return 1;
+      } else if (this.gui_implied_selected.includes(value)) {
+        return 3;
       } else if (this.implied_selected.includes(value)) {
         return 2;
       }
@@ -51,7 +46,7 @@ export const useObjectsStore = defineStore('objects', {
     },
     isSelectedArray(value: number[]) {
       for (const v of value) {
-        if (this.isSelected(v) <= 0) {
+        if (this.isSelected(v) !== 1 && this.isSelected(v) !== 3) {
           return false;
         }
       }
@@ -90,7 +85,7 @@ export const useObjectsStore = defineStore('objects', {
       let currentID = unique_id;
       const ids = [];
 
-      this.selected.push(unique_id);
+      this.user_selected.push(unique_id);
 
       while (currentID !== undefined && this.lookup[currentID] !== undefined) {
         ids.push(currentID);
@@ -101,11 +96,38 @@ export const useObjectsStore = defineStore('objects', {
         ids.push(currentID); // add the last id which doesn't have a parent in lookup
       }
 
-      this.implied_selected = [...new Set([...this.selected, ...ids])];
+      this.implied_selected = [...new Set([...this.implied_selected, ...ids])];
+      this.gui_implied_selected = [
+        ...new Set([...this.gui_implied_selected, ...ids]),
+      ];
+    },
+    onUserDeSelected(unique_id: number) {
+      // remove user first
+      let index = this.user_selected.indexOf(unique_id);
+      if (index > -1) {
+        this.user_selected.splice(index, 1);
+      }
+      // also remove from gui selected
+      index = this.gui_implied_selected.indexOf(unique_id);
+      if (index > -1) {
+        this.gui_implied_selected.splice(index, 1);
+      }
+
+      // update implied
+      let ids: number[] = [];
+      for (const v of this.user_selected) {
+        const newids = this.parentsLookup(v);
+        ids = [...new Set([...newids, ...ids])];
+      }
+      this.implied_selected = ids;
     },
     reset() {
-      this.selected = [];
+      this.user_selected = [];
+      this.gui_implied_selected = [];
       this.implied_selected = [];
-    }
+    },
+    reset_gui() {
+      this.gui_implied_selected = [];
+    },
   },
 });
