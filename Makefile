@@ -17,6 +17,7 @@ docker_run = $(docker_exe_tmp) $(docker_params) run -i $(docker_tty) --rm \
 	                                            -v $$PWD:$$PWD \
 	                                            -v $$PWD/.ccache:/root/.ccache \
 	                                            -v $$PWD/.emscripten_cache:/tmp/.emscripten_cache \
+	                                            --device /dev/dri/card0:/dev/dri/card0 \
 	                                            --entrypoint /bin/bash \
 	                                            -w $$PWD docker.io/rayburgemeestre/build-starcry-ubuntu:22.04
 inside_docker_container = [[ "$$container" == "podman" ]]
