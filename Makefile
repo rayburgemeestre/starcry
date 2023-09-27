@@ -145,7 +145,7 @@ runtime_deps:  ## install run-time dependencies
 
 build-web-deps:
 	pushd web2 && npm ci
-	pushd web2 && npm i -g @quasar/cli
+	pushd web2 && sudo npm i -g @quasar/cli
 
 deps: ## install dependencies required for running and building starcry
 	./docs/install_deps.sh
