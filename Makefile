@@ -11,7 +11,6 @@ docker_exe_tmp := $$(/bin/sh -c 'if [ $$(which podman) ]; then echo "podman"; el
 docker_exe:=$(shell if [ $$(which podman) ]; then echo "podman"; else echo "docker"; fi)
 docker_params = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo "--storage-opt ignore_chown_errors=true"; else echo ""; fi')
 docker_run = $(docker_exe_tmp) $(docker_params) run -i $(docker_tty) --rm \
-	                                            --pull \
 	                                            -e _UID=$(uid) -e _GID=$(gid) \
 	                                            -e container=podman \
 	                                            -e DISPLAY=$$DISPLAY \
