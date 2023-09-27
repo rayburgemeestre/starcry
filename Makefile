@@ -6,6 +6,7 @@ interactive:=$(shell [ -t 0 ] && echo 1)
 ccache_enabled = [[ -f '/usr/bin/ccache' ]]
 ccache_env = CXX='ccache g++' CC='ccache gcc' CCACHE_SLOPPINESS=file_macro,locale,time_macros
 docker_tty = $$(/bin/sh -c 'if [ "$(interactive)" = "1" ]]; then echo "-t"; else echo ""; fi')
+docker_device_card0 = $$(/bin/sh -c 'if [ -e "/dev/dri/card0" ]]; then echo "--device /dev/dri/card0:/dev/dri/card0"; else echo ""; fi')
 docker_exe_tmp := $$(/bin/sh -c 'if [ $$(which podman) ]; then echo "podman"; else echo "docker"; fi')
 docker_exe:=$(shell if [ $$(which podman) ]; then echo "podman"; else echo "docker"; fi)
 docker_params = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo "--storage-opt ignore_chown_errors=true"; else echo ""; fi')
@@ -17,7 +18,7 @@ docker_run = $(docker_exe_tmp) $(docker_params) run -i $(docker_tty) --rm \
 	                                            -v $$PWD:$$PWD \
 	                                            -v $$PWD/.ccache:/root/.ccache \
 	                                            -v $$PWD/.emscripten_cache:/tmp/.emscripten_cache \
-	                                            --device /dev/dri/card0:/dev/dri/card0 \
+	                                            $(docker_device_card0) \
 	                                            --entrypoint /bin/bash \
 	                                            -w $$PWD docker.io/rayburgemeestre/build-starcry-ubuntu:22.04
 inside_docker_container = [[ "$$container" == "podman" ]]
