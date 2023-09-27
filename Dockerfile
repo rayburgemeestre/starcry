@@ -23,7 +23,7 @@ RUN /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -s USE_SDL_TTF=2 -O3 
 # We need a newer Nodejs:
 ENV VERSION=v18.18.0
 ENV DISTRO=linux-x64
-RUN mkdir -p /usr/local/lib/nodejs &&
+RUN mkdir -p /usr/local/lib/nodejs && \
     tar -xJvf node-$VERSION-$DISTRO.tar.xz -C /usr/local/lib/nodejs 
 
 RUN echo "export PATH=/usr/local/lib/nodejs/node-$VERSION-$DISTRO/bin:$PATH" >> /etc/profile
