@@ -11,6 +11,7 @@ docker_exe_tmp := $$(/bin/sh -c 'if [ $$(which podman) ]; then echo "podman"; el
 docker_exe:=$(shell if [ $$(which podman) ]; then echo "podman"; else echo "docker"; fi)
 docker_params = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo "--storage-opt ignore_chown_errors=true"; else echo ""; fi')
 docker_run = $(docker_exe_tmp) $(docker_params) run -i $(docker_tty) --rm \
+	                                            --pull \
 	                                            -e _UID=$(uid) -e _GID=$(gid) \
 	                                            -e container=podman \
 	                                            -e DISPLAY=$$DISPLAY \
@@ -197,8 +198,8 @@ docker-finalize:
 
 
 build-web:  ## build web static files
-	pushd web2 && npm ci
-	pushd web2 && ./node_modules/.bin/quasar build  # doesn't require build-web-deps
+	@$(call make-clang, pushd web2 && npm ci)
+	@$(call make-clang, pushd web2 && ./node_modules/.bin/quasar build)  # doesn't require build-web-deps
 
 build-web-old:
 	pushd web && npm ci

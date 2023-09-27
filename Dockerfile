@@ -25,9 +25,11 @@ ENV VERSION=v18.18.0
 ENV DISTRO=linux-x64
 RUN wget https://nodejs.org/dist/$VERSION/node-$VERSION-$DISTRO.tar.xz && \
     mkdir -p /usr/local/lib/nodejs && \
-    tar -xJvf node-$VERSION-$DISTRO.tar.xz -C /usr/local/lib/nodejs 
+    tar -xJvf node-$VERSION-$DISTRO.tar.xz -C /usr/local/lib/nodejs
 
-RUN echo "export PATH=/usr/local/lib/nodejs/node-$VERSION-$DISTRO/bin:$PATH" >> /etc/profile
+#RUN echo "export PATH=/usr/local/lib/nodejs/node-$VERSION-$DISTRO/bin:$PATH" >> /etc/profile
+# Let's just put in our global PATH
+RUN sudo apt install -y rsync && rsync -raPv /usr/local/lib/nodejs/node-$VERSION-$DISTRO/bin/ /usr/local/bin/
 
 # IDE needs browser as well sometimes
 RUN sudo apt install -y firefox
