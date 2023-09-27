@@ -43,6 +43,10 @@ RUN apt install -y imagemagick-6.q16 ffmpeg
 # xeyes (for troubleshooting X11)
 RUN apt install -y x11-apps
 
+# docs/sphinx/breathe
+RUN apt install -y doxygen python3-pip
+RUN python3 -m pip install sphinx breathe sphinx_rtd_theme
+
 # clean up cache
 RUN apt clean
 
