@@ -29,7 +29,7 @@ RUN wget https://nodejs.org/dist/$VERSION/node-$VERSION-$DISTRO.tar.xz && \
 
 #RUN echo "export PATH=/usr/local/lib/nodejs/node-$VERSION-$DISTRO/bin:$PATH" >> /etc/profile
 # Let's just put in our global PATH
-RUN sudo apt install -y rsync && rsync -raPv /usr/local/lib/nodejs/node-$VERSION-$DISTRO/bin/ /usr/local/bin/
+RUN sudo apt install -y rsync && rsync -raPv /usr/local/lib/nodejs/node-$VERSION-$DISTRO/ /usr/local/
 
 # IDE needs browser as well sometimes
 RUN sudo apt install -y firefox
