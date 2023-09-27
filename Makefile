@@ -198,7 +198,7 @@ docker-finalize:
 
 build-web:  ## build web static files
 	pushd web2 && npm ci
-	pushd web2 && quasar build
+	pushd web2 && ./node_modules/.bin/quasar build  # doesn't require build-web-deps
 
 build-web-old:
 	pushd web && npm ci
