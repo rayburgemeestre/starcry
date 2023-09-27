@@ -274,7 +274,7 @@ debug-last:
 
 .PHONY: docs
 docs:  ## build starcry docs
-	pushd docs && doxygen && sphinx-build source output && echo DONE
+	@$(call make-clang, pushd docs && doxygen && sphinx-build source output && echo DONE)
 
 #------------
 
