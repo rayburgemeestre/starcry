@@ -7,7 +7,6 @@
         <q-item-section>
           <q-item-label class="extra-margin">{{ name }}</q-item-label>
           <q-item-label caption>
-            <!--{{ gradient_data }}-->
             <div class="canvas-container">
               <canvas
                 class="gradient_preview"
@@ -24,17 +23,34 @@
       <q-separator spaced />
       <q-item-label header>Objects</q-item-label>
 
-      <q-item tag="label" v-ripple>
+      <q-item
+        tag="label"
+        v-ripple
+        v-for="(object, key) in objects"
+        :key="key"
+        @click="selected = key"
+      >
         <q-item-section>
-          <q-item-label>obj0</q-item-label>
-          <q-item-label caption> TODO </q-item-label>
-        </q-item-section>
-      </q-item>
-
-      <q-item tag="label" v-ripple>
-        <q-item-section>
-          <q-item-label>obj1</q-item-label>
-          <q-item-label caption> TODO </q-item-label>
+          <q-item-label>{{ key }}</q-item-label>
+          <q-item-label caption> {{ object.type }} </q-item-label>
+          <q-input
+            v-if="selected == key"
+            v-model="object_names[key]"
+            label="name"
+          />
+          <q-table
+            v-if="selected == key"
+            dense
+            :rows="rows[key]"
+            :columns="columns"
+            row-key="name"
+            @row-click="on_row_click"
+            :filter="filter"
+            hide-header
+            hide-pagination
+            :rows-per-page-options="[100]"
+          >
+          </q-table>
         </q-item-section>
       </q-item>
     </q-list>
@@ -42,7 +58,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, onMounted, watch } from 'vue';
+import { defineComponent, onMounted, ref, watch } from 'vue';
 import { JsonWithObjectsParser } from 'components/json_parser';
 import { useScriptStore } from 'stores/script';
 export default defineComponent({
@@ -52,9 +68,10 @@ export default defineComponent({
     let script_store = useScriptStore();
     let p = new JsonWithObjectsParser(script_store.script);
     let parsed = p.parsed();
-    let gradients = parsed ? parsed['gradients'] : {};
-
-    let gradient_names = Object.keys(gradients);
+    let gradients = ref(parsed ? parsed['gradients'] : {});
+    let objects = ref(parsed ? parsed['objects'] : {});
+    let selected = ref('');
+    let gradient_names = ref(Object.keys(gradients));
 
     function resizeCanvas() {
       // get as new
@@ -118,9 +135,48 @@ export default defineComponent({
       resizeCanvas();
     });
 
+    const columns = [
+      {
+        name: 'property',
+        align: 'left',
+        field: (row) => row[0],
+        sortable: true,
+      },
+      {
+        name: 'value',
+        align: 'left',
+        field: (row) => row[1],
+        sortable: true,
+      },
+    ];
+
+    let rows = ref({});
+    let object_names = ref({});
+    for (let k in objects) {
+      let obj = objects[k];
+      object_names.value[k] = k;
+      rows.value[k] = [];
+      for (let p in obj) {
+        let v = obj[p];
+        rows.value[k].push([p, '' + v]);
+      }
+    }
+
+    function on_row_click(evt, row, index) {
+      console.log(evt);
+      console.log(row);
+      console.log(index);
+    }
+
     return {
       parsed,
       gradient_names,
+      objects,
+      columns,
+      rows,
+      selected,
+      object_names,
+      on_row_click,
     };
   },
 });
