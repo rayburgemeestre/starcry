@@ -166,7 +166,7 @@ public:
         }
       }
 
-      sc.run_server();
+      sc.run();
     }
   }
 

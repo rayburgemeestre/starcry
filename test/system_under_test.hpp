@@ -63,7 +63,7 @@ double sut::test_create_image(const std::string& image_name) {
     req->enable_raw_bitmap();
     req->set_last_frame();
     sc.add_image_command(req);
-    sc.run_server();
+  sc.run();
     const auto output_file = fmt::format("test/integration/last-run/{}.png", image_name);
     const auto reference_file = fmt::format("test/integration/reference/{}.png", image_name);
     if (!std::filesystem::exists(reference_file)) {
@@ -96,7 +96,7 @@ double sut::test_create_video(const std::string& video_name, int frames, int fps
     const auto req = std::make_shared<data::video_request>(
             options.script_file, options.output_file, options.num_chunks, options.frame_offset);
     sc.add_video_command(req);
-    sc.run_server();
+  sc.run();
 
     // convert video to seekable video
     const auto video_stem = fs::path(video_name).stem().string();

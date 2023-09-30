@@ -787,7 +787,7 @@ void starcry::setup_server(const std::string &host) {
   system->start(false);
 }
 
-void starcry::run_server() {
+void starcry::run() {
   if (options_.webserver) {
     webserv = std::make_shared<webserver>(this);
     webserv->set_script(script_);

@@ -150,7 +150,7 @@ public:
 
   void setup_server(const std::string &host = "");
 
-  void run_server();
+  void run();
   void run_client(const std::string &host);
 
   const data::viewpoint &get_viewpoint() const;
