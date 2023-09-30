@@ -6,6 +6,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #pragma once
 
 #include <string>
+#include <unordered_map>
 
 namespace data {
 
@@ -68,68 +69,40 @@ public:
 };
 
 inline std::string blending_type::to_str(int type) {
-  switch (type) {
-    case data::blending_type::lighten:
-      return "lighten";
-    case data::blending_type::darken:
-      return "darken";
-    case data::blending_type::multiply:
-      return "multiply";
-    case data::blending_type::average:
-      return "average";
-    case data::blending_type::add:
-      return "add";
-    case data::blending_type::subtract:
-      return "subtract";
-    case data::blending_type::difference:
-      return "difference";
-    case data::blending_type::negation_:
-      return "negation_";
-    case data::blending_type::screen:
-      return "screen";
-    case data::blending_type::exclusion:
-      return "exclusion";
-    case data::blending_type::overlay:
-      return "overlay";
-    case data::blending_type::softlight:
-      return "softlight";
-    case data::blending_type::hardlight:
-      return "hardlight";
-    case data::blending_type::colordodge:
-      return "colordodge";
-    case data::blending_type::colorburn:
-      return "colorburn";
-    case data::blending_type::lineardodge:
-      return "lineardodge";
-    case data::blending_type::linearburn:
-      return "linearburn";
-    case data::blending_type::linearlight:
-      return "linearlight";
-    case data::blending_type::vividlight:
-      return "vividlight";
-    case data::blending_type::pinlight:
-      return "pinlight";
-    case data::blending_type::hardmix:
-      return "hardmix";
-    case data::blending_type::reflect:
-      return "reflect";
-    case data::blending_type::glow:
-      return "glow";
-    case data::blending_type::phoenix:
-      return "phoenix";
-    case data::blending_type::hue:
-      return "hue";
-    case data::blending_type::saturation:
-      return "saturation";
-    case data::blending_type::color:
-      return "color";
-    case data::blending_type::luminosity:
-      return "luminosity";
-    case data::blending_type::normal:
-      return "normal";
-    default:
-      return "";
-  }
+  static const std::unordered_map<int, std::string> blending_type_str{
+    {data::blending_type::lighten, "lighten"},
+    {data::blending_type::darken, "darken"},
+    {data::blending_type::multiply, "multiply"},
+    {data::blending_type::average, "average"},
+    {data::blending_type::add, "add"},
+    {data::blending_type::subtract, "subtract"},
+    {data::blending_type::difference, "difference"},
+    {data::blending_type::negation_, "negation_"},
+    {data::blending_type::screen, "screen"},
+    {data::blending_type::exclusion, "exclusion"},
+    {data::blending_type::overlay, "overlay"},
+    {data::blending_type::softlight, "softlight"},
+    {data::blending_type::hardlight, "hardlight"},
+    {data::blending_type::colordodge, "colordodge"},
+    {data::blending_type::colorburn, "colorburn"},
+    {data::blending_type::lineardodge, "lineardodge"},
+    {data::blending_type::linearburn, "linearburn"},
+    {data::blending_type::linearlight, "linearlight"},
+    {data::blending_type::vividlight, "vividlight"},
+    {data::blending_type::pinlight, "pinlight"},
+    {data::blending_type::hardmix, "hardmix"},
+    {data::blending_type::reflect, "reflect"},
+    {data::blending_type::glow, "glow"},
+    {data::blending_type::phoenix, "phoenix"},
+    {data::blending_type::hue, "hue"},
+    {data::blending_type::saturation, "saturation"},
+    {data::blending_type::color, "color"},
+    {data::blending_type::luminosity, "luminosity"},
+    {data::blending_type::normal, "normal"}
+  };
+
+  auto it = blending_type_str.find(type);
+  return it == blending_type_str.end() ? "" : it->second;
 }
 
 }  // namespace data
