@@ -12,7 +12,7 @@
 
 namespace data {
 
-struct pixel_data2 {
+struct pixel_data {
   size_t job_number;
   std::vector<uint32_t> pixels;
   std::vector<data::color> pixels_raw;

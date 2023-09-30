@@ -90,7 +90,7 @@ void redis_client::run(bitmap_wrapper &bitmap, rendering_engine &engine) {
               NULL);
 
         sc.render_job(getpid(), engine, job, bmp, settings);
-        data::pixel_data2 dat;
+        data::pixel_data dat;
         if (job.is_raw) {
           dat.pixels_raw = bmp.pixels();
         } else {

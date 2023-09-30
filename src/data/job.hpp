@@ -5,7 +5,6 @@
  */
 #pragma once
 
-// #include "caf/meta/type_name.hpp"
 #include "cereal/types/map.hpp"
 #include "cereal/types/vector.hpp"
 
@@ -16,27 +15,26 @@
 namespace data {
 
 struct job {
-  // if you modify these fields, you need to update announce or the added fields won't be transferred..
   uint32_t width = 1920;
   uint32_t height = 1080;
-  double view_x;
-  double view_y;
+  double view_x = 0;
+  double view_y = 0;
   uint32_t offset_x = 0;
   uint32_t offset_y = 0;
   uint32_t canvas_w = 1920;
   uint32_t canvas_h = 1080;
   size_t job_number = 0;
-  uint32_t frame_number;
+  uint32_t frame_number = 0;
   bool rendered = false;
   bool last_frame = false;
-  uint32_t chunk;
+  uint32_t chunk = 0;
   uint32_t num_chunks = 1;
   data::color background_color;
   // for each rendering pass the list of shapes
   std::vector<std::vector<data::shape>> shapes;
   double scale = 1.0;  // deprecated
   std::vector<double> scales;
-  uint32_t bitrate;
+  uint32_t bitrate = 1000;
   bool compress = false;
   bool save_image = false;
   bool is_raw = false;

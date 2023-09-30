@@ -6,7 +6,6 @@
 #pragma once
 
 #include <algorithm>
-// #include <caf/meta/type_name.hpp>
 #include "cereal/types/tuple.hpp"
 #include "cereal/types/vector.hpp"
 
@@ -26,9 +25,9 @@ namespace data {
 struct gradient {
   std::vector<std::tuple<double, color>> colors;
 
-  gradient() {}
+  gradient() = default;
 
-  color get(double index) const {
+  [[nodiscard]] color get(double index) const {
     // TODO: refactor, this COPY & PASTE from gradient.cpp
     size_t counter = 0;
     double processed_index = 0;
@@ -53,12 +52,6 @@ struct gradient {
         };
         auto lerped = vivid::lerp(col1, col2, color2_mult);
         return color{lerped.r, lerped.g, lerped.b, (color1.a * color1_mult) + (color2.a * color2_mult)};
-        /*
-        return color{(color1.r * color1_mult) + (color2.r * color2_mult),
-                     (color1.g * color1_mult) + (color2.g * color2_mult),
-                     (color1.b * color1_mult) + (color2.b * color2_mult),
-                     (color1.a * color1_mult) + (color2.a * color2_mult)};
-                     */
       } else {
         processed_index = current_idx;
       }
@@ -75,7 +68,6 @@ struct gradient {
 };
 
 inline bool operator==(const gradient &lhs, const gradient &rhs) {
-  // TODO: verify if this works, otherwise introduce identifiers
   return 0 == std::memcmp(reinterpret_cast<const void *>(&lhs), reinterpret_cast<const void *>(&rhs), sizeof(gradient));
 }
 

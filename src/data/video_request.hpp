@@ -7,10 +7,6 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <string>
 
-namespace seasocks {
-class WebSocket;
-}
-
 namespace data {
 class video_request {
 private:
@@ -19,8 +15,6 @@ private:
 
   int num_chunks_ = 0;
   size_t offset_frames_ = 0;
-
-  seasocks::WebSocket* client_ = nullptr;
 
   bool compressed_video_ = false;  // compressed video
   bool raw_video_ = false;         // raw video (individual EXR frames)
@@ -38,9 +32,6 @@ public:
     output_filename_ = new_output_file;
   }
 
-  void set_websocket(seasocks::WebSocket* client) {
-    client_ = client;
-  }
   void enable_compressed_video() {
     compressed_video_ = true;
   }
@@ -62,9 +53,6 @@ public:
   }
   size_t offset_frames() const {
     return offset_frames_;
-  }
-  seasocks::WebSocket* client() const {
-    return client_;
   }
   bool compressed_video() const {
     return compressed_video_;

@@ -209,7 +209,6 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     gen = std::make_shared<interpreter::generator>(metrics_, context, options().debug);
   }
 
-  bool client_is_nullptr = false;
   if (cmd_def->type2 == instruction_type2::video) {
     auto &v = cmd_def->video_ref();
     if (viewpoint.canvas_w && viewpoint.canvas_h) {
@@ -277,9 +276,6 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       if (!ret) break;
     }
     std::cout << std::endl;
-    if (v.client() == nullptr) {
-      client_is_nullptr = true;
-    }
   } else {
     metrics_->clear();
 
@@ -343,14 +339,12 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
         jobs->push(std::make_shared<job_message>(cmd_def, std::make_shared<data::job>(*the_job)));
       }
     }
-    if (f.client() == nullptr) {
-      client_is_nullptr = true;
+    if (f.client() != nullptr) {
+      return;  // prevent termination of queues
     }
   }
-  if (client_is_nullptr) {
-    cmds->check_terminate();
-    jobs->check_terminate();
-  }
+  cmds->check_terminate();
+  jobs->check_terminate();
 }
 
 // MARK1 render job using renderer and transform into render_msg
@@ -398,9 +392,6 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   // handle videos
   if (job_msg->original_instruction->type2 == instruction_type2::video) {
     const auto &v = job_msg->original_instruction->video();
-    if (v.client() != nullptr) {
-      return nullptr;
-    }
     auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels(), gen->settings().dithering);
 
     auto msg = std::make_shared<render_msg>(job_msg);
@@ -511,7 +502,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   auto type = job_msg->original_job_message->original_instruction->type2;
   bool finished = false;
   auto &job = *job_msg->original_job_message->job;  // this will allocate a lot of memory if copied
-  auto job_client = f ? f->client() : v->client();
+  auto job_client = f ? f->client() : nullptr;
   if (options_.level != log_level::silent) {
     const auto frame = job.job_number == std::numeric_limits<size_t>::max() ? 0 : job.job_number;
     static size_t prev_frame = 0;

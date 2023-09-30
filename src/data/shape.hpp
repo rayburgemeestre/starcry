@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <map>
 #include <string>
+#include <unordered_map>
 
 #include "cereal/types/string.hpp"
 #include "cereal/types/utility.hpp"  // for std::pair
@@ -30,21 +31,15 @@ enum class shape_type {
 };
 
 inline std::string shape_type_to_string(shape_type type) {
-  switch (type) {
-    case shape_type::none:
-      return "none";
-    case shape_type::text:
-      return "text";
-    case shape_type::circle:
-      return "circle";
-    case shape_type::ellipse:
-      return "ellipse";
-    case shape_type::line:
-      return "line";
-    case shape_type::script:
-      return "script";
-  }
-  return "none";
+  static const std::unordered_map<shape_type, std::string> shape_type_str{{shape_type::none, "none"},
+                                                                          {shape_type::text, "text"},
+                                                                          {shape_type::circle, "circle"},
+                                                                          {shape_type::ellipse, "ellipse"},
+                                                                          {shape_type::line, "line"},
+                                                                          {shape_type::script, "script"}};
+
+  auto it = shape_type_str.find(type);
+  return it == shape_type_str.end() ? "none" : it->second;
 }
 
 struct shape {

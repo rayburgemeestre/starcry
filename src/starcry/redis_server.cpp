@@ -76,7 +76,7 @@ void redis_server::run() {
               std::istringstream is(msg);
               cereal::BinaryInputArchive archive(is);
               data::job job;
-              data::pixel_data2 dat;
+              data::pixel_data dat;
               bool is_remote;
               archive(job);
               archive(dat);

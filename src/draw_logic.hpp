@@ -288,8 +288,6 @@ public:
 
     auto radius_size = shape.radius_size * scale_ * shape.scale;
 
-    bool reuse_sqrt = floor(ellipse_x) == ellipse_x && floor(ellipse_y) == ellipse_y;
-
     // There is a {-1, +1} for compensating rounding that occurs with floating point.
     int radius_outer_circle = round_to_int(radius + radius_size + 1);
     int radius_inner_circle = round_to_int(radius_inner - radius_size - 1);

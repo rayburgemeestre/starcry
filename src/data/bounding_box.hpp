@@ -5,6 +5,10 @@
  */
 #pragma once
 
+#include <algorithm>
+#include <limits>
+#include <ostream>
+
 #include "data/coord.hpp"
 
 class bounding_box {

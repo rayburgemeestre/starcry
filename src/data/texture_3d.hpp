@@ -6,6 +6,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #pragma once
 
 #include <string>
+#include <unordered_map>
 
 namespace data {
 
@@ -45,26 +46,18 @@ public:
 };
 
 inline std::string texture_3d::to_str(int type) {
-  switch (type) {
-    case data::texture_3d::raw:
-      return "raw";
-    case data::texture_3d::radial_displacement:
-      return "radial_displacement";
-    case data::texture_3d::radial_compression:
-      return "radial_compression";
-    case data::texture_3d::radial_distortion:
-      return "radial_distortion";
-    case data::texture_3d::radial_scaling:
-      return "radial_scaling";
-    case data::texture_3d::spherical:
-      return "spherical";
-    case data::texture_3d::noise_3d_simplex:
-      return "noise_3d_simplex";
-    case data::texture_3d::noise_3d_coords:
-      return "noise_3d_coords";
-    default:
-      return "";
-  }
+  static const std::unordered_map<int, std::string> texture_type_str{
+      {data::texture_3d::raw, "raw"},
+      {data::texture_3d::radial_displacement, "radial_displacement"},
+      {data::texture_3d::radial_compression, "radial_compression"},
+      {data::texture_3d::radial_distortion, "radial_distortion"},
+      {data::texture_3d::radial_scaling, "radial_scaling"},
+      {data::texture_3d::spherical, "spherical"},
+      {data::texture_3d::noise_3d_simplex, "noise_3d_simplex"},
+      {data::texture_3d::noise_3d_coords, "noise_3d_coords"}};
+
+  auto it = texture_type_str.find(type);
+  return it == texture_type_str.end() ? "" : it->second;
 }
 
 }  // namespace data

@@ -12,6 +12,8 @@ namespace seasocks {
 class WebSocket;
 }
 
+// TODO: get rid of getters and setters
+
 namespace data {
 class frame_request {
 private:
