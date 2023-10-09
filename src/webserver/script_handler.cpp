@@ -69,6 +69,8 @@ void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
       if (!entry.is_regular_file()) continue;
       const auto data = std::string(entry.path());
       const auto file_size = std::to_string(entry.file_size());
+      std::stringstream file_size_ss;     // workaround for compiler issue??
+      file_size_ss << entry.file_size();  // EDIT: only clang has an issue
       auto timeEntry = std::filesystem::last_write_time(entry);
       time_t cftime = to_time_t(timeEntry);
       const auto time = std::string(std::asctime(std::localtime(&cftime)));
@@ -77,13 +79,14 @@ void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
       if (!endswidth_js_ext) continue;
       json j = {
           {"filename", data},
-          {"filesize", file_size},
+          {"filesize", file_size_ss.str()},
           {"modified", time.substr(0, time.size() - 1)},
       };
       result.push_back(j);
     }
     std::stringstream ss;
-    ss << "4" << result.dump();
+    ss << "4" << result.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace);
+
     con->send(ss.str());
   }
 }

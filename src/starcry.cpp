@@ -762,10 +762,11 @@ void starcry::setup_server(const std::string &host) {
   }
 
   for (size_t i = 0; i < options_.num_worker_threads; i++) {
+    const auto renderer_name = fmt::format("renderer-{}", i);
     metrics_->register_thread(i, fmt::format("L{}", i));
     engines[i] = std::make_shared<rendering_engine>();
     bitmaps[i] = std::make_shared<bitmap_wrapper>();
-    system->spawn_transformer<job_message>("renderer-" + std::to_string(i),
+    system->spawn_transformer<job_message>(renderer_name,
                                            std::bind(&starcry::job_to_frame, this, i, std::placeholders::_1),
                                            jobs,
                                            frames,
