@@ -98,3 +98,10 @@ TEST_CASE("Test simple orbit video") {
   sc.options.script_file = "input/orbit.js";
   REQUIRE(sc.test_create_video("unittest_010_orbit_video.h264", 100, 25) <= double(0.003));
 }
+
+TEST_CASE("Test blending modes image") {
+  sut sc;
+  sc.options.script_file = "input/blending_types.js";
+  sc.options.frame_of_interest = 1;
+  REQUIRE(sc.test_create_image("unittest_011_blending_types_frame1") == double(0));
+}
