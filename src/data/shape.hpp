@@ -69,7 +69,7 @@ struct shape {
   std::string text_font;
   std::vector<std::pair<double, gradient>> gradients_;
   std::vector<std::pair<double, texture>> textures;
-  texture_3d texture_3d = texture_3d::raw;
+  texture_3d texture_3d_ = texture_3d::raw;
   double texture_offset_x = 0;
   double texture_offset_y = 0;
   std::string gradient_id_str;
@@ -121,7 +121,7 @@ struct shape {
        text_font,
        gradients_,
        textures,
-       texture_3d,
+       texture_3d_,
        texture_offset_x,
        texture_offset_y,
        gradient_id_str,

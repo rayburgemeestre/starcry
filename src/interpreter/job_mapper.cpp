@@ -77,7 +77,7 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     copy_gradient_from_object_to_shape(shape, new_shape, gen_.gradients);
     copy_texture_from_object_to_shape(shape, new_shape, gen_.textures);
 
-    new_shape.texture_3d = shape.styling_cref().texture_3d();
+    new_shape.texture_3d_ = shape.styling_cref().texture_3d();
     new_shape.texture_offset_x = shape.styling_cref().texture_offset_x();
     new_shape.texture_offset_y = shape.styling_cref().texture_offset_y();
 

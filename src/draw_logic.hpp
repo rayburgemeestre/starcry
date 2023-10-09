@@ -841,7 +841,7 @@ public:
       if (!shape.textures.empty()) {
         noise = 0;
         for (const auto &texture : shape.textures) {
-          switch (shape.texture_3d.type()) {
+          switch (shape.texture_3d_.type()) {
             case data::texture_3d::raw: {
               double x = _absX - _posX, y = _absY - _posY;
               noise += math::clamp(
@@ -855,7 +855,7 @@ public:
             case data::texture_3d::radial_scaling:
             case data::texture_3d::radial_displacement: {
               const auto r = (shape.radius + shape.radius_size * _scale_ * _shape_scale);
-              if (const auto mapped = map_radial(_absX, _absY, _posX, _posY, r, shape.texture_3d.type())) {
+              if (const auto mapped = map_radial(_absX, _absY, _posX, _posY, r, shape.texture_3d_.type())) {
                 auto [x, y] = *mapped;
                 x -= _absX + (shape.texture_offset_x * _scale_ * _shape_scale);
                 y -= _absY + (shape.texture_offset_y * _scale_ * _shape_scale);
