@@ -15,6 +15,7 @@
 
 #include "v8pp/module.hpp"
 
+#include "interpreter/abort_exception.hpp"
 #include "interpreter/fast_forwarder.hpp"
 #include "scripting.h"
 #include "starcry/metrics.h"
@@ -284,6 +285,8 @@ bool generator::_generate_frame() {
         bool detected_too_many_steps = false;
         while (stepper.has_next_step() && !detected_too_many_steps) {
           // logger(DEBUG) << "Stepper at step " << stepper.current_step << " out of " << stepper.max_step << std::endl;
+          stepper.advance_step();
+
           interactor_.reset();
 
           scenes_.prepare_scene();
@@ -308,15 +311,18 @@ bool generator::_generate_frame() {
           scalesettings.update();
           scenes_.update();
 
-          if (job->shapes.size() != size_t(stepper.max_step)) detected_too_many_steps = true;
+          if (job->shapes.size() != size_t(stepper.max_step)) {
+            detected_too_many_steps = true;
+          }
           metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
         }
         if (!detected_too_many_steps) {                 // didn't bail out with break above
           if (stepper.max_step == max_intermediates) {  // config doesn't allow finer granularity any way, break.
             break;
           } else if (stepper.max_step > max_intermediates) {
-            logger(INFO) << "stepper.max_step > max_intermediates -> " << stepper.max_step << " > " << max_intermediates
-                         << std::endl;
+            logger(DEBUG) << "stepper.max_step > max_intermediates -> " << stepper.max_step << " > "
+                          << max_intermediates << std::endl;
+            throw abort_exception("stepper max exceeds max. intermediates");
             std::exit(0);
           }
         }
@@ -341,9 +347,12 @@ bool generator::_generate_frame() {
 
       metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
     });
+
     job->job_number++;
     job->frame_number++;
+
     metrics_->complete_job(job->job_number);
+
     v8::HeapStatistics hs;
     context->isolate->GetHeapStatistics(&hs);
     const auto total_usage = (double(getValue()) / 1024. / 1024.);
@@ -351,9 +360,11 @@ bool generator::_generate_frame() {
     logger(INFO) << "Memory usage: " << total_usage << " GB. "
                  << "V8 Heap: " << v8_usage << " GB. "
                  << "Other: " << (total_usage - v8_usage) << " GB." << std::endl;
-
+  } catch (abort_exception& ex) {
+    std::cout << "[caught] " << ex.what() << " (abort)" << std::endl;
+    std::exit(0);
   } catch (std::exception& ex) {
-    std::cout << ex.what() << std::endl;
+    std::cout << "[caught] " << ex.what() << std::endl;
   }
   job->last_frame = job->frame_number == max_frames;
   return job->frame_number != max_frames;
@@ -740,6 +751,7 @@ int64_t generator::spawn_object3(data_staging::shape_t& spawner,
       line_obj.add_cascade_in(cascade_type::start, circle_obj1.meta_cref().unique_id());
       line_obj.add_cascade_in(cascade_type::end, circle_obj2.meta_cref().unique_id());
     } catch (std::bad_variant_access const& ex) {
+      logger(WARNING) << "bad variant access connecting objects" << std::endl;
       return;
     }
   };

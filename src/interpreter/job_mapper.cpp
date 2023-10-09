@@ -5,6 +5,7 @@
  */
 
 #include "job_mapper.h"
+#include "abort_exception.hpp"
 #include "generator.h"
 
 namespace interpreter {
@@ -129,7 +130,6 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     new_shape.warp_width = warp_width;
     new_shape.warp_height = warp_height;
 
-    // }
     // wrap this in a proper add method
     if (gen_.stepper.next_step != gen_.stepper.max_step) {
       gen_.indexes[shape.meta_cref().unique_id()][gen_.stepper.current_step] =
@@ -137,20 +137,11 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     } else {
       new_shape.indexes = gen_.indexes[shape.meta_cref().unique_id()];
     }
-    // logger(INFO) << "sizeof shape: " << sizeof(new_shape) << " circle was size: " << sizeof(shape) <<
-    // std::endl;
-    //                   if (job->shapes[stepper.current_step].capacity() < 10000) {
-    //                     logger(INFO) << "resizing to fix capacity" << std::endl;
-    //                     job->shapes[stepper.current_step].reserve(10000);
-    //                   }
-    // why is this shit super slow
-    gen_.job->shapes[gen_.stepper.current_step].emplace_back(std::move(new_shape));
-    // and this reasonably fast
-    // job->shapes_prototype_test[stepper.current_step].emplace_back(shape);
-    // job->shapes[stepper.current_step].emplace_back(data::shape{});
-    //                   if (job->shapes[stepper.current_step].size() > 9999)
-    //                     logger(INFO) << "current_step = " << stepper.current_step << ", shapes: " <<
-    //                     job->shapes[stepper.current_step].size() << std::endl;
+    if (!(gen_.stepper.current_step >= gen_.job->shapes.size())) {
+      gen_.job->shapes[gen_.stepper.current_step].emplace_back(std::move(new_shape));
+    } else {
+      throw abort_exception("current step exceeds shapes size");
+    }
     gen_.job->scale = gen_.scalesettings.video_scale;
     gen_.job->scales = gen_.scalesettings.video_scales;
   };

@@ -39,10 +39,12 @@ public:
   }
 
   bool has_next_step() {
+    return next_step < max_step;
+  }
+
+  void advance_step() {
     current_step = next_step;
-    bool ret = current_step < max_step;
     next_step++;
-    return ret;
   }
 
   void freeze() {

@@ -5,6 +5,7 @@
  */
 
 #include "interactor.h"
+#include "abort_exception.hpp"
 #include "generator.h"
 
 namespace interpreter {
@@ -315,27 +316,31 @@ void interactor::handle_collision(data_staging::circle& instance,
   auto find = gen_.object_definitions_map.find(instance.meta_cref().id());
   if (find != gen_.object_definitions_map.end()) {
     auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
-    auto handle_time_for_shape = [&](auto& c, auto& object_bridge, auto other_unique_id) {
+    auto handle_collide_for_shape = [&](auto& c, auto& object_bridge, auto other_unique_id) {
       object_bridge->push_object(c);
       i.call_fun(object_definition, object_bridge->instance(), "collide", other_unique_id);
       object_bridge->pop_object();
     };
     auto callback_wrapper = [&]<typename T>(T& shape, int64_t unique_id) {
       if constexpr (std::is_same_v<T, data_staging::circle>) {
-        return handle_time_for_shape(shape, gen_.bridges_.circle(), unique_id);
+        return handle_collide_for_shape(shape, gen_.bridges_.circle(), unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::ellipse>) {
-        return handle_time_for_shape(shape, gen_.bridges_.ellipse(), unique_id);
+        return handle_collide_for_shape(shape, gen_.bridges_.ellipse(), unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::line>) {
-        return handle_time_for_shape(shape, gen_.bridges_.line(), unique_id);
+        return handle_collide_for_shape(shape, gen_.bridges_.line(), unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::text>) {
-        return handle_time_for_shape(shape, gen_.bridges_.text(), unique_id);
+        return handle_collide_for_shape(shape, gen_.bridges_.text(), unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::script>) {
-        return handle_time_for_shape(shape, gen_.bridges_.script(), unique_id);
+        return handle_collide_for_shape(shape, gen_.bridges_.script(), unique_id);
       }
-      // unknown (undefined) objects, are ignored..
+      throw abort_exception("unknown (undefined) object is ignored");
     };
-    callback_wrapper(shape, unique_id2);
-    callback_wrapper(shape, unique_id);
+    meta_callback(shape, [&]<typename T>(T& shape_concrete) {
+      callback_wrapper(shape_concrete, unique_id2);
+    });
+    meta_callback(shape2, [&]<typename T>(T& shape_concrete) {
+      callback_wrapper(shape_concrete, unique_id);
+    });
   }
 }
 
