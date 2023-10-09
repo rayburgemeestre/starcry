@@ -72,7 +72,7 @@ integration-test-sanitizer:
 	                    ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
 	                        cmake --build build --target integration_tests && \
 	                    ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
-	                        ./build/integration_tests)
+	                        ./build/integration_tests -s -d yes --rng-seed 0)
 
 client:  ## build webassembly javascript file using docker
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ --std=c++20 -s WASM=1 -s USE_SDL=2 -O3 --bind \
@@ -240,6 +240,7 @@ push:
 clion:
 	xhost +
 	sudo sysctl kernel.unprivileged_userns_clone=0
+	sudo rm -rf /home/trigen/.config/JetBrains/CLion2023.3/.lock
 	mkdir -p /tmp/ccache-root
 	$(docker_exe) rm starcry_clion || true
 	$(docker_exe) run --rm --name starcry_clion -p 18081:18080 -p 10001:10000 -p 16379:6379 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/clion ${HOME}"
@@ -256,7 +257,7 @@ webstorm:
 	podman run --rm --name starcry_webstorm -p 8081:8080 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/webstorm ${HOME}"
 
 profile:  ## run starcry with valgrind's callgrind for profiling
-	valgrind --tool=callgrind ./build/starcry -c 1 input/script.js
+	valgrind --tool=callgrind ./build/starcry -c 1 input/broken/wave.js -f 1 --stdout --debug --verbose
 	# valgrind --tool=callgrind ./build/starcry --no-render --stdout input/test.js
 	ls -althrst | tail -n 1
 

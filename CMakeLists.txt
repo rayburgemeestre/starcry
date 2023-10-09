@@ -61,7 +61,7 @@ else()
     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         add_definitions("-std=c++23 -O2 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
     else()
-        add_definitions("-std=c++23 -O2 -funsigned-char                   -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS -Wno-unknown-pragmas -Wno-literal-suffix")
+        add_definitions("-std=c++23 -O2 -funsigned-char                   -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3                                    -DV8_COMPRESS_POINTERS -Wno-unknown-pragmas -Wno-literal-suffix")
     endif()
 endif()
 
