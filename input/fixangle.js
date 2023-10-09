@@ -7,28 +7,21 @@ _ = {
   },
   'objects': {
     'mother': {
-      'subobj': [],
       'x': 0,
       'y': 0,
       'angle': 0,
-      'opacity': 0,  // TEMP HACK
+      'opacity': 1,  // TEMP HACK
       'init': function() {
-        this.subobj.push(this.spawn({
+        this.spawn({
           'id': 'test_circle',
           'x': -500 + 50.,
           'y': 0,
           'scale': 0.5,
           'props': {'radius_limit': 5., 'x': -500 + 50.}
-        }));
-        this.subobj.push(this.spawn(
-            {'id': 'test_circle', 'x': 0 + 50., 'y': 0, 'scale': 1.0, 'props': {'radius_limit': 5., 'x': 50.}}));
-        this.subobj.push(this.spawn({
-          'id': 'test_circle',
-          'x': 500 + 50.,
-          'y': 0,
-          'scale': 1.0,
-          'props': {'radius_limit': 5., 'x': 500 + 50.}
-        }));
+        });
+        this.spawn({'id': 'test_circle', 'x': 0 + 50., 'y': 0, 'scale': 1.0, 'props': {'radius_limit': 5., 'x': 50.}});
+        this.spawn(
+            {'id': 'test_circle', 'x': 500 + 50., 'y': 0, 'scale': 1.0, 'props': {'radius_limit': 5., 'x': 500 + 50.}});
       },
     },
     'test_circle': {
@@ -56,10 +49,11 @@ _ = {
 
         this.opacity = 1.;
         // return;
-        if (this.props.depth < 10. && this.subobj.length == 0) {
+        if (this.props.depth < 10. && this.attr('flag') != 1) {
+          this.set_attr('flag', 1);
           var child_radius = this.radius * 0.67;
           var child_x = this.radius - child_radius + 50.;
-          this.subobj.push(this.spawn({
+          this.spawn({
             'id': 'test_circle',
             'x': child_x,
             'y': 0,
@@ -67,7 +61,7 @@ _ = {
             'scale': this.scale,
             'props': {'depth': this.props.depth + 1, 'x': child_x},
             'angle': 1,
-          }));
+          });
         }
         if (this.level > 1) this.angle += elapsed * 5.;
       },

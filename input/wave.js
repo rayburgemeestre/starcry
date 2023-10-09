@@ -16,18 +16,17 @@ _ = {
       'blending_type': blending_type.pinlight,
       'angle': 0,
       'props': {'mode': 1},
-      'subobj': [],
       'scale': 1.0,
       'init': function() {
         this.props.wave_strength = 0.;
         this.props.x = this.x;
-        this.subobj.push(this.spawn({'id': 'test_ball', 'x': 0, 'y': 0}));
+        this.spawn({'id': 'test_ball', 'x': 0, 'y': 0});
       },
       'time': function(time, elapsed) {
         // TODO: hide this complexity (of - 1 and calculating total/current frames) in a more "native" vibe/wave
         // function in C++
         // EDIT2: perhaps wasn't a good idea after all.
-        var total_frames = script.video.duration * 25. /* DISABLED AGAIN! - 1.*/;
+        var total_frames = script.scenes[0].duration * 25. /* DISABLED AGAIN! - 1.*/;
         var current_frame = total_frames * time;
         // output('vibe current_frame: ' + current_frame);
         // output('vibe: ' + triangular_wave(current_frame, 1., 1.0));

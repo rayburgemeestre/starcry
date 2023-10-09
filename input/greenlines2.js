@@ -22,18 +22,17 @@ _ = {
     'mother': {
       'x': 0,
       'y': 0,
-      'subobj': [],
       'radius': 0,
       'radiussize': 10.0,
       'init': function() {
-        this.subobj.push(this.spawn({
+        this.spawn({
           'id': 'ball',
           'props': {'level': 1, 'scale': 1.},
           'x': 0,
           'angle': 0,
           'y': 0,
           'z': 0,
-        }));
+        });
       },
       'time': function(t, e, s, tt) {
         var total_frames = script.video.duration * 25.;
@@ -71,7 +70,7 @@ _ = {
           let sub = this.spawn({
             'id': 'ball',
             'props': {'level': this.props.level + 1},
-            //'opacity': opac,
+            'opacity': opac,
             // 'angle': angle,
             // 'scale': 1.0 / this.props.level,
             'x': new_x,
@@ -79,24 +78,19 @@ _ = {
             'z': 0,
           });
 
-          let line = this.spawn({
-            'id': 'line',
-            // 'scale': 1.0 / this.props.level,
-            // 'opacity': opac * 0.5,
-            'x': 0,
-            'y': 0,
-            'x2': new_x,
-            'y2': new_y,
-            'z': 0,
-          });
-
-          if (true) {
-            sub.props.right.push(line);
-            this.props.left.push(line);
-          }
-
-          this.subobj.push(sub);
-          this.subobj.push(line);
+          let line = this.spawn3(
+              {
+                'id': 'line',
+                // 'scale': 1.0 / this.props.level,
+                'opacity': opac * 0.5,
+                'x': 0,
+                'y': 0,
+                'x2': new_x,
+                'y2': new_y,
+                'z': 0,
+              },
+              sub,
+              this.unique_id);
         }
       },
       'time': function(t, e, s, tt) {
@@ -141,7 +135,7 @@ _ = {
     'granularity': 1,
     'grain_for_opacity': false,
     'dithering': true,
-    'min_intermediates': 2,
+    'min_intermediates': 3,
     //'max_intermediates': 2,
     'minimize_steps_per_object': false,  // this guy is interesting to debug!!
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},

@@ -49,7 +49,6 @@ _ = {
       'x': 0,
       'y': 0,
       'props': {'direction': 0, 'steps': 1, 'step': 1, 'times': 0, 'start': false},
-      'subobj': [],
       'radius': 0,
       'radiussize': 10.0,
       'init': function() {
@@ -79,22 +78,18 @@ _ = {
           }
           this.props.step++;
 
-          this.subobj.push(this.spawn({
+          let [vel_x, vel_y] = random_velocity();
+          this.spawn({
             'id': 'ball',
             'label': 'ball#' + i,
             'x': x,
             'y': y,
             'z': 0,
-            'vel_x': 0,
-            'vel_y': 0,
+            'vel_x': vel_x,
+            'vel_y': vel_y,
+            'velocity': 50,
             'props': {'grad': i === 0 || i === 3 ? 'red' : 'white'}
-          }));
-        }
-        for (let obj of this.subobj) {
-          let [x, y] = random_velocity();
-          obj.vel_x = x;
-          obj.vel_y = y;
-          obj.velocity = 50;
+          });
         }
       },
       'time': function(t, e) {},
@@ -116,12 +111,8 @@ _ = {
         // while (this.x + (1920 / 2) > 1920) this.x -= 1920;
         // while (this.y + (1080 / 2) > 1080) this.y -= 1080;
       },
-      'subobj': [],
-      'on': {
-        'collide': function(other) {
-          this.subobj.push(
-              this.spawn({'id': 'tempring', 'label': 'ring_' + this.label, 'x': 0, 'y': 0, 'z': 0, 'props': {}}));
-        }
+      'collide': function(other) {
+        this.spawn({'id': 'tempring', 'label': 'ring_' + this.label, 'x': 0, 'y': 0, 'z': 0, 'props': {}});
       }
     },
     'tempring': {

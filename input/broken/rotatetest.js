@@ -14,7 +14,7 @@ _ = {
       'radiussize': 10.0,
       'init': function() {
         if (this.props.mode === 'line_up') {
-          this.subobj.push(this.spawn({'id': 'line', 'x': 0, 'y': 0, 'x2': 0, 'y2': -100}));
+          this.spawn({'id': 'line', 'x': 0, 'y': 0, 'x2': 0, 'y2': -100});
         } else {
           // this.subobj.push(this.spawn({'id': 'line', 'x': 0, 'y': 0, 'x2': 0, 'y2': -200}));
         }

@@ -197,9 +197,9 @@ _ = {
               visited.push(key);
               real.push([new_x, new_y]);
               let [vel_x, vel_y] = random_velocity();
-              this.subobj.push(this.spawn({
+              this.spawn({
                 'id': 'obj',
-                'label': 'sub1#' + this.subobj.length,
+                'label': 'sub1#??',
                 'x': new_x - (25. * ratio),
                 'y': new_y,
                 'vel_x': 1.,
@@ -208,7 +208,7 @@ _ = {
                 'opacity': 1.0 * (1.0 - ratio),
                 'z': 0,
                 'props': {'child': true, 'radius': this.props.radius}
-              }));
+              });
             }
           }
         }
@@ -220,8 +220,8 @@ _ = {
             var a = real[i];
             var b = real[j];
             if (get_distance(a[0], a[1], b[0], b[1]) >= 1.5 * this.props.radius) continue;
-            this.subobj.push(this.spawn(
-                {'id': 'line', 'label': 'lineX', 'x': a[0], 'y': a[1], 'x2': b[0], 'y2': b[1], 'z': 0, 'props': {}}));
+            this.spawn(
+                {'id': 'line', 'label': 'lineX', 'x': a[0], 'y': a[1], 'x2': b[0], 'y2': b[1], 'z': 0, 'props': {}});
           }
         }
       },

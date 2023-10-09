@@ -16,13 +16,13 @@ _ = {
     'triangles': {
       'x': 0,
       'y': 0,
-      'subobj': [],
       'radius': 0,
       'radiussize': 10.0,
       'init': function() {
         let n = 5;
+        let subobj = [];
         for (let i = 0; i < n; i++)
-          this.subobj.push(this.spawn({
+          subobj.push(this.spawn({
             'id': 'ball',
             'x': 0,
             'y': 0,
@@ -34,72 +34,75 @@ _ = {
         for (let i = 0; i < n; i++) {
           for (let j = 0; j < n; j++) {
             if (i < j) {
-              let obj1 = this.subobj[i];
-              let obj2 = this.subobj[j];
-              this.subobj.push(this.spawn({
-                'id': 'line',
-                'label': this.random_hash,
-                'x': obj1.x,
-                'y': obj1.y,
-                'x2': obj2.x,
-                'y2': obj2.y,
-                'z': 0,
-              }));
+              let obj1 = subobj[i];
+              let obj2 = subobj[j];
+              this.spawn3(
+                  {
+                    'id': 'line',
+                    'label': this.random_hash,
+                    'x': obj1.x,
+                    'y': obj1.y,
+                    'x2': obj2.x,
+                    'y2': obj2.y,
+                    'z': 0,
+                  },
+                  obj1,
+                  obj2);
             }
           }
         }
       },
       'time': function(t) {
-        let n = 5;
-        let index = 0;
-
-        output('A');
-        for (let i = 0; i < n; i++) {
-          for (let j = 0; j < n; j++) {
-            if (i < j) {
-              let obj1 = this.subobj[i];
-              let obj2 = this.subobj[j];
-              output('A');
-              while (this.subobj[index].id != 'line') index++;
-              this.subobj[index].x = obj1.x;
-              this.subobj[index].y = obj1.y;
-              this.subobj[index].x2 = obj2.x;
-              this.subobj[index].y2 = obj2.y;
-              if (!Array.isArray(obj1.props.left)) obj1.props.left = [];
-              if (!Array.isArray(obj2.props.left)) obj2.props.left = [];
-              if (!Array.isArray(obj1.props.right)) obj1.props.right = [];
-              if (!Array.isArray(obj2.props.right)) obj2.props.right = [];
-
-              let add_obj1 = true;
-              let add_obj2 = true;
-
-              for (let o of obj1.props.left) {
-                if (o.unique_id == this.subobj[index].unique_id) {
-                  output('ADDING cnflict: ' + o.unique_id)
-                  add_obj1 = false;
-                  break;
-                }
-              }
-              for (let o of obj2.props.right) {
-                if (o.unique_id == this.subobj[index].unique_id) {
-                  output('ADDING cnflict2: ' + o.unique_id)
-                  add_obj2 = false;
-                  break;
-                }
-              }
-
-              if (add_obj1) {
-                output('ADDING TO OBJ 1');
-                obj1.props.left.push(this.subobj[index]);
-              }
-              if (add_obj2) {
-                output('ADDING TO OBJ 2');
-                obj2.props.right.push(this.subobj[index]);
-              }
-              index++;
-            }
-          }
-        }
+        // let n = 5;
+        // let index = 0;
+        //
+        // output('A');
+        // for (let i = 0; i < n; i++) {
+        //   for (let j = 0; j < n; j++) {
+        //     if (i < j) {
+        //       let obj1 = this.subobj[i];
+        //       let obj2 = this.subobj[j];
+        //       output('A');
+        //       while (this.subobj[index].id != 'line') index++;
+        //       this.subobj[index].x = obj1.x;
+        //       this.subobj[index].y = obj1.y;
+        //       this.subobj[index].x2 = obj2.x;
+        //       this.subobj[index].y2 = obj2.y;
+        //       if (!Array.isArray(obj1.props.left)) obj1.props.left = [];
+        //       if (!Array.isArray(obj2.props.left)) obj2.props.left = [];
+        //       if (!Array.isArray(obj1.props.right)) obj1.props.right = [];
+        //       if (!Array.isArray(obj2.props.right)) obj2.props.right = [];
+        //
+        //       let add_obj1 = true;
+        //       let add_obj2 = true;
+        //
+        //       for (let o of obj1.props.left) {
+        //         if (o.unique_id == this.subobj[index].unique_id) {
+        //           output('ADDING cnflict: ' + o.unique_id)
+        //           add_obj1 = false;
+        //           break;
+        //         }
+        //       }
+        //       for (let o of obj2.props.right) {
+        //         if (o.unique_id == this.subobj[index].unique_id) {
+        //           output('ADDING cnflict2: ' + o.unique_id)
+        //           add_obj2 = false;
+        //           break;
+        //         }
+        //       }
+        //
+        //       if (add_obj1) {
+        //         output('ADDING TO OBJ 1');
+        //         obj1.props.left.push(this.subobj[index]);
+        //       }
+        //       if (add_obj2) {
+        //         output('ADDING TO OBJ 2');
+        //         obj2.props.right.push(this.subobj[index]);
+        //       }
+        //       index++;
+        //     }
+        //   }
+        // }
         this.angle = 360. * t;
       },
     },

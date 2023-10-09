@@ -25,14 +25,14 @@ _ = {
       'radius': 0,
       'radiussize': 10.0,
       'init': function() {
-        this.subobj.push(this.spawn({
+        this.spawn({
           'id': 'ball',
           'props': {'level': 1},
           'x': 0,
           'angle': 0,
           'y': 0,
           'z': 0,
-        }));
+        });
       },
       'time': function(t, e, s, tt) {
         // this.scale += e * 20;
@@ -45,7 +45,7 @@ _ = {
       'gradient': 'white',
       'radius': 10,
       'radiussize': 10.0,
-      'props': {'level': 0, 'left': [], 'right': []},
+      'props': {'level': 0},
       'init': function() {
         if (this.props.level >= 4) {
           return;
@@ -75,31 +75,22 @@ _ = {
             'z': 0,
           });
 
-          this.subobj.push(sub);
-          let line = this.spawn({
-            'id': 'line',
-            // 'scale': 1.0 / this.props.level,
-            'opacity': 1,  // opac * 0.5,
-            'x': 0,
-            'y': 0,
-            'x2': new_x,
-            'y2': new_y,
-            'z': 0,
-          });
-          this.props.left.push(line);
-          sub.props.right.push(line);
-          this.subobj.push(line);
+          this.spawn3(
+              {
+                'id': 'line',
+                // 'scale': 1.0 / this.props.level,
+                'opacity': 1,  // opac * 0.5,
+                'x': 0,
+                'y': 0,
+                'x2': new_x,
+                'y2': new_y,
+                'z': 0,
+              },
+              sub,
+              this.unique_id);
         }
       },
       'time': function(t) {
-        for (var i of this.props.left) {
-          i.x = this.transitive_x;
-          i.y = this.transitive_y;
-        }
-        for (var i of this.props.right) {
-          i.x2 = this.transitive_x;
-          i.y2 = this.transitive_y;
-        }
         this.angle = 360. * t;
       },
     },

@@ -21,10 +21,26 @@ _ = {
       'x': 0,
       'y': 0,
       'props': {'direction': 0, 'steps': 1, 'step': 1, 'times': 0, 'start': false},
-      'subobj': [],
       'radius': 0,
       'radiussize': 10.0,
       'init': function() {
+        class vector2d {
+          constructor(x = 0, y = 0) {
+            this.x = x;
+            this.y = y;
+          }
+          rotate(degrees) {
+            const radian = this.degrees_to_radian(degrees);
+            const sine = Math.sin(radian);
+            const cosine = Math.cos(radian);
+            this.x = this.x * cosine - this.y * sine;
+            this.y = this.x * sine + this.y * cosine;
+          }
+          degrees_to_radian(degrees) {
+            const pi = 3.14159265358979323846;
+            return degrees * pi / 180.0;
+          }
+        }
         const stepsize = 70;
         let directions = [
           [0, -stepsize],  // up
@@ -50,48 +66,21 @@ _ = {
           }
           this.props.step++;
 
-          this.subobj.push(this.spawn({
+          let velocity = new vector2d(rand(), 0);
+          velocity.rotate(rand() * 360);
+          this.spawn({
             'id': 'ball',
             'x': x,
             'y': y,
             'z': 0,
-            'vel_x': 0,
-            'vel_y': 0,
+            'vel_x': velocity.x,
+            'vel_y': velocity.y,
+            'velocity': 1.,
             'props': {'grad': i === 0 || i === 3 ? 'red' : 'white'}
-          }));
-        }
-
-        class vector2d {
-          constructor(x = 0, y = 0) {
-            this.x = x;
-            this.y = y;
-          }
-          rotate(degrees) {
-            const radian = this.degrees_to_radian(degrees);
-            const sine = Math.sin(radian);
-            const cosine = Math.cos(radian);
-            this.x = this.x * cosine - this.y * sine;
-            this.y = this.x * sine + this.y * cosine;
-          }
-          degrees_to_radian(degrees) {
-            const pi = 3.14159265358979323846;
-            return degrees * pi / 180.0;
-          }
-        }
-
-        for (let obj of this.subobj) {
-          let velocity = new vector2d(rand(), 0);
-          velocity.rotate(rand() * 360);
-          obj.vel_x = velocity.x;
-          obj.vel_y = velocity.y;
-          obj.velocity = 1;
+          });
         }
       },
-      'time': function(t, e) {
-        for (let obj of this.subobj) {
-          obj.velocity = 10 * t;
-        }
-      },
+      'time': function(t, e) {},
     },
     'explosion': {
       'type': 'circle',
@@ -105,11 +94,11 @@ _ = {
       'radiussize': 5,
       'init': function() {},
       'time': function(t, elapsed) {
-        if (this.props.enabled) {
-          this.radius += elapsed * 3;
-        } else {
-          this.radius -= elapsed * 3;
-        }
+        // if (this.props.enabled) {
+        this.radius += elapsed * 3;
+        //} else {
+        //  this.radius -= elapsed * 3;
+        // }
         if (this.radius > 15) {
           this.radius = 15;
         }
@@ -131,31 +120,37 @@ _ = {
       'props': {'grad': 'white'},
       'init': function() {
         // this.gradient = this.props.grad;
-        this.subobj.push(this.spawn({'id': 'explosion', 'x': 0, 'y': 0, 'z': 0, 'vel_x': 0, 'vel_y': 0, 'props': {}}));
+        // this.spawn({'id': 'explosion', 'x': 0, 'y': 0, 'z': 0, 'vel_x': 0, 'vel_y': 0, 'props': {}});
       },
       'time': function(t, elapsed) {
+        this.velocity = 10 * t;
+
         const steps = elapsed / 5;  // tie this to elapsed time
         if (this.gradients[1][0] > steps) {
           this.gradients[0][0] += steps;
           this.gradients[1][0] -= steps;
         } else {
-          if (this.subobj.length) {
-            this.subobj[0].props.enabled = false;
-          }
+          // TODO: find alternative for this...
+          // if (this.subobj.length) {
+          //   this.subobj[0].props.enabled = false;
+          // }
         }
         while (this.x + (1920 / 2) < 0) this.x += 1920;
         while (this.y + (1080 / 2) < 0) this.y += 1080;
         while (this.x + (1920 / 2) > 1920) this.x -= 1920;
         while (this.y + (1080 / 2) > 1080) this.y -= 1080;
       },
-      'on': {
-        'collide': function(other) {
-          this.gradients[0][0] = 0.0;
-          this.gradients[1][0] = 1.0;
-          if (this.subobj.length) {
-            this.subobj[0].props.enabled = true;
-          }
-        }
+      'collide': function(other) {
+        this.opacity = 0.;
+        this.spawn({'id': 'explosion', 'x': 0, 'y': 0, 'z': 0, 'vel_x': 0, 'vel_y': 0, 'props': {}});
+
+        this.gradients[0][0] = 0.0;
+        this.gradients[1][0] = 1.0;
+
+        // TODO: find alternative...
+        // if (this.subobj.length) {
+        //   this.subobj[0].props.enabled = true;
+        // }
       }
     },
     'bg': {

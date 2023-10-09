@@ -22,18 +22,17 @@ _ = {
     'mother': {
       'x': 0,
       'y': 0,
-      'subobj': [],
       'radius': 0,
       'radiussize': 10.0,
       'init': function() {
-        this.subobj.push(this.spawn({
+        this.spawn({
           'id': 'ball',
           'props': {'level': 1},
           'x': 0,
           'angle': 0,
           'y': 0,
           'z': 0,
-        }));
+        });
       },
       'time': function(t, e, s, tt) {
         this.angle = 360. * t;
@@ -66,7 +65,7 @@ _ = {
           let opac = 0.25 * (this.level - 1);
           if (opac > 1.) opac = 1.;
           if (opac < 0.) opac = 0.;
-          let sub = this.spawn({
+          this.spawn({
             'id': 'ball',
             'props': {'level': this.props.level + 1},
             //'opacity': opac,
@@ -77,8 +76,7 @@ _ = {
             'z': 0,
           });
 
-          this.subobj.push(sub);
-          let line = this.spawn({
+          this.spawn({
             'id': 'line',
             // 'scale': 1.0 / this.props.level,
             'opacity': opac * 0.5,
@@ -88,7 +86,6 @@ _ = {
             'y2': new_y,
             'z': 0,
           });
-          this.subobj.push(line);
         }
       },
       'time': function(t) {},

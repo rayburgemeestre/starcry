@@ -44,15 +44,13 @@ _ = {
       'radius': 0,
       'radiussize': 0,
       'props': {'depth': 30},
-      'subobj': [],
       'x': 0,
       'y': 0,
       // 'angle': -25,
       'init': function() {
         var x = this.props.depth / 50.;
         var step = expf(x, 300) * 100.;
-        this.subobj.push(
-            this.spawn({'id': 'ring', 'x': -200, 'y': 0, 'x2': 200, 'y2': 0, 'z': 0, 'props': {'scale': step}}));
+        this.spawn({'id': 'ring', 'x': -200, 'y': 0, 'x2': 200, 'y2': 0, 'z': 0, 'props': {'scale': step}});
         // this.subobj.push(
         //     this.spawn({'id': 'ring', 'x': -300, 'y': 150, 'x2': 0, 'y2': -300, 'z': 0, 'props': {'scale': step}}));
         // this.subobj.push(

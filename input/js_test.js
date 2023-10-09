@@ -23,7 +23,7 @@ _ = {
       'y': 0,
       'init': function() {
         for (let i = 0; i < 10000; i++) {
-          this.subobj.push(this.spawn({
+          this.spawn({
             'id': 'ball',
             'x': rand() * 1000 - 500,
             'y': rand() * 1000 - 500,
@@ -31,7 +31,7 @@ _ = {
             'velocity': 10.,
             'vel_x': Math.random(),
             'vel_y': Math.random(),
-          }));
+          });
         }
       }
     },

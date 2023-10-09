@@ -156,28 +156,28 @@ _ = {
           var new_y = 0 + (Math.sin(rads) * move);
 
           real.push([new_x, new_y]);
-          this.subobj.push(this.spawn({
+          this.spawn({
             'id': 'obj',
-            'label': 'sub1#' + this.subobj.length,
+            'label': 'sub1#??',
             'x': new_x,
             'y': new_y,
             'z': 0,
             'props': {'child': true, 'radius': this.props.radius}
-          }));
+          });
 
           move = this.props.radius * 4. * ratio * -1;
           new_x = 0 + (Math.cos(rads) * move);
           new_y = 0 + (Math.sin(rads) * move);
           key = Math.round(new_x) + '' + Math.round(new_y);
           real.push([new_x, new_y]);
-          this.subobj.push(this.spawn({
+          this.spawn({
             'id': 'obj',
-            'label': 'sub1b#' + this.subobj.length,
+            'label': 'sub1b#??',
             'x': new_x,
             'y': new_y,
             'z': 0,
             'props': {'child': true, 'radius': this.props.radius}
-          }));
+          });
         }
 
         for (let i = 0; i < real.length; i++) {
@@ -188,7 +188,7 @@ _ = {
             // var dist = get_distance(a[0], a[1], b[0], b[1]);
             var dist = get_distance(0, 0, a[0], a[1]);
             var dist2 = get_distance(0, 0, b[0], b[1]);
-            this.subobj.push(this.spawn({
+            this.spawn({
               'id': 'line',
               'label': 'lineX',
               'x': a[0],
@@ -198,40 +198,40 @@ _ = {
               'z': 0,
               'gradient': dist < (this.props.radius * 3.1) && dist2 < (this.props.radius * 3.1) ? 'yellow' : 'red',
               'props': {}
-            }));
+            });
           }
         }
         // encapsulating circles
-        this.subobj.push(this.spawn({
+        this.spawn({
           'id': 'obj',
-          'label': 'e#' + this.subobj.length,
+          'label': 'e#??',
           'x': 0,
           'y': 0,
           'z': 0,
           'radius': this.props.radius * 3,
           'gradient': 'green',
           'props': {'child': true, 'radius': this.props.radius}
-        }));
-        this.subobj.push(this.spawn({
+        });
+        this.spawn({
           'id': 'obj',
-          'label': 'e#' + this.subobj.length,
+          'label': 'e#??',
           'x': 0,
           'y': 0,
           'z': 0,
           'radius': this.props.radius * 4,
           'gradient': 'green',
           'props': {'child': true, 'radius': this.props.radius}
-        }));
-        this.subobj.push(this.spawn({
+        });
+        this.spawn({
           'id': 'obj',
-          'label': 'e#' + this.subobj.length,
+          'label': 'e#??',
           'x': 0,
           'y': 0,
           'z': 0,
           'radius': this.props.radius * 5,
           'gradient': 'green',
           'props': {'child': true, 'radius': this.props.radius}
-        }));
+        });
       },
       'time': function(t, elapsed) {},
     },

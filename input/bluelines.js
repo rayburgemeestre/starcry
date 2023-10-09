@@ -14,18 +14,17 @@ _ = {
     'mother': {
       'x': 0,
       'y': 0,
-      'subobj': [],
       'radius': 0,
       'radiussize': 10.0,
       'init': function() {
-        this.subobj.push(this.spawn({
+        this.spawn({
           'id': 'ball',
           'props': {'level': 1, 'scale': 1.},
           'x': 0,
           'angle': 0,
           'y': 0,
           'z': 0,
-        }));
+        });
       },
       'time': function(t, e, s, tt) {},
     },
@@ -72,39 +71,38 @@ _ = {
           });
 
           if (prev) {
-            let line = this.spawn({
-              'id': 'line',
-              // 'scale': 1.0 / this.props.level,
-              // 'opacity': opac * 0.5,
-              'x': prev.x,
-              'y': prev.y,
-              'x2': new_x,
-              'y2': new_y,
-              'z': 0,
-            });
-            sub.props.left.push(line);
-            prev.props.right.push(line);
-            this.subobj.push(line);
+            let line = this.spawn3(
+                {
+                  'id': 'line',
+                  // 'scale': 1.0 / this.props.level,
+                  // 'opacity': opac * 0.5,
+                  'x': prev.x,
+                  'y': prev.y,
+                  'x2': new_x,
+                  'y2': new_y,
+                  'z': 0,
+                },
+                sub,
+                prev);
           }
 
-          this.subobj.push(sub);
           if (!first) first = sub;
           prev = sub;
         }
         if (first && prev) {
-          let line = this.spawn({
-            'id': 'line',
-            // 'scale': 1.0 / this.props.level,
-            // 'opacity': opac * 0.5,
-            'x': first.x,
-            'y': first.y,
-            'x2': prev.x,
-            'y2': prev.y,
-            'z': 0,
-          });
-          first.props.left.push(line);
-          prev.props.right.push(line);
-          this.subobj.push(line);
+          let line = this.spawn3(
+              {
+                'id': 'line',
+                // 'scale': 1.0 / this.props.level,
+                // 'opacity': opac * 0.5,
+                'x': first.x,
+                'y': first.y,
+                'x2': prev.x,
+                'y2': prev.y,
+                'z': 0,
+              },
+              first,
+              prev);
         }
       },
       'time': function(t, e, s, tt) {

@@ -13,40 +13,40 @@ _ = {
     }
   },
   'objects': {
-    'triangles': {
+    'balls': {
       'x': 0,
       'y': 0,
-      'subobj': [],
+      'props': {'subobj': []},
       'radius': 0,
       'radiussize': 10.0,
       'init': function() {
-        let n = 3;
+        let n = 10;
         for (let i = 0; i < n; i++)
-          this.subobj.push(this.spawn({
+          this.props.subobj.push(this.spawn({
             'id': 'ball',
-            'x': 0,
-            'y': 0,
+            // 'x': ((rand() * 2.) - 1.) * 1920/2,
+            // 'y': ((rand() * 2.) - 1.) * 1920/2,
+            // 'x': 0,
+            // 'y': 0,
             'z': 0,
             'velocity': rand() * 100.,
             'vel_x': ((rand() * 2.) - 1.),
             'vel_y': ((rand() * 2.) - 1.),
           }));
-
         for (let i = 0; i < n; i++) {
           for (let j = 0; j < n; j++) {
-            let o1 = this.subobj[i];
-            let o2 = this.subobj[j];
-            let line = this.spawn({
-              'id': 'line',
-              'x': o1.x,
-              'y': o1.y,
-              'x2': o2.x,
-              'y2': o2.y,
-              'z': 0,
-            });
-            o1.props.left.push(line);
-            o2.props.right.push(line);
-            this.subobj.push(line);
+            if (i <= j) {
+              let obj1 = this.props.subobj[i];
+              let obj2 = this.props.subobj[j];
+              this.props.subobj.push(this.spawn3(
+                  {
+                    'id': 'line',
+                    'opacity': rand(),
+                    'z': 0,
+                  },
+                  obj1,
+                  obj2));
+            }
           }
         }
       },
@@ -57,29 +57,25 @@ _ = {
     'ball': {
       'type': 'circle',
       'opacity': 0,
-      'toroidal': 't1',
-      'blending_type': blending_type.normal,
+      // 'collision_group': 'cg1',
+      //      'toroidal': 't1',
+      'blending_type': blending_type.add,
       'gradient': 'white',
       'radius': 10,
       'radiussize': 10.0,
-      'props': {'left': [], 'right': []},
+      'props': {'subobj': []},
       'init': function() {
         this.props.seed = rand();
         this.props.vel = this.velocity;
       },
       'time': function(t) {
-        for (var i of this.props.left) {
-          i.x = this.x;
-          i.y = this.y;
-        }
-        for (var i of this.props.right) {
-          i.x2 = this.x;
-          i.y2 = this.y;
-        }
+        this.velocity = this.props.vel * Math.sin(t * 100 * this.props.seed);
       },
     },
     'line': {
       'type': 'line',
+      // 'collision_group': 'cg1',
+      // 'toroidal': 't1',
       'blending_type': blending_type.add,
       'gradient': 'white',
       'radius': 0,
@@ -97,11 +93,16 @@ _ = {
     'granularity': 1,
     'grain_for_opacity': true,
     'dithering': true,
-    'minimize_steps_per_object': true,  // this guy is interesting to debug!!
+    'min_intermediates': 30,
+    'max_intermediates': 30,
+    //'max_intermediates': 1,
+    'minimize_steps_per_object': false,
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
   },
   'preview': {
     'motion_blur': false,
+    'min_intermediates': 1,
+    'max_intermediates': 1,
     'grain_for_opacity': false,
     'dithering': false,
     'width': 1920,
@@ -111,7 +112,13 @@ _ = {
     'name': 'scene1',
     'duration': 10,
     'objects': [
-      {'id': 'triangles', 'x': 0, 'y': 0, 'z': 0, 'opacity': 1., 'scale': 1., 'props': {}},
+      {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'opacity': 1. / 3., 'scale': 1., 'props': {}},
+      {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'opacity': 1. / 3., 'scale': 1., 'props': {}},
+      {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'opacity': 1. / 3., 'scale': 1., 'props': {}},
+
+      {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'opacity': 1. / 6., 'scale': 2., 'props': {}},
+      {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'opacity': 1. / 7., 'scale': 3., 'props': {}},
+      {'id': 'balls', 'x': 0, 'y': 0, 'z': 0, 'opacity': 1. / 8., 'scale': 4., 'props': {}},
     ],
   }]
 };
