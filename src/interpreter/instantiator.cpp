@@ -143,7 +143,10 @@ instantiator::instantiate_object_from_scene(
   }
   auto object_prototype = v8_index_object(i.get_context(), gen_.genctx->objects, object_id).template As<v8::Object>();
 
-  // logger(DEBUG) << "instantiate_object_from_scene, prototype: " << object_id << std::endl;
+  if (object_prototype->IsNullOrUndefined() || !object_prototype->IsObject()) {
+    logger(WARNING) << "cannot instantiate object id: " << object_id << ", does not exist" << std::endl;
+    throw std::runtime_error(fmt::format("cannot instantiate object id: {}, does not exist", object_id));
+  }
 
   // create a new javascript object
   v8::Local<v8::Object> instance = v8::Object::New(isolate);
@@ -151,11 +154,6 @@ instantiator::instantiate_object_from_scene(
   // TODO: make sure this is the only source..., and get rid of genctx->objects usage
   if (!object_prototype->IsObject()) {
     object_prototype = gen_.object_definitions_map[object_id].Get(isolate);
-  }
-
-  if (!object_prototype->IsObject()) {
-    logger(WARNING) << "cannot instantiate object id: " << object_id << ", does not exist" << std::endl;
-    throw std::runtime_error(fmt::format("cannot instantiate object id: {}, does not exist", object_id));
   }
 
   // instantiate the prototype into newly allocated javascript object
