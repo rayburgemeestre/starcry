@@ -779,6 +779,32 @@ int64_t generator::destroy(data_staging::shape_t& caller) {
   return ret;
 }
 
+v8::Local<v8::Object> generator::get_object(int64_t object_unique_id) {
+  auto& i = genctx->i();
+  // BEGIN: Temporary code (to try out something
+  data_staging::shape_t* obj1o = nullptr;
+  auto find1 = next_instance_map.find(object_unique_id);
+  if (find1 != next_instance_map.end()) {
+    obj1o = &find1->second.get();
+  } else {
+    // todo; we need a mapping for this...
+    for (auto& newo : scenes_.instantiated_objects_current_scene()) {
+      if (auto c = std::get_if<data_staging::circle>(&newo)) {
+        if (c->meta_cref().unique_id() == object_unique_id) {
+          obj1o = &newo;
+        }
+      }
+    }
+  }
+  auto obj = v8::Object::New(i.get_isolate());
+
+  meta_callback(*obj1o, [&]<typename T>(const T& cc) {
+    i.set_field(obj, "unique_id", v8::Number::New(i.get_isolate(), cc.meta_cref().unique_id()));
+    i.set_field(obj, "id", v8_str(i.get_context(), cc.meta_cref().id()));
+  });
+  return obj;
+}
+
 std::unordered_map<std::string, v8::Persistent<v8::Object>>& generator::get_object_definitions_ref() {
   return object_definitions_map;
 }

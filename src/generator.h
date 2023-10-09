@@ -152,6 +152,7 @@ public:
   int64_t spawn_object3(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1, int64_t obj2);
   int64_t spawn_object_at_parent(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
   static int64_t destroy(data_staging::shape_t& spawner);
+  v8::Local<v8::Object> get_object(int64_t object_unique_id);
 
   std::unordered_map<std::string, v8::Persistent<v8::Object>>& get_object_definitions_ref();
   std::vector<int64_t> get_transitive_ids(const std::vector<int64_t>& in);

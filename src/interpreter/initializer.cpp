@@ -69,6 +69,10 @@ void initializer::reset_context() {
                           }
                           return v8::Boolean::New(v8::Isolate::GetCurrent(), ret);
                         });
+  gen_.context->add_fun("get_object", [&](v8::Local<v8::Number> unique_id) -> v8::Local<v8::Object> {
+    return gen_.get_object(
+        unique_id->ToNumber(v8::Isolate::GetCurrent()->GetCurrentContext()).ToLocalChecked()->Value());
+  });
   gen_.context->add_fun("angled_velocity", &angled_velocity);
   gen_.context->add_fun("random_velocity", [&]() {
     return random_velocity(gen_.rand_);
