@@ -20,12 +20,13 @@ _ = {
       'props': {'spawned': false},
       'init': function() {},
       'time': function(t, elapsed, s) {
+        this.rotate += elapsed * 10;
         this.radiussize += elapsed * 100;
         // this.opacity -= elapsed / 10;
         // if (this.opacity < 0) this.opacity = 0;
         if (this.radius == 1) return;
         if (this.radiussize > 100 + 100 * t) {
-          for (let n = 2, i = 0; i < n; i++) {
+          for (let n = 3, i = 0; i < n; i++) {
             let angle = ((360 / n) * i) - 45;
             let vel = angled_velocity(angle);
             this.spawn({

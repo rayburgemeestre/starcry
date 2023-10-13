@@ -50,15 +50,17 @@ _ = {
       'y': 0,
       'angle': 0,
       'init': function() {
-        for (var i = 0; i < 10.; i++) {
+        for (var i = 0; i < 6.; i++) {
           var x = script.video.width * rand() - (script.video.width / 2.);
           var y = script.video.height * rand() - (script.video.height / 2.);
+          x = 0;
+          y = 0;
           this.spawn({
             'id': 'blue_circle',
             'x': x,
             'y': y,
             'hue': (i / 10.) * 360.,
-            'scale': rand() * 3.,
+            'scale': 1. + rand(),
             'props': {'radius_limit': rand() * 10. + 5., 'hue': (i / 10.) * 180.}
           });
         }
@@ -98,20 +100,25 @@ _ = {
         this.gradients[0][0] = 1.0 - time;
         this.gradients[1][0] = time;
 
-        if (this.radius > this.props.radius_limit && this.attr('flag') == 1) {
-          this.set_attr('flag', 2);
-          this.spawn({
-            'id': 'blue_circle',
-            'x': this.radius / 3.,
-            'y': 0,
-            'radius': this.radius * 0.67,
-            'scale': this.scale,
-            'props': this.props
-          });
-        }
-        this.angle += elapsed * 5.;
+        if (false)
+          if (this.radius > this.props.radius_limit && this.attr('flag') == 1) {
+            this.set_attr('flag', 2);
+            this.spawn({
+              'id': 'blue_circle',
+              'x': this.radius / 3.,
+              'y': 0,
+              'radius': this.radius * 0.67,
+              'scale': this.scale,
+              'props': this.props
+            });
+          }
+        // this.rotate += elapsed * 5.;
+        // return;
+
+        return;  //
+                 //
         if (time > 0.5) {
-          this.radius += elapsed * 100;
+          // this.radius += elapsed * 100;
         }
         this.opacity = 1.0 * logn(1. - time * 1.1, 1000);
         if (this.opacity <= 0) {
@@ -155,7 +162,7 @@ _ = {
     // },
   },
   'video': {
-    'duration': 5,
+    //'duration': 10,//5,
     'fps': 25,
     //    'width': 1920,
     //    'height': 1920,
@@ -174,6 +181,7 @@ _ = {
   },
   'scenes': [{
     'name': 'scene1',
+    'duration': 10.0,
     'objects': [
       {'id': 'camera', 'x': 0, 'y': 0, 'z': 0},
       // {'id': 'background', 'x': 0, 'y': 0, 'z': 0},

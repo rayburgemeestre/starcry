@@ -56,7 +56,7 @@
         }
       },
       'time': function(t, e, scene) {
-        this.rotate = 360. * t;
+        this.rotate = 13.33 * t;
       },
     },
     'point': {
@@ -66,7 +66,7 @@
       'gradient': 'green',
       'blending_type': blending_type.add,
       'time': function(t, e, scene) {
-        this.radiussize += e * 10;
+        this.radiussize += e;
       },
     },
   },
@@ -87,6 +87,6 @@
     'height': 512,
   },
   'scenes': [
-    {'name': 'scene1', 'duration': 3.0, 'objects': [{'id': 'spiral', 'x': 0, 'y': 0, 'z': 0, 'props': {}}]},
+    {'name': 'scene1', 'duration': 10.0, 'objects': [{'id': 'spiral', 'x': 0, 'y': 0, 'z': 0, 'props': {}}]},
   ]
 };
