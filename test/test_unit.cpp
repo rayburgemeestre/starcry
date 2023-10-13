@@ -180,11 +180,12 @@ TEST_CASE( "Testing frame stepper" ) {
 
   int steps = 0;
   while (fs.has_next_step()) {
+    fs.advance_step();
     steps++;
   }
   REQUIRE(steps == 3);
 
-  REQUIRE(fs.current_step == 3);
+  REQUIRE(fs.current_step == 2);
   REQUIRE(fs.max_step == 3);
 
   fs.reset();
@@ -200,6 +201,7 @@ TEST_CASE( "Testing frame stepper rewind" ) {
 
   int steps = 0;
   while (fs.has_next_step()) {
+    fs.advance_step();
     steps++;
   }
   REQUIRE(steps == 3);
@@ -210,6 +212,7 @@ TEST_CASE( "Testing frame stepper rewind" ) {
 
   steps = 0;
   while (fs.has_next_step()) {
+    fs.advance_step();
     steps++;
   }
 }
