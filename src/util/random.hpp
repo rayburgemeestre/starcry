@@ -50,6 +50,10 @@ public:
     return numbers[index++];
   }
 
+  void set_index(size_t user_index) {
+    index = user_index;
+  }
+
 private:
   void reset() {
     index = 0;
