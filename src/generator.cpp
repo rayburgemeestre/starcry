@@ -27,10 +27,11 @@
 
 namespace interpreter {
 
-generator::generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug)
+generator::generator(std::shared_ptr<metrics>& metrics,
+                     std::shared_ptr<v8_wrapper>& context,
+                     const generator_options& opts)
     : context(context),
       metrics_(metrics),
-      debug_(debug),
       initializer_(*this),
       bridges_(*this),
       scenes_(*this),
@@ -38,7 +39,8 @@ generator::generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapp
       positioner_(*this),
       interactor_(*this),
       instantiator_(*this),
-      job_mapper_(*this) {}
+      job_mapper_(*this),
+      generator_opts(opts) {}
 
 void generator::init(const std::string& filename,
                      std::optional<double> rand_seed,
@@ -338,7 +340,7 @@ bool generator::_generate_frame() {
 
       scalesettings.commit();
       scenes_.commit();
-      if (debug_) {
+      if (generator_opts.debug) {
         debug_print_next();
       }
 

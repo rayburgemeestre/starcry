@@ -18,6 +18,7 @@
 #include "data/viewpoint.hpp"
 
 #include "core/periodic_executor.hpp"
+#include "interpreter/generator_options.hpp"
 #include "util/random.hpp"
 
 class v8_wrapper;
@@ -89,6 +90,8 @@ struct starcry_options {
   int concurrent_commands = 10;
   int concurrent_jobs = 10;
   int concurrent_frames = 10;
+
+  generator_options generator_opts;
 };
 
 class starcry {

@@ -17,6 +17,7 @@
 
 #include "interpreter/bridges.h"
 #include "interpreter/frame_sampler.h"
+#include "interpreter/generator_options.hpp"
 #include "interpreter/initializer.h"
 #include "interpreter/instantiator.h"
 #include "interpreter/interactor.h"
@@ -109,8 +110,12 @@ private:
   data_staging::attrs global_attrs_;
   std::vector<int64_t> selected_ids_;
 
+  const generator_options& generator_opts;
+
 public:
-  explicit generator(std::shared_ptr<metrics>& metrics, std::shared_ptr<v8_wrapper>& context, bool debug = false);
+  explicit generator(std::shared_ptr<metrics>& metrics,
+                     std::shared_ptr<v8_wrapper>& context,
+                     const generator_options& opts);
   ~generator() = default;
 
   void init(const std::string& filename,

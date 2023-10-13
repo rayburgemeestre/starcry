@@ -218,15 +218,27 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
           gen_.canvas_w = *width;
           gen_.canvas_h = *height;
         }
+        if (gen_.generator_opts.custom_width) {
+          gen_.canvas_w = gen_.generator_opts.custom_width;
+        }
+        if (gen_.generator_opts.custom_height) {
+          gen_.canvas_h = gen_.generator_opts.custom_height;
+        }
 
         gen_.seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
         gen_.tolerated_granularity = i.double_number(video, "granularity", 1);
+        if (gen_.generator_opts.custom_granularity) {
+          gen_.tolerated_granularity = gen_.generator_opts.custom_granularity;
+        }
         gen_.minimize_steps_per_object = i.boolean(video, "minimize_steps_per_object", false);
         auto& settings_ = gen_.settings_;
         if (i.has_field(video, "perlin_noise")) settings_.perlin_noise = i.boolean(video, "perlin_noise");
         if (i.has_field(video, "motion_blur")) settings_.motion_blur = i.boolean(video, "motion_blur");
         if (i.has_field(video, "grain_for_opacity"))
           settings_.grain_for_opacity = i.boolean(video, "grain_for_opacity");
+        if (gen_.generator_opts.custom_grain) {
+          settings_.grain_for_opacity = *gen_.generator_opts.custom_grain;
+        }
         if (i.has_field(video, "extra_grain")) settings_.extra_grain = i.double_number(video, "extra_grain");
         if (i.has_field(video, "update_positions")) settings_.update_positions = i.boolean(video, "update_positions");
         if (i.has_field(video, "dithering")) settings_.dithering = i.boolean(video, "dithering");
@@ -260,8 +272,10 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         if (scale) {
           use_scale = *scale;
         }
+        if (gen_.generator_opts.custom_scale) {
+          use_scale = gen_.generator_opts.custom_scale;
+        }
         gen_.job->scale = use_scale;
-
         gen_.scalesettings.video_scale = use_scale;
         gen_.scalesettings.video_scale_next = use_scale;
         gen_.scalesettings.video_scale_intermediate = use_scale;

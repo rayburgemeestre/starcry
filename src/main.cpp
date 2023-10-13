@@ -56,6 +56,8 @@ public:
     po::positional_options_description p;
     p.add("script", 1);
     p.add("output", 1);
+    bool grain = false;
+    bool nograin = false;
     // clang-format off
     desc.add_options()
       ("help", "produce help message")
@@ -87,8 +89,20 @@ public:
       ("debug", "enable renderer visual debug")
       ("concurrent-commands", po::value<int>(&options.concurrent_commands), "max. concurrent commands in queue (default: 10)")
       ("concurrent-jobs", po::value<int>(&options.concurrent_jobs), "max. concurrent jobs in queue (default: 10)")
-      ("concurrent-frames", po::value<int>(&options.concurrent_frames), "max. concurrent frames in queue (default: 10)");
+      ("concurrent-frames", po::value<int>(&options.concurrent_frames), "max. concurrent frames in queue (default: 10)")
+      ("width", po::value<int>(&options.generator_opts.custom_width), "custom canvas width")
+      ("height", po::value<int>(&options.generator_opts.custom_height), "custom canvas height")
+      ("scale", po::value<double>(&options.generator_opts.custom_scale), "custom canvas scale")
+      ("grain", po::value<bool>(&grain), "custom canvas enable grain")
+      ("no-grain", po::value<bool>(&nograin), "custom canvas disable grain")
+      ("granularity", po::value<int>(&options.generator_opts.custom_granularity), "custom canvas granularity");
     // clang-format on
+
+    if (vm.count("grain")) {
+      options.generator_opts.custom_grain = true;
+    } else if (vm.count("nograin")) {
+      options.generator_opts.custom_grain = false;
+    }
 
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
 
