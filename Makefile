@@ -218,7 +218,7 @@ release:  # alias for make build..
 
 publish:  ## build from scratch starcry, web, client, docker image. (does not push to dockerhub)
 	make clean
-	make build
+	make build-gcc   # currently issues with clang-15 :(
 	make build-web
 	make client
 	make docs || true  # first time tends to fail for some reason

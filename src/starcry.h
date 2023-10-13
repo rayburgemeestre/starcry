@@ -95,13 +95,6 @@ struct starcry_options {
 };
 
 class starcry {
-  friend class command_handler;
-  friend class command_get_video;
-  friend class command_get_bitmap;
-  friend class command_get_image;
-  friend class command_get_shapes;
-  friend class command_get_objects;
-  friend class command_get_raw_image;
   friend class redis_server;
   friend class redis_client;
 

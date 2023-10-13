@@ -199,6 +199,11 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         durations.clear();
         auto obj = val.As<v8::Object>();
         auto scenes = i.v8_array(obj, "scenes");
+        gen_.scenes_.reset();
+        gen_.object_definitions_map.clear();
+        // TODO: put this in a meaningful function?
+        gen_.next_instance_map.clear();
+        gen_.intermediate_map.clear();
         for (size_t I = 0; I < scenes->Length(); I++) {
           gen_.scenes_.add_scene();
           auto current_scene = i.get_index(scenes, I);

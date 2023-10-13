@@ -172,7 +172,12 @@ void scenes::revert() {
   }
 }
 
-void scenes::reset() {}
+void scenes::reset() {
+  scene_shapes.clear();
+  scene_shapes_next.clear();
+  scene_shapes_intermediate.clear();
+  instantiated_objects.clear();
+}
 
 void scenes::commit_scene_shapes() {
 #ifdef DEBUG2
@@ -199,6 +204,24 @@ void scenes::reset_scene_shapes_next() {
   gen_.debug_print_all();
 #endif
 }
+
+void scenes::dump() {
+  const auto details = [](const auto& vecvec) {
+    size_t index = 0;
+    for (const auto& v : vecvec) {
+      logger(DEBUG) << "scenes::dump::details - " << index << " - " << v.size() << std::endl;
+      index++;
+    }
+  };
+  logger(DEBUG) << "scenes::dump - scene_shapes.size() = " << this->scene_shapes.size() << std::endl;
+  details(this->scene_shapes);
+  logger(DEBUG) << "scenes::dump - scene_shapes_next.size() = " << this->scene_shapes_next.size() << std::endl;
+  details(this->scene_shapes_next);
+  logger(DEBUG) << "scenes::dump - scene_shapes_intermediate.size() = " << this->scene_shapes_intermediate.size()
+                << std::endl;
+  details(this->scene_shapes_intermediate);
+}
+
 void scenes::reset_scene_shapes_intermediates() {
   scene_shapes_intermediate = scene_shapes;
 #ifdef DEBUG2

@@ -105,3 +105,14 @@ TEST_CASE("Test blending modes image") {
   sc.options.frame_of_interest = 1;
   REQUIRE(sc.test_create_image("unittest_011_blending_types_frame1") == double(0));
 }
+
+TEST_CASE("Test complex render twice.") {
+  sut sc;
+  sc.options.script_file = "input/kaleidoscope.js";
+  sc.options.frame_of_interest = 1;
+
+  REQUIRE(sc.test_create_image("unittest_012_kaleidoscope_frame1") == double(0));
+
+  // interactive mode crashes rendering the same frame twice for this script
+  REQUIRE(sc.test_create_image("unittest_012_kaleidoscope_frame1") == double(0));
+}

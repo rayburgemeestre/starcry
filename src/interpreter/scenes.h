@@ -35,6 +35,7 @@ public:
 public:
   scenes(generator& gen);
 
+  void dump();
   void initialize();
   void add_scene();
   void append_instantiated_objects();

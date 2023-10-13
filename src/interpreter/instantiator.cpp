@@ -5,6 +5,7 @@
  */
 
 #include "instantiator.h"
+#include "abort_exception.hpp"
 #include "generator.h"
 
 namespace interpreter {
@@ -272,6 +273,11 @@ instantiator::instantiate_object_from_scene(
       auto copy = std::get<T>((*shape_ref).get());
       bridge->push_object(copy);
 
+#if DEBUG
+      if (!gen_.object_definitions_map.contains(object_id)) {
+        throw abort_exception(fmt::format("object_id ({}) not found in definitions map", object_id));
+      }
+#endif
       i.call_fun(gen_.object_definitions_map[object_id],  // object definition
                  bridge->instance(),                      // bridged object is "this"
                  "init");

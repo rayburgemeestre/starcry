@@ -7,6 +7,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include "interpreter/object_bridge.h"
 #include "data_staging/shape.hpp"
 #include "generator.h"
+#include "util/logger.h"
 #include "util/v8_interact.hpp"
 
 template <typename T>
