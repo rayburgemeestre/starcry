@@ -25,6 +25,8 @@ jobs:
       run: make download-integration-test-reference
     - name: make integration-test
       run: make integration-test
+    - name: update apt
+      run: sudo apt update
     - name: install npm
       run: sudo apt install -y npm
     - name: install quasar
