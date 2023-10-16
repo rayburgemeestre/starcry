@@ -94,11 +94,16 @@ _ = {
         }
         this.set_attr('flag', 1);
         this.hue = this.props.hue;
+        this.props.radius = this.radius;
+        this.props.offset = rand();
       },
       'time': function(time, elapsed) {
         this.opacity = 1.;  // TODO: investigate, why is this not doing anything?
         this.gradients[0][0] = 1.0 - time;
         this.gradients[1][0] = time;
+
+        this.radius = this.props.radius + Math.cos(this.props.offset * time * 10) * 10;
+        this.hue += elapsed * 20;
 
         if (false)
           if (this.radius > this.props.radius_limit && this.attr('flag') == 1) {
@@ -181,7 +186,7 @@ _ = {
   },
   'scenes': [{
     'name': 'scene1',
-    'duration': 10.0,
+    'duration': 30.0,
     'objects': [
       {'id': 'camera', 'x': 0, 'y': 0, 'z': 0},
       // {'id': 'background', 'x': 0, 'y': 0, 'z': 0},

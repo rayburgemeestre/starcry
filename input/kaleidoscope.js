@@ -1,8 +1,8 @@
 _ = {
   'gradients': {
-    'red': '#ff0000',
+    'red': '#770000',
     'white': '#ffffff',
-    'two': '#0000FF',
+    'two': '#ff0000',
   },
   'objects': {
     'mother': {
@@ -16,10 +16,13 @@ _ = {
       'blending_type': blending_type.phoenix,
       'props': {'spawned': false},
       'init': function() {
-        // this.scale = this.props.scale; // workaround?
-        if (this.level > 0) return;
+        this.props.offset = this.level;
 
-        let [vel_x, vel_y] = random_velocity1(this.level + this.props.id);
+        // this.scale = this.props.scale; // workaround?
+        let this_level = this.level - this.props.offset;
+        if (this_level > 0) return;
+
+        let [vel_x, vel_y] = random_velocity1(this_level + this.props.id);
         vel_x *= 50 * this.scale;
         vel_y *= 50 * this.scale;
         let rand_angle = rand() * 20;
@@ -30,7 +33,13 @@ _ = {
             'x': vel_x,
             'y': vel_y,
             'z': 0,
-            'props': {'vel_x': vel_x, 'vel_y': vel_y, 'ra': rand_angle, 'mother': this.unique_id},
+            'props': {
+              'vel_x': vel_x,
+              'vel_y': vel_y,
+              'ra': rand_angle,
+              'mother': this.unique_id,
+              'offset': this.props.offset
+            },
             'rotate': deg,
             'scale': this.scale
           });
@@ -41,7 +50,13 @@ _ = {
             'x': vel_x,
             'y': vel_y,
             'z': 0,
-            'props': {'vel_x': vel_x, 'vel_y': vel_y, 'ra': -rand_angle, 'mother': this.unique_id},
+            'props': {
+              'vel_x': vel_x,
+              'vel_y': vel_y,
+              'ra': -rand_angle,
+              'mother': this.unique_id,
+              'offset': this.props.offset
+            },
             'rotate': deg,
             'scale': this.scale
           });
@@ -54,28 +69,29 @@ _ = {
     'dot': {
       'type': 'circle',
       'radius': 0,
-      'radiussize': 10.0,
+      'radiussize': 2.0,
       'gradient': 'red',
-      'opacity': 0.,
+      'opacity': 0.5,
       'hue': 0.,
       'rotate': 0.,
-      'blending_type': blending_type.phoenix,
+      'blending_type': blending_type.add,
       'props': {'spawned': false},
       'init': function() {
-        if (this.level >= 20) return;
+        let this_level = this.level - this.props.offset;  // j;//this.attr('level') + 1;
+        if (this_level >= 20) return;
 
-        let [vx, vy] = random_velocity1(this.level);
+        let [vx, vy] = random_velocity1(this_level);
         this.vel_x = vx;
         this.vel_y = vy;
         this.velocity = 1;
 
-        let [vel_x, vel_y] = random_velocity1(this.level);
+        let [vel_x, vel_y] = random_velocity1(this_level);
         vel_x *= 10;
         vel_y *= 10;
         // this.props.vel_x = vel_x;
         // this.props.vel_y = vel_y;
-        let rand_angle = (rand1(this.level) * 360) - 180;
-        // output("random for: " + this.level + " + " + rand_angle);
+        let rand_angle = (rand1(this_level) * 360) - 180;
+        // output("random for: " + this_level + " + " + rand_angle);
         this.props.ra = rand_angle;
 
         let o = this.spawn({
@@ -93,7 +109,16 @@ _ = {
         // output("debug: " + this.props.mother + " ?");
         //  this.spawn3({'id': 'line'}, o, this.props.mother);
       },
-      'time': function(t, elapsed, s) {},
+      'time': function(t, elapsed, s) {
+        let this_level = this.level - this.props.offset;  // j;//this.attr('level') + 1;
+        if (rand1(this_level + t * 250) < 0.1) {
+          let [vel_x, vel_y] = random_velocity1(this_level + t * 250);
+          vel_x *= 50 * this.scale;
+          vel_y *= 50 * this.scale;
+          this.vel_x = vel_x;
+          this.vel_y = vel_y;
+        }
+      },
     },
     'circle': {
       'type': 'circle',
@@ -153,11 +178,17 @@ _ = {
   // ]
   'video': {
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
+    'min_intermediates': 10,
     'max_intermediates': 10,
-    'scale': 2.0,
+    'rand_seed': 40,
     // 'scale': 3.00,
     // 'width': 10000,
     // 'height': 10000,
+  },
+  'preview': {
+    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
+    'min_intermediates': 1,
+    'max_intermediates': 1,
   },
   'scenes': [
     {

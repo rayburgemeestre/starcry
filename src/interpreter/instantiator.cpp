@@ -8,6 +8,8 @@
 #include "abort_exception.hpp"
 #include "generator.h"
 
+// #define DEBUG2
+
 namespace interpreter {
 
 void instantiate_object_copy_fields(v8_interact& i,
@@ -31,6 +33,7 @@ void instantiate_object_copy_fields(v8_interact& i,
                      "radiussize",
                      "rotate",
                      "scale",
+                     "recursive_scale",
                      "seed",
                      "shortest_diameter",
                      "text",
@@ -128,12 +131,14 @@ instantiator::instantiate_object_from_scene(
   int64_t current_level = 0;
   auto parent_object_ns = std::string("");
   int64_t parent_uid = -1;
+  double parent_recursive_scale = 1.;
 
   if (parent_object) {
     meta_callback(*parent_object, [&]<typename T>(const T& cc) {
       current_level = cc.meta_cref().level() + 1;
       parent_object_ns = cc.meta_cref().namespace_name();
       parent_uid = cc.meta_cref().unique_id();
+      parent_recursive_scale = cc.generic_cref().recursive_scale();
     });
   }
 
@@ -163,6 +168,12 @@ instantiator::instantiate_object_from_scene(
   // give it a unique id (it already has been assigned a random_hash for debugging purposes
   i.set_field(instance, "unique_id", v8::Number::New(i.get_isolate(), ++counter));
   i.set_field(instance, "parent_uid", v8::Number::New(i.get_isolate(), parent_uid));
+
+  // TODO: something is not right here.. Why can't we just set_field with existing recursive scale combined..
+  if (!i.has_field(instance, "recursive_scale") && parent_recursive_scale != 1.) {
+    double existing_recursive_scale = 1.; // i.double_number(instance, "recursive_scale", 1.);
+    i.set_field(instance, "recursive_scale", v8::Number::New(i.get_isolate(), existing_recursive_scale * parent_recursive_scale));
+  }
 
   // TODO: in the future we will simply instantiate this directly, for now, to save some refactoring time
   // we will map, to see if the proof of concept works
@@ -199,6 +210,7 @@ instantiator::instantiate_object_from_scene(
     c.generic_ref().set_opacity(i.double_number(instance, "opacity", 1));
     c.generic_ref().set_mass(i.double_number(instance, "mass", 1));
     c.generic_ref().set_scale(i.double_number(instance, "scale", 1));
+    c.generic_ref().set_recursive_scale(i.double_number(instance, "recursive_scale", 1));
     if constexpr (!std::is_same_v<T, data_staging::script>) {
       if (i.has_field(instance, "texture")) {
         c.styling_ref().set_texture(i.str(instance, "texture"));
@@ -273,7 +285,7 @@ instantiator::instantiate_object_from_scene(
       auto copy = std::get<T>((*shape_ref).get());
       bridge->push_object(copy);
 
-#if DEBUG
+#ifdef DEBUG2
       if (!gen_.object_definitions_map.contains(object_id)) {
         throw abort_exception(fmt::format("object_id ({}) not found in definitions map", object_id));
       }

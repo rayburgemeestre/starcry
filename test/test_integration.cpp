@@ -116,3 +116,11 @@ TEST_CASE("Test complex render twice.") {
   // interactive mode crashes rendering the same frame twice for this script
   REQUIRE(sc.test_create_image("unittest_012_kaleidoscope_frame1") == double(0));
 }
+
+TEST_CASE("Test scale image.") {
+  sut sc;
+  sc.options.script_file = "input/scale.js";
+  sc.options.frame_of_interest = 1;
+
+  REQUIRE(sc.test_create_image("unittest_013_scale_frame1") == double(0));
+}

@@ -206,6 +206,7 @@ object_bridge<data_staging::text>::object_bridge(interpreter::generator* generat
       .property("opacity", &object_bridge::get_opacity, &object_bridge::set_opacity)
       .property("mass", &object_bridge::get_mass, &object_bridge::set_mass)
       .property("scale", &object_bridge::get_scale, &object_bridge::set_scale)
+      .property("recursive_scale", &object_bridge::get_recursive_scale, &object_bridge::set_recursive_scale)
       .property("x", &object_bridge::get_x, &object_bridge::set_x)
       .property("y", &object_bridge::get_y, &object_bridge::set_y)
       .property("z", &object_bridge::get_z, &object_bridge::set_z)

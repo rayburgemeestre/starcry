@@ -55,6 +55,7 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
       seed = shape.styling_cref().seed();
     }
     auto scale = shape.generic_cref().scale();
+    auto recursive_scale = shape.generic_cref().recursive_scale();
 
     auto shape_opacity = shape.generic_cref().opacity();
     auto warp_width = shape.toroidal_ref().warp_width();
@@ -122,6 +123,7 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
       new_shape.blending_ = shape.styling_cref().blending_type();
     }
     new_shape.scale = scale;
+    new_shape.recursive_scale = recursive_scale;
     new_shape.opacity = std::isnan(shape_opacity) ? 1.0 : shape_opacity;
     new_shape.seed = seed;
     new_shape.id = shape.meta_cref().id();

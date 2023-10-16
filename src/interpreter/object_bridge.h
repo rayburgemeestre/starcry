@@ -71,6 +71,7 @@ public:
   data::texture_3d get_texture_3d() const;
   double get_texture_offset_x() const;
   double get_texture_offset_y() const;
+  double get_recursive_scale() const;
 
   void set_unique_id(int64_t unique_id);
   void set_random_hash(const std::string& random_hash);
@@ -107,6 +108,7 @@ public:
   void set_texture_3d(data::texture_3d value) const;
   void set_texture_offset_x(double x) const;
   void set_texture_offset_y(double y) const;
+  void set_recursive_scale(double value) const;
 
   v8::Persistent<v8::Object>& get_properties_ref() const;
   v8::Local<v8::Object> get_properties_local_ref() const;

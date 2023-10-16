@@ -77,6 +77,7 @@ struct shape {
   std::map<int, size_t> indexes;
   double seed = 0;
   double scale = 1.;
+  double recursive_scale = 1.;
   double opacity = 1.;
   double hue = 0.;
 
@@ -129,6 +130,7 @@ struct shape {
        indexes,
        seed,
        scale,
+       recursive_scale,
        opacity,
        hue,
        unique_id,

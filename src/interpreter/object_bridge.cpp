@@ -45,11 +45,7 @@ void object_bridge<T>::pop_object() {
 template <typename T>
 v8::Local<v8::Value> object_bridge<T>::get_attr(v8::Local<v8::String> obj) {
   auto& cc = *shape_stack.back();
-  v8::Local<v8::Value> f = cc.attrs_ref().get(v8_str(v8::Isolate::GetCurrent(), obj));
-  if (f->IsString()) {
-    return f;
-  }
-  return v8::Undefined(v8::Isolate::GetCurrent());
+  return cc.attrs_ref().get(v8_str(v8::Isolate::GetCurrent(), obj));
 }
 
 template <typename T>
@@ -155,7 +151,6 @@ data::texture_3d object_bridge<T>::get_texture_3d() const {
   return shape_stack.back()->styling_cref().texture_3d();
 }
 
-// @add_field@
 template <typename T>
 double object_bridge<T>::get_texture_offset_x() const {
   data_staging::shape_t var = *shape_stack.back();
@@ -179,6 +174,20 @@ void object_bridge<T>::set_texture_offset_y(double value) const {
   data_staging::shape_t var = *shape_stack.back();
   return shape_stack.back()->styling_ref().set_texture_offset_y(value);
 }
+
+template <typename T>
+double object_bridge<T>::get_recursive_scale() const {
+  data_staging::shape_t var = *shape_stack.back();
+  return shape_stack.back()->generic_cref().recursive_scale();
+}
+
+template <typename T>
+void object_bridge<T>::set_recursive_scale(double value) const {
+  data_staging::shape_t var = *shape_stack.back();
+  return shape_stack.back()->generic_ref().set_recursive_scale(value);
+}
+
+// @add_field@
 
 template <typename T>
 v8::Persistent<v8::Object>& object_bridge<T>::instance() {

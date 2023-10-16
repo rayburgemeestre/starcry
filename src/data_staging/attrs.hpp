@@ -36,6 +36,13 @@ public:
     }
     return v8::Undefined(v8::Isolate::GetCurrent());
   }
+
+  std::map<std::string, std::string> get_strings() const {
+    return strings_;
+  }
+  std::map<std::string, double> get_numbers() const {
+    return numbers_;
+  }
 };
 
 }  // namespace data_staging

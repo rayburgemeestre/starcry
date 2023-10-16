@@ -152,11 +152,11 @@ public:
                                     double opacity,
                                     const data::settings &settings) {
     bounding_box box;
-    double circle_x = to_abs_x(shape.x);
-    double circle_y = to_abs_y(shape.y);
+    double circle_x = to_abs_x(shape);
+    double circle_y = to_abs_y(shape);
 
-    auto radius = shape.radius * scale_ * shape.scale;
-    auto radius_size = shape.radius_size * scale_ * shape.scale;
+    auto radius = shape.radius * scale_ * shape.scale * shape.recursive_scale;
+    auto radius_size = shape.radius_size * scale_ * shape.scale * shape.recursive_scale;
 
     bool reuse_sqrt = floor(circle_x) == circle_x && floor(circle_y) == circle_y;
 
@@ -274,19 +274,21 @@ public:
                                      double opacity,
                                      const data::settings &settings) {
     bounding_box box;
-    double ellipse_x = to_abs_x(shape.x);
-    double ellipse_y = to_abs_y(shape.y);
+    double ellipse_x = to_abs_x(shape);
+    double ellipse_y = to_abs_y(shape);
 
-    auto a = shape.longest_diameter * scale_ * shape.scale;
-    auto b = shape.shortest_diameter * scale_ * shape.scale;
+    auto a = shape.longest_diameter * scale_ * shape.scale * shape.recursive_scale;
+    auto b = shape.shortest_diameter * scale_ * shape.scale * shape.recursive_scale;
 
     // We'll just estimate two circles large and small enough to include the ellipse.
     // The math for calculating intersections with an ellipse were a bit too complicated for me
     // at the time of writing (especially since we also need to deal with rotatable ellipses)
-    auto radius = std::max(shape.shortest_diameter, shape.longest_diameter) * scale_ * shape.scale;
-    auto radius_inner = std::min(shape.shortest_diameter, shape.longest_diameter) * scale_ * shape.scale;
+    auto radius =
+        std::max(shape.shortest_diameter, shape.longest_diameter) * scale_ * shape.scale * shape.recursive_scale;
+    auto radius_inner =
+        std::min(shape.shortest_diameter, shape.longest_diameter) * scale_ * shape.scale * shape.recursive_scale;
 
-    auto radius_size = shape.radius_size * scale_ * shape.scale;
+    auto radius_size = shape.radius_size * scale_ * shape.scale * shape.recursive_scale;
 
     // There is a {-1, +1} for compensating rounding that occurs with floating point.
     int radius_outer_circle = round_to_int(radius + radius_size + 1);
@@ -368,8 +370,8 @@ public:
                                   const data::settings &settings,
                                   bool absolute_positioning = false) {
     bounding_box bound_box;
-    double textX = absolute_positioning ? shape.x : to_abs_x(shape.x);
-    double textY = absolute_positioning ? shape.y : to_abs_y(shape.y);
+    double textX = absolute_positioning ? shape.x : to_abs_x(shape);
+    double textY = absolute_positioning ? shape.y : to_abs_y(shape);
     const auto text_size = std::isnan(shape.text_size) ? 99 : shape.text_size;
     const auto &font_name = shape.text_font.empty() ? "monaco.ttf" : shape.text_font;
 
@@ -382,7 +384,8 @@ public:
     }
 
     // determine font size to use
-    size_t index = static_cast<size_t>(text_size * (shape.text_fixed ? 1. : scale_ * shape.scale));
+    size_t index =
+        static_cast<size_t>(text_size * (shape.text_fixed ? 1. : scale_ * shape.scale * shape.recursive_scale));
     if (index >= font_[font_name].size()) {
 #ifndef EMSCRIPTEN
       logger(WARNING) << "Cannot read out of font_ bounds with index " << index << "  due to : " << font_.size()
@@ -547,11 +550,11 @@ public:
   }
 
   void render_line(image &bmp, const data::shape &shape, double opacity, const data::settings &settings) {
-    double x1 = to_abs_x(shape.x);
-    double y1 = to_abs_y(shape.y);
-    double x2 = to_abs_x(shape.x2);
-    double y2 = to_abs_y(shape.y2);
-    auto size = shape.radius_size * scale_ * shape.scale;
+    double x1 = to_abs_x(shape);
+    double y1 = to_abs_y(shape);
+    double x2 = to_abs_x2(shape);
+    double y2 = to_abs_y2(shape);
+    auto size = shape.radius_size * scale_ * shape.scale * shape.recursive_scale;
 
     // test
     // al_draw_line(x1, y1, x2, y2, al_map_rgb_f(red, green, blue), size);
@@ -831,10 +834,10 @@ public:
     double noise = 1.0;
     if (settings.perlin_noise) {
       // In noise land we don't want scale affecting the textures
-      auto _posX = posX / scale_ / shape.scale;
-      auto _posY = posY / scale_ / shape.scale;
-      auto _absX = absX / scale_ / shape.scale;
-      auto _absY = absY / scale_ / shape.scale;
+      auto _posX = posX / scale_ / shape.scale / shape.recursive_scale;
+      auto _posY = posY / scale_ / shape.scale / shape.recursive_scale;
+      auto _absX = absX / scale_ / shape.scale / shape.recursive_scale;
+      auto _absY = absY / scale_ / shape.scale / shape.recursive_scale;
       auto _scale_ = 1.;
       auto _shape_scale = 1.;
 
@@ -1076,11 +1079,17 @@ public:
   }
 
 private:
-  inline double to_abs_x(double x) {
-    return ((x - center_x_) * scale_) - offset_x_ + canvas_w_ / 2;
+  inline double to_abs_x(const data::shape &shape) {
+    return ((shape.x - center_x_) * scale_ * shape.scale * shape.recursive_scale) - offset_x_ + canvas_w_ / 2;
   }
-  inline double to_abs_y(double y) {
-    return ((y - center_y_) * scale_) - offset_y_ + canvas_h_ / 2;
+  inline double to_abs_y(const data::shape &shape) {
+    return ((shape.y - center_y_) * scale_ * shape.scale * shape.recursive_scale) - offset_y_ + canvas_h_ / 2;
+  }
+  inline double to_abs_x2(const data::shape &shape) {
+    return ((shape.x2 - center_x_) * scale_ * shape.scale * shape.recursive_scale) - offset_x_ + canvas_w_ / 2;
+  }
+  inline double to_abs_y2(const data::shape &shape) {
+    return ((shape.y2 - center_y_) * scale_ * shape.scale * shape.recursive_scale) - offset_y_ + canvas_h_ / 2;
   }
 
   bool flag_ = false;

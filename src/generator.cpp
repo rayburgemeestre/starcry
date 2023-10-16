@@ -63,7 +63,7 @@ void generator::init(const std::string& filename,
   scenes_.initialize();
 
   // reset random number generator
-  rand_.set_seed(rand_seed.value_or(0));
+  rand_.set_seed(seed);
 
   // set_scene requires generator_context to be set
   scenes_.set_scene(0);
@@ -101,8 +101,12 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
 
   // created shape namespace
   std::string created_shape_namespace;
+  data_staging::attrs obj_attrs;
+  double scale = 1.;
   meta_callback(created_shape, [&]<typename T>(T& shape) {
     created_shape_namespace = shape.meta_cref().namespace_name();
+    obj_attrs = shape.attrs_cref();
+    scale = shape.generic_cref().scale();
   });
 
   const auto unique_id = i.integer_number(created_instance, "unique_id");
@@ -191,6 +195,23 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
 
     // also copy all the stuff from the object definition
     i.recursively_copy_object(created_instance, object_src_obj);
+
+    // also copy attrs to these objects imported by script
+    if (!i.has_field(object_src_obj, "attrs")) {
+      i.set_field(object_src_obj, "attrs", v8::Object::New(i.get_isolate()));
+    }
+    auto attrs = i.get(object_src_obj, "attrs").As<v8::Object>();
+    for (const auto& str : obj_attrs.get_strings()) {
+      i.set_field(attrs, str.first, v8_str(i.get_context(), str.second));
+    }
+    for (const auto& num : obj_attrs.get_numbers()) {
+      i.set_field(attrs, num.first, v8::Number::New(i.get_isolate(), num.second));
+    }
+    i.set_field(object_src_obj, "attrs", attrs);
+
+    // also copy scale as recursive_scale to all objects, but combine/merge if it already has a value (by multiplying)
+    double existing_recursive_scale = i.double_number(object_src_obj, "recursive_scale", 1.0);
+    i.set_field(object_src_obj, "recursive_scale", v8::Number::New(i.get_isolate(), existing_recursive_scale * scale));
 
     i.set_field(genctx->objects, object_dst_id, object_src);
     auto val = i.get(objects, object_src_id);

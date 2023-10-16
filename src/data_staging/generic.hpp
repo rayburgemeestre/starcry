@@ -11,6 +11,7 @@ private:
   double angle_ = 0;
   double rotate_ = 0;
   double scale_ = 1.;
+  double recursive_scale_ = 1.;
   double opacity_ = 1.;
   double mass_ = 1;
 
@@ -23,6 +24,9 @@ public:
   }
   double scale() const {
     return scale_;
+  }
+  double recursive_scale() const {
+    return recursive_scale_;
   }
   double opacity() const {
     return opacity_;
@@ -38,6 +42,9 @@ public:
   }
   void set_scale(double scale) {
     scale_ = scale;
+  }
+  void set_recursive_scale(double recursive_scale) {
+    recursive_scale_ = recursive_scale;
   }
   void set_opacity(double opacity) {
     opacity_ = opacity;
