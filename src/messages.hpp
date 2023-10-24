@@ -28,26 +28,32 @@ class video_request;
 
 class instruction : public message_type {
 public:
-  instruction_type2 type2;
+  instruction() {}
+};
+
+class frame_instruction : public instruction {
+public:
   std::shared_ptr<data::frame_request> frame_;
-  std::shared_ptr<data::video_request> video_;
 
-  instruction(std::shared_ptr<data::frame_request> req)
-      : type2(instruction_type2::image), frame_(req), video_(nullptr) {}
-
-  instruction(std::shared_ptr<data::video_request> req)
-      : type2(instruction_type2::video), frame_(nullptr), video_(req) {}
+  frame_instruction(std::shared_ptr<data::frame_request> req) : frame_(req) {}
 
   const data::frame_request& frame() {
     return *frame_;
   }
 
-  const data::video_request& video() {
-    return *video_;
-  }
-
   const std::shared_ptr<data::frame_request> frame_ptr() {
     return frame_;
+  }
+};
+
+class video_instruction : public instruction {
+public:
+  std::shared_ptr<data::video_request> video_;
+
+  video_instruction(std::shared_ptr<data::video_request> req) : video_(req) {}
+
+  const data::video_request& video() {
+    return *video_;
   }
 
   const std::shared_ptr<data::video_request> video_ptr() {

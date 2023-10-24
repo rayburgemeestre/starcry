@@ -171,8 +171,17 @@ void redis_server::dispatch_job() {
     auto worker = pop_worker();  // after the worker finishes it will re-register
     std::ostringstream os;
     cereal::BinaryOutputArchive archive(os);
-    auto f = job->original_instruction->frame_ptr();
-    auto v = job->original_instruction->video_ptr();
+    std::shared_ptr<data::frame_request> f = nullptr;
+    std::shared_ptr<data::video_request> v = nullptr;
+    if (const auto &instruction = std::dynamic_pointer_cast<video_instruction>(job->original_instruction)) {
+      v = instruction->video_ptr();
+    } else if (const auto &instruction = std::dynamic_pointer_cast<frame_instruction>(job->original_instruction)) {
+      f = instruction->frame_ptr();
+    }
+    if (!f && !v) {
+      logger(WARNING) << "No video or frame instruction provided. (2)" << std::endl;
+      return;
+    }
     job->job->is_raw = f ? (f->raw_bitmap() || f->raw_image()) : v->raw_video();
     archive(*(job->job));
     const auto settings = sc.gen->settings();

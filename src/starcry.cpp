@@ -105,7 +105,6 @@ void starcry::configure_inotify() {
       // TODO: for the future implement HOT swapping (requires parsing JSON and merging intelligently)
       // TODO: fix this feature, currently it's super annoying, as it generates crashes
       /*
-      gen->reset_context();
       gen->init(script_, {}, viewpoint.preview, features_.caching);
       json j{
           {"type", "fs_change"},
@@ -158,7 +157,7 @@ void starcry::update_script_contents(const std::string &contents) {
 }
 
 void starcry::add_image_command(std::shared_ptr<data::frame_request> req) {
-  cmds->push(std::make_shared<instruction>(req));
+  cmds->push(std::make_shared<frame_instruction>(req));
   pe.run([=, this]() {
     if (webserv) {
       webserv->send_stats(system->get_stats());
@@ -168,7 +167,7 @@ void starcry::add_image_command(std::shared_ptr<data::frame_request> req) {
 }
 
 void starcry::add_video_command(std::shared_ptr<data::video_request> req) {
-  cmds->push(std::make_shared<instruction>(req));
+  cmds->push(std::make_shared<video_instruction>(req));
 }
 
 void starcry::render_job(size_t thread_num,
@@ -209,8 +208,8 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     gen = std::make_shared<interpreter::generator>(metrics_, context, options().generator_opts);
   }
 
-  if (cmd_def->type2 == instruction_type2::video) {
-    auto &v = cmd_def->video_ref();
+  if (const auto &instruction = std::dynamic_pointer_cast<video_instruction>(cmd_def)) {
+    auto &v = instruction->video_ref();
     if (viewpoint.canvas_w && viewpoint.canvas_h) {
       gen->init(v.script(),
                 options_.rand_seed,
@@ -228,7 +227,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       current_frame = v.offset_frames();
     }
     double use_fps = gen->fps();
-    if (!framer && options().output && cmd_def->video().output_file() != "/dev/null") {
+    if (!framer && options().output && instruction->video().output_file() != "/dev/null") {
       auto stream_mode = frame_streamer::stream_mode::FILE;
       auto output_file = v.output_file();
       if (output_file.size() >= 4 && output_file.substr(output_file.size() - 4, 4) == "m3u8") {
@@ -276,10 +275,10 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       if (!ret) break;
     }
     std::cout << std::endl;
-  } else {
+  } else if (const auto &instruction = std::dynamic_pointer_cast<frame_instruction>(cmd_def)) {
     metrics_->clear();
 
-    const auto &f = cmd_def->frame();
+    const auto &f = instruction->frame();
 
     try {
       if (viewpoint.canvas_w && viewpoint.canvas_h) {
@@ -342,6 +341,8 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     if (f.client() != nullptr) {
       return;  // prevent termination of queues
     }
+  } else {
+    logger(WARNING) << "No video or frame instruction provided." << std::endl;
   }
   cmds->check_terminate();
   jobs->check_terminate();
@@ -372,10 +373,17 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
     metrics_->render_job(i, job.job_number, job.chunk);
   }
 
-  const std::vector<int64_t> selected_ids =
-      job_msg && job_msg->original_instruction && job_msg->original_instruction->frame_ptr()
-          ? job_msg->original_instruction->frame_ptr()->selected_ids()
-          : std::vector<int64_t>{};
+  const std::vector<int64_t> selected_ids = ([&]() {
+    if (job_msg && !job_msg->original_instruction) {
+      if (const auto &instruction = std::dynamic_pointer_cast<frame_instruction>(job_msg->original_instruction)) {
+        if (instruction->frame_ptr()) {
+          return instruction->frame_ptr()->selected_ids();
+        }
+      }
+    }
+    return std::vector<int64_t>{};
+  })();
+
   std::vector<int64_t> selected_ids_transitive;
   if (selected_ids.size() > 0) {
     selected_ids_transitive = gen->get_transitive_ids(selected_ids);
@@ -390,8 +398,8 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   }
 
   // handle videos
-  if (job_msg->original_instruction->type2 == instruction_type2::video) {
-    const auto &v = job_msg->original_instruction->video();
+  if (const auto &instruction = std::dynamic_pointer_cast<video_instruction>(job_msg->original_instruction)) {
+    const auto &v = instruction->video();
     auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels(), gen->settings().dithering);
 
     auto msg = std::make_shared<render_msg>(job_msg);
@@ -403,103 +411,111 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   }
 
   // handle frames
-  const auto &f = job_msg->original_instruction->frame();
-  auto msg = std::make_shared<render_msg>(job_msg);
-  job.job_number = std::numeric_limits<uint32_t>::max();
+  if (const auto &instruction = std::dynamic_pointer_cast<frame_instruction>(job_msg->original_instruction)) {
+    const auto &f = instruction->frame();
+    auto msg = std::make_shared<render_msg>(job_msg);
+    job.job_number = std::numeric_limits<uint32_t>::max();
 
-  if (f.raw_image() || get_viewpoint().raw || get_viewpoint().save) {
-    // NOTE that currently bmp is kind of 'moved' into the msg..
-    msg->set_raw(bmp.pixels());
-  }
-
-  if (f.raw_bitmap()) {
-    auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels(), gen->settings().dithering);
-    msg->set_pixels(transfer_pixels);
-  }
-
-  if (job_msg->original_instruction->frame_ptr() && !job_msg->original_instruction->frame_ptr()->client() &&
-      f.compressed_image()) {
-    png::image<png::rgba_pixel> image(job.width, job.height);
-    copy_to_png(rand_, msg->pixels_raw, job.width, job.height, image, gen->settings().dithering);
-    std::ostringstream ss;
-    image.write_stream(ss);
-    auto img = ss.str();
-    msg->set_buffer(img);
-  }
-
-  if (f.renderable_shapes()) {
-    std::ostringstream os;
-    {
-      cereal::JSONOutputArchive archive(os);
-      archive(job);
+    if (f.raw_image() || get_viewpoint().raw || get_viewpoint().save) {
+      // NOTE that currently bmp is kind of 'moved' into the msg..
+      msg->set_raw(bmp.pixels());
     }
-    auto str = os.str();
-    msg->set_buffer(str);
-  }
 
-  if (f.metadata_objects() || get_viewpoint().labels) {
-    json shapes_json = {};
-    auto &shapes = job_msg->job->shapes;
-    size_t index = 0;
-    if (!shapes.empty()) {
+    if (f.raw_bitmap()) {
+      auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels(), gen->settings().dithering);
+      msg->set_pixels(transfer_pixels);
+    }
+
+    if (instruction->frame_ptr() && !instruction->frame_ptr()->client() && f.compressed_image()) {
+      png::image<png::rgba_pixel> image(job.width, job.height);
+      copy_to_png(rand_, msg->pixels_raw, job.width, job.height, image, gen->settings().dithering);
+      std::ostringstream ss;
+      image.write_stream(ss);
+      auto img = ss.str();
+      msg->set_buffer(img);
+    }
+
+    if (f.renderable_shapes()) {
+      std::ostringstream os;
+      {
+        cereal::JSONOutputArchive archive(os);
+        archive(job);
+      }
+      auto str = os.str();
+      msg->set_buffer(str);
+    }
+
+    if (f.metadata_objects() || get_viewpoint().labels) {
+      json shapes_json = {};
+      auto &shapes = job_msg->job->shapes;
+      size_t index = 0;
+      if (!shapes.empty()) {
 #define DEBUG_NUM_SHAPES
 #ifdef DEBUG_NUM_SHAPES
-      std::unordered_map<int64_t, int64_t> nums;
-      for (size_t i = 0; i < shapes.size(); i++) {
-        for (const auto &shape : shapes[i]) {
-          nums[shape.unique_id]++;
+        std::unordered_map<int64_t, int64_t> nums;
+        for (size_t i = 0; i < shapes.size(); i++) {
+          for (const auto &shape : shapes[i]) {
+            nums[shape.unique_id]++;
+          }
+        }
+#endif
+        for (const auto &shape : shapes[shapes.size() - 1]) {
+          // convert shape_type enum to string
+          std::map<std::string, nlohmann::json> f = {
+              {"type", data::shape_type_to_string(shape.type)},
+              {"index", index},
+              {"unique_id", shape.unique_id},
+              {"id", shape.id},
+              {"label", shape.label.empty() ? shape.id : shape.label},
+              {"level", shape.level},
+              {"gradient", shape.gradient_id_str},
+              {"x", shape.x},
+              {"y", shape.y},
+              {"x2", shape.x2},
+              {"y2", shape.y2},
+              {"vel_x", shape.vel_x},
+              {"vel_y", shape.vel_y},
+#ifdef DEBUG_NUM_SHAPES
+              {"#", nums[shape.unique_id]},
+              {"random_hash", shape.random_hash},
+#else
+              {"#", -1},
+#endif
+              {"time", shape.time},
+          };
+          json shape_json(f);
+          shapes_json.push_back(shape_json);
+
+          // TODO: script type
+          index++;
         }
       }
-#endif
-      for (const auto &shape : shapes[shapes.size() - 1]) {
-        // convert shape_type enum to string
-        std::map<std::string, nlohmann::json> f = {
-            {"type", data::shape_type_to_string(shape.type)},
-            {"index", index},
-            {"unique_id", shape.unique_id},
-            {"id", shape.id},
-            {"label", shape.label.empty() ? shape.id : shape.label},
-            {"level", shape.level},
-            {"gradient", shape.gradient_id_str},
-            {"x", shape.x},
-            {"y", shape.y},
-            {"x2", shape.x2},
-            {"y2", shape.y2},
-            {"vel_x", shape.vel_x},
-            {"vel_y", shape.vel_y},
-#ifdef DEBUG_NUM_SHAPES
-            {"#", nums[shape.unique_id]},
-            {"random_hash", shape.random_hash},
-#else
-            {"#", -1},
-#endif
-            {"time", shape.time},
-        };
-        json shape_json(f);
-        shapes_json.push_back(shape_json);
-
-        // TODO: script type
-        index++;
-      }
+      auto str = shapes_json.dump();
+      msg->set_buffer(str);
     }
-    auto str = shapes_json.dump();
-    msg->set_buffer(str);
+
+    msg->set_width(get_viewpoint().canvas_w ? get_viewpoint().canvas_w : job.width);
+    msg->set_height(get_viewpoint().canvas_h ? get_viewpoint().canvas_h : job.height);
+
+    // TODO: below belongs somewhere else
+    features().caching = get_viewpoint().caching;
+    return msg;
+  } else {
+    throw std::runtime_error("expected a frame instruction");
   }
-
-  msg->set_width(get_viewpoint().canvas_w ? get_viewpoint().canvas_w : job.width);
-  msg->set_height(get_viewpoint().canvas_h ? get_viewpoint().canvas_h : job.height);
-
-  // TODO: below belongs somewhere else
-  features().caching = get_viewpoint().caching;
-  return msg;
 }
 
 // MARK1 handle the render msg, create into video or whatever
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   auto instr = job_msg->original_job_message->original_instruction;
-  std::shared_ptr<data::frame_request> f = instr->frame_ptr();
-  std::shared_ptr<data::video_request> v = instr->video_ptr();
-  auto type = job_msg->original_job_message->original_instruction->type2;
+  std::shared_ptr<data::frame_request> f = nullptr;
+  std::shared_ptr<data::video_request> v = nullptr;
+  if (const auto &instruction = std::dynamic_pointer_cast<video_instruction>(instr)) {
+    v = instruction->video_ptr();
+  } else if (const auto &instruction = std::dynamic_pointer_cast<frame_instruction>(instr)) {
+    f = instruction->frame_ptr();
+  }
+  // auto type = job_msg->original_job_message->original_instruction->type2;
   bool finished = false;
   auto &job = *job_msg->original_job_message->job;  // this will allocate a lot of memory if copied
   auto job_client = f ? f->client() : nullptr;
@@ -652,7 +668,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
 
   buffered_frames[job.job_number].push_back(job_msg);
 
-  if (type == instruction_type2::image) {
+  if (f != nullptr) {
     if (f->renderable_shapes() || f->metadata_objects()) {
       current_frame = job.frame_number;
     }
