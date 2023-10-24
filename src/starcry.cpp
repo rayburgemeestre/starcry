@@ -24,6 +24,7 @@
 
 #include "bitmap_wrapper.hpp"
 #include "data/frame_request.hpp"
+#include "data/reload_request.hpp"
 #include "data/video_request.hpp"
 #include "framer.hpp"
 #include "generator.h"
@@ -104,14 +105,8 @@ void starcry::configure_inotify() {
     if (notification.path.string() == script_) {
       // TODO: for the future implement HOT swapping (requires parsing JSON and merging intelligently)
       // TODO: fix this feature, currently it's super annoying, as it generates crashes
-      /*
-      gen->init(script_, {}, viewpoint.preview, features_.caching);
-      json j{
-          {"type", "fs_change"},
-          {"file", script_},
-      };
-      webserv->send_fs_change(j.dump());
-      */
+      auto req = std::make_shared<data::reload_request>(script_);
+      add_reload_command(req);
     }
   };
   auto handleUnexpectedNotification = [](inotify::Notification notification) {};
@@ -154,6 +149,19 @@ void starcry::update_script_contents(const std::string &contents) {
   std::ofstream out(script_);
   out << contents;
   out.close();
+}
+
+void starcry::add_reload_command(std::shared_ptr<data::reload_request> req) {
+  cmds->push(std::make_shared<reload_instruction>(req));
+  pe.run([=, this]() {
+    if (webserv) {
+      json j{
+          {"type", "fs_change"},
+          {"file", req->script()},
+      };
+      webserv->send_fs_change(j.dump());
+    }
+  });
 }
 
 void starcry::add_image_command(std::shared_ptr<data::frame_request> req) {
@@ -206,6 +214,10 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   if (!gen) {
     context->recreate_isolate_in_this_thread();
     gen = std::make_shared<interpreter::generator>(metrics_, context, options().generator_opts);
+  }
+
+  if (const auto &instruction = std::dynamic_pointer_cast<reload_instruction>(cmd_def)) {
+    gen->init(instruction->req().script(), options_.rand_seed, options_.preview, features_.caching);
   }
 
   if (const auto &instruction = std::dynamic_pointer_cast<video_instruction>(cmd_def)) {

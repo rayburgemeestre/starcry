@@ -22,6 +22,7 @@ class WebSocket;
 
 namespace data {
 struct job;
+class reload_request;
 class frame_request;
 class video_request;
 }  // namespace data
@@ -29,6 +30,21 @@ class video_request;
 class instruction : public message_type {
 public:
   instruction() {}
+};
+
+class reload_instruction : public instruction {
+public:
+  std::shared_ptr<data::reload_request> req_;
+
+  reload_instruction(std::shared_ptr<data::reload_request> req) : req_(req) {}
+
+  const data::reload_request& req() {
+    return *req_;
+  }
+
+  const std::shared_ptr<data::reload_request> req_ptr() {
+    return req_;
+  }
 };
 
 class frame_instruction : public instruction {

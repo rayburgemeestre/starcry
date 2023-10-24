@@ -171,8 +171,10 @@ instantiator::instantiate_object_from_scene(
 
   // TODO: something is not right here.. Why can't we just set_field with existing recursive scale combined..
   if (!i.has_field(instance, "recursive_scale") && parent_recursive_scale != 1.) {
-    double existing_recursive_scale = 1.; // i.double_number(instance, "recursive_scale", 1.);
-    i.set_field(instance, "recursive_scale", v8::Number::New(i.get_isolate(), existing_recursive_scale * parent_recursive_scale));
+    double existing_recursive_scale = 1.;  // i.double_number(instance, "recursive_scale", 1.);
+    i.set_field(instance,
+                "recursive_scale",
+                v8::Number::New(i.get_isolate(), existing_recursive_scale * parent_recursive_scale));
   }
 
   // TODO: in the future we will simply instantiate this directly, for now, to save some refactoring time
