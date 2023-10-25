@@ -396,14 +396,14 @@ export default defineComponent({
       }
     }.bind(obj);
 
-    const pinchHandler = ({ offset: [d, a], pinching }) => {
+    obj.pinchHandler = ({ offset: [d, a], pinching }) => {
       const zoom = d / 256;
       debug_text.value = 1 + zoom;
       viewpoint_store.scale = 1 + zoom;
       // set({ zoom: d, rotateZ: a })
     };
 
-    usePinch(pinchHandler, {
+    usePinch(obj.pinchHandler, {
       domTarget: canvas_elem,
       eventOptions: {
         passive: true,

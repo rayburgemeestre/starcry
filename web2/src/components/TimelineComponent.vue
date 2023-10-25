@@ -65,7 +65,7 @@ export default defineComponent({
   computed: {
     computed_ticks() {
       let colors = ['one', 'two'];
-      let copy = script_store.frames_per_scene;
+      let copy = JSON.parse(JSON.stringify(script_store.frames_per_scene));
       let current_scene = copy.shift();
       let result: any[] = [];
       if (typeof current_scene == 'undefined') {
@@ -78,12 +78,27 @@ export default defineComponent({
           color_idx++;
           color_idx = color_idx % colors.length;
         }
-        if (this.tick == i) {
+        if (script_store.job_skipped != -1 && script_store.job_skipped >= i) {
+          result.push([i, 'skipped ' + colors[color_idx]]);
+        } else if (
+          script_store.job_rendered != -1 &&
+          script_store.job_rendered == i
+        ) {
+          result.push([i, 'rendered']);
+        } else if (
+          script_store.job_rendering != -1 &&
+          script_store.job_rendering == i
+        ) {
+          result.push([i, 'rendering']);
+        } else if (script_store.frame == i) {
+          result.push([i, 'current']);
+        } else if (this.tick == i) {
           result.push([i, 'selected']);
-          continue;
+        } else {
+          result.push([i, colors[color_idx]]);
         }
-        result.push([i, colors[color_idx]]);
       }
+      console.log(result);
       return result;
     },
   },
@@ -118,6 +133,21 @@ span.info {
 }
 .myslider div.selected {
   background-color: #ffffff;
+}
+.myslider div.skipped {
+  mix-blend-mode: color-burn;
+}
+.myslider div.current {
+  background-color: #0000ff;
+}
+.myslider div.rendering {
+  background-color: #ff00ff;
+}
+.myslider div.rendered {
+  background-color: #00ff00;
+}
+.myslider div.queued {
+  background-color: #ffff00;
 }
 .myslider div:nth-child(even) {
   opacity: 1;

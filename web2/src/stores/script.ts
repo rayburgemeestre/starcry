@@ -20,6 +20,11 @@ export const useScriptStore = defineStore('script', {
     texture_w: ref(0),
     texture_h: ref(0),
 
+    job_skipped: ref(0),
+    job_rendering: ref(0),
+    job_rendered: ref(0),
+    job_queued: ref(0),
+
     // used as event handlers
     value_updated_by_user: ref(0),
     render_requested_by_user: ref(0), // ??

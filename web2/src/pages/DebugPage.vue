@@ -98,6 +98,7 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
 import { StarcryAPI } from 'components/api';
+import { useScriptStore } from 'stores/script';
 export default defineComponent({
   name: 'DebugPage',
   setup() {
@@ -116,14 +117,34 @@ export default defineComponent({
         if (buffer.type === 'metrics') {
           rows.value = [];
           for (let thread of buffer.data.threads) {
-            console.log(thread);
-            console.log([thread.name, thread.seconds_idle, thread.state]);
             rows.value.push([
               thread.name,
               Math.round(thread.seconds_idle),
               thread.state,
             ]);
           }
+
+          let script_store = useScriptStore();
+          let skipped = -1;
+          let rendering = -1;
+          let rendered = -1;
+          let queued = -1;
+          let jobs = buffer.data.jobs || [];
+          for (let job of jobs) {
+            if (job.state == 'SKIPPED') {
+              skipped = Math.max(skipped, job.number);
+            } else if (job.state == 'RENDERING') {
+              rendering = Math.max(rendering, job.number);
+            } else if (job.state == 'RENDERED') {
+              rendered = Math.max(rendered, job.number);
+            } else if (job.state == 'QUEUED') {
+              queued = Math.max(queued, job.number);
+            }
+          }
+          script_store.job_skipped = skipped;
+          script_store.job_rendering = rendering;
+          script_store.job_rendered = rendered;
+          script_store.job_queued = queued;
         }
       }
     );

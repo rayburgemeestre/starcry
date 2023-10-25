@@ -18,7 +18,6 @@
       :rows="rows"
       :columns="columns"
       row-key="name"
-      :filter="filter"
       hide-header
       hide-pagination
       :rows-per-page-options="[100]"
