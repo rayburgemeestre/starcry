@@ -3,7 +3,7 @@
     <q-list bordered padding>
       <q-item-label header>Gradients</q-item-label>
 
-      <q-item clickable v-ripple v-for="name in gradient_names" :key="name">
+      <q-item clickable v-ripple v-for="name in Object.keys(gradients)" :key="name">
         <q-item-section>
           <q-item-label class="extra-margin">{{ name }}</q-item-label>
           <q-item-label caption>
@@ -71,7 +71,6 @@ export default defineComponent({
     let gradients = ref(parsed ? parsed['gradients'] : {});
     let objects = ref(parsed ? parsed['objects'] : {});
     let selected = ref('');
-    let gradient_names = ref(Object.keys(gradients));
 
     function resizeCanvas() {
       // get as new
@@ -89,10 +88,11 @@ export default defineComponent({
         let gradient_name = canvas.getAttribute('data-gradient');
         if (!gradient_name) continue;
 
-        let colors = window.Module.get_gradient_colors(
-          JSON.stringify(gradients[gradient_name]),
+        let gradient_definition = JSON.stringify(gradients[gradient_name]);
+        let colors = typeof gradient_definition !== 'undefined' ? window.Module.get_gradient_colors(
+          gradient_definition,
           canvas.width
-        );
+        ) : undefined;
 
         function drawCheckerboard() {
           if (!ctx) return;
@@ -114,6 +114,7 @@ export default defineComponent({
         drawCheckerboard();
 
         let x = 0;
+        if (!colors) return;
         for (let i = 0; i < colors.size(); ) {
           let r = colors.get(i++);
           let g = colors.get(i++);
@@ -170,7 +171,7 @@ export default defineComponent({
 
     return {
       parsed,
-      gradient_names,
+      gradients,
       objects,
       columns,
       rows,

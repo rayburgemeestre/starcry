@@ -16,7 +16,6 @@ export class JsonWithObjectsParser {
     return this.functions;
   }
   _parse() {
-    console.log('handle:');
     // let's get this JSON in parseable shape
     this.json_str = this.json_str.replaceAll("'", '"');
 
@@ -122,6 +121,7 @@ export class JsonWithObjectsParser {
           in_blending_type = false;
         }
         if (
+          !in_function &&
           !(in_blending_type as boolean) &&
           s === 'b' &&
           this.json_str.substr(i, 'blending_type'.length) === 'blending_type' &&
@@ -156,7 +156,13 @@ export class JsonWithObjectsParser {
     this.functions = functions;
     //
     // let obj = eval('(function() { return ' + this.json_str + '; })()');
-    this.obj = eval('(function() { return ' + trail + '; })()');
+    try {
+      this.obj = eval('(function() { return ' + trail + '; })()');
+    }
+    catch (e) {
+      console.log(trail);
+      console.log(e);
+    }
     // console.log(JSON.parse(trail));
   }
 }
