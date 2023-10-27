@@ -18,7 +18,20 @@
         </q-tr>
       </template>
     </q-table>
+
+    <br/>
+
+    <q-table
+      dense
+      :rows="rows_piper"
+      :columns="columns_piper"
+      row-key="name"
+      hide-pagination
+      :rows-per-page-options="[100]"
+    >
+    </q-table>
   </div>
+  <!--
   <div class="q-pa-md flex flex-center">
     <q-knob
       :min="5"
@@ -89,10 +102,12 @@
       class="q-ma-md"
     />
   </div>
-
+  -->
+  <!--
   <div>TODO debug page</div>
   <div>{{ status }}</div>
   <pre v-for="msg in msgs" :key="msg.type">{{ pretty(msg) }}<hr></pre>
+  -->
 </template>
 
 <script lang="ts">
@@ -105,6 +120,7 @@ export default defineComponent({
     let status = ref('');
     let msgs = ref({});
     let rows = ref([]);
+    let rows_piper = ref([]);
 
     const stats_endpoint = new StarcryAPI(
       'stats',
@@ -116,7 +132,8 @@ export default defineComponent({
         msgs.value[buffer.type] = buffer;
         if (buffer.type === 'metrics') {
           rows.value = [];
-          for (let thread of buffer.data.threads) {
+          let threads = buffer.data.threads || [];
+          for (let thread of threads) {
             rows.value.push([
               thread.name,
               Math.round(thread.seconds_idle),
@@ -145,6 +162,17 @@ export default defineComponent({
           script_store.job_rendering = rendering;
           script_store.job_rendered = rendered;
           script_store.job_queued = queued;
+        }
+        else if (buffer.type === 'stats') {
+          rows_piper.value = [];
+          let components = buffer.data || [];
+          for (let component of components) {
+            if (component.counter)
+              rows_piper.value.push([
+                component.name,
+                component.counter
+              ]);
+          }
         }
       }
     );
@@ -186,6 +214,25 @@ export default defineComponent({
           field: (row) => row[2],
           sortable: true,
         },
+      ],
+      // piper library stats
+      rows_piper,
+      columns_piper: [
+        {
+          name: 'component',
+          label: 'component',
+          align: 'left',
+          field: (row) => row[0],
+          format: (val) => `${val}`,
+          sortable: true,
+        },
+        {
+          name: 'messages',
+          label: 'messages',
+          align: 'right',
+          field: (row) => row[1],
+          sortable: true,
+        }
       ],
     };
   },
