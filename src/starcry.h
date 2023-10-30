@@ -167,12 +167,4 @@ private:
   void command_to_jobs(std::shared_ptr<instruction> cmd_def);
   std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);
   void handle_frame(std::shared_ptr<render_msg> job_msg);
-
-  void save_images(std::vector<data::color> &pixels_raw,
-                   size_t width,
-                   size_t height,
-                   size_t frame_number,
-                   bool write_8bit_png,
-                   bool write_32bit_exr,
-                   const std::string &output_file);
 };

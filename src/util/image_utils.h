@@ -25,3 +25,15 @@ void copy_to_png(util::random_generator &rand,
 std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &pixels_in, const bool &dithering);
 
 void pixels_vec_insert_checkers_background(std::vector<uint32_t> &pixels, int width, int height);
+
+void save_images(const std::string &filename,
+                 util::random_generator &rand,
+                 double seed,
+                 bool dithering,
+                 std::vector<data::color> &pixels_raw,
+                 size_t width,
+                 size_t height,
+                 size_t frame_number,
+                 bool write_8bit_png,
+                 bool write_32bit_exr,
+                 const std::string &output_file);
