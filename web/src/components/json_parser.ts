@@ -158,8 +158,7 @@ export class JsonWithObjectsParser {
     // let obj = eval('(function() { return ' + this.json_str + '; })()');
     try {
       this.obj = eval('(function() { return ' + trail + '; })()');
-    }
-    catch (e) {
+    } catch (e) {
       console.log(trail);
       console.log(e);
     }
