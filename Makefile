@@ -76,7 +76,7 @@ integration-test-sanitizer:
 
 client:  ## build webassembly javascript file using docker
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ --std=c++20 -s WASM=1 -s USE_SDL=2 -O3 --bind \
-	                    -o web/webroot/client.js src/client.cpp src/stb.cpp src/util/logger.cpp \
+	                    -o web/public/client.js src/client.cpp src/stb.cpp src/util/logger.cpp \
 	                    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
 	                    -I./libs/json/single_include/ \
 	                    -I/opt/cppse/build/v8pp/include/v8 -I/opt/cppse/build/v8pp/include/ \
@@ -84,8 +84,6 @@ client:  ## build webassembly javascript file using docker
 	                    -I/opt/cppse/build/fmt/include /opt/cppse/build/fmt/lib/libfmt-em.a \
 	                    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s SAFE_HEAP=0 -s ALLOW_MEMORY_GROWTH=0)
 	                    # -s TOTAL_MEMORY=2147483648 -s ASSERTIONS=1 -s SAFE_HEAP=1 -s ALLOW_MEMORY_GROWTH=1)
-	cp -prv web/webroot/client.js web2/public/client.js
-	cp -prv web/webroot/client.wasm web2/public/client.wasm
 
 client-desktop:  ## build webassembly client for desktop for testing purposes
 	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
@@ -131,7 +129,7 @@ format:  ## format source code (build at least once first)
 	                    find ./input -name '*.js' -type f | xargs -I{} -n 1 -P 8 clang-format-15 -i {} && \
 	                    mv -v input/webpack*.js ./web/ && \
 	                    cmake --build build --target clangformat && \
-						pushd web2 && npm run format && popd)
+						pushd web && npm run format && popd)
 
 pull:  ## pull the starcry docker build image
 	$(docker_exe) pull docker.io/rayburgemeestre/build-starcry-ubuntu:22.04
@@ -144,8 +142,8 @@ runtime_deps:  ## install run-time dependencies
 	./docs/install_runtime_deps.sh
 
 build-web-deps:
-	pushd web2 && npm ci
-	pushd web2 && sudo npm i -g @quasar/cli
+	pushd web && npm ci
+	pushd web && sudo npm i -g @quasar/cli
 
 deps: ## install dependencies required for running and building starcry
 	./docs/install_deps.sh
@@ -172,7 +170,7 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 	make build
 	@$(call make-clang, mkdir -p out/workdir/web && \
 						echo disabled: cp -prv $$PWD/web/webroot out/workdir/web/webroot && \
-	                    cp -prv $$PWD/web2/dist/spa out/workdir/web/webroot && \
+	                    cp -prv $$PWD/web/dist/spa out/workdir/web/webroot && \
 	                    (cp -prv $$PWD/output/report.html out/workdir/web/webroot/report.html || true) && \
 	                    cp -prv $$PWD/input out/workdir/input && \
 	                    strip --strip-debug $$PWD/build/starcry && \
@@ -197,18 +195,15 @@ docker-finalize:
 
 
 build-web:  ## build web static files
-	@$(call make-clang, pushd web2 && npm ci)
-	@$(call make-clang, pushd web2 && ./node_modules/.bin/quasar build)  # doesn't require build-web-deps
+	@$(call make-clang, pushd web && npm ci)
+	@$(call make-clang, pushd web && ./node_modules/.bin/quasar build)  # doesn't require build-web-deps
 
 build-web-old:
 	pushd web && npm ci
 	pushd web && npm run build
 
 run-web:  ## run web in development hot-swappable mode
-	pushd web && npm run dev
-
-run-web2:  ## run new web in development hot-swappable mode
-	pushd web2 && quasar dev
+	pushd web && quasar dev
 
 attach:
 	docker exec -it starcry /bin/bash
@@ -216,7 +211,7 @@ attach:
 release:  # alias for make build..
 	make build
 
-publish:  ## build from scratch starcry, web, client, docker image. (does not push to dockerhub)
+publish:  ## build from scratch starcry, web, client, docker image, push dockerhub, deploy k8s
 	make clean
 	make build-gcc   # currently issues with clang-15 :(
 	make build-web
@@ -233,7 +228,6 @@ publish:  ## build from scratch starcry, web, client, docker image. (does not pu
 
 push:
 	$(docker_exe) push docker.io/rayburgemeestre/starcry:v`cat .version` || true
-	# $(docker_exe) push docker.io/rayburgemeestre/starcry-no-gui:v`cat .version` || true
 
 #------------
 
