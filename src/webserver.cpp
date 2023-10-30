@@ -81,6 +81,9 @@ void webserver::set_script(const std::string &script) {
 void webserver::run() {
   std::string str = "web/webroot";
   if (!std::filesystem::exists(str)) {
+    str = "web/dist/spa";
+  }
+  if (!std::filesystem::exists(str)) {
     str = "/workdir/web/webroot";
   }
   server->serve(str.c_str(), 18080);
