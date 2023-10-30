@@ -3,7 +3,12 @@
     <q-list bordered padding>
       <q-item-label header>Gradients</q-item-label>
 
-      <q-item clickable v-ripple v-for="name in Object.keys(gradients)" :key="name">
+      <q-item
+        clickable
+        v-ripple
+        v-for="name in Object.keys(gradients)"
+        :key="name"
+      >
         <q-item-section>
           <q-item-label class="extra-margin">{{ name }}</q-item-label>
           <q-item-label caption>
@@ -89,10 +94,13 @@ export default defineComponent({
         if (!gradient_name) continue;
 
         let gradient_definition = JSON.stringify(gradients[gradient_name]);
-        let colors = typeof gradient_definition !== 'undefined' ? window.Module.get_gradient_colors(
-          gradient_definition,
-          canvas.width
-        ) : undefined;
+        let colors =
+          typeof gradient_definition !== 'undefined'
+            ? window.Module.get_gradient_colors(
+                gradient_definition,
+                canvas.width
+              )
+            : undefined;
 
         function drawCheckerboard() {
           if (!ctx) return;

@@ -19,7 +19,7 @@
       </template>
     </q-table>
 
-    <br/>
+    <br />
 
     <q-table
       dense
@@ -162,16 +162,12 @@ export default defineComponent({
           script_store.job_rendering = rendering;
           script_store.job_rendered = rendered;
           script_store.job_queued = queued;
-        }
-        else if (buffer.type === 'stats') {
+        } else if (buffer.type === 'stats') {
           rows_piper.value = [];
           let components = buffer.data || [];
           for (let component of components) {
             if (component.counter)
-              rows_piper.value.push([
-                component.name,
-                component.counter
-              ]);
+              rows_piper.value.push([component.name, component.counter]);
           }
         }
       }
@@ -232,7 +228,7 @@ export default defineComponent({
           align: 'right',
           field: (row) => row[1],
           sortable: true,
-        }
+        },
       ],
     };
   },
