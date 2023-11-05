@@ -196,10 +196,6 @@ build-web:  ## build web static files
 	@$(call make-clang, pushd web && npm ci)
 	@$(call make-clang, pushd web && ./node_modules/.bin/quasar build)  # doesn't require build-web-deps
 
-build-web-old:
-	pushd web && npm ci
-	pushd web && npm run build
-
 run-web:  ## run web in development hot-swappable mode
 	pushd web && quasar dev
 
