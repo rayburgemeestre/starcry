@@ -378,7 +378,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   }
 
   const std::vector<int64_t> selected_ids = ([&]() {
-    if (job_msg && !job_msg->original_instruction) {
+    if (job_msg && job_msg->original_instruction) {
       if (const auto &instruction = std::dynamic_pointer_cast<frame_instruction>(job_msg->original_instruction)) {
         if (instruction->frame_ptr()) {
           return instruction->frame_ptr()->selected_ids();
