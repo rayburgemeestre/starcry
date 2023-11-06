@@ -17,7 +17,7 @@ class sut {
 public:
     starcry_options options;
     sut();
-    double test_create_image(const std::string& image_name);
+    double test_create_image(const std::string& image_name, const std::vector<int64_t>& selected_ids = {});
     double test_create_video(const std::string& video_name, int frames, int fps);
     double compare(const std::string& file1, const std::string& file2);
 };
@@ -43,7 +43,7 @@ sut::sut() {
     options.stdout_ = false;
 }
 
-double sut::test_create_image(const std::string& image_name) {
+double sut::test_create_image(const std::string& image_name, const std::vector<int64_t>& selected_ids) {
     std::filesystem::create_directories("test/integration/last-run");
     std::filesystem::create_directories("test/integration/reference");
     options.output_file = fmt::format("test/integration/last-run/{}", image_name);
@@ -58,6 +58,9 @@ double sut::test_create_image(const std::string& image_name) {
     sc.setup_server();
     auto req = std::make_shared<data::frame_request>(options.script_file, options.frame_of_interest, options.num_chunks);
     // req->enable_compressed_image(); // compressed image is currently only for Web UI
+    if (!selected_ids.empty()) {
+      req->set_selected_ids(selected_ids);
+    }
     req->set_output(options.output_file);
     req->enable_raw_image();
     req->enable_raw_bitmap();

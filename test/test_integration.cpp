@@ -124,3 +124,12 @@ TEST_CASE("Test scale image.") {
 
   REQUIRE(sc.test_create_image("unittest_013_scale_frame1") == double(0));
 }
+
+TEST_CASE("Test rendering selected IDs") {
+  sut sc;
+  sc.options.script_file = "input/test.js";
+  // part of the video (full = 175)
+  std::vector<int64_t> selected_ids;
+  selected_ids.push_back(20);
+  REQUIRE(sc.test_create_image("unittest_014_test_frame1", selected_ids) == double(0));
+}
