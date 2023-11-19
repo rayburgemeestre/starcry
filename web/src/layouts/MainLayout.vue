@@ -10,6 +10,28 @@
             alt="logo"
           />
         </q-toolbar-title>
+        <q-btn
+          v-if="global_store.connected.size"
+          flat
+          round
+          dense
+          icon="cloud_queue"
+          class="q-mr-xs"
+        />
+        <div v-if="global_store.connected.size">
+          {{ global_store.connected.size }} connected
+        </div>
+        <q-btn
+          v-if="global_store.disconnected.size"
+          flat
+          round
+          dense
+          icon="cloud_off"
+          class="q-mr-xs"
+        />
+        <div v-if="global_store.disconnected.size">
+          {{ global_store.disconnected.size }} disconnected
+        </div>
         <q-btn dense flat round icon="menu" @click="toggleRightDrawer" />
       </q-toolbar>
 
@@ -98,6 +120,7 @@ import { append_script_to_body } from 'components/utils';
 import { useViewpointStore } from 'stores/viewpoint';
 import { useObjectsStore } from 'stores/objects';
 import { usePinch } from '@vueuse/gesture';
+import { useGlobalStore } from 'stores/global';
 
 const canvas_elem = ref();
 let debug_text = ref('');
@@ -120,6 +143,7 @@ export default defineComponent({
     const rightDrawerOpen = ref(false);
     const script = ref('Hello world');
 
+    let global_store = useGlobalStore();
     let script_store = useScriptStore();
     let viewpoint_store = useViewpointStore();
 
@@ -329,6 +353,8 @@ export default defineComponent({
         } else if (event.altKey && event.key === 'z') {
         }
       },
+
+      global_store,
     };
     obj.toggleLeftDrawer = function () {
       leftDrawerOpen.value = !leftDrawerOpen.value;

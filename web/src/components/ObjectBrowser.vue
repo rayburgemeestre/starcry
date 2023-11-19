@@ -117,7 +117,7 @@
 import { defineComponent, ref } from 'vue';
 import { useObjectsStore } from 'stores/objects';
 import { useScriptStore } from 'stores/script';
-import { StarcryAPI } from 'components/api';
+
 export default defineComponent({
   // name: 'ComponentName'
   name: 'ObjectBrowser',
@@ -128,26 +128,6 @@ export default defineComponent({
     let scripts_store = useScriptStore();
     let state = ref('');
     let filter_selected = ref(false);
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const objects_endpoint = new StarcryAPI(
-      'objects',
-      StarcryAPI.json_type,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      (msg) => {},
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      (buffer) => {
-        objects_store.objects = buffer;
-        objects_store.updateLookupTable();
-      },
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      (_) => {},
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      (_) => {}
-    );
 
     function to_utf8_symbol(type) {
       switch (type) {

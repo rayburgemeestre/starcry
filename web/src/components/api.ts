@@ -1,4 +1,5 @@
 import { load_client_data, save_client_data } from 'components/clientstorage';
+import { useGlobalStore } from 'stores/global';
 
 export interface StarcryAPI {
   endpoint: string;
@@ -76,14 +77,17 @@ export class StarcryAPI {
     this.ws.onopen = function () {
       clearTimeout(this.retry);
       this.on_status_change('connected');
+      useGlobalStore().connected.add(this.endpoint);
+      useGlobalStore().disconnected.delete(this.endpoint);
       this.send('LINK ' + this.client_data['ID']);
       this.on_connected();
     }.bind(this);
     this.ws.onclose = function () {
       this.on_status_change('disconnected');
       this.on_disconnected();
-      // do not reconnect (annoying during development in case of a crash)
-      // this.retry = setTimeout(this.connect.bind(this), 1000);
+      useGlobalStore().connected.delete(this.endpoint);
+      useGlobalStore().disconnected.add(this.endpoint);
+      this.retry = setTimeout(this.connect.bind(this), 1000);
     }.bind(this);
     this.ws.onmessage = function (message) {
       switch (this.type) {

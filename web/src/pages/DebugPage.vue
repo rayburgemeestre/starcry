@@ -2,7 +2,7 @@
   <div class="q-pa-md">
     <q-table
       dense
-      :rows="rows"
+      :rows="stats_store.rows"
       :columns="columns"
       row-key="name"
       :filter="filter"
@@ -112,74 +112,20 @@
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
-import { StarcryAPI } from 'components/api';
-import { useScriptStore } from 'stores/script';
+import { useStatsStore } from 'stores/stats';
 export default defineComponent({
   name: 'DebugPage',
   setup() {
-    let status = ref('');
-    let msgs = ref({});
     let rows = ref([]);
     let rows_piper = ref([]);
-
-    const stats_endpoint = new StarcryAPI(
-      'stats',
-      StarcryAPI.json_type,
-      (msg: string) => {
-        status.value = msg;
-      },
-      (buffer: string) => {
-        msgs.value[buffer.type] = buffer;
-        if (buffer.type === 'metrics') {
-          rows.value = [];
-          let threads = buffer.data.threads || [];
-          for (let thread of threads) {
-            rows.value.push([
-              thread.name,
-              Math.round(thread.seconds_idle),
-              thread.state,
-            ]);
-          }
-
-          let script_store = useScriptStore();
-          let skipped = -1;
-          let rendering = -1;
-          let rendered = -1;
-          let queued = -1;
-          let jobs = buffer.data.jobs || [];
-          for (let job of jobs) {
-            if (job.state == 'SKIPPED') {
-              skipped = Math.max(skipped, job.number);
-            } else if (job.state == 'RENDERING') {
-              rendering = Math.max(rendering, job.number);
-            } else if (job.state == 'RENDERED') {
-              rendered = Math.max(rendered, job.number);
-            } else if (job.state == 'QUEUED') {
-              queued = Math.max(queued, job.number);
-            }
-          }
-          script_store.job_skipped = skipped;
-          script_store.job_rendering = rendering;
-          script_store.job_rendered = rendered;
-          script_store.job_queued = queued;
-        } else if (buffer.type === 'stats') {
-          rows_piper.value = [];
-          let components = buffer.data || [];
-          for (let component of components) {
-            if (component.counter)
-              rows_piper.value.push([component.name, component.counter]);
-          }
-        }
-      }
-    );
+    const stats_store = useStatsStore();
 
     function pretty(value) {
       return JSON.stringify(value, null, 2);
     }
 
     return {
-      status,
-      msgs,
+      stats_store,
       pretty,
       value1: ref(7),
       value2: ref(70),

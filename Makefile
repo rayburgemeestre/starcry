@@ -235,6 +235,8 @@ clion:
 
 ide_shell:
 	xhost +
+	sudo sysctl kernel.unprivileged_userns_clone=0
+	sudo rm -rf /home/trigen/.config/JetBrains/CLion2023.3/.lock
 	mkdir -p /tmp/ccache-root
 	$(docker_exe) rm starcry_clion || true
 	$(docker_exe) run --rm --name starcry_clion -p 18081:18080 -p 10001:10000 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; bash"

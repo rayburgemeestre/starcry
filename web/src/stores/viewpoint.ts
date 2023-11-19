@@ -19,7 +19,11 @@ export const useViewpointStore = defineStore('viewpoint', {
     debug: false,
     save: false,
 
+    first_load: true,
+    previous_hash: ref(''),
+    current_message: ref(''),
     viewpoint_updated_by_client: ref(0),
+    viewpoint_send_needed: ref(0),
   }),
   actions: {
     select() {
