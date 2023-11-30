@@ -7,7 +7,6 @@
 
 #include <algorithm>  // for stdmath::clamp
 #include <cmath>
-#include <random>
 
 #include "color_blender.hpp"
 #include "data/bounding_box.hpp"
@@ -152,6 +151,7 @@ public:
                                     double opacity,
                                     const data::settings &settings) {
     bounding_box box;
+    if (shape.opacity < std::numeric_limits<double>::epsilon()) return box;
     double circle_x = to_abs_x(shape);
     double circle_y = to_abs_y(shape);
 
@@ -186,14 +186,10 @@ public:
 
       for (int rel_x = hxcl_inner; rel_x < hxcl_outer; rel_x++) {
         int abs_x_left = static_cast<int>(circle_x - rel_x + 0.5) - 1;
-        if (abs_x_left > static_cast<int>(width_)) break;
         int abs_x_right = static_cast<int>(circle_x + rel_x + 0.5) - 1;
-        if (abs_x_right < 0) break;
 
         box.update_x(abs_x_left);
         box.update_x(abs_x_right);
-
-        if (abs_x_left < 0 && abs_x_right > static_cast<int>(width_)) continue;
 
         double diff_from_center = reuse_sqrt ? distance<double>(abs_x_left, circle_x, abs_y_top, circle_y) : -1;
 
@@ -274,6 +270,7 @@ public:
                                      double opacity,
                                      const data::settings &settings) {
     bounding_box box;
+    if (shape.opacity < std::numeric_limits<double>::epsilon()) return box;
     double ellipse_x = to_abs_x(shape);
     double ellipse_y = to_abs_y(shape);
 
@@ -316,14 +313,10 @@ public:
 
       for (int rel_x = hxcl_inner; rel_x < hxcl_outer; rel_x++) {
         int abs_x_left = static_cast<int>(ellipse_x - rel_x + 0.5) - 1;
-        if (abs_x_left > static_cast<int>(width_)) break;
         int abs_x_right = static_cast<int>(ellipse_x + rel_x + 0.5) - 1;
-        if (abs_x_right < 0) break;
 
         box.update_x(abs_x_left);
         box.update_x(abs_x_right);
-
-        if (abs_x_left < 0 && abs_x_right > static_cast<int>(width_)) continue;
 
         render_ellipse_pixel(
             bmp, shape, a, b, radius_size, ellipse_x, ellipse_y, abs_x_left, abs_y_top, opacity, settings);
@@ -370,6 +363,7 @@ public:
                                   const data::settings &settings,
                                   bool absolute_positioning = false) {
     bounding_box bound_box;
+    if (shape.opacity < std::numeric_limits<double>::epsilon()) return bound_box;
     double textX = absolute_positioning ? shape.x : to_abs_x(shape);
     double textY = absolute_positioning ? shape.y : to_abs_y(shape);
     const auto text_size = std::isnan(shape.text_size) ? 99 : shape.text_size;
@@ -550,6 +544,7 @@ public:
   }
 
   void render_line(image &bmp, const data::shape &shape, double opacity, const data::settings &settings) {
+    if (shape.opacity < std::numeric_limits<double>::epsilon()) return;
     double x1 = to_abs_x(shape);
     double y1 = to_abs_y(shape);
     double x2 = to_abs_x2(shape);
@@ -942,13 +937,19 @@ public:
       // TODO: cool alternative for lines, e.g., line style 2?
       // blend_the_pixel(bmp, shape, absX, absY, opacity, data::color{clr.r, clr.g, clr.b, clr.a * opacity});
     } else {
-      blend_the_pixel(bmp, shape, absX, absY, opacity, data::color{clr.r, clr.g, clr.b, clr.a * opacity});
+      blend_the_pixel(
+          bmp, shape.blending_.type(), absX, absY, opacity, data::color{clr.r, clr.g, clr.b, clr.a * opacity});
     }
   }
 
   static void blend_the_pixel(
-      image &bmp, const data::shape &shape, int absX, int absY, double opacity, const data::color &clr) {
-    switch (shape.blending_.type()) {
+      image &bmp, const int &blending_type, int absX, int absY, double opacity, const data::color &clr) {
+    // useful for debugging
+    // const_cast<data::color &>(clr).r = 1;
+    // const_cast<data::color &>(clr).g = 0;
+    // const_cast<data::color &>(clr).b = 0;
+    // const_cast<data::color &>(clr).a = 0.5;
+    switch (blending_type) {
       case data::blending_type::lighten:
         blend_pixel<lighten>(bmp, opacity, absX, absY, clr);
         break;
@@ -1076,6 +1077,35 @@ public:
 
   std::map<std::string, std::vector<std::shared_ptr<text_drawer>>> &font_ref() {
     return font_;
+  }
+
+  void render_bounding_box(image &bmp, const bounding_box &box) {
+    int counter = 0;
+    for (auto x = box.top_left.x; x <= box.bottom_right.x; ++x) {
+      if (x < 0 || x > width_) continue;
+      auto clr = data::color{1., 1., 1., 0.5};
+      if (counter < 10) {
+        clr = data::color{1., 0., 0., 0.5};
+      }
+      if (box.top_left.y >= 0 && box.top_left.y <= height_)
+        blend_the_pixel(bmp, data::blending_type::normal, x, box.top_left.y, 1., clr);
+      if (box.bottom_right.y >= 0 && box.bottom_right.y <= height_)
+        blend_the_pixel(bmp, data::blending_type::normal, x, box.bottom_right.y, 1., clr);
+      counter++;
+    }
+    counter = 0;
+    for (auto y = box.top_left.y; y <= box.bottom_right.y; ++y) {
+      if (y < 0 || y > height_) continue;
+      auto clr = data::color{1., 1., 1., 0.5};
+      if (counter < 10) {
+        clr = data::color{1., 0., 0., 0.5};
+      }
+      if (box.top_left.x >= 0 && box.top_left.x <= width_)
+        blend_the_pixel(bmp, data::blending_type::normal, box.top_left.x, y, 1., clr);
+      if (box.bottom_right.x >= 0 && box.bottom_right.x <= width_)
+        blend_the_pixel(bmp, data::blending_type::normal, box.bottom_right.x, y, 1., clr);
+      counter++;
+    }
   }
 
 private:
