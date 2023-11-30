@@ -324,6 +324,7 @@ image &rendering_engine::_render(size_t thread_num,
           }
           warp_view -= double(warp_value);
           draw_logic_->center(view_x, view_y);
+          if (debug) draw_logic_->render_bounding_box(bmp, box);
         };
         if (warp_view_x && warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y);
         if (warp_view_y && warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y);
@@ -355,6 +356,7 @@ image &rendering_engine::_render(size_t thread_num,
           if (warp_view_y && warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y, true);
         }
         // TODO: comment out entire blug to find some bugs in blending_types.js
+        if (debug) draw_logic_->render_bounding_box(bmp, box);
         box.normalize(width, height);
         box_x.normalize(width, height);
         box_y.normalize(width, height);
@@ -373,9 +375,10 @@ image &rendering_engine::_render(size_t thread_num,
             const auto &color_dat = q.second;
             const auto col = ref.get_color(color_dat);
             // TODO: design is suffering a bit, draw_logic_ needs a refactoring
-            draw_logic_->blend_the_pixel(bmp, shape, x, y, col.a, col);
+            draw_logic_->blend_the_pixel(bmp, shape.blending_.type(), x, y, col.a, col);
           }
         }
+        if (debug) draw_logic_->render_bounding_box(bmp, box);
       }
 #ifndef EMSCRIPTEN
 #ifndef SC_CLIENT
