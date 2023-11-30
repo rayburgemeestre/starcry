@@ -479,6 +479,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
               {"y2", shape.y2},
               {"vel_x", shape.vel_x},
               {"vel_y", shape.vel_y},
+              {"opacity", shape.opacity},
 #ifdef DEBUG_NUM_SHAPES
               {"#", nums[shape.unique_id]},
               {"random_hash", shape.random_hash},
