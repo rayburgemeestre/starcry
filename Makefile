@@ -153,15 +153,15 @@ shell:  ## start a shell in the starcry build image
 
 .PHONY: starcry
 clean:  ## clean build artifacts
-	rm -f CMakeCache.txt
-	rm -rf build
-	rm -rf out
-	rm -f callgrind.out.*
-	rm -f actor_log*.log
-	rm -f web/webroot/stream/stream.m3u8*
-	rm -rf docs/doxygen/*
-	rm -rf docs/output/*
-	rm -rf cmake-build-debug
+	sudo rm -f CMakeCache.txt
+	sudo rm -rf build
+	sudo rm -rf out
+	sudo rm -f callgrind.out.*
+	sudo rm -f actor_log*.log
+	sudo rm -f web/webroot/stream/stream.m3u8*
+	sudo rm -rf docs/doxygen/*
+	sudo rm -rf docs/output/*
+	sudo rm -rf cmake-build-debug
 
 .PHONY: dockerize
 dockerize:  ## dockerize starcry executable in stripped down docker image
