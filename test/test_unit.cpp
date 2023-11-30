@@ -239,3 +239,25 @@ TEST_CASE( "Copy of circle shape" ) {
   c.location_ref().position_ref().x++;
   REQUIRE(copy.location_ref().position_ref().x == 19.);
 }
+
+TEST_CASE( "Shape class sizes" ) {
+  // data_staging::circle c("test", 1, vector2d{19, 11}, 10., 5.);
+  // data_staging::ellipse e{"test", 1, vector2d{19, 11}, 1., 2., 3.};
+  // data_staging::line{"test", 1, vector2d{19, 11}, vector2d{19, 11}, 1.};
+  // data_staging::text{"test", 1, vector2d{19, 11}, "test", 11., "left", true};
+  // data_staging::script{"test", 1, vector2d{19, 11}};
+  // data_staging::shape_t test;
+
+  // std::cout << "size of circle: " << sizeof(data_staging::circle) << std::endl;
+  // std::cout << "size of ellipse: " << sizeof(data_staging::ellipse) << std::endl;
+  // std::cout << "size of line: " << sizeof(data_staging::line) << std::endl;
+  // std::cout << "size of text: " << sizeof(data_staging::text) << std::endl;
+  // std::cout << "size of script: " << sizeof(data_staging::script) << std::endl;
+  // std::cout << "size of variant: " << sizeof(data_staging::shape_t) << std::endl;
+
+  REQUIRE(sizeof(data_staging::circle) < sizeof(data_staging::shape_t));
+  REQUIRE(sizeof(data_staging::ellipse) < sizeof(data_staging::shape_t));
+  REQUIRE(sizeof(data_staging::line) < sizeof(data_staging::shape_t));
+  REQUIRE(sizeof(data_staging::text) < sizeof(data_staging::shape_t));
+  REQUIRE(sizeof(data_staging::script) < sizeof(data_staging::shape_t));
+}
