@@ -342,11 +342,11 @@ bool generator::_generate_frame() {
         if (!detected_too_many_steps) {                 // didn't bail out with break above
           if (stepper.max_step == max_intermediates) {  // config doesn't allow finer granularity any way, break.
             break;
-          } else if (stepper.max_step > max_intermediates) {
+          }
+          if (stepper.max_step > max_intermediates) {
             logger(DEBUG) << "stepper.max_step > max_intermediates -> " << stepper.max_step << " > "
                           << max_intermediates << std::endl;
             throw abort_exception("stepper max exceeds max. intermediates");
-            std::exit(0);
           }
         }
       }
@@ -497,17 +497,16 @@ void generator::insert_newly_created_objects() {
 void generator::update_object_distances() {
   stepper.reset_current();
   const auto handle = [&](data_staging::shape_t& abstract_shape, data_staging::meta& meta) {
-    auto instance_uid = meta.unique_id();
-    // MARK
-    auto find = intermediate_map.find(instance_uid);
+    const auto instance_uid = meta.unique_id();
+    const auto find = intermediate_map.find(instance_uid);
     if (find == intermediate_map.end()) {
       return;
     }
-    double dist = get_max_travel_of_object(abstract_shape, find->second.get());
+    const double dist = get_max_travel_of_object(abstract_shape, find->second.get());
     if (dist > max_dist_found) {
       max_dist_found = dist;
     }
-    auto steps = update_steps(dist);
+    const auto steps = update_steps(dist);
 
     static std::unordered_map<int64_t, int> recorded_steps;
 
@@ -532,16 +531,9 @@ void generator::update_time(data_staging::shape_t& instance,
   auto& i = genctx->i();
   const auto time_settings = scenes_.get_time(scenesettings);
   const auto execute = [&](double scene_time) {
-    // Are these still needed?? (EDIT: I don't think it's used)
-    // EDIT: during texture rendering we query the shape for the time
-    // i.set_field(instance, "__time__", v8::Number::New(i.get_isolate(), scene_time));
-    // i.set_field(instance, "__global_time__", v8::Number::New(i.get_isolate(), time_settings.time));
-    // i.set_field(instance, "__elapsed__", v8::Number::New(i.get_isolate(), time_settings.elapsed));
-
-    auto find = object_definitions_map.find(instance_id);
-    if (find != object_definitions_map.end()) {
-      auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
-      auto handle_time_for_shape = [&](auto& c, auto& object_bridge) {
+    if (const auto find = object_definitions_map.find(instance_id); find != object_definitions_map.end()) {
+      const auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
+      const auto handle_time_for_shape = [&](auto& c, auto& object_bridge) {
         // TODO: check if the object has an "time" function, or we can just skip this entire thing
         c.meta_ref().set_time(scene_time);
         object_bridge->push_object(c);
@@ -577,7 +569,7 @@ void generator::update_time(data_staging::shape_t& instance,
   if (scenesettings.current_scene_next > scenesettings.current_scene_intermediate) {
     // Make sure we end previous scene at the very last frame in any case, even though we won't render it.
     // This may be necessary to finalize some calculations that work with "t" (time), i.e., for rotations.
-    auto bak = scenesettings.current_scene_next;
+    const auto bak = scenesettings.current_scene_next;
     scenesettings.current_scene_next = scenesettings.current_scene_intermediate;
     execute(1.0);
     scenesettings.current_scene_next = bak;

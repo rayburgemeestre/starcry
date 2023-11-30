@@ -100,8 +100,7 @@ void scenes::prepare_scene() {
   // initialize scenes for script objects
   for (auto& [_, settings] : scenesettings_objs) {
     if (settings.update(get_time(settings).time)) {
-      // TODO: move into this object??
-      set_scene_sub_object(settings, settings.current_scene_next + 1);
+      _set_scene_sub_object(settings, settings.current_scene_next + 1);
     }
   }
 }
@@ -308,10 +307,10 @@ size_t scenes::current() {
 }
 
 void scenes::set_scene_sub_object(int64_t unique_id) {
-  set_scene_sub_object(scenesettings_objs[unique_id], 0);
+  _set_scene_sub_object(scenesettings_objs[unique_id], 0);
 }
 
-void scenes::set_scene_sub_object(scene_settings& scenesettings, size_t scene) {
+void scenes::_set_scene_sub_object(scene_settings& scenesettings, size_t scene) {
   if (scenesettings.current_scene_next == std::numeric_limits<size_t>::max())
     scenesettings.current_scene_next = scene;
   else

@@ -321,7 +321,7 @@ public:
   }
 
   template <class... Args>
-  void call_fun(v8::Local<v8::Object>& object,
+  void call_fun(const v8::Local<v8::Object>& object,
                 v8::Persistent<v8::Object>& self,
                 const std::string& field,
                 Args... args) {
@@ -356,7 +356,7 @@ public:
     fun->Call(get_isolate()->GetCurrentContext(), self.Get(get_isolate()), sizeof...(Args), argz).ToLocalChecked();
   }
   template <class... Args>
-  void call_fun(v8::Local<v8::Object> object, const std::string& field, Args... args) {
+  void call_fun(const v8::Local<v8::Object> object, const std::string& field, Args... args) {
     return call_fun(object, object, field, std::forward<Args>(args)...);
   }
 

@@ -33,7 +33,7 @@ public:
   std::unordered_map<int64_t, scene_settings> scenesettings_objs;
 
 public:
-  scenes(generator& gen);
+  explicit scenes(generator& gen);
 
   void dump();
   void initialize();
@@ -67,11 +67,11 @@ public:
 
   interpreter::time_settings get_time(scene_settings& settings) const;
 
-  void set_scene_sub_object(int64_t unique_id);
-  void set_scene_sub_object(scene_settings& unique_id, size_t scene);
   size_t current();
+  void set_scene_sub_object(int64_t unique_id);
 
 private:
+  void _set_scene_sub_object(scene_settings& scenesettings, size_t scene);
   void refresh_scenesettings();
 };
 
