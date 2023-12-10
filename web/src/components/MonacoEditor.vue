@@ -138,6 +138,16 @@ export default defineComponent({
     );
     if (this.vim_mode) toggle_vim_mode.bind(this)(true);
     if (this.emacs_mode) toggle_emacs_mode.bind(this)(true);
+
+    // TODO: this is not really the place to do this, can we add API to a component?
+    // Need to figure out the "vue3"/quasar way to do things.
+    let script = useScriptStore();
+    watch(
+      () => script.script,
+      function (val) {
+        editor?.setValue(val);
+      }.bind(this)
+    );
   },
 });
 </script>

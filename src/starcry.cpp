@@ -135,9 +135,6 @@ void starcry::set_script(const std::string &script) {
 }
 
 void starcry::update_script_contents(const std::string &contents) {
-  if (script_.find(".new") == std::string::npos) {
-    script_ = script_ + ".new";
-  }
   std::ofstream out(script_);
   out << contents;
   out.close();
@@ -145,15 +142,26 @@ void starcry::update_script_contents(const std::string &contents) {
 
 void starcry::add_reload_command(std::shared_ptr<data::reload_request> req) {
   cmds->push(std::make_shared<reload_instruction>(req));
-  pe.run([=, this]() {
-    if (webserv) {
-      json j{
-          {"type", "fs_change"},
-          {"file", req->script()},
-      };
-      webserv->send_fs_change(j.dump());
+  if (webserv) {
+    std::ifstream stream(req->script());
+    if (!stream) {
+      throw std::runtime_error("could not locate file " + req->script());
     }
-  });
+    std::istreambuf_iterator<char> begin(stream), end;
+    // remove "_ =" part from script (which is a workaround to silence 'not in use' linting)
+    if (*begin == '_') {
+      while (*begin != '=') begin++;
+      begin++;
+    }
+    const auto source = std::string(begin, end);
+
+    json j{
+        {"type", "fs_change"},
+        {"file", req->script()},
+        {"source", source},
+    };
+    webserv->send_fs_change(j.dump());
+  }
 }
 
 void starcry::add_image_command(std::shared_ptr<data::frame_request> req) {
@@ -345,6 +353,9 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     if (f.client() != nullptr) {
       return;  // prevent termination of queues
     }
+  } else if (const auto &instruction = std::dynamic_pointer_cast<reload_instruction>(cmd_def)) {
+    logger(DEBUG) << "Reloaded." << std::endl;
+    return;  // prevent termination of queues
   } else {
     logger(WARNING) << "No video or frame instruction provided." << std::endl;
   }

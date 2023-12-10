@@ -56,12 +56,7 @@ export function create_stats_endpoint() {
             ]);
         }
       } else if (buffer.type == 'fs_change') {
-        // console.log(buffer['file'], this.$parent.filename);
-        console.log('TODO !!! fix fs_change event here...');
-        console.log(buffer['file']);
-        // if (buffer['file'] === this.$parent.filename) {
-        //   this.$parent.set_frame(this.$parent.current_frame);
-        // }
+        script_store.script = buffer['source'];
       }
     },
     // eslint-disable-next-line @typescript-eslint/no-empty-function
