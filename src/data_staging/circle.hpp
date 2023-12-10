@@ -5,9 +5,6 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 #pragma once
 
-#include "data/blending_type.hpp"
-#include "data/gradient.hpp"
-#include "data/texture.hpp"
 #include "util/vector_logic.hpp"
 
 #include "data_staging/attrs.hpp"
@@ -28,7 +25,6 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 namespace data_staging {
 
 class circle {
-private:
   meta meta_;
   location location_;
   location transitive_location_;
@@ -62,138 +58,138 @@ public:
   /**
    * Meta data const reference
    */
-  const meta& meta_cref() const {
+  [[nodiscard]] const meta& meta_cref() const {
     return meta_;
   }
   /**
    * Meta data reference
    */
-  data_staging::meta& meta_ref() {
+  meta& meta_ref() {
     return meta_;
   }
 
   /**
    * Attributes data const reference
    */
-  const attrs& attrs_cref() const {
+  [[nodiscard]] const attrs& attrs_cref() const {
     return attrs_;
   }
 
   /**
    * Attributes data reference
    */
-  data_staging::attrs& attrs_ref() {
+  attrs& attrs_ref() {
     return attrs_;
   }
 
   /**
    * Location data const reference
    */
-  const location& location_cref() const {
+  [[nodiscard]] const location& location_cref() const {
     return location_;
   }
   /**
    * Location data reference
    */
-  data_staging::location& location_ref() {
+  location& location_ref() {
     return location_;
   }
   /**
    * Absolute location data reference
    */
-  data_staging::location& transitive_location_ref() {
+  location& transitive_location_ref() {
     return transitive_location_;
   }
   /**
    * Absolute location data const reference
    */
-  const data_staging::location& transitive_location_cref() {
+  const location& transitive_location_cref() {
     return transitive_location_;
   }
   /**
    * Movement data const reference
    */
-  const movement& movement_cref() const {
+  [[nodiscard]] const movement& movement_cref() const {
     return movement_;
   }
   /**
    * Movement data reference
    */
-  data_staging::movement& movement_ref() {
+  movement& movement_ref() {
     return movement_;
   }
   /**
    * Generic data const reference
    */
-  const generic& generic_cref() const {
+  [[nodiscard]] const generic& generic_cref() const {
     return generic_;
   }
   /**
    * Generic data reference
    */
-  data_staging::generic& generic_ref() {
+  generic& generic_ref() {
     return generic_;
   }
 
   /**
    * Styling data const reference
    */
-  const styling& styling_cref() const {
+  [[nodiscard]] const styling& styling_cref() const {
     return styling_;
   }
   /**
    * Styling data reference
    */
-  data_staging::styling& styling_ref() {
+  styling& styling_ref() {
     return styling_;
   }
   /**
    * Behavior data const reference
    */
-  const behavior& behavior_cref() const {
+  [[nodiscard]] const behavior& behavior_cref() const {
     return behavior_;
   }
   /**
    * Behavior data reference
    */
-  data_staging::behavior& behavior_ref() {
+  behavior& behavior_ref() {
     return behavior_;
   }
   /**
    * Toroidal data const reference
    */
-  const data_staging::toroidal& toroidal_cref() {
+  const toroidal& toroidal_cref() {
     return toroidal_;
   }
   /**
    * Toroidal data reference
    */
-  data_staging::toroidal& toroidal_ref() {
+  toroidal& toroidal_ref() {
     return toroidal_;
   }
   /**
    * Properties data const reference
    */
-  const properties& properties_cref() const {
+  [[nodiscard]] const properties& properties_cref() const {
     return properties_;
   }
   /**
    * Properties data reference
    */
-  data_staging::properties& properties_ref() {
+  properties& properties_ref() {
     return properties_;
   }
 
   /**
    * Radius
    */
-  double radius() const {
+  [[nodiscard]] double radius() const {
     return radius_;
   }
   /**
    * Radius size
    */
-  double radius_size() const {
+  [[nodiscard]] double radius_size() const {
     return radius_size_;
   }
   /**
@@ -214,7 +210,7 @@ public:
   /**
    * Cascades in const reference
    */
-  const std::vector<cascade>& cascade_out_cref() const {
+  [[nodiscard]] const std::vector<cascade>& cascade_out_cref() const {
     return cascades_out_;
   }
 
