@@ -31,6 +31,9 @@ struct gradient {
     // TODO: refactor, this COPY & PASTE from gradient.cpp
     size_t counter = 0;
     double processed_index = 0;
+    if (colors.empty()) {
+      return color{0.1, 0.2, 0.3, 0.};
+    }
     for (const auto &pair : colors) {
       const double &current_idx = std::get<0>(pair);
       if (current_idx > index) {
