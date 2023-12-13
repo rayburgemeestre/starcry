@@ -5,9 +5,6 @@
  */
 
 #include <cmath>
-#include <cstring>
-#include <functional>
-#include <mutex>
 
 #include "bitmap_wrapper.hpp"
 #include "rendering_engine.h"
