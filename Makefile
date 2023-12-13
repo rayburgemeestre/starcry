@@ -37,30 +37,30 @@ help: # with thanks to Ben Rady
 
 .PHONY: build
 build:  ## build starcry binary using docker (with clang)
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
 	                    cmake --build build --target starcry -j $$(nproc) && \
 	                    strip --strip-debug build/starcry)
 
 .PHONY: all
 all:  ## build all binaries in cmake
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
 	                    cmake --build build)
 
 .PHONY: build-gcc
 build-gcc:  ## build starcry binary using docker (with gcc)
-	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which g++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
+	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which g++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
 	              cmake --build build --target starcry -j 4 && \
 	              strip --strip-debug build/starcry)
 
 .PHONY: test
 test:  ## execute starcry unit tests using docker (with clang)
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
 	                    cmake --build build --target tests && \
 	                    ./build/tests -s -d yes)
 
 .PHONY: integration-test
 integration-test:  ## execute starcry unit tests using docker (with clang)
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
 	                    cmake --build build --target integration_tests && \
 	                    ./build/integration_tests -s -d yes --rng-seed 0)
 
@@ -68,7 +68,7 @@ integration-test:  ## execute starcry unit tests using docker (with clang)
 integration-test-sanitizer:
 	@$(call make-clang, ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
 	                    CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) \
-	                        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on -GNinja -B build && \
+	                        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on -B build && \
 	                    ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
 	                        cmake --build build --target integration_tests && \
 	                    ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
@@ -86,7 +86,7 @@ client:  ## build webassembly javascript file using docker
 	                    # -s TOTAL_MEMORY=2147483648 -s ASSERTIONS=1 -s SAFE_HEAP=1 -s ALLOW_MEMORY_GROWTH=1)
 
 client-desktop:  ## build webassembly client for desktop for testing purposes
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -GNinja -B build && \
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
 	                    cmake --build build --target sc_client)
 
 client_debug:  ## build webassembly javascript file using docker with debug
