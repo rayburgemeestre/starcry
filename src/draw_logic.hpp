@@ -34,7 +34,6 @@ public:
   double y2;
   double size;
 
-public:
   line(double x, double y, double x2, double y2, double size = 1) : x(x), y(y), x2(x2), y2(y2), size(size) {}
 
   line(data::coord a, data::coord b, double size = 1) : x(a.x), y(a.y), x2(b.x), y2(b.y), size(size) {}
@@ -73,10 +72,8 @@ public:
     if (dx == 0 && dy == 0) return 0;
 
     if (dx == 0) {
-      if (dy < 0)
-        return 270;
-      else
-        return 90;
+      if (dy < 0) return 270;
+      return 90;
     }
 
     double slope = dy / dx;
@@ -93,7 +90,7 @@ public:
 
 // inline auto constexpr squared_dist(auto num, auto num2) { return (num - num2) * (num - num2); }
 template <typename T, typename T2>
-inline auto constexpr squared_dist(T &&num, T2 &&num2) {
+auto constexpr squared_dist(T &&num, T2 &&num2) {
   return (num - num2) * (num - num2);
 }
 
@@ -115,13 +112,12 @@ inline data::coord move_minus(data::coord c, double angle, double rotate, double
 inline data::coord move(data::coord c, double angle, double rotate, double move) {
   if (rotate >= 0) {
     return move_plus(c, angle, rotate, move);
-  } else {
-    return move_minus(c, angle, rotate, move);
   }
+  return move_minus(c, angle, rotate, move);
 }
 
 class draw_logic {
-  static constexpr const size_t max_font_size = 2048;
+  static constexpr size_t max_font_size = 2048;
 
 public:
   draw_logic() = default;
@@ -146,10 +142,7 @@ public:
    *   circle). For this we calculate the half of the "x chord length" for both the outer- and inner circle, and
    *   substract them.
    */
-  inline bounding_box render_circle(image &bmp,
-                                    const data::shape &shape,
-                                    double opacity,
-                                    const data::settings &settings) {
+  bounding_box render_circle(image &bmp, const data::shape &shape, double opacity, const data::settings &settings) {
     bounding_box box;
     if (shape.opacity < std::numeric_limits<double>::epsilon()) return box;
     double circle_x = to_abs_x(shape);
@@ -265,10 +258,7 @@ public:
     return box;
   }
 
-  inline bounding_box render_ellipse(image &bmp,
-                                     const data::shape &shape,
-                                     double opacity,
-                                     const data::settings &settings) {
+  bounding_box render_ellipse(image &bmp, const data::shape &shape, double opacity, const data::settings &settings) {
     bounding_box box;
     if (shape.opacity < std::numeric_limits<double>::epsilon()) return box;
     double ellipse_x = to_abs_x(shape);
@@ -357,11 +347,11 @@ public:
     return box;
   }
 
-  inline bounding_box render_text(image &bmp,
-                                  const data::shape &shape,
-                                  double opacity,
-                                  const data::settings &settings,
-                                  bool absolute_positioning = false) {
+  bounding_box render_text(image &bmp,
+                           const data::shape &shape,
+                           double opacity,
+                           const data::settings &settings,
+                           bool absolute_positioning = false) {
     bounding_box bound_box;
     if (shape.opacity < std::numeric_limits<double>::epsilon()) return bound_box;
     double textX = absolute_positioning ? shape.x : to_abs_x(shape);
@@ -1109,16 +1099,16 @@ public:
   }
 
 private:
-  inline double to_abs_x(const data::shape &shape) {
+  double to_abs_x(const data::shape &shape) {
     return ((shape.x - center_x_) * scale_ * shape.scale * shape.recursive_scale) - offset_x_ + canvas_w_ / 2;
   }
-  inline double to_abs_y(const data::shape &shape) {
+  double to_abs_y(const data::shape &shape) {
     return ((shape.y - center_y_) * scale_ * shape.scale * shape.recursive_scale) - offset_y_ + canvas_h_ / 2;
   }
-  inline double to_abs_x2(const data::shape &shape) {
+  double to_abs_x2(const data::shape &shape) {
     return ((shape.x2 - center_x_) * scale_ * shape.scale * shape.recursive_scale) - offset_x_ + canvas_w_ / 2;
   }
-  inline double to_abs_y2(const data::shape &shape) {
+  double to_abs_y2(const data::shape &shape) {
     return ((shape.y2 - center_y_) * scale_ * shape.scale * shape.recursive_scale) - offset_y_ + canvas_h_ / 2;
   }
 
