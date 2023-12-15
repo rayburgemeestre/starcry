@@ -9,9 +9,10 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 namespace data {
 class video_request {
-private:
   std::string script_;
   std::string output_filename_;
+
+  seasocks::WebSocket* client_ = nullptr;
 
   int num_chunks_ = 0;
   size_t offset_frames_ = 0;
@@ -32,6 +33,10 @@ public:
     output_filename_ = new_output_file;
   }
 
+  void set_websocket(seasocks::WebSocket* client) {
+    client_ = client;
+  }
+
   void enable_compressed_video() {
     compressed_video_ = true;
   }
@@ -42,6 +47,9 @@ public:
     preview_ = true;
   }
   ////
+  seasocks::WebSocket* client() const {
+    return client_;
+  }
   const std::string& script() const {
     return script_;
   }

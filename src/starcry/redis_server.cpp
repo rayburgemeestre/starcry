@@ -52,6 +52,7 @@ void redis_server::run() {
         redis = std::make_unique<Redis>(host);
         auto sub = redis->subscriber();
         sub.on_message([&](const std::string &channel, const std::string &msg) -> void {
+          logger(DEBUG) << "msg on channel " << channel << std::endl;
           if (channel == "REGISTER") {
             logger(DEBUG) << "REGISTER CLIENT: " << msg << std::endl;
             // split the string in msg which is HOSTNAME_ID into two variables

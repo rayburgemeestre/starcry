@@ -14,8 +14,10 @@ export function create_bitmap_endpoint() {
       // this.$data.websock_status = msg;
     },
     (buffer) => {
-      window.Module.last_buffer = buffer;
-      window.Module.set_texture(buffer);
+      if (buffer.byteLength > 0) {
+        window.Module.last_buffer = buffer;
+        window.Module.set_texture(buffer);
+      }
       // this.$data.rendering--;
       // this.process_queue();
       bitmap_store.loading = false;

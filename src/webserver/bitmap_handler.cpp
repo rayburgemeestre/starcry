@@ -7,6 +7,7 @@
 #include "webserver.h"
 
 #include "data/frame_request.hpp"
+#include "data/video_request.hpp"
 #include "nlohmann/json.hpp"
 #include "util/logger.h"
 
@@ -37,20 +38,38 @@ void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
     selected_ids = json["selected"].get<std::vector<int64_t>>();
   }
   if (json["filename"].is_string() && json["frame"].is_number_integer()) {
-    auto req = std::make_shared<data::frame_request>(json["filename"], json["frame"], num_chunks);
-    req->set_websocket(con);
-    req->enable_raw_bitmap();
-    req->set_selected_ids(selected_ids);
-    if (sc->get_viewpoint().raw) {
-      req->enable_raw_image();
+    if (!json["video"].is_boolean() || !bool(json["video"])) {
+      auto req = std::make_shared<data::frame_request>(json["filename"], json["frame"], num_chunks);
+      req->set_websocket(con);
+      req->enable_raw_bitmap();
+      req->set_selected_ids(selected_ids);
+      if (sc->get_viewpoint().raw) {
+        req->enable_raw_image();
+      }
+      if (sc->get_viewpoint().preview) {
+        req->set_preview_mode();
+      }
+      if (sc->get_viewpoint().labels) {
+        req->enable_metadata_objects();
+      }
+      sc->add_image_command(req);
+    } else {
+      auto req = std::make_shared<data::video_request>(
+          json["filename"], sc->options().output_file, num_chunks, size_t(json["frame"]));
+      req->enable_compressed_video();
+      req->set_websocket(con);
+      // req->set_selected_ids(selected_ids);
+      if (sc->get_viewpoint().raw) {
+        // req->enable_raw_video();
+      }
+      if (sc->get_viewpoint().preview) {
+        req->set_preview_mode();
+      }
+      if (sc->get_viewpoint().labels) {
+        // req->enable_metadata_objects();
+      }
+      sc->add_video_command(req);
     }
-    if (sc->get_viewpoint().preview) {
-      req->set_preview_mode();
-    }
-    if (sc->get_viewpoint().labels) {
-      req->enable_metadata_objects();
-    }
-    sc->add_image_command(req);
   }
 }
 
@@ -63,5 +82,11 @@ void BitmapHandler::callback(seasocks::WebSocket *recipient, std::string s, uint
     memcpy(ptr, &width, sizeof(width));
     memcpy(ptr + sizeof(uint32_t), &height, sizeof(height));
     recipient->send((const uint8_t *)s.c_str(), s.size() * sizeof(uint8_t));
+  }
+}
+
+void BitmapHandler::callback(seasocks::WebSocket *recipient) {
+  if (_cons.find(recipient) != _cons.end()) {
+    recipient->send(nullptr, 0);
   }
 }

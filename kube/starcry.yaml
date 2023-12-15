@@ -34,9 +34,10 @@ spec:
         command: ["/starcry"]
         #args: ["-i", "--notty"]
         # remote workers, seems broken right now.
-        #args: ["-i", "-t", "0", "-c", "8", "--stdout", "--server", "tcp://redis:6379", "input/test.js"]
+        # let's try again...
+        args: ["-i", "-t", "0", "-c", "8", "--stdout", "--server", "tcp://redis:6379", "input/demo.js"]
         # local workers.
-        args: ["-i", "-t", "4", "-c", "16", "--stdout", "input/web.js"]
+        # args: ["-i", "-t", "4", "-c", "16", "--stdout", "input/web.js"]
         workingDir: /workdir
         imagePullPolicy: Always
         ports:

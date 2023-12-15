@@ -82,6 +82,16 @@
       style="width: 100%"
       >Zoom in to cursor</q-btn
     >
+    <br />
+    <br />
+    <hr />
+    <q-btn
+      :loading="bitmap_store.loading"
+      color="secondary"
+      @click="render_current_video"
+      style="width: 100%"
+      >Render video</q-btn
+    >
   </div>
 </template>
 
@@ -200,6 +210,16 @@ export default defineComponent({
           // random frame between 1 and 150
           frame: parseInt(script_store.frame),
           // viewpoint_settings: viewpoint_settings,
+          num_chunks: parseInt(script_store.num_chunks),
+          selected: script_store.selected,
+        });
+      },
+      render_current_video: function () {
+        bitmap_store.loading = true;
+        bitmap_store.outbox.push({
+          filename: script_store.filename,
+          frame: 0,
+          video: true,
           num_chunks: parseInt(script_store.num_chunks),
           selected: script_store.selected,
         });

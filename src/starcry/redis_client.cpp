@@ -51,6 +51,7 @@ void redis_client::run(bitmap_wrapper &bitmap, rendering_engine &engine) {
 
     auto sub = redis.subscriber();
     sub.on_message([&](const std::string &channel, const std::string &msg) {
+      logger(DEBUG) << "msg on channel " << channel << std::endl;
       // split msg into two parts: msg_type and data
       auto pos = msg.find(' ');
       auto msg_type = msg.substr(0, pos);

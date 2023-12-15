@@ -287,6 +287,9 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       if (!ret) break;
     }
     std::cout << std::endl;
+    if (v.client() != nullptr) {
+      return;  // prevent termination of queues
+    }
   } else if (const auto &instruction = std::dynamic_pointer_cast<frame_instruction>(cmd_def)) {
     metrics_->clear();
 
@@ -359,6 +362,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   } else {
     logger(WARNING) << "No video or frame instruction provided." << std::endl;
   }
+  logger(DEBUG) << "check for termination" << std::endl;
   cmds->check_terminate();
   jobs->check_terminate();
 }
@@ -534,7 +538,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   // auto type = job_msg->original_job_message->original_instruction->type2;
   bool finished = false;
   auto &job = *job_msg->original_job_message->job;  // this will allocate a lot of memory if copied
-  auto job_client = f ? f->client() : nullptr;
+  auto job_client = f ? f->client() : v->client();
   if (options_.level != log_level::silent) {
     const auto frame = job.job_number == std::numeric_limits<size_t>::max() ? 0 : job.job_number;
     static size_t prev_frame = 0;
@@ -731,6 +735,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
             height = chunk->height;
 
             last_frame = chunk->original_job_message->job->last_frame;
+            if (last_frame) finished = true;
             frame_number = chunk->original_job_message->job->frame_number;
           }
 
@@ -767,27 +772,31 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       return false;
     };
 
-    if (options().interactive) {
+    // videos have to be explicit about each frame one by one in the correct order
+    if (try_and_call(current_frame)) {
+      current_frame++;
+    }
+    // individual pictures (-f) don't need to be, and can use this sentinel 'max' value.
+    else if (!try_and_call(std::numeric_limits<uint32_t>::max())) {
       flag = false;
-      for (const auto &frame : buffered_frames) {
-        if (try_and_call(frame.first)) {
-          flag = true;
-          break;  // iterator is invalidated potentially
-        }
-      }
-    } else {
-      // videos have to be explicit about each frame one by one in the correct order
-      if (try_and_call(current_frame)) {
-        current_frame++;
-      }
-      // individual pictures (-f) don't need to be, and can use this sentinel 'max' value.
-      else if (!try_and_call(std::numeric_limits<uint32_t>::max())) {
-        flag = false;
-      }
     }
   }
   if (finished && webserv) {
-    webserv->stop();
+    if (!options().interactive) {
+      webserv->stop();
+    } else if (v && job_client) {
+      auto fun = [&](std::shared_ptr<BitmapHandler> bmp_handler, seasocks::WebSocket *job_client) {
+        // notifies client we're done w/o any data
+        bmp_handler->callback(job_client);
+      };
+      if (webserv) {
+        webserv->execute_bitmap(
+            [&fun, job_client](std::shared_ptr<BitmapHandler> bmp_handler, std::shared_ptr<render_msg> job_msg) {
+              fun(bmp_handler, job_client);
+            },
+            job_msg);
+      }
+    }
   }
 }
 
