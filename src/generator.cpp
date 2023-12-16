@@ -10,14 +10,13 @@
 #include <sys/prctl.h>
 #include <cmath>
 #include <memory>
-#include <numeric>
-#include <set>
 
 #include "v8pp/module.hpp"
 
 #include "interpreter/abort_exception.hpp"
 #include "interpreter/fast_forwarder.hpp"
 #include "scripting.h"
+#include "core/delayed_exit.hpp"
 #include "starcry/metrics.h"
 #include "util/logger.h"
 #include "util/math.h"
@@ -260,6 +259,7 @@ bool generator::generate_frame() {
 }
 
 bool generator::_generate_frame() {
+  delayed_exit de(10);
   try {
     job->shapes.clear();
 

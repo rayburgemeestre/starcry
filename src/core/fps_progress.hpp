@@ -12,11 +12,9 @@
 #include <mutex>
 #include <thread>
 
-#include "util/a.hpp"
 #include "util/logger.h"
 
 class fps_progress {
-private:
   std::chrono::high_resolution_clock::time_point start;
   std::chrono::high_resolution_clock::time_point last_update;
   std::mutex mut;

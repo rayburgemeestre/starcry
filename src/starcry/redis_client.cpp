@@ -14,6 +14,7 @@
 #include "starcry.h"
 #include "util/image_utils.h"
 #include "util/logger.h"
+#include "core/delayed_exit.hpp"
 
 #include <fmt/core.h>
 #include <linux/prctl.h>
@@ -90,7 +91,11 @@ void redis_client::run(bitmap_wrapper &bitmap, rendering_engine &engine) {
               NULL,
               NULL);
 
-        sc.render_job(getpid(), engine, job, bmp, settings);
+        {
+          delayed_exit de(10);
+          sc.render_job(getpid(), engine, job, bmp, settings);
+        }
+
         data::pixel_data dat;
         if (job.is_raw) {
           dat.pixels_raw = bmp.pixels();
