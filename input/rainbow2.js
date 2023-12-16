@@ -1,4 +1,4 @@
-_ = {
+{
   'gradients': {
     'red': [
       {'position': 0, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
@@ -23,7 +23,7 @@ _ = {
         this.radiussize += elapsed * 100;
         // this.opacity -= elapsed / 10;
         // if (this.opacity < 0) this.opacity = 0;
-        if (this.radius !== 1 && this.radiussize > 200 * Math.random()) {
+        if (this.radius !== 1 && this.radiussize > 200 * rand()) {
           for (let n = 3, i = 0; i < n; i++) {
             let angle = ((360 / n) * i) - 45;
             let vel = angled_velocity(angle);
