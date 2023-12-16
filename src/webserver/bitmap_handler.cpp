@@ -38,6 +38,7 @@ void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
     selected_ids = json["selected"].get<std::vector<int64_t>>();
   }
   if (json["filename"].is_string() && json["frame"].is_number_integer()) {
+
     if (!json["video"].is_boolean() || !bool(json["video"])) {
       auto req = std::make_shared<data::frame_request>(json["filename"], json["frame"], num_chunks);
       req->set_websocket(con);
@@ -54,8 +55,11 @@ void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
       }
       sc->add_image_command(req);
     } else {
+      const int frame = size_t(json["frame"]);
+      const int width = json["width"].is_number_integer() ? int(json["width"]) : 1920;
+      const int height = json["height"].is_number_integer() ? int(json["height"]) : 1080;
       auto req = std::make_shared<data::video_request>(
-          json["filename"], sc->options().output_file, num_chunks, size_t(json["frame"]));
+          json["filename"], sc->options().output_file, num_chunks, frame, width, height);
       req->enable_compressed_video();
       req->set_websocket(con);
       // req->set_selected_ids(selected_ids);

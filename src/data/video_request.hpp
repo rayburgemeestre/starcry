@@ -21,13 +21,17 @@ class video_request {
   bool raw_video_ = false;         // raw video (individual EXR frames)
 
   bool preview_ = false;
+  int width_ = 1920;
+  int height_ = 1080;
 
 public:
-  video_request(std::string script, std::string output_file, int num_chunks, size_t offset_frames)
+  video_request(std::string script, std::string output_file, int num_chunks, size_t offset_frames, int width, int height)
       : script_(std::move(script)),
         output_filename_(output_file),
         num_chunks_(num_chunks),
-        offset_frames_(offset_frames) {}
+        offset_frames_(offset_frames),
+        width_(width),
+        height_(height) {}
 
   void set_output_file(const std::string& new_output_file) {
     output_filename_ = new_output_file;
@@ -70,6 +74,12 @@ public:
   }
   bool preview() const {
     return preview_;
+  }
+  const int width() const {
+    return width_;
+  }
+  const int height() const {
+    return height_;
   }
 };
 }  // namespace data

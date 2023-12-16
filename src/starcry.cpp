@@ -227,8 +227,8 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
                 options_.rand_seed,
                 v.preview(),
                 features_.caching,
-                viewpoint.canvas_w,
-                viewpoint.canvas_h,
+                instruction->video().width(),
+                instruction->video().height(),
                 viewpoint.scale);
     } else {
       gen->init(v.script(), options_.rand_seed, v.preview(), features_.caching);
@@ -560,6 +560,21 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
                      std::vector<uint32_t> &pixels,
                      std::vector<data::color> &pixels_raw,
                      bool last_frame) {
+
+    const auto add_frame_to_streamer = [&]() {
+      if (gui) {
+        gui->add_frame(width, height, pixels);
+      }
+      if (framer) {
+        framer->add_frame(pixels);
+        if (last_frame) {
+          for (int i = 0; i < 50; i++) {
+            framer->add_frame(pixels);
+          }
+        }
+      }
+    };
+
     if (job_client == nullptr) {
       // get pixels from raw pixels for the ffmpeg video
       if (pixels.empty() && !pixels_raw.empty()) {
@@ -572,19 +587,12 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       } else {
         pixels_vec_insert_checkers_background(pixels, width, height);
       }
-      if (gui) {
-        gui->add_frame(width, height, pixels);
-      }
-      if (framer) {
-        framer->add_frame(pixels);
-        if (last_frame) {
-          for (int i = 0; i < 50; i++) {
-            framer->add_frame(pixels);
-          }
-        }
-      }
+      add_frame_to_streamer();
       return last_frame;
     }
+
+    add_frame_to_streamer();
+
     std::swap(job_msg->pixels, pixels);
     std::swap(job_msg->pixels_raw, pixels_raw);
 

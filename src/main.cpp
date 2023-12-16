@@ -168,7 +168,7 @@ public:
           sc.add_image_command(req);
         } else {
           auto req = std::make_shared<data::video_request>(
-              options.script_file, options.output_file, options.num_chunks, options.frame_offset);
+              options.script_file, options.output_file, options.num_chunks, options.frame_offset, sc.get_viewpoint().canvas_w, sc.get_viewpoint().canvas_h);
           req->enable_compressed_video();
           if (is_raw) {
             req->enable_raw_video();
