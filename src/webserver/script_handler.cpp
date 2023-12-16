@@ -88,6 +88,10 @@ void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
     ss << "4" << result.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace);
 
     con->send(ss.str());
+  } else if (input == "terminate") {
+    logger(DEBUG) << "ScriptHandler::onData - " << input << std::endl;
+    con->send("5");
+    std::exit(1);
   }
 }
 

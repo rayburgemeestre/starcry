@@ -75,6 +75,11 @@
       label="Auto Render"
       color="#990000"
     />
+    <hr/>
+    <q-btn color="secondary" @click="restart_server" style="width: 100%"
+    >Restart server</q-btn
+    >
+    <br/>
     <br />
     <q-btn
       color="secondary"
@@ -208,6 +213,9 @@ export default defineComponent({
       script_store,
       reset_values: function () {
         viewpoint_store_raw.reset();
+      },
+      restart_server: function () {
+        script_store.restart_server_requested_by_user++;
       },
       render_current_frame: function () {
         bitmap_store.loading = true;

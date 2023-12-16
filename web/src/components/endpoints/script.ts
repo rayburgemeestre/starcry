@@ -57,6 +57,8 @@ export function create_script_endpoint() {
         const tree = create_tree(buffer.slice(1));
         sort_tree(tree);
         files_store.simple = tree;
+      } else if (buffer[0] === '5') {
+        console.log('server terminated.');
       }
     },
     (_) => {
@@ -87,6 +89,14 @@ export function create_script_endpoint() {
     () => {
       self.send('open ' + files_store.selected);
       script_store.filename = files_store.selected;
+    }
+  );
+
+  watch(
+    () => script_store.restart_server_requested_by_user,
+    () => {
+      // trust kubernetes to restart the pod
+      self.send('terminate');
     }
   );
 

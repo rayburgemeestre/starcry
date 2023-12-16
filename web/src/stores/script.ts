@@ -30,6 +30,7 @@ export const useScriptStore = defineStore('script', {
     render_requested_by_user: ref(0), // ??
     render_requested_by_user_v2: ref(0),
     render_completed_by_server: ref(0),
+    restart_server_requested_by_user: ref(0),
     texture_size_updated_by_server: ref(0),
     re_render_editor_sidepane: ref(0),
   }),
