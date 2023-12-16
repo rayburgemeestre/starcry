@@ -25,7 +25,8 @@ class video_request {
   int height_ = 1080;
 
 public:
-  video_request(std::string script, std::string output_file, int num_chunks, size_t offset_frames, int width, int height)
+  video_request(
+      std::string script, std::string output_file, int num_chunks, size_t offset_frames, int width, int height)
       : script_(std::move(script)),
         output_filename_(output_file),
         num_chunks_(num_chunks),

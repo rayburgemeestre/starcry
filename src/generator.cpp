@@ -13,10 +13,10 @@
 
 #include "v8pp/module.hpp"
 
+#include "core/delayed_exit.hpp"
 #include "interpreter/abort_exception.hpp"
 #include "interpreter/fast_forwarder.hpp"
 #include "scripting.h"
-#include "core/delayed_exit.hpp"
 #include "starcry/metrics.h"
 #include "util/logger.h"
 #include "util/math.h"

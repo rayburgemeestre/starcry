@@ -75,11 +75,11 @@
       label="Auto Render"
       color="#990000"
     />
-    <hr/>
+    <hr />
     <q-btn color="secondary" @click="restart_server" style="width: 100%"
-    >Restart server</q-btn
+      >Restart server</q-btn
     >
-    <br/>
+    <br />
     <br />
     <q-btn
       color="secondary"

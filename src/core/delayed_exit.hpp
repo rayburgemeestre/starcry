@@ -5,10 +5,10 @@
  */
 
 #pragma once
-#include <thread>
 #include <chrono>
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
+#include <thread>
 
 class delayed_exit {
 public:
@@ -29,7 +29,9 @@ public:
 
   void wait_and_exit() {
     std::unique_lock<std::mutex> lock(mtx);
-    if (!cv.wait_for(lock, std::chrono::seconds(timeout_seconds), [this]() { return job_done; })) {
+    if (!cv.wait_for(lock, std::chrono::seconds(timeout_seconds), [this]() {
+          return job_done;
+        })) {
       std::exit(2);
     }
   }

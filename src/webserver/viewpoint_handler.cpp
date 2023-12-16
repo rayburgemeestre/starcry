@@ -57,8 +57,7 @@ void ViewPointHandler::onData(seasocks::WebSocket *con, const char *data) {
       sc->set_viewpoint(vp);
       con->send(json.dump());
     }
-  }
-  catch (nlohmann::detail::type_error& e) {
+  } catch (nlohmann::detail::type_error &e) {
     logger(WARNING) << "json exception: " << e.what() << std::endl;
   }
 }

@@ -38,7 +38,6 @@ void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
     selected_ids = json["selected"].get<std::vector<int64_t>>();
   }
   if (json["filename"].is_string() && json["frame"].is_number_integer()) {
-
     if (!json["video"].is_boolean() || !bool(json["video"])) {
       auto req = std::make_shared<data::frame_request>(json["filename"], json["frame"], num_chunks);
       req->set_websocket(con);

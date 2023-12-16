@@ -560,7 +560,6 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
                      std::vector<uint32_t> &pixels,
                      std::vector<data::color> &pixels_raw,
                      bool last_frame) {
-
     const auto add_frame_to_streamer = [&]() {
       if (gui) {
         gui->add_frame(width, height, pixels);

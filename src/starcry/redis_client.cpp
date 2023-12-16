@@ -8,13 +8,13 @@
 
 #include "bitmap_wrapper.hpp"
 #include "cereal/archives/binary.hpp"
+#include "core/delayed_exit.hpp"
 #include "data/job.hpp"
 #include "data/pixels.hpp"
 #include "data/settings.hpp"
 #include "starcry.h"
 #include "util/image_utils.h"
 #include "util/logger.h"
-#include "core/delayed_exit.hpp"
 
 #include <fmt/core.h>
 #include <linux/prctl.h>
