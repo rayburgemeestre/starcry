@@ -28,33 +28,38 @@ void ViewPointHandler::onData(seasocks::WebSocket *con, const char *data) {
   if (link(input, con)) return;
   auto json = nlohmann::json::parse(input);
   logger(DEBUG) << "ViewPointHandler::onData - " << input << std::endl;
-  if (json["operation"] == "read") {
-    nlohmann::json response;
-    const auto &vp = sc->get_viewpoint();
-    response["scale"] = vp.scale;
-    response["offset_x"] = vp.offset_x;
-    response["offset_y"] = vp.offset_y;
-    response["raw"] = vp.raw;
-    response["preview"] = vp.preview;
-    response["save"] = vp.save;
-    response["labels"] = vp.labels;
-    response["caching"] = vp.caching;
-    response["debug"] = vp.debug;
-    con->send(response.dump());
-  } else if (json["operation"] == "set") {
-    data::viewpoint vp{json["scale"],
-                       json["offset_x"],
-                       json["offset_y"],
-                       json["raw"],
-                       json["preview"],
-                       json["save"],
-                       json["labels"],
-                       json["caching"],
-                       json["debug"],
-                       json["canvas_w"],
-                       json["canvas_h"]};
-    sc->set_viewpoint(vp);
-    con->send(json.dump());
+  try {
+    if (json["operation"] == "read") {
+      nlohmann::json response;
+      const auto &vp = sc->get_viewpoint();
+      response["scale"] = vp.scale;
+      response["offset_x"] = vp.offset_x;
+      response["offset_y"] = vp.offset_y;
+      response["raw"] = vp.raw;
+      response["preview"] = vp.preview;
+      response["save"] = vp.save;
+      response["labels"] = vp.labels;
+      response["caching"] = vp.caching;
+      response["debug"] = vp.debug;
+      con->send(response.dump());
+    } else if (json["operation"] == "set") {
+      data::viewpoint vp{json["scale"],
+                         json["offset_x"],
+                         json["offset_y"],
+                         json["raw"],
+                         json["preview"],
+                         json["save"],
+                         json["labels"],
+                         json["caching"],
+                         json["debug"],
+                         json["canvas_w"],
+                         json["canvas_h"]};
+      sc->set_viewpoint(vp);
+      con->send(json.dump());
+    }
+  }
+  catch (nlohmann::detail::type_error& e) {
+    logger(WARNING) << "json exception: " << e.what() << std::endl;
   }
 }
 
