@@ -85,6 +85,8 @@
     <br />
     <br />
     <hr />
+    <q-input v-model.number="video_width" label="video width" />
+    <q-input v-model.number="video_height" label="video height" />
     <q-btn
       :loading="bitmap_store.loading"
       color="secondary"
@@ -192,11 +194,16 @@ export default defineComponent({
       }
     );
 
+    let video_width = ref(1920);
+    let video_height = ref(1080);
+
     const obj = {
       bitmap_store,
       rows,
       columns,
       viewpoint_store_raw,
+      video_width,
+      video_height,
 
       script_store,
       reset_values: function () {
@@ -219,8 +226,10 @@ export default defineComponent({
         bitmap_store.outbox.push({
           filename: script_store.filename,
           frame: 0,
-          video: true,
           num_chunks: parseInt(script_store.num_chunks),
+          video: true,
+          width: video_width,
+          height: video_height,
           selected: script_store.selected,
         });
       },
