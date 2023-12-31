@@ -5,6 +5,7 @@
  */
 #include "starcry.h"
 #include "util/logger.h"
+#include "util/threadname.hpp"
 #include "webserver.h"
 
 #include "nlohmann/json.hpp"
@@ -13,20 +14,22 @@ using json = nlohmann::json;
 #include <filesystem>
 #include <sstream>
 
-ScriptHandler::ScriptHandler(starcry *sc) : sc(sc) {}
+ScriptHandler::ScriptHandler(starcry* sc) : sc(sc) {
+  set_thread_name("ScriptHandler");
+}
 
-void ScriptHandler::set_script(const std::string &script) {
+void ScriptHandler::set_script(const std::string& script) {
   script_ = script;
 }
 
-void ScriptHandler::onConnect(seasocks::WebSocket *con) {
+void ScriptHandler::onConnect(seasocks::WebSocket* con) {
   _cons.insert(con);
   std::ostringstream ss;
   ss << "1" << script_;
   con->send(ss.str());
 }
 
-void ScriptHandler::onDisconnect(seasocks::WebSocket *con) {
+void ScriptHandler::onDisconnect(seasocks::WebSocket* con) {
   _cons.erase(con);
   unlink(con);
 }
@@ -40,7 +43,7 @@ std::time_t to_time_t(TP tp) {
   return system_clock::to_time_t(sctp);
 }
 
-void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
+void ScriptHandler::onData(seasocks::WebSocket* con, const char* data) {
   std::string input(data);
   if (link(input, con)) return;
   const auto find = input.find(" ");
@@ -65,7 +68,7 @@ void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
     logger(DEBUG) << "ScriptHandler::onData - " << input << std::endl;
     json result = {};
     using recursive_directory_iterator = std::filesystem::recursive_directory_iterator;
-    for (const auto &entry : recursive_directory_iterator("input")) {
+    for (const auto& entry : recursive_directory_iterator("input")) {
       if (!entry.is_regular_file()) continue;
       const auto data = std::string(entry.path());
       const auto file_size = std::to_string(entry.file_size());
@@ -95,7 +98,7 @@ void ScriptHandler::onData(seasocks::WebSocket *con, const char *data) {
   }
 }
 
-void ScriptHandler::callback(seasocks::WebSocket *recipient, std::string s) {
+void ScriptHandler::callback(seasocks::WebSocket* recipient, std::string s) {
   if (_cons.find(recipient) != _cons.end()) {
     recipient->send(s);
   }

@@ -214,11 +214,15 @@ publish:  ## build from scratch starcry, web, client, docker image, push dockerh
 	make docs || true  # second time hopefully better...
 	make dockerize
 	make push
+	make kube
+	echo done
+
+.PHONY: kube
+kube:
 	kubectl apply -f kube/starcry.yaml
 	kubectl rollout restart deployment -n starcry starcry
 	kubectl rollout restart deployment -n starcry starcry-workers
 	kubectl rollout restart deployment -n starcry redis
-	echo done
 
 push:
 	$(docker_exe) push docker.io/rayburgemeestre/starcry:v`cat .version` || true

@@ -30,6 +30,7 @@
 #include "starcry/metrics.h"
 #include "starcry/redis_client.h"
 #include "starcry/redis_server.h"
+#include "util/threadname.hpp"
 
 // TODO: re-organize this somehow
 #include <sys/prctl.h>
@@ -48,7 +49,7 @@
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
 
-starcry::starcry(starcry_options &options, std::shared_ptr<v8_wrapper> &context)
+starcry::starcry(starcry_options& options, std::shared_ptr<v8_wrapper>& context)
     : context(context),
       options_(options),
       bitmaps({}),
@@ -112,29 +113,30 @@ void starcry::configure_inotify() {
       .onEvents(events, handleNotification)
       .onUnexpectedEvent(handleUnexpectedNotification);
   notifier_thread = std::thread([&]() {
+    set_thread_name("notifier");
     notifier->run();
   });
 }
 
-feature_settings &starcry::features() {
+feature_settings& starcry::features() {
   return features_;
 }
 
-starcry_options &starcry::options() {
+starcry_options& starcry::options() {
   return options_;
 }
 
-const std::string &starcry::script() {
+const std::string& starcry::script() {
   return script_;
 }
 
-void starcry::set_script(const std::string &script) {
+void starcry::set_script(const std::string& script) {
   script_ = script;
   if (metrics_) metrics_->set_script(script_);
   if (webserv) webserv->set_script(script_);
 }
 
-void starcry::update_script_contents(const std::string &contents) {
+void starcry::update_script_contents(const std::string& contents) {
   std::ofstream out(script_);
   out << contents;
   out.close();
@@ -167,6 +169,7 @@ void starcry::add_reload_command(std::shared_ptr<data::reload_request> req) {
 void starcry::add_image_command(std::shared_ptr<data::frame_request> req) {
   cmds->push(std::make_shared<frame_instruction>(req));
   pe.run([=, this]() {
+    set_thread_name("periodic_exec");
     if (webserv) {
       webserv->send_stats(system->get_stats());
       webserv->send_metrics(metrics_->to_json());
@@ -179,11 +182,11 @@ void starcry::add_video_command(std::shared_ptr<data::video_request> req) {
 }
 
 void starcry::render_job(size_t thread_num,
-                         rendering_engine &engine,
-                         const data::job &job,
-                         image &bmp,
-                         const data::settings &settings,
-                         const std::vector<int64_t> &selected_ids) {
+                         rendering_engine& engine,
+                         const data::job& job,
+                         image& bmp,
+                         const data::settings& settings,
+                         const std::vector<int64_t>& selected_ids) {
   prctl(PR_SET_NAME, fmt::format("sc {} {}/{}", job.frame_number, job.chunk, job.num_chunks).c_str(), NULL, NULL, NULL);
 
   bmp = engine.render(thread_num,
@@ -216,12 +219,12 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     gen = std::make_shared<interpreter::generator>(metrics_, context, options().generator_opts);
   }
 
-  if (const auto &instruction = std::dynamic_pointer_cast<reload_instruction>(cmd_def)) {
+  if (const auto& instruction = std::dynamic_pointer_cast<reload_instruction>(cmd_def)) {
     gen->init(instruction->req().script(), options_.rand_seed, options_.preview, features_.caching);
   }
 
-  if (const auto &instruction = std::dynamic_pointer_cast<video_instruction>(cmd_def)) {
-    auto &v = instruction->video_ref();
+  if (const auto& instruction = std::dynamic_pointer_cast<video_instruction>(cmd_def)) {
+    auto& v = instruction->video_ref();
     if (viewpoint.canvas_w && viewpoint.canvas_h) {
       gen->init(v.script(),
                 options_.rand_seed,
@@ -252,7 +255,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
             "output_seed_{}_{}x{}-{}.h264", gen->get_seed(), (int)gen->width(), (int)gen->height(), scriptname));
       }
       framer = std::make_unique<frame_streamer>(v.output_file(), stream_mode);
-      framer->set_log_callback([&](int level, const std::string &line) {
+      framer->set_log_callback([&](int level, const std::string& line) {
         metrics_->log_callback(level, line);
       });
     }
@@ -290,10 +293,10 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     if (v.client() != nullptr) {
       return;  // prevent termination of queues
     }
-  } else if (const auto &instruction = std::dynamic_pointer_cast<frame_instruction>(cmd_def)) {
+  } else if (const auto& instruction = std::dynamic_pointer_cast<frame_instruction>(cmd_def)) {
     metrics_->clear();
 
-    const auto &f = instruction->frame();
+    const auto& f = instruction->frame();
 
     try {
       if (viewpoint.canvas_w && viewpoint.canvas_h) {
@@ -307,7 +310,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       } else {
         gen->init(f.script(), options_.rand_seed, f.preview(), features_.caching);
       }
-    } catch (std::runtime_error &err) {
+    } catch (std::runtime_error& err) {
       logger(DEBUG) << "err = " << err.what() << std::endl;
       return;
     }
@@ -356,7 +359,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     if (f.client() != nullptr) {
       return;  // prevent termination of queues
     }
-  } else if (const auto &instruction = std::dynamic_pointer_cast<reload_instruction>(cmd_def)) {
+  } else if (const auto& instruction = std::dynamic_pointer_cast<reload_instruction>(cmd_def)) {
     logger(DEBUG) << "Reloaded." << std::endl;
     return;  // prevent termination of queues
   } else {
@@ -369,7 +372,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
 
 // MARK1 render job using renderer and transform into render_msg
 std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_message> job_msg) {
-  auto &job = *job_msg->job;
+  auto& job = *job_msg->job;
 
   if (!options_.render) {
     // Be careful, below is a stub message, note the zero width and height below, since we don't
@@ -383,7 +386,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   }
 
   // render
-  auto &bmp = bitmaps[i]->get(job.width, job.height);
+  auto& bmp = bitmaps[i]->get(job.width, job.height);
   data::settings settings = gen->settings();
   if (job.job_number == std::numeric_limits<uint32_t>::max()) {
     metrics_->set_frame_mode();
@@ -394,7 +397,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 
   const std::vector<int64_t> selected_ids = ([&]() {
     if (job_msg && job_msg->original_instruction) {
-      if (const auto &instruction = std::dynamic_pointer_cast<frame_instruction>(job_msg->original_instruction)) {
+      if (const auto& instruction = std::dynamic_pointer_cast<frame_instruction>(job_msg->original_instruction)) {
         if (instruction->frame_ptr()) {
           return instruction->frame_ptr()->selected_ids();
         }
@@ -417,8 +420,8 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   }
 
   // handle videos
-  if (const auto &instruction = std::dynamic_pointer_cast<video_instruction>(job_msg->original_instruction)) {
-    const auto &v = instruction->video();
+  if (const auto& instruction = std::dynamic_pointer_cast<video_instruction>(job_msg->original_instruction)) {
+    const auto& v = instruction->video();
     auto transfer_pixels = pixels_vec_to_pixel_data(bmp.pixels(), gen->settings().dithering);
 
     auto msg = std::make_shared<render_msg>(job_msg);
@@ -430,8 +433,8 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   }
 
   // handle frames
-  if (const auto &instruction = std::dynamic_pointer_cast<frame_instruction>(job_msg->original_instruction)) {
-    const auto &f = instruction->frame();
+  if (const auto& instruction = std::dynamic_pointer_cast<frame_instruction>(job_msg->original_instruction)) {
+    const auto& f = instruction->frame();
     auto msg = std::make_shared<render_msg>(job_msg);
     job.job_number = std::numeric_limits<uint32_t>::max();
 
@@ -466,19 +469,19 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 
     if (f.metadata_objects() || get_viewpoint().labels) {
       json shapes_json = {};
-      auto &shapes = job_msg->job->shapes;
+      auto& shapes = job_msg->job->shapes;
       size_t index = 0;
       if (!shapes.empty()) {
 #define DEBUG_NUM_SHAPES
 #ifdef DEBUG_NUM_SHAPES
         std::unordered_map<int64_t, int64_t> nums;
         for (size_t i = 0; i < shapes.size(); i++) {
-          for (const auto &shape : shapes[i]) {
+          for (const auto& shape : shapes[i]) {
             nums[shape.unique_id]++;
           }
         }
 #endif
-        for (const auto &shape : shapes[shapes.size() - 1]) {
+        for (const auto& shape : shapes[shapes.size() - 1]) {
           // convert shape_type enum to string
           std::map<std::string, nlohmann::json> f = {
               {"type", data::shape_type_to_string(shape.type)},
@@ -530,14 +533,14 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   auto instr = job_msg->original_job_message->original_instruction;
   std::shared_ptr<data::frame_request> f = nullptr;
   std::shared_ptr<data::video_request> v = nullptr;
-  if (const auto &instruction = std::dynamic_pointer_cast<video_instruction>(instr)) {
+  if (const auto& instruction = std::dynamic_pointer_cast<video_instruction>(instr)) {
     v = instruction->video_ptr();
-  } else if (const auto &instruction = std::dynamic_pointer_cast<frame_instruction>(instr)) {
+  } else if (const auto& instruction = std::dynamic_pointer_cast<frame_instruction>(instr)) {
     f = instruction->frame_ptr();
   }
   // auto type = job_msg->original_job_message->original_instruction->type2;
   bool finished = false;
-  auto &job = *job_msg->original_job_message->job;  // this will allocate a lot of memory if copied
+  auto& job = *job_msg->original_job_message->job;  // this will allocate a lot of memory if copied
   auto job_client = f ? f->client() : v->client();
   if (options_.level != log_level::silent) {
     const auto frame = job.job_number == std::numeric_limits<size_t>::max() ? 0 : job.job_number;
@@ -557,8 +560,8 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   // COZ_PROGRESS;
   auto process = [&](size_t width,
                      size_t height,
-                     std::vector<uint32_t> &pixels,
-                     std::vector<data::color> &pixels_raw,
+                     std::vector<uint32_t>& pixels,
+                     std::vector<data::color>& pixels_raw,
                      bool last_frame) {
     const auto add_frame_to_streamer = [&]() {
       if (gui) {
@@ -598,22 +601,22 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
     if (job_client != nullptr && f && (f->raw_bitmap() || f->raw_image())) {
       auto fun = [&](std::shared_ptr<BitmapHandler> bmp_handler,
                      std::shared_ptr<render_msg> job_msg,
-                     seasocks::WebSocket *job_client,
+                     seasocks::WebSocket* job_client,
                      uint32_t width,
                      uint32_t height) {
         std::string buffer;
         if (job_msg->pixels.size())
-          for (const auto &i : job_msg->pixels) {
-            buffer.append((char *)&i, sizeof(i));
+          for (const auto& i : job_msg->pixels) {
+            buffer.append((char*)&i, sizeof(i));
           }
         else
-          for (const auto &i : job_msg->pixels_raw) {
+          for (const auto& i : job_msg->pixels_raw) {
             uint32_t pixel = 0;
             pixel |= (int(i.a * 255) << 24);
             pixel |= (int(i.b * 255) << 16);
             pixel |= (int(i.g * 255) << 8);
             pixel |= (int(i.r * 255) << 0);
-            buffer.append((char *)&pixel, sizeof(pixel));
+            buffer.append((char*)&pixel, sizeof(pixel));
           }
         bmp_handler->callback(job_client, buffer, width, height);
       };
@@ -635,7 +638,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
     if (job_client != nullptr && f && f->compressed_image()) {
       auto fun = [&](std::shared_ptr<ImageHandler> image_handler,
                      std::shared_ptr<render_msg> job_msg,
-                     seasocks::WebSocket *job_client,
+                     seasocks::WebSocket* job_client,
                      uint32_t width,
                      uint32_t height) {
         image_handler->callback(job_client, job_msg->buffer);
@@ -654,7 +657,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       job_msg->ID = webserv->get_client_id(job_client);
       auto fun = [&](std::shared_ptr<ObjectsHandler> objects_handler,
                      std::shared_ptr<render_msg> job_msg,
-                     seasocks::WebSocket *job_client,
+                     seasocks::WebSocket* job_client,
                      uint32_t width,
                      uint32_t height) {
         if (objects_handler->_links.contains(job_msg->ID)) {
@@ -675,7 +678,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
     if (job_client != nullptr && f && f->renderable_shapes()) {
       auto fun = [&](std::shared_ptr<ShapesHandler> shapes_handler,
                      std::shared_ptr<render_msg> job_msg,
-                     seasocks::WebSocket *job_client,
+                     seasocks::WebSocket* job_client,
                      uint32_t width,
                      uint32_t height) {
         shapes_handler->callback(job_client, job_msg->buffer);
@@ -706,7 +709,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
     const auto process_frame =
         [this, &process, &finished, &job](std::map<size_t, std::vector<std::shared_ptr<render_msg>>>::iterator pos) {
           // sort them first
-          std::sort(pos->second.begin(), pos->second.end(), [](const auto &lh, const auto &rh) {
+          std::sort(pos->second.begin(), pos->second.end(), [](const auto& lh, const auto& rh) {
             return lh->original_job_message->job->chunk < rh->original_job_message->job->chunk;
           });
 
@@ -720,16 +723,16 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
           size_t frame_number = 0;
 
           size_t reserve_size =
-              std::accumulate(pos->second.begin(), pos->second.end(), size_t(0), [](size_t size, auto &chunk) {
+              std::accumulate(pos->second.begin(), pos->second.end(), size_t(0), [](size_t size, auto& chunk) {
                 return chunk->pixels.size() + size;
               });
           size_t reserve_size2 =
-              std::accumulate(pos->second.begin(), pos->second.end(), size_t(0), [](size_t size, auto &chunk) {
+              std::accumulate(pos->second.begin(), pos->second.end(), size_t(0), [](size_t size, auto& chunk) {
                 return chunk->pixels_raw.size() + size;
               });
           pixels.reserve(reserve_size);
           pixels_raw.reserve(reserve_size2);
-          for (auto &chunk : pos->second) {
+          for (auto& chunk : pos->second) {
             pixels.insert(std::end(pixels), std::begin(chunk->pixels), std::end(chunk->pixels));
             pixels_raw.insert(std::end(pixels_raw), std::begin(chunk->pixels_raw), std::end(chunk->pixels_raw));
             chunk->pixels.clear();
@@ -792,7 +795,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
     if (!options().interactive) {
       webserv->stop();
     } else if (v && job_client) {
-      auto fun = [&](std::shared_ptr<BitmapHandler> bmp_handler, seasocks::WebSocket *job_client) {
+      auto fun = [&](std::shared_ptr<BitmapHandler> bmp_handler, seasocks::WebSocket* job_client) {
         // notifies client we're done w/o any data
         bmp_handler->callback(job_client);
       };
@@ -807,7 +810,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   }
 }
 
-void starcry::setup_server(const std::string &host) {
+void starcry::setup_server(const std::string& host) {
   if (options_.gui) gui = std::make_unique<sfml_window>();
 
   system->spawn_consumer<instruction>(
@@ -848,7 +851,7 @@ void starcry::run() {
   std::cout << std::endl;
 }
 
-void starcry::run_client(const std::string &host) {
+void starcry::run_client(const std::string& host) {
   redis_client redisclient(host, *this);
   rendering_engine engine;
   bitmap_wrapper bitmap;
@@ -856,10 +859,10 @@ void starcry::run_client(const std::string &host) {
   redisclient.run(bitmap, engine);
 }
 
-const data::viewpoint &starcry::get_viewpoint() const {
+const data::viewpoint& starcry::get_viewpoint() const {
   return viewpoint;
 }
 
-void starcry::set_viewpoint(data::viewpoint &vp) {
+void starcry::set_viewpoint(data::viewpoint& vp) {
   viewpoint = vp;
 }

@@ -67,7 +67,11 @@ export function create_viewpoint_endpoint() {
     () => viewpoint_store.viewpoint_send_needed,
     (n) => {
       if (!viewpoint_store.current_message) return;
-      self.send(viewpoint_store.current_message);
+      try {
+        self.send(viewpoint_store.current_message);
+      } catch (e) {
+        console.log('likely not connected, TODO: schedule retry for; ' + e);
+      }
     }
   );
   return self;

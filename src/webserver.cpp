@@ -11,6 +11,7 @@
 
 #include <filesystem>
 #include <memory>
+#include "util/threadname.hpp"
 
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
@@ -86,6 +87,7 @@ void webserver::run() {
   if (!std::filesystem::exists(str)) {
     str = "/workdir/web/webroot";
   }
+  set_thread_name("webserver");
   server->serve(str.c_str(), 18080);
 }
 

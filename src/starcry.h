@@ -7,7 +7,6 @@
 #pragma once
 
 #include <memory>
-#include <mutex>
 
 #include "image.hpp"
 #include "messages.hpp"

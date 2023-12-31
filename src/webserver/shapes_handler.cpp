@@ -6,20 +6,23 @@
 #include "data/frame_request.hpp"
 #include "starcry.h"
 #include "util/logger.h"
+#include "util/threadname.hpp"
 #include "webserver.h"
 
-ShapesHandler::ShapesHandler(starcry *sc) : sc(sc) {}
+ShapesHandler::ShapesHandler(starcry* sc) : sc(sc) {
+  set_thread_name("ShapesHandler");
+}
 
-void ShapesHandler::onConnect(seasocks::WebSocket *con) {
+void ShapesHandler::onConnect(seasocks::WebSocket* con) {
   _cons.insert(con);
 }
 
-void ShapesHandler::onDisconnect(seasocks::WebSocket *con) {
+void ShapesHandler::onDisconnect(seasocks::WebSocket* con) {
   _cons.erase(con);
   unlink(con);
 }
 
-void ShapesHandler::onData(seasocks::WebSocket *con, const char *data) {
+void ShapesHandler::onData(seasocks::WebSocket* con, const char* data) {
   std::string input(data);
   if (link(input, con)) return;
   auto find = input.find(" ");
@@ -37,7 +40,7 @@ void ShapesHandler::onData(seasocks::WebSocket *con, const char *data) {
   }
 }
 
-void ShapesHandler::callback(seasocks::WebSocket *recipient, std::string s) {
+void ShapesHandler::callback(seasocks::WebSocket* recipient, std::string s) {
   if (_cons.find(recipient) != _cons.end()) {
     recipient->send(s);
   }

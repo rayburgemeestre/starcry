@@ -6,20 +6,23 @@
 #include "data/frame_request.hpp"
 #include "starcry.h"
 #include "util/logger.h"
+#include "util/threadname.hpp"
 #include "webserver.h"
 
-ObjectsHandler::ObjectsHandler(starcry *sc) : sc(sc) {}
+ObjectsHandler::ObjectsHandler(starcry* sc) : sc(sc) {
+  set_thread_name("ObjectsHandler");
+}
 
-void ObjectsHandler::onConnect(seasocks::WebSocket *con) {
+void ObjectsHandler::onConnect(seasocks::WebSocket* con) {
   _cons.insert(con);
 }
 
-void ObjectsHandler::onDisconnect(seasocks::WebSocket *con) {
+void ObjectsHandler::onDisconnect(seasocks::WebSocket* con) {
   _cons.erase(con);
   unlink(con);
 }
 
-void ObjectsHandler::onData(seasocks::WebSocket *con, const char *data) {
+void ObjectsHandler::onData(seasocks::WebSocket* con, const char* data) {
   std::string input(data);
   if (link(input, con)) return;
   auto find = input.find(" ");
@@ -34,7 +37,7 @@ void ObjectsHandler::onData(seasocks::WebSocket *con, const char *data) {
   }
 }
 
-void ObjectsHandler::callback(seasocks::WebSocket *recipient, std::string s) {
+void ObjectsHandler::callback(seasocks::WebSocket* recipient, std::string s) {
   if (_cons.find(recipient) != _cons.end()) {
     recipient->send(s);
   }

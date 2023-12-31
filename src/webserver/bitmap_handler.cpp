@@ -10,21 +10,24 @@
 #include "data/video_request.hpp"
 #include "nlohmann/json.hpp"
 #include "util/logger.h"
+#include "util/threadname.hpp"
 
 using json = nlohmann::json;
 
-BitmapHandler::BitmapHandler(starcry *sc) : sc(sc) {}
+BitmapHandler::BitmapHandler(starcry* sc) : sc(sc) {
+  set_thread_name("BitmapHandler");
+}
 
-void BitmapHandler::onConnect(seasocks::WebSocket *con) {
+void BitmapHandler::onConnect(seasocks::WebSocket* con) {
   _cons.insert(con);
 }
 
-void BitmapHandler::onDisconnect(seasocks::WebSocket *con) {
+void BitmapHandler::onDisconnect(seasocks::WebSocket* con) {
   _cons.erase(con);
   unlink(con);
 }
 
-void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
+void BitmapHandler::onData(seasocks::WebSocket* con, const char* data) {
   std::string input(data);
   if (link(input, con)) return;
   logger(DEBUG) << "BitmapHandler::onData - " << input << std::endl;
@@ -76,19 +79,19 @@ void BitmapHandler::onData(seasocks::WebSocket *con, const char *data) {
   }
 }
 
-void BitmapHandler::callback(seasocks::WebSocket *recipient, std::string s, uint32_t width, uint32_t height) {
+void BitmapHandler::callback(seasocks::WebSocket* recipient, std::string s, uint32_t width, uint32_t height) {
   if (_cons.find(recipient) != _cons.end()) {
     size_t n = s.size();
     // append 8 chars (room for 2 32-bit ints)
     s.append("        ");
-    char *ptr = s.data() + n;
+    char* ptr = s.data() + n;
     memcpy(ptr, &width, sizeof(width));
     memcpy(ptr + sizeof(uint32_t), &height, sizeof(height));
-    recipient->send((const uint8_t *)s.c_str(), s.size() * sizeof(uint8_t));
+    recipient->send((const uint8_t*)s.c_str(), s.size() * sizeof(uint8_t));
   }
 }
 
-void BitmapHandler::callback(seasocks::WebSocket *recipient) {
+void BitmapHandler::callback(seasocks::WebSocket* recipient) {
   if (_cons.find(recipient) != _cons.end()) {
     recipient->send(nullptr, 0);
   }
