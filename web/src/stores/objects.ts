@@ -19,7 +19,9 @@ export const useObjectsStore = defineStore('objects', {
     implied_selected: [] as number[],
     // overrides from the GUI (e.g., toggle expand/collapse)
     gui_implied_selected: [] as number[],
+    // lookup parents
     lookup: {} as Record<number, number>,
+    has_children: {} as Record<number, boolean>,
   }),
   getters: {},
   actions: {
@@ -35,7 +37,9 @@ export const useObjectsStore = defineStore('objects', {
       }
     },
     isSelected(value: number) {
-      if (this.user_selected.includes(value)) {
+      if (!this.hasChildren(value)) {
+        return 4;
+      } else if (this.user_selected.includes(value)) {
         return 1;
       } else if (this.gui_implied_selected.includes(value)) {
         return 3;
@@ -43,6 +47,15 @@ export const useObjectsStore = defineStore('objects', {
         return 2;
       }
       return 0;
+    },
+    isUserSelected(value: number) {
+      return this.user_selected.includes(value);
+    },
+    hasParent(value: number) {
+      return value in this.lookup;
+    },
+    hasChildren(value: number) {
+      return value in this.has_children && this.has_children[value];
     },
     isSelectedArray(value: number[]) {
       for (const v of value) {
@@ -55,11 +68,13 @@ export const useObjectsStore = defineStore('objects', {
     updateLookupTable() {
       const parentStack = []; // stack to keep track of parents at each level
       this.lookup = {};
+      this.has_children = {};
       try {
         for (const obj of this.objects) {
           if (obj.level > 0) {
             // only non-root nodes have a parent
             this.lookup[obj.unique_id] = parentStack[obj.level - 1];
+            this.has_children[parentStack[obj.level - 1]] = true;
           }
           // update the current object as the potential parent for the next level
           parentStack[obj.level] = obj.unique_id;

@@ -97,7 +97,7 @@ double sut::test_create_video(const std::string& video_name, int frames, int fps
     sc.set_viewpoint(vp);
     sc.setup_server();
     const auto req = std::make_shared<data::video_request>(
-            options.script_file, options.output_file, options.num_chunks, options.frame_offset);
+            options.script_file, options.output_file, options.num_chunks, options.frame_offset, vp.canvas_w, vp.canvas_h);
     sc.add_video_command(req);
   sc.run();
 

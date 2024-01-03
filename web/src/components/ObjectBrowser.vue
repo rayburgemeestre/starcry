@@ -58,15 +58,15 @@
         <span
           class="col type"
           :style="{
-            backgroundColor:
-              objects_store.isSelected(object['unique_id']) === 1 ? 'red' : '',
-            color:
-              objects_store.isSelected(object['unique_id']) === 1
-                ? 'black'
-                : '',
+            backgroundColor: objects_store.isUserSelected(object['unique_id'])
+              ? 'red'
+              : '',
+            color: objects_store.isUserSelected(object['unique_id'])
+              ? 'black'
+              : '',
           }"
           @click="user_select(this, object.unique_id)"
-          >{{ to_utf8_symbol(object['type']) }}</span
+          >focus<!-- {{ to_utf8_symbol(object['type']) }}--></span
         >
         <span
           class="col unique_id"
@@ -89,7 +89,8 @@
       <div
         :style="{ marginLeft: object['level'] * 20 + 'px' }"
         v-if="
-          show_icon(object['unique_id'], 1) && show_object(object['unique_id'])
+          objects_store.isUserSelected(object['unique_id']) &&
+          show_object(object['unique_id'])
         "
         class="item"
       >
@@ -132,7 +133,7 @@ export default defineComponent({
     function to_utf8_symbol(type) {
       switch (type) {
         case 'circle':
-          return '●';
+          return '◯';
         case 'line':
           return '⎯';
         case 'script':
@@ -166,7 +167,7 @@ export default defineComponent({
     }
 
     function user_select(source_elem, unique_id) {
-      if (objects_store.isSelected(unique_id) === 1) {
+      if (objects_store.isUserSelected(unique_id)) {
         scripts_store.removeSelectedObject(unique_id);
         objects_store.onUserDeSelected(unique_id);
       } else {
@@ -278,16 +279,32 @@ export default defineComponent({
   padding-right: 2px;
 }
 .col.type {
-  max-width: 10px;
+  max-width: 35px;
   margin-left: 10px;
   padding: 0;
 }
 .col.unique_id {
+  width: 60px;
   max-width: 60px;
   padding: 0;
 }
+.col.id {
+  width: 60px;
+  max-width: 60px;
+  padding: 0;
+}
+.col.gradient {
+  width: 100px;
+  max-width: 100px;
+}
 .item:hover .col {
   background-color: rgba(255, 255, 255, 0.28);
+}
+.col.expand,
+.col.collapse {
+  margin-left: 10px;
+  width: 15px;
+  max-width: 15px;
 }
 .col.expand:hover,
 .col.collapse:hover {
