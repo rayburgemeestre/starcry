@@ -105,7 +105,7 @@ export default defineComponent({
 });
 </script>
 
-<style>
+<style scoped>
 .myslider {
   width: 100%;
   display: -webkit-flex; /* Safari */

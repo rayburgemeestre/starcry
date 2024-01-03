@@ -65,8 +65,23 @@
               ? 'black'
               : '',
           }"
-          @click="user_select(this, object.unique_id)"
+          @click="user_select(this, object.unique_id, true)"
           >focus<!-- {{ to_utf8_symbol(object['type']) }}--></span
+        >
+        <span
+          class="col info"
+          :style="{
+            backgroundColor: objects_store.isUserInfoSelected(
+              object['unique_id']
+            )
+              ? 'red'
+              : '',
+            color: objects_store.isUserInfoSelected(object['unique_id'])
+              ? 'black'
+              : '',
+          }"
+          @click="user_select_info(this, object.unique_id)"
+          >info</span
         >
         <span
           class="col unique_id"
@@ -89,7 +104,7 @@
       <div
         :style="{ marginLeft: object['level'] * 20 + 'px' }"
         v-if="
-          objects_store.isUserSelected(object['unique_id']) &&
+          objects_store.isUserInfoSelected(object['unique_id']) &&
           show_object(object['unique_id'])
         "
         class="item"
@@ -166,13 +181,37 @@ export default defineComponent({
       scripts_store.render_completed_by_server++;
     }
 
-    function user_select(source_elem, unique_id) {
+    function user_select(source_elem, unique_id, recursive) {
       if (objects_store.isUserSelected(unique_id)) {
-        scripts_store.removeSelectedObject(unique_id);
-        objects_store.onUserDeSelected(unique_id);
+        function toggle(unique_id) {
+          scripts_store.removeSelectedObject(unique_id);
+          objects_store.onUserDeSelected(unique_id);
+          if (recursive) {
+            for (const child of objects_store.getChildren(unique_id)) {
+              toggle(child);
+            }
+          }
+        }
+        toggle(unique_id);
       } else {
-        scripts_store.addSelectedObject(unique_id);
-        objects_store.onUserSelected(unique_id);
+        function toggle(unique_id) {
+          scripts_store.addSelectedObject(unique_id);
+          objects_store.onUserSelected(unique_id);
+          if (recursive) {
+            for (const child of objects_store.getChildren(unique_id)) {
+              toggle(child);
+            }
+          }
+        }
+        toggle(unique_id);
+      }
+    }
+
+    function user_select_info(source_elem, unique_id) {
+      if (objects_store.isUserInfoSelected(unique_id)) {
+        objects_store.onUserInfoDeSelected(unique_id);
+      } else {
+        objects_store.onUserSelectedInfo(unique_id);
       }
     }
 
@@ -240,6 +279,7 @@ export default defineComponent({
       expand_icon_click,
       highlight,
       user_select,
+      user_select_info,
       componentKey,
       rows,
       columns,
@@ -281,6 +321,11 @@ export default defineComponent({
 .col.type {
   max-width: 35px;
   margin-left: 10px;
+  padding: 0;
+}
+.col.info {
+  width: 60px;
+  max-width: 60px;
   padding: 0;
 }
 .col.unique_id {

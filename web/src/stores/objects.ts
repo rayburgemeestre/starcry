@@ -15,6 +15,8 @@ export const useObjectsStore = defineStore('objects', {
     objects: [] as ObjectType[],
     // selections explicitly made by user (e.g., by clicking on objects)
     user_selected: [] as number[],
+    // selections to show info by user
+    user_selected_info: [] as number[],
     // parents of user selected items (they are "implied" selected)
     implied_selected: [] as number[],
     // overrides from the GUI (e.g., toggle expand/collapse)
@@ -22,6 +24,7 @@ export const useObjectsStore = defineStore('objects', {
     // lookup parents
     lookup: {} as Record<number, number>,
     has_children: {} as Record<number, boolean>,
+    children: {} as Record<number, number[]>,
   }),
   getters: {},
   actions: {
@@ -51,11 +54,20 @@ export const useObjectsStore = defineStore('objects', {
     isUserSelected(value: number) {
       return this.user_selected.includes(value);
     },
+    isUserInfoSelected(value: number) {
+      return this.user_selected_info.includes(value);
+    },
     hasParent(value: number) {
       return value in this.lookup;
     },
     hasChildren(value: number) {
       return value in this.has_children && this.has_children[value];
+    },
+    getChildren(value: number) {
+      if (value in this.children) {
+        return this.children[value];
+      }
+      return [];
     },
     isSelectedArray(value: number[]) {
       for (const v of value) {
@@ -69,11 +81,17 @@ export const useObjectsStore = defineStore('objects', {
       const parentStack = []; // stack to keep track of parents at each level
       this.lookup = {};
       this.has_children = {};
+      this.children = {};
       try {
         for (const obj of this.objects) {
           if (obj.level > 0) {
             // only non-root nodes have a parent
-            this.lookup[obj.unique_id] = parentStack[obj.level - 1];
+            const parent_id = parentStack[obj.level - 1];
+            this.lookup[obj.unique_id] = parent_id;
+            if (!(parent_id in this.children)) {
+              this.children[parent_id] = [];
+            }
+            this.children[parent_id].push(obj.unique_id);
             this.has_children[parentStack[obj.level - 1]] = true;
           }
           // update the current object as the potential parent for the next level
@@ -116,6 +134,9 @@ export const useObjectsStore = defineStore('objects', {
         ...new Set([...this.gui_implied_selected, ...ids]),
       ];
     },
+    onUserSelectedInfo(unique_id: number) {
+      this.user_selected_info.push(unique_id);
+    },
     onUserDeSelected(unique_id: number) {
       // remove user first
       let index = this.user_selected.indexOf(unique_id);
@@ -136,8 +157,16 @@ export const useObjectsStore = defineStore('objects', {
       }
       this.implied_selected = ids;
     },
+    onUserInfoDeSelected(unique_id: number) {
+      // remove user first
+      const index = this.user_selected_info.indexOf(unique_id);
+      if (index > -1) {
+        this.user_selected_info.splice(index, 1);
+      }
+    },
     reset() {
       this.user_selected = [];
+      this.user_selected_info = [];
       this.gui_implied_selected = [];
       this.implied_selected = [];
     },
