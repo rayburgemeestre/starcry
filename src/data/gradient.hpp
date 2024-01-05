@@ -12,16 +12,20 @@
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-volatile"
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvolatile"
 #endif
 #include "vivid/vivid.h"
 #ifdef __clang__
 #pragma clang diagnostic pop
+#else
+#pragma GCC diagnostic pop
 #endif
 
 #include "data/color.hpp"
 
 namespace data {
-
 struct gradient {
   std::vector<std::tuple<double, color>> colors;
 
@@ -34,8 +38,8 @@ struct gradient {
     if (colors.empty()) {
       return color{0.1, 0.2, 0.3, 0.};
     }
-    for (const auto &pair : colors) {
-      const double &current_idx = std::get<0>(pair);
+    for (const auto& pair : colors) {
+      const double& current_idx = std::get<0>(pair);
       if (current_idx > index) {
         double nom = (index - processed_index);
         double denom = (current_idx - processed_index);
@@ -60,18 +64,17 @@ struct gradient {
       }
       counter++;
     }
-    const color &c = std::get<1>(colors[counter - 1]);
+    const color& c = std::get<1>(colors[counter - 1]);
     return color{c.r, c.g, c.b, c.a};
   }
 
   template <class Archive>
-  void serialize(Archive &ar) {
+  void serialize(Archive& ar) {
     ar(colors);
   }
 };
 
-inline bool operator==(const gradient &lhs, const gradient &rhs) {
-  return 0 == std::memcmp(reinterpret_cast<const void *>(&lhs), reinterpret_cast<const void *>(&rhs), sizeof(gradient));
+inline bool operator==(const gradient& lhs, const gradient& rhs) {
+  return 0 == std::memcmp(reinterpret_cast<const void*>(&lhs), reinterpret_cast<const void*>(&rhs), sizeof(gradient));
 }
-
 }  // namespace data

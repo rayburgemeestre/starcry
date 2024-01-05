@@ -20,10 +20,13 @@
 
 #pragma clang diagnostic pop
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvolatile"
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-volatile"
 __link(RScroller) __link(RScrollBar)
 #pragma clang diagnostic pop
+#pragma GCC diagnostic pop
 
 #include <cstdlib>
 #include <cstring>
@@ -31,9 +34,9 @@ __link(RScroller) __link(RScrollBar)
 #include <fstream>
 #include <sstream>
 
-    const char *const TFileViewer::name = "TFileViewer";
+    const char* const TFileViewer::name = "TFileViewer";
 
-TFileViewer::TFileViewer(const TRect &bounds, TScrollBar *aHScrollBar, TScrollBar *aVScrollBar, const char *aFileName)
+TFileViewer::TFileViewer(const TRect& bounds, TScrollBar* aHScrollBar, TScrollBar* aVScrollBar, const char* aFileName)
     : TScroller(bounds, aHScrollBar, aVScrollBar) {
   growMode = gfGrowHiX | gfGrowHiY;
   isValid = True;
@@ -47,7 +50,7 @@ TFileViewer::~TFileViewer() {
 }
 
 void TFileViewer::draw() {
-  char *p;
+  char* p;
 
   TColorAttr c = getColor(1);
   for (short i = 0; i < size.y; i++) {
@@ -55,7 +58,7 @@ void TFileViewer::draw() {
     b.moveChar(0, ' ', c, (short)size.x);
 
     if (delta.y + i < fileLines->getCount()) {
-      p = (char *)(fileLines->at(delta.y + i));
+      p = (char*)(fileLines->at(delta.y + i));
       if (p) b.moveStr(0, p, c, (short)size.x, (short)delta.x);
     }
     writeBuf(0, i, (short)size.x, 1, b);
@@ -67,7 +70,7 @@ void TFileViewer::scrollDraw() {
   draw();
 }
 
-void TFileViewer::readFile(const char *fName) {
+void TFileViewer::readFile(const char* fName) {
   delete[] fileName;
 
   limit.x = 0;
@@ -80,14 +83,14 @@ void TFileViewer::readFile(const char *fName) {
     messageBox(os.str().c_str(), mfError | mfOKButton);
     isValid = False;
   } else {
-    char *line = (char *)malloc(maxLineLength);
+    char* line = (char*)malloc(maxLineLength);
     size_t lineSize = maxLineLength;
     char c;
     while (!lowMemory() && !fileToView.eof() && fileToView.get(c)) {
       size_t i = 0;
       while (!fileToView.eof() && c != '\n' && c != '\r')  // read a whole line
       {
-        if (i == lineSize) line = (char *)realloc(line, (lineSize *= 2));
+        if (i == lineSize) line = (char*)realloc(line, (lineSize *= 2));
         line[i++] = c ? c : ' ';
         fileToView.get(c);
       }
@@ -111,8 +114,8 @@ Boolean TFileViewer::valid(ushort) {
   return isValid;
 }
 
-void *TFileViewer::read(ipstream &is) {
-  char *fName;
+void* TFileViewer::read(ipstream& is) {
+  char* fName;
 
   TScroller::read(is);
   fName = is.readString();
@@ -122,12 +125,12 @@ void *TFileViewer::read(ipstream &is) {
   return this;
 }
 
-void TFileViewer::write(opstream &os) {
+void TFileViewer::write(opstream& os) {
   TScroller::write(os);
   os.writeString(fileName);
 }
 
-TStreamable *TFileViewer::build() {
+TStreamable* TFileViewer::build() {
   return new TFileViewer(streamableInit);
 }
 
@@ -135,7 +138,7 @@ TStreamableClass RFileView(TFileViewer::name, TFileViewer::build, __DELTA(TFileV
 
 static short winNumber = 0;
 
-TFileWindow::TFileWindow(const char *fileName, std::function<void()> onDestroyFun)
+TFileWindow::TFileWindow(const char* fileName, std::function<void()> onDestroyFun)
     : TWindowInit(&TFileWindow::initFrame),
       TWindow(TProgram::deskTop->getExtent(), fileName, winNumber++),
       onDestroyFun(onDestroyFun) {

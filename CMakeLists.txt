@@ -54,7 +54,7 @@ if (DEBUG)
         # -gdwarf-4 is needed for valgrind, version 5 seens unsupported.
         add_definitions("-std=c++23 -O0 -g -stdlib=libstdc++ -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3 -gdwarf-4")
     else()
-        add_definitions("-std=c++23 -O0 -g                   -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3 -Wno-unknown-pragmas -Wno-literal-suffix -fmudflap -lmudflap")
+        add_definitions("-std=c++23 -O0 -g                   -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3 -Wno-unknown-pragmas -Wno-literal-suffix")
     endif()
 else()
     message(STATUS "This is a RELEASE build.")

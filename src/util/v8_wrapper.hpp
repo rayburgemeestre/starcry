@@ -242,7 +242,7 @@ inline void v8_wrapper::loop_object(std::string const& source,
     }
   } else if (result->IsArray()) {
     auto array = result.As<v8::Array>();
-    for (auto i = 0; i < array->Length(); i++) {
+    for (auto i = uint32_t(0); i < array->Length(); i++) {
       auto element = array->Get(isolate->GetCurrentContext(), i).ToLocalChecked();
       callback(isolate, element);
     }

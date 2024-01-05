@@ -139,7 +139,7 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     } else {
       new_shape.indexes = gen_.indexes[shape.meta_cref().unique_id()];
     }
-    if (!(gen_.stepper.current_step >= gen_.job->shapes.size())) {
+    if (!(gen_.stepper.current_step >= int(gen_.job->shapes.size()))) {
       gen_.job->shapes[gen_.stepper.current_step].emplace_back(std::move(new_shape));
     } else {
       throw abort_exception("current step exceeds shapes size");

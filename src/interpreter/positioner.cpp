@@ -95,7 +95,7 @@ void positioner::update_rotations() {
   auto& stack = gen_.stack;
   const auto handle_pass1 = [&]<typename T>(data_staging::shape_t& abstract_shape, T& shape, data_staging::meta& meta) {
     if (meta.level() >= 0) {
-      if (stack.size() <= meta.level()) {
+      if (int64_t(stack.size()) <= meta.level()) {
         stack.emplace_back(abstract_shape);
       } else {
         stack[meta.level()] = std::ref(abstract_shape);
@@ -141,7 +141,7 @@ void positioner::handle_rotations(data_staging::shape_t& shape,
     vector2d current1;
     vector2d current2;
     double current_rotation = 0;
-    for (size_t i = 0; i <= concrete_shape.meta_cref().level(); i++) {
+    for (auto i = int64_t(0); i <= concrete_shape.meta_cref().level(); i++) {
       meta_callback(use_stack[i].get(), [&]<typename TP>(TP& parent_shape) {
         if constexpr (std::is_same_v<TP, data_staging::circle>) {
           current = add_vector(current, parent_shape.location_ref().position_ref());

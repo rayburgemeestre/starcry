@@ -179,10 +179,10 @@ image &rendering_engine::_render(size_t thread_num,
 
   if (debug) {
     double r = double(offset_y) / double(canvas_h), g = 0, b = 0, a = 1;
-    for (auto i = 0; i < width; i++) {
+    for (auto i = uint32_t(0); i < width; i++) {
       bmp.set(i, 0, r, g, b, a);
     }
-    for (auto i = 0; i < height; i++) {
+    for (auto i = uint32_t(0); i < height; i++) {
       bmp.set(width / 2, i, r, g, b, a);
     }
     scope_exit se([&]() {
