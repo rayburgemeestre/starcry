@@ -68,3 +68,15 @@ Almost everything is statically linked, resulting in a relatively portable binar
 * Getting rid of the old properties system we have for shapes.
 * https://varun.ca/noise/#glossy-blobs
 * Move more properties to "base" class object_bridge, some are needless duplication.
+
+## Separate worker processes
+
+Starcry can run with redis as a pub/sub. First install redis, run it, then:
+
+    make build
+    ./build/starcry -i input/test.js -t 0 --server tcp://localhost:6379
+
+    ./build/starcry --client tcp://localhost:6379 &
+    ./build/starcry --client tcp://localhost:6379 &
+    ./build/starcry --client tcp://localhost:6379 &
+    ./build/starcry --client tcp://localhost:6379 &

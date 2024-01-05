@@ -234,21 +234,34 @@ clion:
 	sudo sysctl kernel.unprivileged_userns_clone=0
 	sudo rm -rf /home/trigen/.config/JetBrains/CLion2023.3/.lock
 	mkdir -p /tmp/ccache-root
+	$(docker_exe) stop starcry_clion || true
 	$(docker_exe) rm starcry_clion || true
-	$(docker_exe) run --rm --name starcry_clion -p 18081:18080 -p 10001:10000 -p 16379:6379 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/clion ${HOME}"
+	$(docker_exe) run --rm --name starcry_clion --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/clion ${HOME}"
+
+clion-gcc:
+	xhost +
+	sudo sysctl kernel.unprivileged_userns_clone=0
+	sudo rm -rf /home/trigen/.config/JetBrains/CLion2023.3/.lock
+	mkdir -p /tmp/ccache-root
+	$(docker_exe) stop starcry_clion || true
+	$(docker_exe) rm starcry_clion || true
+	$(docker_exe) run --rm --name starcry_clion --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/clion ${HOME}"
 
 ide_shell:
 	xhost +
 	sudo sysctl kernel.unprivileged_userns_clone=0
 	sudo rm -rf /home/trigen/.config/JetBrains/CLion2023.3/.lock
 	mkdir -p /tmp/ccache-root
+	$(docker_exe) stop starcry_clion || true
 	$(docker_exe) rm starcry_clion || true
-	$(docker_exe) run --rm --name starcry_clion -p 18081:18080 -p 10001:10000 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; bash"
+	$(docker_exe) run --rm --name starcry_clion --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; bash"
 
 webstorm:
 	xhost +
 	mkdir -p /tmp/ccache-root
-	podman run --rm --name starcry_webstorm -p 8081:8080 -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/webstorm ${HOME}"
+	$(docker_exe) stop starcry_webstorm || true
+	$(docker_exe) rm starcry_webstorm || true
+	$(docker_exe) run --rm --name starcry_webstorm --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:22.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/webstorm ${HOME}"
 
 profile:  ## run starcry with valgrind's callgrind for profiling
 	valgrind --tool=callgrind ./build/starcry -c 1 input/broken/wave.js -f 1 --stdout --debug --verbose
