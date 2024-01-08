@@ -166,4 +166,5 @@ private:
   void command_to_jobs(std::shared_ptr<instruction> cmd_def);
   std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);
   void handle_frame(std::shared_ptr<render_msg> job_msg);
+  static std::string serialize_shapes_to_json(std::vector<std::vector<data::shape>>& shapes);
 };

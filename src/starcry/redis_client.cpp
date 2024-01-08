@@ -16,6 +16,8 @@
 #include "util/image_utils.h"
 #include "util/logger.h"
 
+#include "nlohmann/json.hpp"
+using json = nlohmann::json;
 #include <fmt/core.h>
 #include <linux/prctl.h>
 #ifdef __clang__
@@ -31,7 +33,8 @@
 
 using namespace sw::redis;
 
-redis_client::redis_client(const std::string &host, starcry &sc) : host(host), sc(sc) {
+redis_client::redis_client(const std::string& host, starcry& sc)
+  : host(host), sc(sc) {
   char hostname[1024] = {0x00};
   gethostname(hostname, 1024);
 
@@ -42,16 +45,17 @@ redis_client::redis_client(const std::string &host, starcry &sc) : host(host), s
   my_id_ = fmt::format("{}_{}", hostname, random_num);
 }
 
-redis_client::~redis_client() {}
+redis_client::~redis_client() {
+}
 
-void redis_client::run(bitmap_wrapper &bitmap, rendering_engine &engine) {
+void redis_client::run(bitmap_wrapper& bitmap, rendering_engine& engine) {
   try {
     // Create a Redis object, which is movable but NOT copyable.
     auto redis = Redis(host);
     redis.publish("REGISTER", my_id_);
 
     auto sub = redis.subscriber();
-    sub.on_message([&](const std::string &channel, const std::string &msg) {
+    sub.on_message([&](const std::string& channel, const std::string& msg) {
       logger(DEBUG) << "msg on channel " << channel << std::endl;
       // split msg into two parts: msg_type and data
       auto pos = msg.find(' ');
@@ -73,17 +77,19 @@ void redis_client::run(bitmap_wrapper &bitmap, rendering_engine &engine) {
         cereal::BinaryInputArchive archive(is);
         data::job job;
         data::settings settings;
+        bool include_objects_json = false;
         archive(job);
         archive(settings);
-        auto &bmp = bitmap.get(job.width, job.height);
+        archive(include_objects_json);
+        auto& bmp = bitmap.get(job.width, job.height);
         size_t num_shapes = 0;
-        for (const auto &shapez : job.shapes) {
+        for (const auto& shapez : job.shapes) {
           num_shapes += shapez.size();
         }
 
         std::cout << "render client " << getpid() << " rendering job " << job.job_number << " chunk = " << job.chunk
-                  << " of " << job.num_chunks << ", shapes=" << num_shapes << ", dimensions=" << job.width << "x"
-                  << job.height << std::endl;
+            << " of " << job.num_chunks << ", shapes=" << num_shapes << ", dimensions=" << job.width << "x"
+            << job.height << std::endl;
 
         prctl(PR_SET_NAME,
               fmt::format("sc {} {}/{}", job.frame_number, job.chunk + 1, job.num_chunks).c_str(),
@@ -91,9 +97,18 @@ void redis_client::run(bitmap_wrapper &bitmap, rendering_engine &engine) {
               NULL,
               NULL);
 
+        std::string shapes_json_buffer;
+
         {
           delayed_exit de(10);
           sc.render_job(getpid(), engine, job, bmp, settings);
+          // We could, instead of sending the JSON string, also choose to let
+          // the redis_server handle this serialization, and save some network
+          // bandwidth.
+          if (include_objects_json) {
+            json shapes_json = {};
+            shapes_json_buffer = starcry::serialize_shapes_to_json(job.shapes);
+          }
         }
 
         data::pixel_data dat;
@@ -114,6 +129,8 @@ void redis_client::run(bitmap_wrapper &bitmap, rendering_engine &engine) {
         archive_out(job);
         archive_out(dat);
         archive_out(true);
+        archive_out(shapes_json_buffer);
+
         redis.publish("FRAME", os.str());
         redis.publish("PULL_JOB", my_id_);
       }
@@ -124,12 +141,11 @@ void redis_client::run(bitmap_wrapper &bitmap, rendering_engine &engine) {
     while (true) {
       try {
         sub.consume();
-      } catch (const Error &err) {
+      } catch (const Error& err) {
         std::cout << "Error: " << err.what() << std::endl;
       }
     }
-
-  } catch (const Error &e) {
+  } catch (const Error& e) {
     std::cerr << "Error: " << e.what() << std::endl;
   }
 }

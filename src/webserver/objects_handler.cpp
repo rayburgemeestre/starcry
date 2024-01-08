@@ -25,7 +25,7 @@ void ObjectsHandler::onDisconnect(seasocks::WebSocket* con) {
 void ObjectsHandler::onData(seasocks::WebSocket* con, const char* data) {
   std::string input(data);
   if (link(input, con)) return;
-  auto find = input.find(" ");
+  const auto find = input.find(" ");
   if (find != std::string::npos) {
     logger(DEBUG) << "ObjectsHandler::onData - " << input << std::endl;
     const auto script = input.substr(0, find);

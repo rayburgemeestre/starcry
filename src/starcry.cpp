@@ -468,53 +468,8 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
     }
 
     if (f.metadata_objects() || get_viewpoint().labels) {
-      json shapes_json = {};
-      auto& shapes = job_msg->job->shapes;
-      size_t index = 0;
-      if (!shapes.empty()) {
-#define DEBUG_NUM_SHAPES
-#ifdef DEBUG_NUM_SHAPES
-        std::unordered_map<int64_t, int64_t> nums;
-        for (size_t i = 0; i < shapes.size(); i++) {
-          for (const auto& shape : shapes[i]) {
-            nums[shape.unique_id]++;
-          }
-        }
-#endif
-        for (const auto& shape : shapes[shapes.size() - 1]) {
-          // convert shape_type enum to string
-          std::map<std::string, nlohmann::json> f = {
-              {"type", data::shape_type_to_string(shape.type)},
-              {"index", index},
-              {"unique_id", shape.unique_id},
-              {"id", shape.id},
-              {"label", shape.label.empty() ? shape.id : shape.label},
-              {"level", shape.level},
-              {"gradient", shape.gradient_id_str},
-              {"x", shape.x},
-              {"y", shape.y},
-              {"x2", shape.x2},
-              {"y2", shape.y2},
-              {"vel_x", shape.vel_x},
-              {"vel_y", shape.vel_y},
-              {"opacity", shape.opacity},
-#ifdef DEBUG_NUM_SHAPES
-              {"#", nums[shape.unique_id]},
-              {"random_hash", shape.random_hash},
-#else
-              {"#", -1},
-#endif
-              {"time", shape.time},
-          };
-          json shape_json(f);
-          shapes_json.push_back(shape_json);
-
-          // TODO: script type
-          index++;
-        }
-      }
-      auto str = shapes_json.dump();
-      msg->set_buffer(str);
+      auto buf = serialize_shapes_to_json(job_msg->job->shapes);
+      msg->set_buffer(buf);
     }
 
     msg->set_width(get_viewpoint().canvas_w ? get_viewpoint().canvas_w : job.width);
@@ -865,4 +820,52 @@ const data::viewpoint& starcry::get_viewpoint() const {
 
 void starcry::set_viewpoint(data::viewpoint& vp) {
   viewpoint = vp;
+}
+
+std::string starcry::serialize_shapes_to_json(std::vector<std::vector<data::shape>>& shapes) {
+  json shapes_json = {};
+  size_t index = 0;
+  if (!shapes.empty()) {
+#define DEBUG_NUM_SHAPES
+#ifdef DEBUG_NUM_SHAPES
+    std::unordered_map<int64_t, int64_t> nums;
+    for (size_t i = 0; i < shapes.size(); i++) {
+      for (const auto& shape : shapes[i]) {
+        nums[shape.unique_id]++;
+      }
+    }
+#endif
+    for (const auto& shape : shapes[shapes.size() - 1]) {
+      // convert shape_type enum to string
+      std::map<std::string, nlohmann::json> f = {
+          {"type", data::shape_type_to_string(shape.type)},
+          {"index", index},
+          {"unique_id", shape.unique_id},
+          {"id", shape.id},
+          {"label", shape.label.empty() ? shape.id : shape.label},
+          {"level", shape.level},
+          {"gradient", shape.gradient_id_str},
+          {"x", shape.x},
+          {"y", shape.y},
+          {"x2", shape.x2},
+          {"y2", shape.y2},
+          {"vel_x", shape.vel_x},
+          {"vel_y", shape.vel_y},
+          {"opacity", shape.opacity},
+#ifdef DEBUG_NUM_SHAPES
+          {"#", nums[shape.unique_id]},
+          {"random_hash", shape.random_hash},
+#else
+          {"#", -1},
+#endif
+          {"time", shape.time},
+      };
+      json shape_json(f);
+      shapes_json.push_back(shape_json);
+
+      // TODO: script type
+      index++;
+    }
+  }
+  return shapes_json.dump();
 }

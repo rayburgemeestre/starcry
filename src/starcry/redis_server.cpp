@@ -26,7 +26,7 @@
 
 using namespace sw::redis;
 
-redis_server::redis_server(const std::string &host, starcry &sc) : host(host), sc(sc) {}
+redis_server::redis_server(const std::string& host, starcry& sc) : host(host), sc(sc) {}
 
 redis_server::~redis_server() {
   running = false;
@@ -35,14 +35,12 @@ redis_server::~redis_server() {
 }
 
 namespace {
-
-std::tuple<std::string, std::string> split(auto &msg) {
+std::tuple<std::string, std::string> split(auto& msg) {
   if (auto pos = msg.find('_')) {
     return std::make_tuple(msg.substr(0, pos), msg.substr(pos + 1));
   }
   return std::make_tuple(msg, std::string());
 }
-
 }  // namespace
 
 void redis_server::run() {
@@ -51,7 +49,7 @@ void redis_server::run() {
       try {
         redis = std::make_unique<Redis>(host);
         auto sub = redis->subscriber();
-        sub.on_message([&](const std::string &channel, const std::string &msg) -> void {
+        sub.on_message([&](const std::string& channel, const std::string& msg) -> void {
           logger(DEBUG) << "msg on channel " << channel << std::endl;
           if (channel == "REGISTER") {
             logger(DEBUG) << "REGISTER CLIENT: " << msg << std::endl;
@@ -79,9 +77,11 @@ void redis_server::run() {
               data::job job;
               data::pixel_data dat;
               bool is_remote;
+              std::string buffer;
               archive(job);
               archive(dat);
               archive(is_remote);
+              archive(buffer);
               // if (job.compress) {
               //   compress_vector<uint32_t> cv;
               //   cv.decompress(&dat.pixels, job.width * job.height);
@@ -109,6 +109,7 @@ void redis_server::run() {
               if (!dat.pixels_raw.empty()) {
                 frame->set_raw(dat.pixels_raw);
               }
+              frame->set_buffer(buffer);
               sc.frames->push(frame);
               outstanding_jobs--;
               if (outstanding_jobs == 0) {
@@ -116,7 +117,7 @@ void redis_server::run() {
                   sc.frames->check_terminate();
                 }
               }
-            } catch (cereal::Exception &ex) {
+            } catch (cereal::Exception& ex) {
               logger(ERROR) << "Cereal exception: " << ex.what() << std::endl;
             }
           }
@@ -130,12 +131,12 @@ void redis_server::run() {
         while (true) {
           try {
             sub.consume();
-          } catch (const Error &err) {
+          } catch (const Error& err) {
             std::cout << "Error (1): " << err.what() << std::endl;
             std::exit(1);
           }
         }
-      } catch (const Error &e) {
+      } catch (const Error& e) {
         std::cerr << "Error (2): " << e.what() << std::endl;
         std::exit(1);
       }
@@ -167,16 +168,17 @@ void redis_server::dispatch_job() {
   }
 
   auto job = std::dynamic_pointer_cast<job_message>(sc.jobs->pop(0));
-  if (job) {  // can be nullptr if someone else took it faster than us
+  if (job) {
+    // can be nullptr if someone else took it faster than us
     // Next line might crash (dunno), if that's the case, we need to rewrite this to some std::optional..
     auto worker = pop_worker();  // after the worker finishes it will re-register
     std::ostringstream os;
     cereal::BinaryOutputArchive archive(os);
     std::shared_ptr<data::frame_request> f = nullptr;
     std::shared_ptr<data::video_request> v = nullptr;
-    if (const auto &instruction = std::dynamic_pointer_cast<video_instruction>(job->original_instruction)) {
+    if (const auto& instruction = std::dynamic_pointer_cast<video_instruction>(job->original_instruction)) {
       v = instruction->video_ptr();
-    } else if (const auto &instruction = std::dynamic_pointer_cast<frame_instruction>(job->original_instruction)) {
+    } else if (const auto& instruction = std::dynamic_pointer_cast<frame_instruction>(job->original_instruction)) {
       f = instruction->frame_ptr();
     }
     if (!f && !v) {
@@ -187,6 +189,9 @@ void redis_server::dispatch_job() {
     archive(*(job->job));
     const auto settings = sc.gen->settings();
     archive(settings);
+    bool include_objects_json = (f->metadata_objects() || sc.get_viewpoint().labels);
+    archive(include_objects_json);
+
     outstanding_jobs2[std::make_pair(job->job->frame_number, job->job->chunk)] = job;
     // sc.renderserver->send_msg(sockfd, starcry_msgs::pull_job_response, os.str().c_str(),
     // os.str().size());
