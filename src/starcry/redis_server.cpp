@@ -191,6 +191,8 @@ void redis_server::dispatch_job() {
     archive(settings);
     bool include_objects_json = (f->metadata_objects() || sc.get_viewpoint().labels);
     archive(include_objects_json);
+    const auto selected_ids_transitive = sc.selected_ids_transitive(job);
+    archive(selected_ids_transitive);
 
     outstanding_jobs2[std::make_pair(job->job->frame_number, job->job->chunk)] = job;
     // sc.renderserver->send_msg(sockfd, starcry_msgs::pull_job_response, os.str().c_str(),

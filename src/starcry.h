@@ -131,40 +131,41 @@ private:
   util::random_generator rand_;
 
 public:
-  starcry(starcry_options &options, std::shared_ptr<v8_wrapper> &context);
+  starcry(starcry_options& options, std::shared_ptr<v8_wrapper>& context);
   ~starcry();
 
-  starcry_options &options();
-  feature_settings &features();
+  starcry_options& options();
+  feature_settings& features();
 
-  const std::string &script();
-  void set_script(const std::string &script);
-  void update_script_contents(const std::string &contents);
+  const std::string& script();
+  void set_script(const std::string& script);
+  void update_script_contents(const std::string& contents);
 
   void add_reload_command(std::shared_ptr<data::reload_request> req);
   void add_image_command(std::shared_ptr<data::frame_request> req);
   void add_video_command(std::shared_ptr<data::video_request> req);
 
-  void setup_server(const std::string &host = "");
+  void setup_server(const std::string& host = "");
 
   void run();
-  void run_client(const std::string &host);
+  void run_client(const std::string& host);
 
-  const data::viewpoint &get_viewpoint() const;
-  void set_viewpoint(data::viewpoint &vp);
+  const data::viewpoint& get_viewpoint() const;
+  void set_viewpoint(data::viewpoint& vp);
 
 private:
   void configure_inotify();
 
   void render_job(size_t thread_num,
-                  rendering_engine &engine,
-                  const data::job &job,
-                  image &bmp,
-                  const data::settings &settings,
-                  const std::vector<int64_t> &selected_ids = {});
+                  rendering_engine& engine,
+                  const data::job& job,
+                  image& bmp,
+                  const data::settings& settings,
+                  const std::vector<int64_t>& selected_ids = {});
 
   void command_to_jobs(std::shared_ptr<instruction> cmd_def);
   std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);
   void handle_frame(std::shared_ptr<render_msg> job_msg);
   static std::string serialize_shapes_to_json(std::vector<std::vector<data::shape>>& shapes);
+  const std::vector<int64_t> selected_ids_transitive(std::shared_ptr<job_message>& job);
 };

@@ -395,21 +395,11 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
     metrics_->render_job(i, job.job_number, job.chunk);
   }
 
-  const std::vector<int64_t> selected_ids = ([&]() {
-    if (job_msg && job_msg->original_instruction) {
-      if (const auto& instruction = std::dynamic_pointer_cast<frame_instruction>(job_msg->original_instruction)) {
-        if (instruction->frame_ptr()) {
-          return instruction->frame_ptr()->selected_ids();
-        }
-      }
-    }
-    return std::vector<int64_t>{};
+  const auto selected_ids_transitive = ([&, this]() {
+    std::vector<int64_t> ret;
+    if (job_msg && job_msg->original_instruction) ret = this->selected_ids_transitive(job_msg);
+    return ret;
   })();
-
-  std::vector<int64_t> selected_ids_transitive;
-  if (selected_ids.size() > 0) {
-    selected_ids_transitive = gen->get_transitive_ids(selected_ids);
-  }
 
   render_job(i, *engines[i], job, bmp, settings, selected_ids_transitive);
 
@@ -868,4 +858,22 @@ std::string starcry::serialize_shapes_to_json(std::vector<std::vector<data::shap
     }
   }
   return shapes_json.dump();
+}
+
+const std::vector<int64_t> starcry::selected_ids_transitive(std::shared_ptr<job_message>& job) {
+  const std::vector<int64_t> selected_ids = ([&]() {
+    {
+      if (const auto& instruction = std::dynamic_pointer_cast<frame_instruction>(job->original_instruction)) {
+        if (instruction->frame_ptr()) {
+          return instruction->frame_ptr()->selected_ids();
+        }
+      }
+    }
+    return std::vector<int64_t>{};
+  })();
+  std::vector<int64_t> selected_ids_transitive;
+  if (selected_ids.size() > 0) {
+    selected_ids_transitive = gen->get_transitive_ids(selected_ids);
+  }
+  return selected_ids_transitive;
 }

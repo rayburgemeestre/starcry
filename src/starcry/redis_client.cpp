@@ -33,8 +33,7 @@ using json = nlohmann::json;
 
 using namespace sw::redis;
 
-redis_client::redis_client(const std::string& host, starcry& sc)
-  : host(host), sc(sc) {
+redis_client::redis_client(const std::string& host, starcry& sc) : host(host), sc(sc) {
   char hostname[1024] = {0x00};
   gethostname(hostname, 1024);
 
@@ -45,8 +44,7 @@ redis_client::redis_client(const std::string& host, starcry& sc)
   my_id_ = fmt::format("{}_{}", hostname, random_num);
 }
 
-redis_client::~redis_client() {
-}
+redis_client::~redis_client() {}
 
 void redis_client::run(bitmap_wrapper& bitmap, rendering_engine& engine) {
   try {
@@ -78,9 +76,11 @@ void redis_client::run(bitmap_wrapper& bitmap, rendering_engine& engine) {
         data::job job;
         data::settings settings;
         bool include_objects_json = false;
+        std::vector<int64_t> selected_ids_transitive;
         archive(job);
         archive(settings);
         archive(include_objects_json);
+        archive(selected_ids_transitive);
         auto& bmp = bitmap.get(job.width, job.height);
         size_t num_shapes = 0;
         for (const auto& shapez : job.shapes) {
@@ -88,8 +88,8 @@ void redis_client::run(bitmap_wrapper& bitmap, rendering_engine& engine) {
         }
 
         std::cout << "render client " << getpid() << " rendering job " << job.job_number << " chunk = " << job.chunk
-            << " of " << job.num_chunks << ", shapes=" << num_shapes << ", dimensions=" << job.width << "x"
-            << job.height << std::endl;
+                  << " of " << job.num_chunks << ", shapes=" << num_shapes << ", dimensions=" << job.width << "x"
+                  << job.height << std::endl;
 
         prctl(PR_SET_NAME,
               fmt::format("sc {} {}/{}", job.frame_number, job.chunk + 1, job.num_chunks).c_str(),
@@ -101,7 +101,7 @@ void redis_client::run(bitmap_wrapper& bitmap, rendering_engine& engine) {
 
         {
           delayed_exit de(10);
-          sc.render_job(getpid(), engine, job, bmp, settings);
+          sc.render_job(getpid(), engine, job, bmp, settings, selected_ids_transitive);
           // We could, instead of sending the JSON string, also choose to let
           // the redis_server handle this serialization, and save some network
           // bandwidth.

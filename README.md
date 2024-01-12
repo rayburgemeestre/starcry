@@ -73,6 +73,9 @@ Almost everything is statically linked, resulting in a relatively portable binar
 
 Starcry can run with redis as a pub/sub. First install redis, run it, then:
 
+    redis-server
+    redis-cli config set client-output-buffer-limit "pubsub 512mb 256mb 120"
+
     make build
     ./build/starcry -i input/test.js -t 0 --server tcp://localhost:6379
 
