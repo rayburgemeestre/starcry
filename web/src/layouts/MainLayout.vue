@@ -73,6 +73,7 @@ import { useViewpointStore } from 'stores/viewpoint';
 import { useObjectsStore } from 'stores/objects';
 import { usePinch } from '@vueuse/gesture';
 import { useGlobalStore } from 'stores/global';
+import { rectangle, circle, quadtree, point } from 'components/quadtree';
 
 const canvas_elem = ref();
 let debug_text = ref('');
@@ -104,12 +105,14 @@ export default defineComponent({
     let previous_h;
     const drawerWidth = ref(300);
 
+    let boundary = new rectangle(-10000, -10000, 10000 * 2, 10000 * 2);
+    let quadtree1 = new quadtree(boundary, 1);
+
     // let holdTimer = null;
     // let startXY = [];
 
     // unfinished, experimental code.
-    let points = [];
-    let lines = [];
+    let lines = new Set();
     let new_line = [];
 
     // Composable usage
@@ -126,7 +129,6 @@ export default defineComponent({
       filter: ref(''),
       script_store,
 
-      points,
       lines,
       new_line,
 
@@ -196,6 +198,7 @@ export default defineComponent({
 
         let canvas_w = Module.get_canvas_w();
         let canvas_h = Module.get_canvas_h();
+
         let texture_w = Module.get_texture_w();
         let texture_h = Module.get_texture_h();
         ctx.fillText('canvas: ' + canvas_w + ' x ' + canvas_h + ', texture: ' + texture_w + ' x ' + texture_h, 20, 20);
@@ -221,12 +224,12 @@ export default defineComponent({
           return;
         }
         let show_all = script_store.selected.length === 0;
+        let center_x = viewpoint_store.offset_x;
+        let center_y = viewpoint_store.offset_y;
+        let offset_x = 0;
+        let offset_y = 0;
         for (let pass = 1; pass <= 2; pass++) {
           for (let obj of objects_store.objects) {
-            let center_x = viewpoint_store.offset_x;
-            let center_y = viewpoint_store.offset_y;
-            let offset_x = 0;
-            let offset_y = 0;
             let color = '';
             // TODO: refactor the way we send objects once more
 
@@ -262,17 +265,21 @@ export default defineComponent({
             ) {
               color = 'red';
               if (set_point) {
-                const entry = [x, y];
-                if (!(entry in points)) points.push([x, y]);
-                if (set_line) {
-                  if (new_line.length == 0) {
-                    new_line.push(entry);
-                  } else if (new_line.length == 1) {
-                    new_line.push(entry);
-                    lines.push(new_line);
-                    new_line = [];
-                  }
+                let others = quadtree1.query(new circle(obj.x, obj.y, 1));
+                if (others.length == 0) {
+                  quadtree1.insert(new point(new circle(obj.x, obj.y, 10), 1001));
                 }
+                console.log('Total entries now: ' + quadtree1.query(new circle(0, 0, 100000)).length);
+                // TODO: something for line as well....
+                // if (set_line) {
+                //   if (new_line.length == 0) {
+                //     new_line.push(entry);
+                //   } else if (new_line.length == 1) {
+                //     new_line.push(entry);
+                //     lines.add(new_line);
+                //     new_line = [];
+                //   }
+                // }
               }
               if (hover) {
                 color = 'purple';
@@ -329,8 +336,11 @@ export default defineComponent({
           h = script_store.video.height * scale;
         ctx.strokeRect(x, y, w, h);
 
-        for (let point of points) {
-          let [x, y] = point;
+        for (let res of quadtree1.query(new circle(0, 0, 100000))) {
+          let x = res.shape.x;
+          let y = res.shape.y;
+          x = (x - center_x) * scale - offset_x + canvas_w / 2;
+          y = (y - center_y) * scale - offset_y + canvas_h / 2;
           ctx.beginPath();
           ctx.arc(x, y, 10, 0, Math.PI * 2);
           ctx.strokeStyle = 'cyan';
