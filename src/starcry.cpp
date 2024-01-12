@@ -839,6 +839,7 @@ std::string starcry::serialize_shapes_to_json(std::vector<std::vector<data::shap
           {"y", shape.y},
           {"x2", shape.x2},
           {"y2", shape.y2},
+          {"radius", shape.radius},
           {"vel_x", shape.vel_x},
           {"vel_y", shape.vel_y},
           {"opacity", shape.opacity},

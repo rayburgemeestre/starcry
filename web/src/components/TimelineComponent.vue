@@ -98,7 +98,6 @@ export default defineComponent({
           result.push([i, colors[color_idx]]);
         }
       }
-      console.log(result);
       return result;
     },
   },

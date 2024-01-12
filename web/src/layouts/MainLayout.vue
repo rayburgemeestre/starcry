@@ -155,6 +155,11 @@ export default defineComponent({
     // let holdTimer = null;
     // let startXY = [];
 
+    // unfinished, experimental code.
+    let points = [];
+    let lines = [];
+    let new_line = [];
+
     // Composable usage
     let obj = {
       canvas_elem,
@@ -169,9 +174,14 @@ export default defineComponent({
       filter: ref(''),
       script_store,
 
+      points,
+      lines,
+      new_line,
+
       on_mouse_move: function (e) {
         viewpoint_store.view_x = Module.get_mouse_x();
         viewpoint_store.view_y = Module.get_mouse_y();
+        this.render_objects(false, true);
       },
       on_touchmove: function (e) {
         viewpoint_store.view_x = Module.get_mouse_x();
@@ -206,13 +216,23 @@ export default defineComponent({
         this.render_objects(true);
       },
       on_mouse_down: function (e) {
-        if (e.ctrlKey) {
+        if (e.altKey) {
+          // will improve this later...
+          this.render_objects(true, false, true, true);
+        } else if (e.shiftKey) {
+          this.render_objects(true, false, true);
+        } else if (e.ctrlKey) {
           viewpoint_store.select();
         } else {
           this.render_objects(true);
         }
       },
-      render_objects: function (update_selected_objects: boolean) {
+      render_objects: function (
+        update_selected_objects: boolean,
+        hover: boolean,
+        set_point: boolean,
+        set_line: boolean
+      ) {
         let canvas1 = document.getElementById('canvas') as HTMLCanvasElement;
         let canvas = document.getElementById('canvas2') as HTMLCanvasElement;
         [canvas.height, canvas.height] = [canvas1.width, canvas1.height];
@@ -240,9 +260,7 @@ export default defineComponent({
         );
         script_store.texture_w = texture_w;
         script_store.texture_h = texture_h;
-        console.log(
-          'Updated texture dimensions: ' + texture_w + 'x' + texture_h
-        );
+        // console.log('Updated texture dimensions: ' + texture_w + 'x' + texture_h);
         script_store.texture_size_updated_by_server++; // make sure our viewpont reacts
 
         let viewpoint_store = useViewpointStore();
@@ -273,16 +291,26 @@ export default defineComponent({
 
             let x = (obj.x - center_x) * scale - offset_x + canvas_w / 2;
             let y = (obj.y - center_y) * scale - offset_y + canvas_h / 2;
+            let x1 = x;
+            let y1 = y;
+            let x2 = 0;
+            let y2 = 0;
             let obj_x = obj.x;
             let obj_y = obj.y;
+            let radius = 0;
+
+            if (obj.type === 'circle') {
+              radius = obj.radius * scale;
+            }
             if (obj.type === 'line') {
-              let x2 = (obj.x2 - center_x) * scale - offset_x + canvas_w / 2;
-              let y2 = (obj.y2 - center_y) * scale - offset_y + canvas_h / 2;
+              x2 = (obj.x2 - center_x) * scale - offset_x + canvas_w / 2;
+              y2 = (obj.y2 - center_y) * scale - offset_y + canvas_h / 2;
               x = (x + x2) / 2.0;
               y = (y + y2) / 2.0;
               obj_x = (obj_x + obj.x2) / 2.0;
               obj_y = (obj_y + obj.y2) / 2.0;
             }
+
             let view_x =
               (viewpoint_store.view_x - canvas_w / 2) / scale + center_x;
             let view_y =
@@ -298,7 +326,53 @@ export default defineComponent({
                 script_store.selected.includes(obj.unique_id))
             ) {
               color = 'red';
-              if (update_selected_objects) {
+              if (set_point) {
+                const entry = [x, y];
+                if (!(entry in points)) points.push([x, y]);
+                if (set_line) {
+                  if (new_line.length == 0) {
+                    new_line.push(entry);
+                  } else if (new_line.length == 1) {
+                    new_line.push(entry);
+                    lines.push(new_line);
+                    new_line = [];
+                  }
+                }
+              }
+              if (hover) {
+                color = 'purple';
+                if (obj.type == 'circle') {
+                  ctx.beginPath();
+                  ctx.arc(x, y, radius, 0, Math.PI * 2);
+                  ctx.strokeStyle = 'black';
+                  ctx.lineWidth = 2;
+                  // ctx.fillStyle = 'red';
+                  // ctx.fill();
+                  ctx.stroke();
+                  ctx.strokeStyle = 'yellow';
+                  ctx.lineWidth = 1;
+                  ctx.stroke();
+                  ctx.closePath();
+                } else if (obj.type == 'line') {
+                  ctx.beginPath();
+                  ctx.strokeStyle = 'yellow';
+                  ctx.lineWidth = 2;
+                  ctx.moveTo(x1, y1);
+                  ctx.lineTo(x2, y2);
+                  ctx.stroke();
+                }
+                ctx.strokeStyle = 'grey';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas_w, y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas_h);
+                ctx.stroke();
+              }
+              if (!set_point && update_selected_objects) {
                 script_store.addSelectedObject(obj.unique_id);
                 objects_store.onUserSelected(obj.unique_id);
               }
@@ -319,6 +393,28 @@ export default defineComponent({
           w = script_store.video.width * scale,
           h = script_store.video.height * scale;
         ctx.strokeRect(x, y, w, h);
+
+        for (let point of points) {
+          let [x, y] = point;
+          ctx.beginPath();
+          ctx.arc(x, y, 10, 0, Math.PI * 2);
+          ctx.strokeStyle = 'cyan';
+          ctx.lineWidth = 2;
+          ctx.fillStyle = 'cyan';
+          ctx.fill();
+          ctx.stroke();
+          ctx.closePath();
+        }
+        for (let line of lines) {
+          let [x, y] = line[0];
+          let [x2, y2] = line[1];
+          ctx.beginPath();
+          ctx.strokeStyle = 'cyan';
+          ctx.lineWidth = 2;
+          ctx.moveTo(x, y);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        }
       },
       on_wheel: function (event) {
         event.preventDefault();
