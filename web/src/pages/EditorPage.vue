@@ -3,12 +3,7 @@
     <q-list bordered padding>
       <q-item-label header>Gradients</q-item-label>
 
-      <q-item
-        clickable
-        v-ripple
-        v-for="name in Object.keys(gradients)"
-        :key="name"
-      >
+      <q-item clickable v-ripple v-for="name in Object.keys(gradients)" :key="name">
         <q-item-section>
           <q-item-label class="extra-margin">{{ name }}</q-item-label>
           <q-item-label caption>
@@ -28,21 +23,11 @@
       <q-separator spaced />
       <q-item-label header>Objects</q-item-label>
 
-      <q-item
-        tag="label"
-        v-ripple
-        v-for="(object, key) in objects"
-        :key="key"
-        @click="selected = key"
-      >
+      <q-item tag="label" v-ripple v-for="(object, key) in objects" :key="key" @click="selected = key">
         <q-item-section>
           <q-item-label>{{ key }}</q-item-label>
           <q-item-label caption> {{ object.type }} </q-item-label>
-          <q-input
-            v-if="selected == key"
-            v-model="object_names[key]"
-            label="name"
-          />
+          <q-input v-if="selected == key" v-model="object_names[key]" label="name" />
           <q-table
             v-if="selected == key"
             dense
@@ -96,10 +81,7 @@ export default defineComponent({
         let gradient_definition = JSON.stringify(gradients[gradient_name]);
         let colors =
           typeof gradient_definition !== 'undefined'
-            ? window.Module.get_gradient_colors(
-                gradient_definition,
-                canvas.width
-              )
+            ? window.Module.get_gradient_colors(gradient_definition, canvas.width)
             : undefined;
 
         function drawCheckerboard() {
@@ -109,10 +91,7 @@ export default defineComponent({
             for (let x = 0; x < canvas.width; x++) {
               // Select the color based on the current pixel's position
               const blocksize = 5;
-              const colorIndex =
-                Math.floor(x / blocksize) % 2 === Math.floor(y / blocksize) % 2
-                  ? 0
-                  : 1;
+              const colorIndex = Math.floor(x / blocksize) % 2 === Math.floor(y / blocksize) % 2 ? 0 : 1;
               ctx.fillStyle = colors[colorIndex];
               ctx.fillRect(x, y, 1, 1);
             }

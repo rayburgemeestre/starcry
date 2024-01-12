@@ -97,10 +97,7 @@ export default defineComponent({
     function toggle_vim_mode(value: boolean) {
       if (value) {
         this.emacs_mode = false;
-        vimmode = initVimMode(
-          editor,
-          document.getElementById(name + '_status')
-        );
+        vimmode = initVimMode(editor, document.getElementById(name + '_status'));
       } else {
         vimmode?.dispose();
         document.getElementById(name + '_status').innerHTML = '';

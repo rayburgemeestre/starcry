@@ -1,26 +1,14 @@
 <template>
   <div class="q-pa-md">
     <br />
-    <q-btn color="secondary" style="width: 33.33%" @click="reset()"
-      >Reset</q-btn
-    >
-    <q-btn
-      color="secondary"
-      style="width: 33.33%"
-      @click="toggle_expand(true)"
-      v-if="state === 'expand'"
+    <q-btn color="secondary" style="width: 33.33%" @click="reset()">Reset</q-btn>
+    <q-btn color="secondary" style="width: 33.33%" @click="toggle_expand(true)" v-if="state === 'expand'"
       >Collapse</q-btn
     >
-    <q-btn
-      color="secondary"
-      style="width: 33.33%"
-      @click="toggle_expand(false)"
-      v-if="state !== 'expand'"
+    <q-btn color="secondary" style="width: 33.33%" @click="toggle_expand(false)" v-if="state !== 'expand'"
       >Expand</q-btn
     >
-    <q-btn color="secondary" style="width: 33.33%" @click="filtering()"
-      >Filter</q-btn
-    >
+    <q-btn color="secondary" style="width: 33.33%" @click="filtering()">Filter</q-btn>
   </div>
 
   <div :key="componentKey">
@@ -58,12 +46,8 @@
         <span
           class="col type"
           :style="{
-            backgroundColor: objects_store.isUserSelected(object['unique_id'])
-              ? 'red'
-              : '',
-            color: objects_store.isUserSelected(object['unique_id'])
-              ? 'black'
-              : '',
+            backgroundColor: objects_store.isUserSelected(object['unique_id']) ? 'red' : '',
+            color: objects_store.isUserSelected(object['unique_id']) ? 'black' : '',
           }"
           @click="user_select(this, object.unique_id, true)"
           >focus<!-- {{ to_utf8_symbol(object['type']) }}--></span
@@ -71,14 +55,8 @@
         <span
           class="col info"
           :style="{
-            backgroundColor: objects_store.isUserInfoSelected(
-              object['unique_id']
-            )
-              ? 'red'
-              : '',
-            color: objects_store.isUserInfoSelected(object['unique_id'])
-              ? 'black'
-              : '',
+            backgroundColor: objects_store.isUserInfoSelected(object['unique_id']) ? 'red' : '',
+            color: objects_store.isUserInfoSelected(object['unique_id']) ? 'black' : '',
           }"
           @click="user_select_info(this, object.unique_id)"
           >info</span
@@ -86,14 +64,8 @@
         <span
           class="col unique_id"
           :style="{
-            backgroundColor: scripts_store.highlighted.includes(
-              object['unique_id']
-            )
-              ? 'cyan'
-              : '',
-            color: scripts_store.highlighted.includes(object['unique_id'])
-              ? 'black'
-              : '',
+            backgroundColor: scripts_store.highlighted.includes(object['unique_id']) ? 'cyan' : '',
+            color: scripts_store.highlighted.includes(object['unique_id']) ? 'black' : '',
           }"
           @click="highlight(this, object.unique_id)"
           >{{ object['unique_id'] }}</span
@@ -103,10 +75,7 @@
       </div>
       <div
         :style="{ marginLeft: object['level'] * 20 + 'px' }"
-        v-if="
-          objects_store.isUserInfoSelected(object['unique_id']) &&
-          show_object(object['unique_id'])
-        "
+        v-if="objects_store.isUserInfoSelected(object['unique_id']) && show_object(object['unique_id'])"
         class="item"
       >
         <q-table
@@ -236,9 +205,7 @@ export default defineComponent({
 
     function rows(unique_id) {
       // get the object with matching unique_id, from the array
-      let object = objects_store.objects.find(
-        (element) => element.unique_id === unique_id
-      );
+      let object = objects_store.objects.find((element) => element.unique_id === unique_id);
       return Object.entries(object);
     }
 
@@ -262,10 +229,7 @@ export default defineComponent({
       if (filter_selected.value) {
         return objects_store.isSelected(unique_id) !== 0;
       }
-      return (
-        objects_store.isSelectedArray(objects_store.parentsLookup(unique_id)) ||
-        state.value === 'expand'
-      );
+      return objects_store.isSelectedArray(objects_store.parentsLookup(unique_id)) || state.value === 'expand';
     }
 
     function show_icon(unique_id: number, expected: number) {

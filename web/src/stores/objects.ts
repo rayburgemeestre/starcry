@@ -130,9 +130,7 @@ export const useObjectsStore = defineStore('objects', {
       }
 
       this.implied_selected = [...new Set([...this.implied_selected, ...ids])];
-      this.gui_implied_selected = [
-        ...new Set([...this.gui_implied_selected, ...ids]),
-      ];
+      this.gui_implied_selected = [...new Set([...this.gui_implied_selected, ...ids])];
     },
     onUserSelectedInfo(unique_id: number) {
       this.user_selected_info.push(unique_id);

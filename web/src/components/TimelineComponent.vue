@@ -1,11 +1,6 @@
 <template>
   <div style="width: 100%">
-    <div
-      class="myslider"
-      style="width: 100%; margin-right: 10px; float: left"
-      :min="1"
-      @mouseout="mouse_out"
-    >
+    <div class="myslider" style="width: 100%; margin-right: 10px; float: left" :min="1" @mouseout="mouse_out">
       <div
         v-bind:class="t"
         v-bind:key="index"
@@ -80,15 +75,9 @@ export default defineComponent({
         }
         if (script_store.job_skipped != -1 && script_store.job_skipped >= i) {
           result.push([i, 'skipped ' + colors[color_idx]]);
-        } else if (
-          script_store.job_rendered != -1 &&
-          script_store.job_rendered == i
-        ) {
+        } else if (script_store.job_rendered != -1 && script_store.job_rendered == i) {
           result.push([i, 'rendered']);
-        } else if (
-          script_store.job_rendering != -1 &&
-          script_store.job_rendering == i
-        ) {
+        } else if (script_store.job_rendering != -1 && script_store.job_rendering == i) {
           result.push([i, 'rendering']);
         } else if (script_store.frame == i) {
           result.push([i, 'current']);

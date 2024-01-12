@@ -40,14 +40,10 @@ export function create_script_endpoint() {
           if (scene.duration) {
             total_duration += scene.duration;
           }
-          script_store.frames_per_scene.push(
-            scene.duration * script_store.video['fps']
-          );
+          script_store.frames_per_scene.push(scene.duration * script_store.video['fps']);
         }
         if (!total_duration) total_duration = script_store.video['duration'];
-        script_store.max_frames = Math.floor(
-          total_duration * script_store.video['fps']
-        );
+        script_store.max_frames = Math.floor(total_duration * script_store.video['fps']);
         // the editorpane needs to be updated
         script_store.re_render_editor_sidepane++;
       } else if (buffer[0] === '3') {

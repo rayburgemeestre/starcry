@@ -18,11 +18,7 @@ export function create_stats_endpoint() {
         stats_store.rows = [];
         const threads = buffer.data.threads || [];
         for (const thread of threads) {
-          stats_store.rows.push([
-            thread.name,
-            Math.round(thread.seconds_idle),
-            thread.state,
-          ]);
+          stats_store.rows.push([thread.name, Math.round(thread.seconds_idle), thread.state]);
         }
 
         let skipped = -1;
@@ -49,11 +45,7 @@ export function create_stats_endpoint() {
         stats_store.rows_piper.value = [];
         const components = buffer.data || [];
         for (const component of components) {
-          if (component.counter)
-            stats_store.rows_piper.value.push([
-              component.name,
-              component.counter,
-            ]);
+          if (component.counter) stats_store.rows_piper.value.push([component.name, component.counter]);
         }
       } else if (buffer.type == 'fs_change') {
         script_store.script = buffer['source'];

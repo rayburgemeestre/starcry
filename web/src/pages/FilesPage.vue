@@ -2,12 +2,7 @@
   <div class="q-pa-md q-gutter-sm">
     <q-input ref="filterRef" filled v-model="files.filter" label="Filter">
       <template v-slot:append>
-        <q-icon
-          v-if="files.filter !== ''"
-          name="clear"
-          class="cursor-pointer"
-          @click="resetFilter()"
-        />
+        <q-icon v-if="files.filter !== ''" name="clear" class="cursor-pointer" @click="resetFilter()" />
       </template>
     </q-input>
 

@@ -24,9 +24,7 @@ export function create_tree(files_list_json_string: string): TreeNode[] {
       let current: TreeNode[] = tree;
       for (const parent of parents) {
         // see if current is in current
-        let item: TreeNode | undefined = current.find(
-          (node) => node.label == parent
-        );
+        let item: TreeNode | undefined = current.find((node) => node.label == parent);
         let found: boolean = item != undefined;
         if (!found) {
           const new_children: TreeNode[] = [];

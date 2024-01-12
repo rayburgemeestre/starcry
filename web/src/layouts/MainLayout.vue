@@ -4,34 +4,12 @@
       <q-toolbar>
         <q-btn dense flat round icon="menu" @click="toggleLeftDrawer" />
         <q-toolbar-title>
-          <img
-            src="/sc.png"
-            style="position: relative; top: 10px; left: 10px; height: 40px"
-            alt="logo"
-          />
+          <img src="/sc.png" style="position: relative; top: 10px; left: 10px; height: 40px" alt="logo" />
         </q-toolbar-title>
-        <q-btn
-          v-if="global_store.connected.size"
-          flat
-          round
-          dense
-          icon="cloud_queue"
-          class="q-mr-xs"
-        />
-        <div v-if="global_store.connected.size">
-          {{ global_store.connected.size }} connected
-        </div>
-        <q-btn
-          v-if="global_store.disconnected.size"
-          flat
-          round
-          dense
-          icon="cloud_off"
-          class="q-mr-xs"
-        />
-        <div v-if="global_store.disconnected.size">
-          {{ global_store.disconnected.size }} disconnected
-        </div>
+        <q-btn v-if="global_store.connected.size" flat round dense icon="cloud_queue" class="q-mr-xs" />
+        <div v-if="global_store.connected.size">{{ global_store.connected.size }} connected</div>
+        <q-btn v-if="global_store.disconnected.size" flat round dense icon="cloud_off" class="q-mr-xs" />
+        <div v-if="global_store.disconnected.size">{{ global_store.disconnected.size }} disconnected</div>
         <q-btn dense flat round icon="menu" @click="toggleRightDrawer" />
       </q-toolbar>
 
@@ -45,18 +23,9 @@
       </q-tabs>
     </q-header>
 
-    <q-drawer
-      show-if-above
-      v-model="leftDrawerOpen"
-      side="left"
-      bordered
-      :width="drawerWidth"
-    >
+    <q-drawer show-if-above v-model="leftDrawerOpen" side="left" bordered :width="drawerWidth">
       <router-view />
-      <div
-        v-touch-pan.preserveCursor.prevent.mouse.horizontal="resizeDrawer"
-        class="q-drawer__resizer"
-      ></div>
+      <div v-touch-pan.preserveCursor.prevent.mouse.horizontal="resizeDrawer" class="q-drawer__resizer"></div>
     </q-drawer>
 
     <q-drawer show-if-above v-model="rightDrawerOpen" side="right" bordered>
@@ -64,28 +33,11 @@
     </q-drawer>
 
     <q-page-container>
-      <div
-        style="
-          position: relative;
-          z-index: 2; /* background-color: #880000; */
-          height: 100%;
-        "
-      >
-        <div
-          style="
-            position: absolute;
-            z-index: 1000;
-            top: 10px;
-            left: 10px;
-            color: blue;
-          "
-        >
+      <div style="position: relative; z-index: 2; /* background-color: #880000; */ height: 100%">
+        <div style="position: absolute; z-index: 1000; top: 10px; left: 10px; color: blue">
           <!-- DEBUG: {{ debug_text }} -->
         </div>
-        <canvas
-          id="canvas2"
-          style="z-index: 1; pointer-events: none; /* saved my day */"
-        ></canvas>
+        <canvas id="canvas2" style="z-index: 1; pointer-events: none; /* saved my day */"></canvas>
         <canvas
           id="canvas"
           ref="canvas_elem"
@@ -246,18 +198,7 @@ export default defineComponent({
         let canvas_h = Module.get_canvas_h();
         let texture_w = Module.get_texture_w();
         let texture_h = Module.get_texture_h();
-        ctx.fillText(
-          'canvas: ' +
-            canvas_w +
-            ' x ' +
-            canvas_h +
-            ', texture: ' +
-            texture_w +
-            ' x ' +
-            texture_h,
-          20,
-          20
-        );
+        ctx.fillText('canvas: ' + canvas_w + ' x ' + canvas_h + ', texture: ' + texture_w + ' x ' + texture_h, 20, 20);
         script_store.texture_w = texture_w;
         script_store.texture_h = texture_h;
         // console.log('Updated texture dimensions: ' + texture_w + 'x' + texture_h);
@@ -311,19 +252,13 @@ export default defineComponent({
               obj_y = (obj_y + obj.y2) / 2.0;
             }
 
-            let view_x =
-              (viewpoint_store.view_x - canvas_w / 2) / scale + center_x;
-            let view_y =
-              (viewpoint_store.view_y - canvas_h / 2) / scale + center_y;
-            if (
-              pass === 2 &&
-              script_store.highlighted.includes(obj.unique_id)
-            ) {
+            let view_x = (viewpoint_store.view_x - canvas_w / 2) / scale + center_x;
+            let view_y = (viewpoint_store.view_y - canvas_h / 2) / scale + center_y;
+            if (pass === 2 && script_store.highlighted.includes(obj.unique_id)) {
               color = 'cyan';
             } else if (
               pass === 1 &&
-              (get_distance(obj_x, obj_y, view_x, view_y) < 10 / scale ||
-                script_store.selected.includes(obj.unique_id))
+              (get_distance(obj_x, obj_y, view_x, view_y) < 10 / scale || script_store.selected.includes(obj.unique_id))
             ) {
               color = 'red';
               if (set_point) {
@@ -428,10 +363,7 @@ export default defineComponent({
         // Restrict scale
         // TODO: this 100 needs to come from some constant, or better yet, some actual setting somewhere..
         // eslint-disable-next-line @typescript-eslint/no-loss-of-precision
-        viewpoint_store.scale = Math.min(
-          Math.max(0, viewpoint_store.scale),
-          100
-        );
+        viewpoint_store.scale = Math.min(Math.max(0, viewpoint_store.scale), 100);
       },
 
       handleKeydown(event) {
@@ -476,9 +408,7 @@ export default defineComponent({
     }.bind(obj);
 
     obj.update_size = function () {
-      let cvs = document
-        .getElementById('canvas')
-        .parentNode.getBoundingClientRect();
+      let cvs = document.getElementById('canvas').parentNode.getBoundingClientRect();
       let header = document.querySelector('.q-header').getBoundingClientRect();
       let footer = document.querySelector('.q-footer').getBoundingClientRect();
       let w = Math.floor(cvs['width']);

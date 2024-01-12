@@ -1,11 +1,7 @@
 <template>
   <div class="q-pa-md">
     <br />
-    <q-btn
-      :loading="bitmap_store.loading"
-      color="secondary"
-      @click="render_current_frame"
-      style="width: 100%"
+    <q-btn :loading="bitmap_store.loading" color="secondary" @click="render_current_frame" style="width: 100%"
       >Render</q-btn
     >
     <br />
@@ -29,74 +25,26 @@
     <q-input v-model.number="script_store.num_chunks" label="num chunks" />
     <q-input v-model.number="viewpoint_store_raw.scale" label="scale" />
     <br />
-    <q-checkbox
-      dark
-      v-model="viewpoint_store_raw.labels"
-      label="Labels"
-      color="#990000"
-    />
-    <q-checkbox
-      dark
-      v-model="viewpoint_store_raw.debug"
-      label="Debug"
-      color="#990000"
-    />
-    <q-checkbox
-      dark
-      v-model="viewpoint_store_raw.raw"
-      label="Raw"
-      color="#990000"
-    />
-    <q-checkbox
-      dark
-      v-model="viewpoint_store_raw.preview"
-      label="Preview"
-      color="#990000"
-    />
-    <q-checkbox
-      dark
-      v-model="viewpoint_store_raw.caching"
-      label="Caching"
-      color="#990000"
-    />
-    <q-checkbox
-      dark
-      v-model="viewpoint_store_raw.save"
-      label="Save"
-      color="#990000"
-    />
+    <q-checkbox dark v-model="viewpoint_store_raw.labels" label="Labels" color="#990000" />
+    <q-checkbox dark v-model="viewpoint_store_raw.debug" label="Debug" color="#990000" />
+    <q-checkbox dark v-model="viewpoint_store_raw.raw" label="Raw" color="#990000" />
+    <q-checkbox dark v-model="viewpoint_store_raw.preview" label="Preview" color="#990000" />
+    <q-checkbox dark v-model="viewpoint_store_raw.caching" label="Caching" color="#990000" />
+    <q-checkbox dark v-model="viewpoint_store_raw.save" label="Save" color="#990000" />
     <br />
-    <q-btn color="secondary" @click="reset_values" style="width: 100%"
-      >Reset</q-btn
-    >
-    <q-checkbox
-      dark
-      v-model="script_store.auto_render"
-      label="Auto Render"
-      color="#990000"
-    />
+    <q-btn color="secondary" @click="reset_values" style="width: 100%">Reset</q-btn>
+    <q-checkbox dark v-model="script_store.auto_render" label="Auto Render" color="#990000" />
     <hr />
-    <q-btn color="secondary" @click="restart_server" style="width: 100%"
-      >Restart server</q-btn
-    >
+    <q-btn color="secondary" @click="restart_server" style="width: 100%">Restart server</q-btn>
     <br />
     <br />
-    <q-btn
-      color="secondary"
-      @click="viewpoint_store_raw.select()"
-      style="width: 100%"
-      >Zoom in to cursor</q-btn
-    >
+    <q-btn color="secondary" @click="viewpoint_store_raw.select()" style="width: 100%">Zoom in to cursor</q-btn>
     <br />
     <br />
     <hr />
     <q-input v-model.number="video_width" label="video width" />
     <q-input v-model.number="video_height" label="video height" />
-    <q-btn
-      :loading="bitmap_store.loading"
-      color="secondary"
-      @click="render_current_video"
-      style="width: 100%"
+    <q-btn :loading="bitmap_store.loading" color="secondary" @click="render_current_video" style="width: 100%"
       >Render video</q-btn
     >
   </div>
@@ -135,8 +83,7 @@ let bitmap_store = useBitmapStore();
 let rows = ref([]);
 for (let v in viewpoint_store) {
   // we're already creating checkboxes for booleans manually
-  if (typeof viewpoint_store[v].value !== 'boolean')
-    rows.value.push([v, viewpoint_store[v]]);
+  if (typeof viewpoint_store[v].value !== 'boolean') rows.value.push([v, viewpoint_store[v]]);
 }
 // rows.value.push(['texture_w', script_store_refs.texture_w]);
 // rows.value.push(['texture_h', script_store_refs.texture_h]);
@@ -174,8 +121,7 @@ export default defineComponent({
     };
 
     for (let v in viewpoint_store_raw.$state) {
-      if (v === 'view_x' || v === 'view_y' || v === 'viewpoint_send_needed')
-        continue;
+      if (v === 'view_x' || v === 'view_y' || v === 'viewpoint_send_needed') continue;
       watch(
         () => viewpoint_store[v].value,
         (n) => {
@@ -265,10 +211,7 @@ export default defineComponent({
       if (script_store.texture_w === 0 && script_store.texture_h === 0) {
         canvas_different = false;
       }
-      if (
-        viewpoint_store.previous_hash.value === serialize_viewpoint() &&
-        !canvas_different
-      ) {
+      if (viewpoint_store.previous_hash.value === serialize_viewpoint() && !canvas_different) {
         return;
       } // nothing new
       // make sure that we sync the updated viewpoint..

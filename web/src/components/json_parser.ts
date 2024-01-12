@@ -105,11 +105,7 @@ export class JsonWithObjectsParser {
         }
       }
       //
-      if (
-        !(in_function as boolean) &&
-        s === 'f' &&
-        this.json_str.substr(i, 'function'.length) === 'function'
-      ) {
+      if (!(in_function as boolean) && s === 'f' && this.json_str.substr(i, 'function'.length) === 'function') {
         in_function = brace;
         trail += '"FUNCTION ' + function_num + '"';
         function_str = 'f';
@@ -133,11 +129,7 @@ export class JsonWithObjectsParser {
         }
       }
       if (in_function === false) {
-        if (
-          ',;'.indexOf(s) !== -1 &&
-          previous_char === '.' &&
-          '0123456789'.indexOf(previous_char2) !== -1
-        ) {
+        if (',;'.indexOf(s) !== -1 && previous_char === '.' && '0123456789'.indexOf(previous_char2) !== -1) {
           trail += '0';
         }
 
