@@ -117,11 +117,6 @@ export default defineComponent({
 
     let boundary = new rectangle(-10000, -10000, 10000 * 2, 10000 * 2);
     let quadtree1 = new quadtree(boundary, 1);
-
-    // let holdTimer = null;
-    // let startXY = [];
-
-    // unfinished, experimental code.
     let lines = new Set();
     let new_line = [];
 
@@ -145,7 +140,7 @@ export default defineComponent({
       on_mouse_move: function (e) {
         viewpoint_store.view_x = Module.get_mouse_x();
         viewpoint_store.view_y = Module.get_mouse_y();
-        this.render_objects(false, true);
+        this.render_objects(false, true, false, false, e.shiftKey);
       },
       on_touchmove: function (e) {
         viewpoint_store.view_x = Module.get_mouse_x();
@@ -180,7 +175,7 @@ export default defineComponent({
         this.render_objects(true);
       },
       on_mouse_down: function (e) {
-        if (e.altKey) {
+        if (e.altKey || new_line.length === 1) {
           // will improve this later...
           this.render_objects(true, false, true, true);
         } else if (e.shiftKey) {
@@ -195,7 +190,8 @@ export default defineComponent({
         update_selected_objects: boolean,
         hover: boolean,
         set_point: boolean,
-        set_line: boolean
+        set_line: boolean,
+        preview_object_add: boolean
       ) {
         let canvas1 = document.getElementById('canvas') as HTMLCanvasElement;
         let canvas = document.getElementById('canvas2') as HTMLCanvasElement;
@@ -242,6 +238,9 @@ export default defineComponent({
         let center_y = viewpoint_store.offset_y;
         let offset_x = 0;
         let offset_y = 0;
+        let line_snap_x = false;
+        let line_snap_y = false;
+
         for (let pass = 1; pass <= 2; pass++) {
           for (let obj of objects_store.objects) {
             let color = '';
@@ -277,23 +276,25 @@ export default defineComponent({
               pass === 1 &&
               (get_distance(obj_x, obj_y, view_x, view_y) < 10 / scale || script_store.selected.includes(obj.unique_id))
             ) {
+              line_snap_x = obj_x;
+              line_snap_y = obj_y;
+
               color = 'red';
               if (set_point) {
                 let others = quadtree1.query(new circle(obj.x, obj.y, 1));
                 if (others.length == 0) {
                   quadtree1.insert(new point(new circle(obj.x, obj.y, 10), 1001));
+                  console.log('Total entries now: ' + quadtree1.query(new circle(0, 0, 100000)).length);
                 }
-                console.log('Total entries now: ' + quadtree1.query(new circle(0, 0, 100000)).length);
-                // TODO: something for line as well....
-                // if (set_line) {
-                //   if (new_line.length == 0) {
-                //     new_line.push(entry);
-                //   } else if (new_line.length == 1) {
-                //     new_line.push(entry);
-                //     lines.add(new_line);
-                //     new_line = [];
-                //   }
-                // }
+                if (set_line) {
+                  if (new_line.length == 0) {
+                    new_line.push([obj.x, obj.y]);
+                  } else if (new_line.length == 1) {
+                    new_line.push([obj.x, obj.y]);
+                    lines.add(new_line);
+                    new_line = [];
+                  }
+                }
               }
               if (hover) {
                 color = 'purple';
@@ -309,6 +310,18 @@ export default defineComponent({
                   ctx.lineWidth = 1;
                   ctx.stroke();
                   ctx.closePath();
+
+                  if (preview_object_add) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, 10, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.fillStyle = 'white';
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.closePath();
+                    preview_object_add = false;
+                  }
                 } else if (obj.type == 'line') {
                   ctx.beginPath();
                   ctx.strokeStyle = 'yellow';
@@ -341,6 +354,20 @@ export default defineComponent({
             }
           }
         }
+
+        if (preview_object_add) {
+          let view_x = viewpoint_store.view_x;
+          let view_y = viewpoint_store.view_y;
+          ctx.beginPath();
+          ctx.arc(view_x, view_y, 10, 0, Math.PI * 2);
+          ctx.strokeStyle = 'grey';
+          ctx.lineWidth = 2;
+          ctx.fillStyle = 'grey';
+          ctx.fill();
+          ctx.stroke();
+          ctx.closePath();
+        }
+
         // draw the actual canvas of the video
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 2;
@@ -364,9 +391,34 @@ export default defineComponent({
           ctx.stroke();
           ctx.closePath();
         }
+
+        if (new_line.length === 1) {
+          let x = new_line[0][0];
+          let y = new_line[0][1];
+          x = (x - center_x) * scale - offset_x + canvas_w / 2;
+          y = (y - center_y) * scale - offset_y + canvas_h / 2;
+          let view_x = viewpoint_store.view_x;
+          let view_y = viewpoint_store.view_y;
+          if (line_snap_x !== false && line_snap_y !== false) {
+            view_x = line_snap_x;
+            view_y = line_snap_y;
+            view_x = (view_x - center_x) * scale - offset_x + canvas_w / 2;
+            view_y = (view_y - center_y) * scale - offset_y + canvas_h / 2;
+          }
+          ctx.beginPath();
+          ctx.strokeStyle = 'cyan';
+          ctx.lineWidth = 2;
+          ctx.moveTo(x, y);
+          ctx.lineTo(view_x, view_y);
+          ctx.stroke();
+        }
         for (let line of lines) {
           let [x, y] = line[0];
           let [x2, y2] = line[1];
+          x = (x - center_x) * scale - offset_x + canvas_w / 2;
+          y = (y - center_y) * scale - offset_y + canvas_h / 2;
+          x2 = (x2 - center_x) * scale - offset_x + canvas_w / 2;
+          y2 = (y2 - center_y) * scale - offset_y + canvas_h / 2;
           ctx.beginPath();
           ctx.strokeStyle = 'cyan';
           ctx.lineWidth = 2;
