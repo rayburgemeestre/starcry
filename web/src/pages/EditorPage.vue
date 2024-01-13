@@ -166,6 +166,9 @@ export default defineComponent({
       }
     }
 
+    let current_evt_element = false;
+    let current_function = '';
+
     function on_row_click(evt, row, index) {
       if (row[0] === 'init' || row[0] === 'time') {
         if (current_evt_element) {
