@@ -5,6 +5,7 @@ export const useScriptStore = defineStore('script', {
   state: () => ({
     filename: 'input/test.js',
     script: '',
+    snippet: '',
     frame: 1,
 
     video: {},
@@ -41,6 +42,9 @@ export const useScriptStore = defineStore('script', {
     set_value(new_val: string) {
       this.script = new_val;
       this.value_updated_by_user++;
+    },
+    set_snippet(new_val: string) {
+      this.snippet = new_val;
     },
     clearSelectedObjects() {
       this.selected = [];

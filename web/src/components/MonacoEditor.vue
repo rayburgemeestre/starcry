@@ -58,6 +58,10 @@ export default defineComponent({
       type: String,
       required: false,
     },
+    target: {
+      type: String,
+      required: false,
+    },
     language: {
       type: String,
       required: false,
@@ -89,7 +93,13 @@ export default defineComponent({
 
     editor.onDidChangeModelContent((event: any) => {
       const value = editor?.getValue();
-      script_store.set_value(value);
+      // This makes this component pretty completely hardcoded.
+      // Need to figure out at some point how to get it working the right way
+      if (this.target === 'main') {
+        script_store.set_value(value);
+      } else if (this.target === 'snippet') {
+        script_store.set_snippet(value);
+      }
     });
 
     let vimmode = null;
@@ -138,13 +148,29 @@ export default defineComponent({
 
     // TODO: this is not really the place to do this, can we add API to a component?
     // Need to figure out the "vue3"/quasar way to do things.
-    let script = useScriptStore();
-    watch(
-      () => script.script,
-      function (val) {
-        editor?.setValue(val);
-      }.bind(this)
-    );
+    if (this.target === 'main') {
+      let script = useScriptStore();
+      watch(
+        () => script.script,
+        function (val) {
+          editor?.setValue(val);
+        }.bind(this)
+      );
+    } else if (this.target === 'snippet') {
+      let script = useScriptStore();
+      watch(
+        () => script.snippet,
+        function (val) {
+          editor?.setValue(val);
+          // format on change
+          editor?.getAction('editor.action.formatDocument').run();
+        }.bind(this)
+      );
+      // format once, no idea why the delay is necessary here...
+      setTimeout(function () {
+        editor?.getAction('editor.action.formatDocument').run();
+      }, 100);
+    }
   },
 });
 </script>

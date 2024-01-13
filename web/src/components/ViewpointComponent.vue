@@ -125,7 +125,6 @@ export default defineComponent({
       watch(
         () => viewpoint_store[v].value,
         (n) => {
-          console.log('viewpoint_store_raw.$state changed', n, 'v', v);
           if (timer !== null) {
             clearTimeout(timer);
             timer = null;

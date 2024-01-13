@@ -12,8 +12,12 @@ export class JsonWithObjectsParser {
   parsed() {
     return this.obj;
   }
-  funs() {
-    return this.functions;
+  fun(lookup) {
+    const index = parseInt(lookup.split(' ')[1]);
+    if (this.functions.length < index) {
+      return 'OUT OF BOUNDS';
+    }
+    return this.functions[index];
   }
   _parse() {
     // let's get this JSON in parseable shape

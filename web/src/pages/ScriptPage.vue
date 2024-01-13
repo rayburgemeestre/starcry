@@ -1,5 +1,5 @@
 <template>
-  <monaco-editor name="container" :value="script.script" language="javascript" />
+  <monaco-editor name="container" :value="script.script" language="javascript" target="main" />
 </template>
 
 <script lang="ts">

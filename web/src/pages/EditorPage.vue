@@ -23,7 +23,16 @@
       <q-separator spaced />
       <q-item-label header>Objects</q-item-label>
 
-      <q-item tag="label" v-ripple v-for="(object, key) in objects" :key="key" @click="selected = key">
+      <q-item
+        tag="label"
+        v-ripple
+        v-for="(object, key) in objects"
+        :key="key"
+        @click="
+          if (selected != key) clear_fun_select();
+          selected = key;
+        "
+      >
         <q-item-section>
           <q-item-label>{{ key }}</q-item-label>
           <q-item-label caption> {{ object.type }} </q-item-label>
@@ -63,6 +72,13 @@ export default defineComponent({
     let selected = ref('');
 
     function resizeCanvas() {
+      let module_already_loaded = !!window.Module;
+      if (!module_already_loaded || !window.Module.get_gradient_colors) {
+        // reschedule
+        setTimeout(resizeCanvas, 100);
+        return;
+      }
+
       // get as new
       let p = new JsonWithObjectsParser(script_store.script);
       let parsed = p.parsed();
@@ -140,8 +156,8 @@ export default defineComponent({
 
     let rows = ref({});
     let object_names = ref({});
-    for (let k in objects) {
-      let obj = objects[k];
+    for (let k in objects.value) {
+      let obj = objects.value[k];
       object_names.value[k] = k;
       rows.value[k] = [];
       for (let p in obj) {
@@ -151,9 +167,29 @@ export default defineComponent({
     }
 
     function on_row_click(evt, row, index) {
-      console.log(evt);
-      console.log(row);
-      console.log(index);
+      if (row[0] === 'init' || row[0] === 'time') {
+        if (current_evt_element) {
+          current_evt_element.classList.remove('bg-amber-5');
+        }
+        if (current_function !== row[1]) {
+          script_store.snippet = p.fun(row[1]);
+          current_function = row[1];
+          evt.target.parentNode.classList.add('bg-amber-5');
+          current_evt_element = evt.target.parentNode;
+        } else {
+          evt.target.parentNode.classList.remove('bg-amber-5');
+          script_store.snippet = '';
+        }
+      }
+    }
+
+    function clear_fun_select() {
+      script_store.snippet = '';
+      if (current_evt_element) {
+        current_evt_element.classList.remove('bg-amber-5');
+      }
+      current_evt_element = false;
+      current_function = '';
     }
 
     return {
@@ -165,6 +201,7 @@ export default defineComponent({
       selected,
       object_names,
       on_row_click,
+      clear_fun_select,
     };
   },
 });

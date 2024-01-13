@@ -50,6 +50,15 @@
           v-pinch="pinchHandler"
           style="z-index: 0"
         ></canvas>
+        <monaco-editor
+          v-if="script_store.snippet"
+          id="container3"
+          name="container3b"
+          :value="script_store.snippet"
+          language="javascript"
+          style="z-index: 3; position: absolute; width: 100%"
+          target="snippet"
+        />
       </div>
     </q-page-container>
 
@@ -74,6 +83,7 @@ import { useObjectsStore } from 'stores/objects';
 import { usePinch } from '@vueuse/gesture';
 import { useGlobalStore } from 'stores/global';
 import { rectangle, circle, quadtree, point } from 'components/quadtree';
+import MonacoEditor from 'components/MonacoEditor.vue';
 
 const canvas_elem = ref();
 let debug_text = ref('');
@@ -89,12 +99,12 @@ export default defineComponent({
   components: {
     TimelineComponent,
     ViewpointComponent,
+    MonacoEditor,
   },
 
   setup() {
     const leftDrawerOpen = ref(false);
     const rightDrawerOpen = ref(false);
-    const script = ref('Hello world');
 
     let global_store = useGlobalStore();
     let script_store = useScriptStore();
@@ -119,7 +129,7 @@ export default defineComponent({
     let obj = {
       canvas_elem,
       debug_text,
-      script,
+
       leftDrawerOpen,
       rightDrawerOpen,
       drawer: ref(false),
@@ -189,7 +199,11 @@ export default defineComponent({
       ) {
         let canvas1 = document.getElementById('canvas') as HTMLCanvasElement;
         let canvas = document.getElementById('canvas2') as HTMLCanvasElement;
+        let container3 = document.getElementById('container3') as HTMLCanvasElement;
         [canvas.height, canvas.height] = [canvas1.width, canvas1.height];
+        if (container3)
+          [container3.style.width, container3.style.height] = [canvas1.width + 'px', canvas1.height + 'px'];
+
         let ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.font = '15px Monaco';
@@ -425,6 +439,10 @@ export default defineComponent({
       let h = Math.floor(footer['y'] - header['height']);
       document.getElementById('canvas').width = w;
       document.getElementById('canvas').height = h;
+      if (document.getElementById('container3')) {
+        document.getElementById('container3').style.width = w + 'px';
+        document.getElementById('container3').style.height = h + 'px';
+      }
       if (Math.abs(previous_w - w) < 2 && Math.abs(previous_h - h) < 2) {
         return;
       }
@@ -587,5 +605,8 @@ canvas {
 
 canvas:active {
   cursor: none !important;
+}
+.tags {
+  background-color: #1d1d1d;
 }
 </style>
