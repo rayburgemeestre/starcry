@@ -58,7 +58,7 @@
             non_overlapping.push([x, y]);
           }
           this.spawn({
-            'id': 'layer1',
+            'id': 'flowercircle',
             'x': x,
             'y': y,
             'opacity': opacity,
@@ -76,14 +76,14 @@
           }
         }
         this.spawn_parent({
-          'id': 'layer2',
+          'id': 'edge',
           'opacity': 1,
           'radius': 500,
         });
       },
       'time': function(t, e, s, tt) {},
     },
-    'layer1': {
+    'flowercircle': {
       'type': 'circle',
       'unique_group': 'group1',
       'gradient': 'color1',
@@ -92,7 +92,7 @@
       'init': function() {},
       'time': function(t, e, s, tt) {},
     },
-    'layer2': {
+    'edge': {
       'type': 'circle',
       //'unique_group': 'group2',
       'gradient': 'color2',
@@ -112,7 +112,7 @@
           let x = radius * Math.cos(radians(t));
           let y = radius * Math.sin(radians(t));
           this.spawn({
-            'id': 'layer3',
+            'id': 'edgering',
             'x': x,
             'y': y,
             'opacity': 1,
@@ -121,7 +121,7 @@
       },
       'time': function(t, e, s, tt) {},
     },
-    'layer3': {
+    'edgering': {
       'type': 'circle',
       'gradient': 'color3',
       'radius': 4,
