@@ -83,7 +83,9 @@ import { useObjectsStore } from 'stores/objects';
 import { usePinch } from '@vueuse/gesture';
 import { useGlobalStore } from 'stores/global';
 import { rectangle, circle, quadtree, point } from 'components/quadtree';
+import { original_x, original_y, position } from 'components/position';
 import MonacoEditor from 'components/MonacoEditor.vue';
+import Timeout = NodeJS.Timeout;
 
 const canvas_elem = ref();
 let debug_text = ref('');
@@ -91,7 +93,7 @@ let debug_text = ref('');
 // this is not the right place, quasar build generates javascript that tries to read client-data before this has executed
 // save_client_data(load_client_data());
 
-let my_interval: number = null;
+let my_interval: Timeout | null = null;
 
 export default defineComponent({
   name: 'MainLayout',
@@ -238,34 +240,31 @@ export default defineComponent({
         let center_y = viewpoint_store.offset_y;
         let offset_x = 0;
         let offset_y = 0;
-        let line_snap_x = false;
-        let line_snap_y = false;
+        let line_snap: position | false = false;
+
+        function pos(x: original_x, y: original_y) {
+          return new position(center_x, center_y, offset_x, offset_y, canvas_w, canvas_h, scale, x, y);
+        }
 
         for (let pass = 1; pass <= 2; pass++) {
           for (let obj of objects_store.objects) {
             let color = '';
             // TODO: refactor the way we send objects once more
 
-            let x = (obj.x - center_x) * scale - offset_x + canvas_w / 2;
-            let y = (obj.y - center_y) * scale - offset_y + canvas_h / 2;
-            let x1 = x;
-            let y1 = y;
-            let x2 = 0;
-            let y2 = 0;
-            let obj_x = obj.x;
-            let obj_y = obj.y;
+            let object_pos = pos(obj.x, obj.y);
+            let object_pos2 = object_pos;
+            let object_mid = object_pos; // corrected to mid point for lines
             let radius = 0;
 
             if (obj.type === 'circle') {
               radius = obj.radius * scale;
             }
             if (obj.type === 'line') {
-              x2 = (obj.x2 - center_x) * scale - offset_x + canvas_w / 2;
-              y2 = (obj.y2 - center_y) * scale - offset_y + canvas_h / 2;
-              x = (x + x2) / 2.0;
-              y = (y + y2) / 2.0;
-              obj_x = (obj_x + obj.x2) / 2.0;
-              obj_y = (obj_y + obj.y2) / 2.0;
+              object_pos2 = pos(obj.x2, obj.y2);
+              object_mid = pos(
+                (object_pos.original_x + object_pos2.original_x) / 2.0,
+                (object_pos.original_y + object_pos2.original_y) / 2.0
+              );
             }
 
             let view_x = (viewpoint_store.view_x - canvas_w / 2) / scale + center_x;
@@ -274,23 +273,23 @@ export default defineComponent({
               color = 'cyan';
             } else if (
               pass === 1 &&
-              (get_distance(obj_x, obj_y, view_x, view_y) < 10 / scale || script_store.selected.includes(obj.unique_id))
+              (get_distance(object_mid.original_x, object_mid.original_y, view_x, view_y) < 10 / scale ||
+                script_store.selected.includes(obj.unique_id))
             ) {
-              line_snap_x = obj_x;
-              line_snap_y = obj_y;
+              line_snap = object_pos;
 
               color = 'red';
               if (set_point) {
-                let others = quadtree1.query(new circle(obj.x, obj.y, 1));
+                let others = quadtree1.query(new circle(object_mid.original_x, object_mid.original_y, 1));
                 if (others.length == 0) {
-                  quadtree1.insert(new point(new circle(obj.x, obj.y, 10), 1001));
+                  quadtree1.insert(new point(new circle(object_mid.original_x, object_mid.original_y, 10), 1001));
                   console.log('Total entries now: ' + quadtree1.query(new circle(0, 0, 100000)).length);
                 }
                 if (set_line) {
                   if (new_line.length == 0) {
-                    new_line.push([obj.x, obj.y]);
+                    new_line.push([object_mid.original_x, object_mid.original_y]);
                   } else if (new_line.length == 1) {
-                    new_line.push([obj.x, obj.y]);
+                    new_line.push([object_mid.original_x, object_mid.original_y]);
                     lines.add(new_line);
                     new_line = [];
                   }
@@ -300,7 +299,7 @@ export default defineComponent({
                 color = 'purple';
                 if (obj.type == 'circle') {
                   ctx.beginPath();
-                  ctx.arc(x, y, radius, 0, Math.PI * 2);
+                  ctx.arc(object_pos.x(), object_pos.y(), radius, 0, Math.PI * 2);
                   ctx.strokeStyle = 'black';
                   ctx.lineWidth = 2;
                   // ctx.fillStyle = 'red';
@@ -310,10 +309,9 @@ export default defineComponent({
                   ctx.lineWidth = 1;
                   ctx.stroke();
                   ctx.closePath();
-
                   if (preview_object_add) {
                     ctx.beginPath();
-                    ctx.arc(x, y, 10, 0, Math.PI * 2);
+                    ctx.arc(object_pos.x(), object_pos.y(), 10, 0, Math.PI * 2);
                     ctx.strokeStyle = 'white';
                     ctx.lineWidth = 2;
                     ctx.fillStyle = 'white';
@@ -326,19 +324,19 @@ export default defineComponent({
                   ctx.beginPath();
                   ctx.strokeStyle = 'yellow';
                   ctx.lineWidth = 2;
-                  ctx.moveTo(x1, y1);
-                  ctx.lineTo(x2, y2);
+                  ctx.moveTo(object_pos.x(), object_pos.y());
+                  ctx.lineTo(object_pos2.x(), object_pos2.y());
                   ctx.stroke();
                 }
                 ctx.strokeStyle = 'grey';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas_w, y);
+                ctx.moveTo(0, object_pos.y());
+                ctx.lineTo(canvas_w, object_pos.y());
                 ctx.stroke();
                 ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas_h);
+                ctx.moveTo(object_pos.x(), 0);
+                ctx.lineTo(object_pos.x(), canvas_h);
                 ctx.stroke();
               }
               if (!set_point && update_selected_objects) {
@@ -350,11 +348,10 @@ export default defineComponent({
             }
             if (color != '') {
               ctx.fillStyle = color;
-              ctx.fillText('' + obj.unique_id, x, y);
+              ctx.fillText('' + obj.unique_id, object_mid.x(), object_mid.y());
             }
           }
         }
-
         if (preview_object_add) {
           let view_x = viewpoint_store.view_x;
           let view_y = viewpoint_store.view_y;
@@ -378,12 +375,9 @@ export default defineComponent({
         ctx.strokeRect(x, y, w, h);
 
         for (let res of quadtree1.query(new circle(0, 0, 100000))) {
-          let x = res.shape.x;
-          let y = res.shape.y;
-          x = (x - center_x) * scale - offset_x + canvas_w / 2;
-          y = (y - center_y) * scale - offset_y + canvas_h / 2;
+          let p = pos(res.shape.x, res.shape.y);
           ctx.beginPath();
-          ctx.arc(x, y, 10, 0, Math.PI * 2);
+          ctx.arc(p.x(), p.y(), 10, 0, Math.PI * 2);
           ctx.strokeStyle = 'cyan';
           ctx.lineWidth = 2;
           ctx.fillStyle = 'cyan';
@@ -393,37 +387,28 @@ export default defineComponent({
         }
 
         if (new_line.length === 1) {
-          let x = new_line[0][0];
-          let y = new_line[0][1];
-          x = (x - center_x) * scale - offset_x + canvas_w / 2;
-          y = (y - center_y) * scale - offset_y + canvas_h / 2;
+          let p = pos(new_line[0][0], new_line[0][1]);
           let view_x = viewpoint_store.view_x;
           let view_y = viewpoint_store.view_y;
-          if (line_snap_x !== false && line_snap_y !== false) {
-            view_x = line_snap_x;
-            view_y = line_snap_y;
-            view_x = (view_x - center_x) * scale - offset_x + canvas_w / 2;
-            view_y = (view_y - center_y) * scale - offset_y + canvas_h / 2;
+          if (line_snap !== false) {
+            view_x = line_snap.x();
+            view_y = line_snap.y();
           }
           ctx.beginPath();
           ctx.strokeStyle = 'cyan';
           ctx.lineWidth = 2;
-          ctx.moveTo(x, y);
+          ctx.moveTo(p.x(), p.y());
           ctx.lineTo(view_x, view_y);
           ctx.stroke();
         }
         for (let line of lines) {
-          let [x, y] = line[0];
-          let [x2, y2] = line[1];
-          x = (x - center_x) * scale - offset_x + canvas_w / 2;
-          y = (y - center_y) * scale - offset_y + canvas_h / 2;
-          x2 = (x2 - center_x) * scale - offset_x + canvas_w / 2;
-          y2 = (y2 - center_y) * scale - offset_y + canvas_h / 2;
+          let p = pos(line[0][0], line[0][1]);
+          let q = pos(line[1][0], line[1][1]);
           ctx.beginPath();
           ctx.strokeStyle = 'cyan';
           ctx.lineWidth = 2;
-          ctx.moveTo(x, y);
-          ctx.lineTo(x2, y2);
+          ctx.moveTo(p.x(), p.y());
+          ctx.lineTo(q.x(), q.y());
           ctx.stroke();
         }
       },
