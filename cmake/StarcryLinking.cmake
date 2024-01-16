@@ -1,3 +1,12 @@
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  # set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold")  # WARNING:
+  # mold gave issues with linking stdlib stuff, with clang-14 and clang-15.
+  # I've put an assertion in main() to actively prevent from using mold when it's still broken.
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold")
+else()
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,notext -Wno-unknown-pragmas")
+endif()
+
 function(configure_links target)
   # boost
   target_link_libraries(${target} PRIVATE ${Boost_LIBRARIES})

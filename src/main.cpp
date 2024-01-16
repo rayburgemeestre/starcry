@@ -213,6 +213,9 @@ public:
 };
 
 int main(int argc, char *argv[]) {
+  long val = 999;
+  assert(std::to_string(val) == "999");  // this crashes with clang using mold linker, amongst other issues
+
   const auto wire_stdout_and_stderr = [=]() {
     for (int i = 1; i < argc; i++) {
       if (std::string(argv[i]).find("--stdout") != std::string::npos) {
