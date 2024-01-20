@@ -937,6 +937,9 @@ std::vector<int64_t> generator::get_transitive_ids(const std::vector<int64_t>& u
       queue.pop_back();
       const auto obj = next_instance_map.at(item).get();
       meta_callback(obj, [&]<typename T>(const T& cc) {
+        if (item != cc.meta_cref().unique_id()) {
+          throw std::runtime_error("next instance map lookup index corrupted");
+        }
         if (cc.meta_cref().level() >= 0) {
           ret.push_back(cc.meta_cref().parent_uid());
         }
