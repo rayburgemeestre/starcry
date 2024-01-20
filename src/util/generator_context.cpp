@@ -23,7 +23,7 @@ generator_context::generator_context(v8::Local<v8::Value> script_value, size_t c
   };
   initialize_array(video_obj, "video");
   initialize_array(scenes, "scenes");
-  auto scenes_array = scenes.As<v8::Array>().Get(i.get_isolate());
+  auto scenes_array = scenes.Get(i.get_isolate());
   if (scenes_array->Length() == 0) {
     throw std::runtime_error("No scenes defined in script");
   }
@@ -38,7 +38,9 @@ void generator_context::set_scene(size_t current_scene_idx) {
   auto& i = this->i();
 
   current_scene_val.Reset(i.get_isolate(), i.get_index(scenes, current_scene_idx));
-  current_scene_obj.Reset(i.get_isolate(), current_scene_val.As<v8::Object>());
+  v8::Local<v8::Value> v = current_scene_val.Get(i.get_isolate());
+  v8::Local<v8::Object> vo = v->ToObject(i.get_isolate()->GetCurrentContext()).ToLocalChecked();
+  current_scene_obj.Reset(i.get_isolate(), vo);
 
   scene_objects.Reset(i.get_isolate(), i.v8_array(current_scene_obj, "objects"));
 }

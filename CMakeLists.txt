@@ -11,9 +11,9 @@ project(starcry VERSION 0.3 LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-set(CLANGFORMAT_EXECUTABLE clang-format-14)
+set(CLANGFORMAT_EXECUTABLE clang-format-15)
 # clang-tidy makes compilation significantly slower
-# set(CMAKE_CXX_CLANG_TIDY clang-tidy-14)
+# set(CMAKE_CXX_CLANG_TIDY clang-tidy-15)
 set(Boost_USE_STATIC_LIBS ON)
 set(BOOST_ROOT "/opt/cppse/build/boost/")
 if(CMAKE_BUILD_TYPE MATCHES Debug)
@@ -30,29 +30,42 @@ find_package(V8 REQUIRED)
 find_package(Boost 1.52 COMPONENTS program_options system date_time thread chrono REQUIRED)
 find_package(Threads)
 
+set(COMMON_FLAGS "-std=c++23 -fno-omit-frame-pointer -Wall -mssse3 -DV8_COMPRESS_POINTERS -DV8_ENABLE_SANDBOX")
+set(DEBUG_FLAGS "-O0 -g")
+set(RELEASE_FLAGS "-O2 -funsigned-char -pedantic -pthread")  # TODO: support --ffast-math
+
+# Determine the build type and compiler
+set(BUILD_TYPE "RELEASE")
+set(COMPILER_TYPE "GCC")
+
 if (DEBUG)
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        message(STATUS "This is a DEBUG Clang build.")
-        # -gdwarf-4 is needed for valgrind, version 5 seems unsupported.
-        add_definitions("-std=c++23 -O0 -g -stdlib=libstdc++ -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3 -gdwarf-4")
+    set(BUILD_TYPE "DEBUG")
+    set(BUILD_TYPE_FLAGS ${DEBUG_FLAGS})
+else()
+    set(BUILD_TYPE_FLAGS ${RELEASE_FLAGS})
+endif()
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(COMPILER_TYPE "Clang")
+    if (DEBUG)
+        set(COMPILER_SPECIFIC_FLAGS "-stdlib=libstdc++ -gdwarf-4")  # -gdwarf-4 is needed for valgrind, version 5 seems unsupported.
     else()
-        message(STATUS "This is a DEBUG GCC build.")
-        add_definitions("-std=c++23 -O0 -g                   -DV8_COMPRESS_POINTERS -fno-omit-frame-pointer -Wall -mssse3 -Wno-unknown-pragmas -Wno-literal-suffix")
+        set(COMPILER_SPECIFIC_FLAGS "-stdlib=libstdc++ -Wno-reserved-user-defined-literal")
     endif()
 else()
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        message(STATUS "This is a RELEASE Clang build.")
-        add_definitions("-std=c++23 -O2 -funsigned-char -stdlib=libstdc++ -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3 -Wno-reserved-user-defined-literal -DV8_COMPRESS_POINTERS")
+    if (DEBUG)
+        set(COMPILER_SPECIFIC_FLAGS "-Wno-unknown-pragmas -Wno-literal-suffix")
     else()
-        message(STATUS "This is a RELEASE GCC build.")
-        add_definitions("-std=c++23 -O2 -funsigned-char                   -Wall -fno-omit-frame-pointer -pedantic -pthread -mssse3                                    -DV8_COMPRESS_POINTERS -Wno-unknown-pragmas -Wno-literal-suffix")
+        # removed -flto, was a bit too slow for my taste
+        set(COMPILER_SPECIFIC_FLAGS "-Wno-unknown-pragmas -Wno-literal-suffix")
     endif()
 endif()
+
+message(STATUS "This is a ${BUILD_TYPE} ${COMPILER_TYPE} build.")
+
+add_definitions("${COMMON_FLAGS} ${BUILD_TYPE_FLAGS} ${COMPILER_SPECIFIC_FLAGS}")
 if (SANITIZER)
     add_definitions("-fsanitize=address")
-endif()
-if (DEVELOP)
-    add_definitions("-DDEVELOP")
 endif()
 
 # starcry
@@ -61,7 +74,7 @@ list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/client.cpp")
 add_executable(starcry ${starcry_SOURCES})
 configure_links(starcry)
 if (SANITIZER)
-    target_link_libraries(starcry PRIVATE -static-libgcc -static-libstdc++ /usr/lib/llvm-14/lib/clang/14.0.0/lib/linux/libclang_rt.asan-x86_64.a)
+    target_link_libraries(starcry PRIVATE -static-libgcc -static-libstdc++ /usr/lib/llvm-15/lib/clang/15.0.0/lib/linux/libclang_rt.asan-x86_64.a)
 else()
     target_link_libraries(starcry PRIVATE -static-libgcc -static-libstdc++)
 endif()
