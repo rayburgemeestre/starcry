@@ -109,7 +109,7 @@ inline v8_wrapper::~v8_wrapper() {
   isolate->Exit();
   isolate->Dispose();
   v8::V8::Dispose();
-  v8::V8::ShutdownPlatform();
+  v8::V8::DisposePlatform();
   delete create_params.array_buffer_allocator;
 }
 
