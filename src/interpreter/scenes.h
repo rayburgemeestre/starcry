@@ -20,7 +20,6 @@ struct time_settings {
 
 class generator;
 class scenes : public transaction {
-private:
   generator& gen_;
 
   std::vector<std::vector<data_staging::shape_t>> scene_shapes;

@@ -227,6 +227,7 @@ image &rendering_engine::_render(size_t thread_num,
       if (!selected_ids.empty()) {
         // TODO: selected_ids should be a set, although for now perhaps this is fine, since we're only dealing with
         // around 3 or 4 items in selected_ids most likely.
+        // EDIT: this is no longer the case, we build up a transitive selection
         if (std::find(selected_ids.begin(), selected_ids.end(), shape.unique_id) == selected_ids.end()) {
           continue;
         }

@@ -8,7 +8,7 @@
 
 #include "generator.h"
 
-// #define DEBUG2
+#define DEBUG2
 
 namespace interpreter {
 
@@ -190,9 +190,13 @@ void scenes::commit_scene_shapes() {
 #endif
 }
 void scenes::commit_scene_shapes_intermediates() {
+#ifdef DEBUG2
+  logger(DEBUG) << "##[ scenes::commit_scene_shapes_intermediates(BEFORE) ]##" << std::endl;
+  gen_.debug_print_all();
+#endif
   scene_shapes_intermediate = scene_shapes_next;
 #ifdef DEBUG2
-  logger(DEBUG) << "##[ scenes::commit_scene_shapes_intermediates() ]##" << std::endl;
+  logger(DEBUG) << "##[ scenes::commit_scene_shapes_intermediates(AFTER) ]##" << std::endl;
   gen_.debug_print_all();
 #endif
 }

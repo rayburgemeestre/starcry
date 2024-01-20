@@ -5,8 +5,7 @@
  */
 #pragma once
 
-#include <iostream>
-#include <mutex>
+#include <vector>
 
 #include "data/bounding_box.hpp"
 #include "data/color.hpp"

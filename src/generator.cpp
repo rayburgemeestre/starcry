@@ -25,7 +25,6 @@
 #include "util/vector_logic.hpp"
 
 namespace interpreter {
-
 generator::generator(std::shared_ptr<metrics>& metrics,
                      std::shared_ptr<v8_wrapper>& context,
                      const generator_options& opts)
@@ -339,8 +338,10 @@ bool generator::_generate_frame() {
           }
           metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
         }
-        if (!detected_too_many_steps) {                 // didn't bail out with break above
-          if (stepper.max_step == max_intermediates) {  // config doesn't allow finer granularity any way, break.
+        if (!detected_too_many_steps) {
+          // didn't bail out with break above
+          if (stepper.max_step == max_intermediates) {
+            // config doesn't allow finer granularity any way, break.
             break;
           }
           if (stepper.max_step > max_intermediates) {
@@ -460,7 +461,8 @@ void generator::insert_newly_created_objects() {
         if (searching && level <= found_level) {
           insert_offset = j;
           break;
-        } else if (uid == parent_uid) {
+        }
+        if (uid == parent_uid) {
           found_level = level;
           // assume at this point it's the element after this one
           insert_offset = j + 1;
@@ -665,18 +667,23 @@ std::shared_ptr<data::job> generator::get_job() const {
 double generator::fps() const {
   return use_fps;
 }
+
 int32_t generator::width() const {
   return canvas_w;
 }
+
 int32_t generator::height() const {
   return canvas_h;
 }
+
 double generator::get_seed() const {
   return seed;
 }
+
 data::settings generator::settings() const {
   return settings_;
 }
+
 std::string generator::filename() const {
   return filename_;
 }
@@ -848,13 +855,13 @@ std::unordered_map<std::string, v8::Persistent<v8::Object>>& generator::get_obje
 }
 
 void generator::debug_print_all() {
-  logger(DEBUG) << "==[ debug print: next ]==" << std::endl;
+  logger(DEBUG) << "==[ debug print: next (" << scenes_.next_shapes_current_scene().size() << ") ]==" << std::endl;
   debug_print(scenes_.next_shapes_current_scene());
 
-  logger(DEBUG) << "==[ debug print: intermediate ]==" << std::endl;
+  logger(DEBUG) << "==[ debug print: intermediate (" <<scenes_.intermediate_shapes_current_scene().size() << ") ]==" << std::endl;
   debug_print(scenes_.intermediate_shapes_current_scene());
 
-  logger(DEBUG) << "==[ debug print: current ]==" << std::endl;
+  logger(DEBUG) << "==[ debug print: current (" << scenes_.shapes_current_scene().size() << ") ]==" << std::endl;
   debug_print(scenes_.shapes_current_scene());
 }
 
