@@ -8,7 +8,7 @@
 
 #include "generator.h"
 
-#define DEBUG2
+// #define DEBUG2
 
 namespace interpreter {
 
