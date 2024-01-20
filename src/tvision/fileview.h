@@ -11,7 +11,7 @@ class TLineCollection : public TCollection {
 public:
   TLineCollection(short lim, short delta) : TCollection(lim, delta) {}
   virtual void freeItem(void *p) {
-    delete[](char *) p;
+    delete[] (char *)p;
   }
 
 private:

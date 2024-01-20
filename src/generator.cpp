@@ -858,7 +858,8 @@ void generator::debug_print_all() {
   logger(DEBUG) << "==[ debug print: next (" << scenes_.next_shapes_current_scene().size() << ") ]==" << std::endl;
   debug_print(scenes_.next_shapes_current_scene());
 
-  logger(DEBUG) << "==[ debug print: intermediate (" <<scenes_.intermediate_shapes_current_scene().size() << ") ]==" << std::endl;
+  logger(DEBUG) << "==[ debug print: intermediate (" << scenes_.intermediate_shapes_current_scene().size()
+                << ") ]==" << std::endl;
   debug_print(scenes_.intermediate_shapes_current_scene());
 
   logger(DEBUG) << "==[ debug print: current (" << scenes_.shapes_current_scene().size() << ") ]==" << std::endl;

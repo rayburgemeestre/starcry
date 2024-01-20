@@ -234,7 +234,7 @@ void scenes::reset_scene_shapes_intermediates() {
 }
 
 bool scenes::cleanup_destroyed_objects() {
-                                  size_t total_destroyed = 0;
+  size_t total_destroyed = 0;
   for (auto& scenes : scene_shapes_next) {
     scenes.erase(std::remove_if(scenes.begin(),
                                 scenes.end(),
@@ -263,8 +263,7 @@ bool scenes::cleanup_destroyed_objects() {
                                       }
                                     }
                                   });
-                                  if (destroyed > 0)
-                                    logger(INFO) << "destroyed objects: " << destroyed << std::endl;
+                                  if (destroyed > 0) logger(INFO) << "destroyed objects: " << destroyed << std::endl;
                                   total_destroyed += destroyed;
                                   return ret;
                                 }),
