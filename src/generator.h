@@ -84,6 +84,7 @@ private:
   std::unordered_map<int64_t, std::reference_wrapper<data_staging::shape_t>> next_instance_map;
   std::unordered_map<int64_t, std::reference_wrapper<data_staging::shape_t>> intermediate_map;
   std::unordered_map<std::string, v8::Persistent<v8::Object>> object_definitions_map;
+  bool mappings_dirty = false;
   data::settings settings_;
 
   int min_intermediates = 1.;

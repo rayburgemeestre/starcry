@@ -229,15 +229,18 @@ void scenes::reset_scene_shapes_intermediates() {
 #endif
 }
 
-void scenes::cleanup_destroyed_objects() {
+bool scenes::cleanup_destroyed_objects() {
+                                  size_t total_destroyed = 0;
   for (auto& scenes : scene_shapes_next) {
     scenes.erase(std::remove_if(scenes.begin(),
                                 scenes.end(),
-                                [&scenes](auto& shape) {
+                                [&scenes, &total_destroyed](auto& shape) {
                                   bool ret = false;
+                                  size_t destroyed = 0;
                                   meta_callback(shape, [&]<typename T>(T& shape) {
                                     ret = shape.meta_cref().is_destroyed();
                                     if (ret) {
+                                      destroyed++;
                                       // we should update levels for this about to be erased parent
                                       // we can do this here because this does not involve removing
                                       // elements, etc., so we won't invalidate any iterators
@@ -256,10 +259,14 @@ void scenes::cleanup_destroyed_objects() {
                                       }
                                     }
                                   });
+                                  if (destroyed > 0)
+                                    logger(INFO) << "destroyed objects: " << destroyed << std::endl;
+                                  total_destroyed += destroyed;
                                   return ret;
                                 }),
                  scenes.end());
   }
+  return total_destroyed > 0;
 }
 
 std::vector<data_staging::shape_t>& scenes::shapes_current_scene() {

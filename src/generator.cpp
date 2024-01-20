@@ -355,7 +355,17 @@ bool generator::_generate_frame() {
         positioner_.revert_position_updates();
       }
 
-      scenes_.cleanup_destroyed_objects();
+      /* The next statement potentially invalidates our mappings, but usually this doesn't matter, if we're rendering
+       * frame after frame, we start fresh the next frame anyway. However, in interactive mode, the client can send
+       * additional requests, such as rendering a specific set of IDs, and certain code gets exercised that relies on
+       * the mappings.
+       * We will set a dirty flag, so that if a client wishes to use the mappings, it should check the dirty flag.
+       * We can, after some refactoring, put a nice wrapper type around this stuff.
+       */
+      bool destroyed = scenes_.cleanup_destroyed_objects();
+      if (destroyed) {
+        mappings_dirty = true;
+      }
 
       scenes_.commit_scene_shapes();
 
@@ -420,6 +430,7 @@ void generator::create_new_mappings() {
       intermediate_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
     });
   }
+  mappings_dirty = false;
 }
 
 void generator::insert_newly_created_objects() {
@@ -916,6 +927,9 @@ void generator::debug_print(std::vector<data_staging::shape_t>& shapes) {
 
 std::vector<int64_t> generator::get_transitive_ids(const std::vector<int64_t>& unique_ids) {
   std::vector<int64_t> ret = unique_ids;
+  if (mappings_dirty) {
+    create_new_mappings();
+  }
   try {
     auto queue = unique_ids;
     while (!queue.empty()) {
