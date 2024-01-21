@@ -17,8 +17,8 @@ RUN /emsdk/upstream/emscripten/em++ -s WASM=1 -s USE_SDL=2 -s USE_SDL_TTF=2 -O3 
 #RUN apt install -y clangd-10
 
 # IDE plugin SonarLint requires nodejs
-#RUN curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-#RUN sudo apt-get install -y nodejs
+#RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+#RUN apt-get install -y nodejs
 
 # We need a newer Nodejs:
 ENV VERSION=v18.18.0
@@ -29,16 +29,23 @@ RUN wget https://nodejs.org/dist/$VERSION/node-$VERSION-$DISTRO.tar.xz && \
 
 #RUN echo "export PATH=/usr/local/lib/nodejs/node-$VERSION-$DISTRO/bin:$PATH" >> /etc/profile
 # Let's just put in our global PATH
-RUN sudo apt install -y rsync && rsync -raPv /usr/local/lib/nodejs/node-$VERSION-$DISTRO/ /usr/local/
+RUN apt install -y rsync && rsync -raPv /usr/local/lib/nodejs/node-$VERSION-$DISTRO/ /usr/local/
 
 # IDE needs browser as well sometimes
-RUN sudo apt install -y firefox
+RUN apt install -y firefox
 
 # IDE needs bunch of stuff for markdown viewer
-RUN sudo apt install -y libnss3 libnspr4 libatk-bridge2.0-0 libatspi2.0-0
+RUN apt install -y libnss3 libnspr4 libatk-bridge2.0-0 libatspi2.0-0
 
 # IDE no longer ships jre
-RUN sudo apt install -y openjdk-21-jre
+RUN apt install -y openjdk-21-jre
+
+# IDE requires a browser
+RUN apt install apt-transport-https curl && \
+    curl -s https://brave-browser-apt-beta.s3.brave.com/brave-core-nightly.asc | apt-key --keyring /etc/apt/trusted.gpg.d/brave-browser-prerelease.gpg add - && \
+    echo "deb [arch=amd64] https://brave-browser-apt-beta.s3.brave.com/ stable main" | tee /etc/apt/sources.list.d/brave-browser-beta.list && \
+    apt update && \
+    apt install brave-browser-beta
 
 # Integration tests dependencies
 RUN apt install -y imagemagick-6.q16 ffmpeg
