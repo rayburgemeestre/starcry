@@ -263,7 +263,6 @@ bool scenes::cleanup_destroyed_objects() {
                                       }
                                     }
                                   });
-                                  if (destroyed > 0) logger(INFO) << "destroyed objects: " << destroyed << std::endl;
                                   total_destroyed += destroyed;
                                   return ret;
                                 }),

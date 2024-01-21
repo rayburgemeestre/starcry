@@ -19,6 +19,7 @@ export class position {
   scale: number;
   original_x: original_x;
   original_y: original_y;
+  transform: boolean;
 
   constructor(
     center_x: original_x,
@@ -29,7 +30,8 @@ export class position {
     canvas_h: original_x,
     scale: number,
     x: original_x,
-    y: original_x
+    y: original_x,
+    transform: boolean
   ) {
     this.center_x = center_x;
     this.center_y = center_y;
@@ -40,13 +42,16 @@ export class position {
     this.scale = scale;
     this.original_x = x;
     this.original_y = y;
+    this.transform = transform;
   }
 
   x(): transformed_x {
+    if (!this.transform) return this.original_x; // already transformed
     return (this.original_x - this.center_x) * this.scale - this.offset_x + this.canvas_w / 2;
   }
 
   y(): transformed_y {
+    if (!this.transform) return this.original_y; // already transformed
     return (this.original_y - this.center_y) * this.scale - this.offset_y + this.canvas_h / 2;
   }
 }

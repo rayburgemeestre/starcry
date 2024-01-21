@@ -7,7 +7,11 @@ export type ObjectType = {
   id: string;
   x: number;
   y: number;
+  x2: number;
+  y2: number;
+  radius: number;
   '#': number;
+  type: string;
 };
 
 export const useObjectsStore = defineStore('objects', {

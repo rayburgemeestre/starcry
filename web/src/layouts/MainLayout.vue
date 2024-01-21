@@ -84,6 +84,7 @@ import { usePinch } from '@vueuse/gesture';
 import { useGlobalStore } from 'stores/global';
 import { rectangle, circle, quadtree, point } from 'components/quadtree';
 import { original_x, original_y, position } from 'components/position';
+import { draw_utils } from 'components/draw_utils';
 import MonacoEditor from 'components/MonacoEditor.vue';
 import Timeout = NodeJS.Timeout;
 
@@ -112,9 +113,9 @@ export default defineComponent({
     let script_store = useScriptStore();
     let viewpoint_store = useViewpointStore();
 
-    let initialDrawerWidth;
-    let previous_w;
-    let previous_h;
+    let initialDrawerWidth: number;
+    let previous_w: number;
+    let previous_h: number;
     const drawerWidth = ref(300);
 
     let boundary = new rectangle(-10000, -10000, 10000 * 2, 10000 * 2);
@@ -242,9 +243,8 @@ export default defineComponent({
         let offset_y = 0;
         let line_snap: position | false = false;
 
-        function pos(x: original_x, y: original_y) {
-          return new position(center_x, center_y, offset_x, offset_y, canvas_w, canvas_h, scale, x, y);
-        }
+        let du = new draw_utils(center_x, center_y, offset_x, offset_y, canvas_w, canvas_h, scale, ctx);
+        let pos = du.pos.bind(du);
 
         for (let pass = 1; pass <= 2; pass++) {
           for (let obj of objects_store.objects) {
@@ -298,46 +298,16 @@ export default defineComponent({
               if (hover) {
                 color = 'purple';
                 if (obj.type == 'circle') {
-                  ctx.beginPath();
-                  ctx.arc(object_pos.x(), object_pos.y(), radius, 0, Math.PI * 2);
-                  ctx.strokeStyle = 'black';
-                  ctx.lineWidth = 2;
-                  // ctx.fillStyle = 'red';
-                  // ctx.fill();
-                  ctx.stroke();
-                  ctx.strokeStyle = 'yellow';
-                  ctx.lineWidth = 1;
-                  ctx.stroke();
-                  ctx.closePath();
+                  du.draw_circle(object_pos, radius, 'yellow', '');
                   if (preview_object_add) {
-                    ctx.beginPath();
-                    ctx.arc(object_pos.x(), object_pos.y(), 10, 0, Math.PI * 2);
-                    ctx.strokeStyle = 'white';
-                    ctx.lineWidth = 2;
-                    ctx.fillStyle = 'white';
-                    ctx.fill();
-                    ctx.stroke();
-                    ctx.closePath();
+                    du.draw_circle(object_pos, 10, 'white', 'white');
                     preview_object_add = false;
                   }
                 } else if (obj.type == 'line') {
-                  ctx.beginPath();
-                  ctx.strokeStyle = 'yellow';
-                  ctx.lineWidth = 2;
-                  ctx.moveTo(object_pos.x(), object_pos.y());
-                  ctx.lineTo(object_pos2.x(), object_pos2.y());
-                  ctx.stroke();
+                  du.draw_line(object_pos, object_pos2, 2, 'yellow');
                 }
-                ctx.strokeStyle = 'grey';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(0, object_pos.y());
-                ctx.lineTo(canvas_w, object_pos.y());
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(object_pos.x(), 0);
-                ctx.lineTo(object_pos.x(), canvas_h);
-                ctx.stroke();
+                du.draw_line(pos(0, object_pos.y(), false), pos(canvas_w, object_pos.y(), false), 1, 'grey');
+                du.draw_line(pos(object_pos.x(), 0, false), pos(object_pos.x(), canvas_h, false), 1, 'grey');
               }
               if (!set_point && update_selected_objects) {
                 script_store.addSelectedObject(obj.unique_id);
@@ -355,35 +325,21 @@ export default defineComponent({
         if (preview_object_add) {
           let view_x = viewpoint_store.view_x;
           let view_y = viewpoint_store.view_y;
-          ctx.beginPath();
-          ctx.arc(view_x, view_y, 10, 0, Math.PI * 2);
-          ctx.strokeStyle = 'grey';
-          ctx.lineWidth = 2;
-          ctx.fillStyle = 'grey';
-          ctx.fill();
-          ctx.stroke();
-          ctx.closePath();
+          du.draw_circle(pos(view_x, view_y, false), 10, 'grey', 'grey');
         }
 
         // draw the actual canvas of the video
-        ctx.strokeStyle = 'red';
-        ctx.lineWidth = 2;
         let x = canvas_w / 2 - (script_store.video.width / 2) * scale,
           y = canvas_h / 2 - (script_store.video.height / 2) * scale,
           w = script_store.video.width * scale,
           h = script_store.video.height * scale;
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 2;
         ctx.strokeRect(x, y, w, h);
 
         for (let res of quadtree1.query(new circle(0, 0, 100000))) {
           let p = pos(res.shape.x, res.shape.y);
-          ctx.beginPath();
-          ctx.arc(p.x(), p.y(), 10, 0, Math.PI * 2);
-          ctx.strokeStyle = 'cyan';
-          ctx.lineWidth = 2;
-          ctx.fillStyle = 'cyan';
-          ctx.fill();
-          ctx.stroke();
-          ctx.closePath();
+          du.draw_circle(p, 10, 'cyan', 'cyan');
         }
 
         if (new_line.length === 1) {
@@ -394,22 +350,12 @@ export default defineComponent({
             view_x = line_snap.x();
             view_y = line_snap.y();
           }
-          ctx.beginPath();
-          ctx.strokeStyle = 'cyan';
-          ctx.lineWidth = 2;
-          ctx.moveTo(p.x(), p.y());
-          ctx.lineTo(view_x, view_y);
-          ctx.stroke();
+          du.draw_line(p, pos(view_x, view_y, false), 2, 'cyan', '');
         }
         for (let line of lines) {
           let p = pos(line[0][0], line[0][1]);
           let q = pos(line[1][0], line[1][1]);
-          ctx.beginPath();
-          ctx.strokeStyle = 'cyan';
-          ctx.lineWidth = 2;
-          ctx.moveTo(p.x(), p.y());
-          ctx.lineTo(q.x(), q.y());
-          ctx.stroke();
+          du.draw_line(p, q, 2, 'cyan', '');
         }
       },
       on_wheel: function (event) {
