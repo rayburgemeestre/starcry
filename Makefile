@@ -49,7 +49,7 @@ all:  ## build all binaries in cmake
 .PHONY: build-gcc
 build-gcc:  ## build starcry binary using docker (with gcc)
 	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which g++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
-	              cmake --build build --target starcry -j 4 && \
+	              cmake --build build --target starcry -j $$(nproc) && \
 	              strip --strip-debug build/starcry)
 
 .PHONY: test
@@ -61,7 +61,7 @@ test:  ## execute starcry unit tests using docker (with clang)
 .PHONY: integration-test
 integration-test:  ## execute starcry unit tests using docker (with clang)
 	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
-	                    cmake --build build --target integration_tests && \
+	                    cmake --build build --target integration_tests -j $$(nproc) && \
 	                    ./build/integration_tests -s -d yes --rng-seed 0)
 
 .PHONY: integration-test-sanitizer
