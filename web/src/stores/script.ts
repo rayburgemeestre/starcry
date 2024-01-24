@@ -5,7 +5,9 @@ export const useScriptStore = defineStore('script', {
   state: () => ({
     filename: 'input/test.js',
     script: '',
+    current_function: '',
     snippet: '',
+    result: '',
     frame: 1,
 
     video: {},
@@ -28,6 +30,9 @@ export const useScriptStore = defineStore('script', {
 
     // used as event handlers
     value_updated_by_user: ref(0),
+    snippet_updated_by_user: ref(0),
+    result_updated_by_user: ref(0),
+
     render_requested_by_user: ref(0), // ??
     render_requested_by_user_v2: ref(0),
     render_completed_by_server: ref(0),
@@ -39,12 +44,17 @@ export const useScriptStore = defineStore('script', {
   getters: {},
 
   actions: {
-    set_value(new_val: string) {
+    set_value(new_val: string, emit_event: boolean) {
       this.script = new_val;
-      this.value_updated_by_user++;
+      if (emit_event) this.value_updated_by_user++;
     },
-    set_snippet(new_val: string) {
+    set_snippet(new_val: string, emit_event: boolean) {
       this.snippet = new_val;
+      if (emit_event) this.snippet_updated_by_user++;
+    },
+    set_result(new_val: string, emit_event: boolean) {
+      this.result = new_val;
+      if (emit_event) this.result_updated_by_user++;
     },
     clearSelectedObjects() {
       this.selected = [];

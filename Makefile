@@ -82,6 +82,7 @@ client:  ## build webassembly javascript file using docker
 	                    -I/opt/cppse/build/v8pp/include/v8 -I/opt/cppse/build/v8pp/include/ \
 	                    -I/opt/cppse/build/vivid/include/ /opt/cppse/build/vivid/lib/libvivid-em.a \
 	                    -I/opt/cppse/build/fmt/include /opt/cppse/build/fmt/lib/libfmt-em.a \
+	                    -D_M_X64 \
 	                    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s SAFE_HEAP=0 -s ALLOW_MEMORY_GROWTH=0)
 	                    # -s TOTAL_MEMORY=2147483648 -s ASSERTIONS=1 -s SAFE_HEAP=1 -s ALLOW_MEMORY_GROWTH=1)
 
@@ -207,7 +208,7 @@ release:  # alias for make build..
 
 publish:  ## build from scratch starcry, web, client, docker image, push dockerhub, deploy k8s
 	make clean
-	make build-gcc   # currently issues with clang-15 :(
+	make build
 	make build-web
 	make client
 	make docs || true  # first time tends to fail for some reason

@@ -24,6 +24,7 @@ import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 import { initVimMode } from 'monaco-vim/lib';
 import { EmacsExtension } from 'monaco-emacs';
+import { JsonWithObjectsParser } from 'components/json_parser';
 
 window.MonacoEnvironment = {
   getWorker(_, label) {
@@ -96,9 +97,14 @@ export default defineComponent({
       // This makes this component pretty completely hardcoded.
       // Need to figure out at some point how to get it working the right way
       if (this.target === 'main') {
-        script_store.set_value(value);
+        script_store.set_value(value, false);
       } else if (this.target === 'snippet') {
-        script_store.set_snippet(value);
+        script_store.set_snippet(value, false);
+        let parser = new JsonWithObjectsParser(script_store.script);
+        parser.update_function(script_store.current_function, script_store.snippet);
+        script_store.set_result(parser.to_string(), false);
+      } else if (this.target === 'result') {
+        script_store.set_result(value, false);
       }
     });
 
@@ -147,29 +153,37 @@ export default defineComponent({
     if (this.emacs_mode) toggle_emacs_mode.bind(this)(true);
 
     // TODO: this is not really the place to do this, can we add API to a component?
-    // Need to figure out the "vue3"/quasar way to do things.
-    if (this.target === 'main') {
-      let script = useScriptStore();
-      watch(
-        () => script.script,
-        function (val) {
-          editor?.setValue(val);
-        }.bind(this)
-      );
-    } else if (this.target === 'snippet') {
-      let script = useScriptStore();
-      watch(
-        () => script.snippet,
-        function (val) {
-          editor?.setValue(val);
-          // format on change
-          editor?.getAction('editor.action.formatDocument').run();
-        }.bind(this)
-      );
-      // format once, no idea why the delay is necessary here...
+    let script = useScriptStore();
+
+    let value_updated = function () {
+      editor?.setValue(script.script);
+    }.bind(this);
+
+    let snippet_updated = function () {
+      editor?.setValue(script.snippet);
+      editor?.getAction('editor.action.formatDocument').run();
       setTimeout(function () {
         editor?.getAction('editor.action.formatDocument').run();
       }, 100);
+    }.bind(this);
+
+    let result_updated = function () {
+      editor?.setValue(script.result);
+      editor?.getAction('editor.action.formatDocument').run();
+      setTimeout(function () {
+        editor?.getAction('editor.action.formatDocument').run();
+      }, 100);
+    }.bind(this);
+
+    watch(() => script.value_updated_by_user, value_updated);
+    watch(() => script.snippet_updated_by_user, snippet_updated);
+    watch(() => script.result_updated_by_user, result_updated);
+    if (this.target == 'main') {
+      value_updated();
+    } else if (this.target == 'snippet') {
+      snippet_updated();
+    } else if (this.target == 'result') {
+      result_updated();
     }
   },
 });

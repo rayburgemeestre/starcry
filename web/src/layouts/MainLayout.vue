@@ -13,7 +13,7 @@
         <q-btn dense flat round icon="menu" @click="toggleRightDrawer" />
       </q-toolbar>
 
-      <q-tabs align="left">
+      <q-tabs align="left" v-model="selected_tab">
         <q-route-tab to="/files" label="Files" />
         <q-route-tab to="/script" label="Script" />
         <q-route-tab to="/editor" label="Editor" />
@@ -51,13 +51,22 @@
           style="z-index: 0"
         ></canvas>
         <monaco-editor
-          v-if="script_store.snippet"
+          v-if="script_store.snippet && (selected_tab == 't_2' || selected_tab == 't_8')"
           id="container3"
           name="container3b"
           :value="script_store.snippet"
           language="javascript"
           style="z-index: 3; position: absolute; width: 100%"
           target="snippet"
+        />
+        <monaco-editor
+          v-if="script_store.result && (selected_tab == 't_5' || selected_tab == 't_11')"
+          id="container3"
+          name="container3b"
+          :value="script_store.result"
+          language="javascript"
+          style="z-index: 3; position: absolute; width: 100%"
+          target="result"
         />
       </div>
     </q-page-container>
@@ -479,6 +488,8 @@ export default defineComponent({
         obj.render_objects(false);
       }
     );
+
+    obj.selected_tab = ref('');
 
     return obj;
   },

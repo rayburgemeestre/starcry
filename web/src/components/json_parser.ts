@@ -12,6 +12,27 @@ export class JsonWithObjectsParser {
   parsed() {
     return this.obj;
   }
+
+  update_function(index, value) {
+    for (let i = 0; i < this.functions.length; i++) {
+      if ('FUNCTION ' + i != index) {
+        continue;
+      }
+      this.functions[i] = value;
+    }
+  }
+
+  to_string() {
+    const obj = this.parsed();
+    let str = JSON.stringify(obj, null, 2);
+    let num = 0;
+    for (const fun of this.functions) {
+      str = str.replace('"FUNCTION ' + num + '"', fun);
+      num++;
+    }
+    return '_ = ' + str;
+  }
+
   fun(lookup) {
     const index = parseInt(lookup.split(' ')[1]);
     if (this.functions.length < index) {

@@ -167,32 +167,31 @@ export default defineComponent({
     }
 
     let current_evt_element = false;
-    let current_function = '';
 
     function on_row_click(evt, row, index) {
       if (row[0] === 'init' || row[0] === 'time') {
         if (current_evt_element) {
           current_evt_element.classList.remove('bg-amber-5');
         }
-        if (current_function !== row[1]) {
-          script_store.snippet = p.fun(row[1]);
-          current_function = row[1];
+        if (script_store.current_function !== row[1]) {
+          script_store.set_snippet(p.fun(row[1]), true);
+          script_store.current_function = row[1];
           evt.target.parentNode.classList.add('bg-amber-5');
           current_evt_element = evt.target.parentNode;
         } else {
           evt.target.parentNode.classList.remove('bg-amber-5');
-          script_store.snippet = '';
+          script_store.set_snippet('', true);
         }
       }
     }
 
     function clear_fun_select() {
-      script_store.snippet = '';
+      script_store.set_snippet('', true);
       if (current_evt_element) {
         current_evt_element.classList.remove('bg-amber-5');
       }
       current_evt_element = false;
-      current_function = '';
+      script_store.current_function = '';
     }
 
     return {
