@@ -63,8 +63,8 @@ void initializer::reset_context() {
                           const auto str = v8_str(v8::Isolate::GetCurrent(), object_id);
                           const auto object_id_long = std::stoll(str);
                           bool ret = false;
-                          if (gen_.next_instance_map.contains(object_id_long)) {
-                            auto& object_ref = gen_.next_instance_map.at(object_id_long).get();
+                          if (gen_.object_lookup_.contains(object_id_long)) {
+                            auto& object_ref = gen_.object_lookup_.at(object_id_long).get();
                             meta_callback(object_ref, [&](auto& cc) {
                               cc.attrs_ref().set(v8_str(v8::Isolate::GetCurrent(), key),
                                                  v8_str(v8::Isolate::GetCurrent(), value));
@@ -202,8 +202,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         gen_.scenes_.reset();
         gen_.object_definitions_map.clear();
         // TODO: put this in a meaningful function?
-        gen_.next_instance_map.clear();
-        gen_.intermediate_map.clear();
+        gen_.object_lookup_.reset();
         for (size_t I = 0; I < scenes->Length(); I++) {
           gen_.scenes_.add_scene();
           auto current_scene = i.get_index(scenes, I);

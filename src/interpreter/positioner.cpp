@@ -242,7 +242,7 @@ void positioner::revert_position_updates() {
     meta_callback(abstract_shape, [&]<typename T>(T& shape) {
       auto uid = shape.meta_cref().unique_id();
       if constexpr (std::is_same_v<T, data_staging::line>) {
-        auto& abstract_intermediate = gen_.intermediate_map.at(uid);
+        auto& abstract_intermediate = gen_.object_lookup_.at_intermediate(uid);
         meta_callback(abstract_intermediate.get(), [&]<typename TT>(TT& intermediate) {
           if constexpr (std::is_same_v<TT, data_staging::line>) {
             intermediate.line_start_ref().position_ref().x = shape.line_start_ref().position_ref().x;
@@ -251,7 +251,7 @@ void positioner::revert_position_updates() {
             intermediate.line_end_ref().position_ref().y = shape.line_end_ref().position_ref().y;
           }
         });
-        auto& abstract_next = gen_.next_instance_map.at(uid);
+        auto& abstract_next = gen_.object_lookup_.at(uid);
         meta_callback(abstract_next.get(), [&]<typename TT>(TT& next) {
           if constexpr (std::is_same_v<TT, data_staging::line>) {
             next.line_start_ref().position_ref().x = shape.line_start_ref().position_ref().x;
@@ -261,14 +261,14 @@ void positioner::revert_position_updates() {
           }
         });
       } else {
-        auto& abstract_intermediate = gen_.intermediate_map.at(uid);
+        auto& abstract_intermediate = gen_.object_lookup_.at_intermediate(uid);
         meta_callback(abstract_intermediate.get(), [&]<typename TT>(TT& intermediate) {
           if constexpr (!std::is_same_v<TT, data_staging::line>) {
             intermediate.location_ref().position_ref().x = shape.location_ref().position_ref().x;
             intermediate.location_ref().position_ref().y = shape.location_ref().position_ref().y;
           }
         });
-        auto& abstract_next = gen_.next_instance_map.at(uid);
+        auto& abstract_next = gen_.object_lookup_.at(uid);
         meta_callback(abstract_next.get(), [&]<typename TT>(TT& next) {
           if constexpr (!std::is_same_v<TT, data_staging::line>) {
             next.location_ref().position_ref().x = shape.location_ref().position_ref().x;

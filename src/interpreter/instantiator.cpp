@@ -61,23 +61,23 @@ void instantiate_object_copy_fields(v8_interact& i,
 
 void recursively_build_stack_for_object(auto& new_stack,
                                         auto& shape,
-                                        auto& next_instance_map,
+                                        auto& object_lookup,
                                         std::vector<data_staging::shape_t>& instantiated_objs,
                                         int level = 0) {
   meta_callback(shape, [&](const auto& cc) {
     new_stack.emplace_back(shape);
     if (cc.meta_cref().level() > 0) {
-      if (next_instance_map.find(cc.meta_cref().parent_uid()) != next_instance_map.end()) {
+      if (object_lookup.find(cc.meta_cref().parent_uid()) != object_lookup.end()) {
         recursively_build_stack_for_object(new_stack,
-                                           next_instance_map.at(cc.meta_cref().parent_uid()).get(),
-                                           next_instance_map,
+                                           object_lookup.at(cc.meta_cref().parent_uid()).get(),
+                                           object_lookup,
                                            instantiated_objs,
                                            level + 1);
       } else {
         for (auto& v : instantiated_objs) {
           meta_callback(v, [&](const auto& ccc) {
             if (ccc.meta_cref().unique_id() == cc.meta_cref().parent_uid()) {
-              recursively_build_stack_for_object(new_stack, v, next_instance_map, instantiated_objs, level + 1);
+              recursively_build_stack_for_object(new_stack, v, object_lookup, instantiated_objs, level + 1);
             }
           });
         }
@@ -422,7 +422,7 @@ instantiator::instantiate_object_from_scene(
 
     std::vector<std::reference_wrapper<data_staging::shape_t>> new_stack;
     recursively_build_stack_for_object(
-        new_stack, shape_ref.get(), gen_.next_instance_map, gen_.scenes_.instantiated_objects_current_scene());
+        new_stack, shape_ref.get(), gen_.object_lookup_, gen_.scenes_.instantiated_objects_current_scene());
     // reverse new_stack
     std::reverse(new_stack.begin(), new_stack.end());
 

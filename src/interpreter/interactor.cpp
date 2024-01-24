@@ -90,7 +90,7 @@ void interactor::update_interactions() {
                           [&](data_staging::circle& c) {
                             handle_pass2(abstract_shape, c, c.meta_ref());
                             for (const auto& cascade_out : c.cascade_out_cref()) {
-                              auto& other = gen_.next_instance_map.at(cascade_out.unique_id()).get();
+                              auto& other = gen_.object_lookup_.at(cascade_out.unique_id()).get();
                               if (auto other_line = std::get_if<data_staging::line>(&other)) {
                                 if (cascade_out.type() == cascade_type::start) {
                                   other_line->line_start_ref().position_ref().x = c.location_ref().position_cref().x;
@@ -114,7 +114,7 @@ void interactor::update_interactions() {
                             // TODO: duplicated code from above with ellipse -> we need to re-use
                             handle_pass2(abstract_shape, e, e.meta_ref());
                             for (const auto& cascade_out : e.cascade_out_cref()) {
-                              auto& other = gen_.next_instance_map.at(cascade_out.unique_id()).get();
+                              auto& other = gen_.object_lookup_.at(cascade_out.unique_id()).get();
                               if (auto other_line = std::get_if<data_staging::line>(&other)) {
                                 if (cascade_out.type() == cascade_type::start) {
                                   other_line->line_start_ref().position_ref().x = e.location_ref().position_cref().x;
@@ -242,7 +242,7 @@ void interactor::handle_collisions(data_staging::shape_t& shape) {
     if (radiussize < 1000 /* todo create property of course */) {
       for (const auto& collide : found) {
         const auto unique_id2 = collide.userdata;
-        auto& shape2 = gen_.next_instance_map.at(unique_id2);
+        auto& shape2 = gen_.object_lookup_.at(unique_id2);
         try {
           data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
           if (c2.meta_cref().id() != "balls" && c.meta_cref().unique_id() != c2.meta_cref().unique_id()) {
@@ -380,7 +380,7 @@ void interactor::handle_gravity(data_staging::shape_t& shape) {
     };
     for (const auto& in_range : found) {
       const auto unique_id2 = in_range.userdata;
-      auto shape2 = gen_.next_instance_map.at(unique_id2);
+      auto shape2 = gen_.object_lookup_.at(unique_id2);
       if (std::holds_alternative<data_staging::circle>(shape2.get())) {
         data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
         handle(c, c2);

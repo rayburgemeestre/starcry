@@ -38,6 +38,7 @@ generator::generator(std::shared_ptr<metrics>& metrics,
       interactor_(*this),
       instantiator_(*this),
       job_mapper_(*this),
+      object_lookup_(*this),
       generator_opts(opts) {}
 
 void generator::init(const std::string& filename,
@@ -313,7 +314,7 @@ bool generator::_generate_frame() {
 
           scenes_.prepare_scene();
 
-          create_new_mappings();  // object uid -> object ref
+          object_lookup_.update();  // object uid -> object ref
 
           positioner_.update_object_positions();  // velocity + time
 
@@ -365,7 +366,7 @@ bool generator::_generate_frame() {
        */
       bool destroyed = scenes_.cleanup_destroyed_objects();
       if (destroyed) {
-        mappings_dirty = true;
+        object_lookup_.set_dirty();
       }
 
       scenes_.commit_scene_shapes();
@@ -414,24 +415,6 @@ void generator::revert_all_changes(v8_interact& i) {
 
   scalesettings.revert();
   scenes_.revert();
-}
-
-void generator::create_new_mappings() {
-  next_instance_map.clear();
-  intermediate_map.clear();
-  for (auto& abstract_shape : scenes_.next_shapes_current_scene()) {
-    // Will we just put copies here now??
-    meta_callback(abstract_shape, [&]<typename T>(T& shape) {
-      next_instance_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
-    });
-  }
-  for (auto& abstract_shape : scenes_.intermediate_shapes_current_scene()) {
-    // Will we just put copies here now??
-    meta_callback(abstract_shape, [&]<typename T>(T& shape) {
-      intermediate_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
-    });
-  }
-  mappings_dirty = false;
 }
 
 void generator::insert_newly_created_objects() {
@@ -504,15 +487,15 @@ void generator::insert_newly_created_objects() {
     });
   }
   source.clear();
-  create_new_mappings();
+  object_lookup_.update();
 }
 
 void generator::update_object_distances() {
   stepper.reset_current();
   const auto handle = [&](data_staging::shape_t& abstract_shape, data_staging::meta& meta) {
     const auto instance_uid = meta.unique_id();
-    const auto find = intermediate_map.find(instance_uid);
-    if (find == intermediate_map.end()) {
+    const auto find = object_lookup_.find_intermediate(instance_uid);
+    if (find == object_lookup_.end_intermediate()) {
       return;
     }
     const double dist = get_max_travel_of_object(abstract_shape, find->second.get());
@@ -747,8 +730,8 @@ int64_t generator::spawn_object3(data_staging::shape_t& spawner,
   // BEGIN: Temporary code (to try out something
   data_staging::shape_t* obj1o = nullptr;
   data_staging::shape_t* obj2o = nullptr;
-  auto find1 = next_instance_map.find(obj1);
-  if (find1 != next_instance_map.end()) {
+  auto find1 = object_lookup_.find(obj1);
+  if (find1 != object_lookup_.end()) {
     obj1o = &find1->second.get();
   } else {
     // todo; we need a mapping for this...
@@ -760,8 +743,8 @@ int64_t generator::spawn_object3(data_staging::shape_t& spawner,
       }
     }
   }
-  auto find2 = next_instance_map.find(obj2);
-  if (find2 != next_instance_map.end()) {
+  auto find2 = object_lookup_.find(obj2);
+  if (find2 != object_lookup_.end()) {
     obj2o = &find2->second.get();
   } else {
     // todo; we need a mapping for this...
@@ -798,7 +781,7 @@ int64_t generator::spawn_object_at_parent(data_staging::shape_t& spawner, v8::Lo
   std::optional<std::reference_wrapper<data_staging::shape_t>> parent;
   meta_callback(spawner, [&]<typename T>(const T& cc) {
     if (cc.meta_cref().level() > 0) {
-      parent = next_instance_map.at(cc.meta_cref().parent_uid());
+      parent = object_lookup_.at(cc.meta_cref().parent_uid());
     }
   });
   auto instantiated_object = ([&]() {
@@ -828,8 +811,8 @@ v8::Local<v8::Object> generator::get_object(int64_t object_unique_id) {
   auto& i = genctx->i();
   // BEGIN: Temporary code (to try out something
   data_staging::shape_t* obj1o = nullptr;
-  auto find1 = next_instance_map.find(object_unique_id);
-  if (find1 != next_instance_map.end()) {
+  auto find1 = object_lookup_.find(object_unique_id);
+  if (find1 != object_lookup_.end()) {
     obj1o = &find1->second.get();
   } else {
     // todo; we need a mapping for this...
@@ -935,15 +918,13 @@ void generator::debug_print(std::vector<data_staging::shape_t>& shapes) {
 
 std::vector<int64_t> generator::get_transitive_ids(const std::vector<int64_t>& unique_ids) {
   std::vector<int64_t> ret = unique_ids;
-  if (mappings_dirty) {
-    create_new_mappings();
-  }
+  object_lookup_.update_if_dirty();
   try {
     auto queue = unique_ids;
     while (!queue.empty()) {
       const auto item = queue.back();
       queue.pop_back();
-      const auto obj = next_instance_map.at(item).get();
+      const auto obj = object_lookup_.at(item).get();
       meta_callback(obj, [&]<typename T>(const T& cc) {
         if (item != cc.meta_cref().unique_id()) {
           throw std::runtime_error("next instance map lookup index corrupted");

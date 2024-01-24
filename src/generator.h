@@ -22,6 +22,7 @@
 #include "interpreter/instantiator.h"
 #include "interpreter/interactor.h"
 #include "interpreter/job_mapper.h"
+#include "interpreter/object_lookup.h"
 #include "interpreter/positioner.h"
 #include "interpreter/scenes.h"
 
@@ -48,7 +49,6 @@ class vector2d;
 namespace interpreter {
 
 class generator {
-private:
   friend class initializer;
   friend class bridges;
   friend class scenes;
@@ -57,6 +57,7 @@ private:
   friend class interactor;
   friend class instantiator;
   friend class job_mapper;
+  friend class object_lookup;
 
   std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
@@ -80,11 +81,7 @@ private:
   int attempt = 0;
   double max_dist_found = std::numeric_limits<double>::max();
 
-  // TODO: Can we do without copies, please?
-  std::unordered_map<int64_t, std::reference_wrapper<data_staging::shape_t>> next_instance_map;
-  std::unordered_map<int64_t, std::reference_wrapper<data_staging::shape_t>> intermediate_map;
   std::unordered_map<std::string, v8::Persistent<v8::Object>> object_definitions_map;
-  bool mappings_dirty = false;
   data::settings settings_;
 
   int min_intermediates = 1.;
@@ -106,6 +103,7 @@ private:
   interactor interactor_;
   instantiator instantiator_;
   job_mapper job_mapper_;
+  object_lookup object_lookup_;
 
   util::random_generator rand_;
   data_staging::attrs global_attrs_;
