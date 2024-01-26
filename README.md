@@ -10,7 +10,7 @@ Javascript engine.
 
 The interface to the user is either the Javascript file or the VueJS based UI.
 
-<img src="https://cppse.nl/screenshots.gif" width="100%">
+<img src="https://cppse.nl/screenshots.gif?V2" width="100%">
 
 ## Quickstart
 
