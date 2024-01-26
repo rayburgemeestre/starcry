@@ -4,7 +4,7 @@
       <q-toolbar>
         <q-btn dense flat round icon="menu" @click="toggleLeftDrawer" />
         <q-toolbar-title>
-          <img src="/sc.png" style="position: relative; top: 10px; left: 10px; height: 40px" alt="logo" />
+          <img src="/sc2.png" style="position: relative; top: 10px; left: 10px; height: 40px" alt="logo" />
         </q-toolbar-title>
         <q-btn v-if="global_store.connected.size" flat round dense icon="cloud_queue" class="q-mr-xs" />
         <div v-if="global_store.connected.size">{{ global_store.connected.size }} connected</div>
