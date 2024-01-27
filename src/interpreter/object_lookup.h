@@ -27,7 +27,7 @@ public:
   map_type::iterator find(int64_t id);
   map_type::iterator end();
   std::reference_wrapper<data_staging::shape_t>& at(int64_t id);
-  bool contains(int64_t id);
+  bool contains(int64_t id) const;
 
   map_type::iterator find_intermediate(int64_t id);
   map_type::iterator end_intermediate();

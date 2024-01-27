@@ -71,7 +71,8 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     // temp
     new_shape.level = level;
     new_shape.time = shape.meta_cref().get_time();
-    // new_shape.dist = dist;
+    new_shape.dist = shape.meta_cref().distance();
+    new_shape.steps = shape.meta_cref().steps();
 
     new_shape.gradients_.clear();
     new_shape.textures.clear();

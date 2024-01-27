@@ -93,6 +93,7 @@ struct shape {
   int warp_height = 0;
 
   double dist = 0.;
+  int steps = 0.;
 
   template <class Archive>
   void serialize(Archive &ar) {
@@ -141,7 +142,8 @@ struct shape {
        motion_blur,
        warp_width,
        warp_height,
-       dist);
+       dist,
+       steps);
   }
 };
 

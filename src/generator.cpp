@@ -506,8 +506,8 @@ void generator::update_object_distances() {
 
     static std::unordered_map<int64_t, int> recorded_steps;
 
+    meta.set_distance(max_dist_found);
     if (attempt == 1) {
-      meta.set_distance(dist);
       meta.set_steps(steps);
       recorded_steps[instance_uid] = steps;
     } else if (attempt > 1) {

@@ -54,7 +54,7 @@ std::reference_wrapper<data_staging::shape_t>& object_lookup::at(int64_t id) {
   return next_instance_map.at(id);
 }
 
-bool object_lookup::contains(int64_t id) {
+bool object_lookup::contains(int64_t id) const {
   return next_instance_map.contains(id);
 }
 
