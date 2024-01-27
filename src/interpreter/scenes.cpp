@@ -33,10 +33,6 @@ void scenes::refresh_scenesettings() {
   scene_settings tmp;
   std::swap(scenesettings, tmp);
 
-  // restore scene durations info in the recreated object
-  scenesettings.scene_durations = tmp.scene_durations;
-  scenesettings.scenes_duration = tmp.scenes_duration;
-
   // throw away all the scene information for script objects
   scenesettings_objs.clear();
 
