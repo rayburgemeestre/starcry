@@ -1,6 +1,6 @@
 <template>
   <div style="width: 100%">
-    <div class="myslider" style="width: 100%; margin-right: 10px; float: left" :min="1" @mouseout="mouse_out">
+    <div class="myslider" style="width: 100%; margin-right: 10px; float: left" :min="0" @mouseout="mouse_out">
       <div
         v-bind:class="t"
         v-bind:key="index"
@@ -67,7 +67,7 @@ export default defineComponent({
         return result;
       }
       let color_idx = 0;
-      for (let i = 1; i < this.max; i++) {
+      for (let i = 0; i < this.max; i++) {
         if (i >= current_scene) {
           current_scene += copy.shift() as number;
           color_idx++;
@@ -101,7 +101,7 @@ export default defineComponent({
 }
 span.info {
   position: absolute;
-  top: calc(100vh - 40px);
+  top: calc(100% - 40px);
   left: 50px;
   color: black;
 }

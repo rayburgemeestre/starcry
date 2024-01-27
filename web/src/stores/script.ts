@@ -8,7 +8,7 @@ export const useScriptStore = defineStore('script', {
     current_function: '',
     snippet: '',
     result: '',
-    frame: 1,
+    frame: 0,
 
     video: {},
     preview: {},

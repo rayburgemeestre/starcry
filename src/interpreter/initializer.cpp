@@ -95,6 +95,9 @@ void initializer::reset_context() {
   gen_.context->add_fun("triangular_wave", &triangular_wave);
   gen_.context->add_fun("blending_type_str", &data::blending_type::to_str);
   gen_.context->add_fun("texture_3d_str", &data::texture_3d::to_str);
+  gen_.context->add_fun("frame_number", [&]() {
+    return gen_.job->frame_number;
+  });
   gen_.context->add_fun("exit", &my_exit);
 
   gen_.context->add_include_fun();

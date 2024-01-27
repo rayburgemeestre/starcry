@@ -17,6 +17,23 @@ _ = {
         script.video.scale = (expf(tt, 20) * 3.0) + 1.0;
       },
     },
+    'text_frame_number': {
+      'type': 'text',
+      'gradient': 'full_white',
+      'text': '',
+      'text_size': 60,
+      'text_align': 'center',
+      'text_fixed': true,
+      'props': {},
+      'init': function() {
+        this.props.x = this.x;
+        this.props.y = this.y;
+      },
+      'time': function(t, e, s, tt) {
+        this.y = this.props.y / (4. + script.video.scale);
+        this.text = 'FRAME ' + frame_number();
+      },
+    },
     'text_fixed': {
       'type': 'text',
       'gradient': 'full_white',
@@ -84,6 +101,7 @@ _ = {
       'duration': 1,
       'objects': [
         {'id': 'main'},
+        {'id': 'text_frame_number', 'text': 'FRAME NUMBER', 'x': 0, 'y': 500, 'z': 0, 'props': {}},
         {'id': 'text_fixed', 'text': 'This is scale independent text', 'x': 0, 'y': 400, 'z': 0, 'props': {}},
         {'id': 'text_not_fixed', 'text': 'This is scale dependent text', 'x': 0, 'y': -400, 'z': 0, 'props': {}},
         {'id': 'text_per_scene', 'x': 0, 'y': 0, 'z': 0, 'props': {}},
