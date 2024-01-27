@@ -82,7 +82,8 @@ public:
       ("notty,n", "disable terminal (default tty is assumed)")
       ("caching", "enable caching (experimental feature)")
       ("raw,r", "write raw 32-bit EXR frames (default no)")
-      ("stdout", "print logger output to stdout (disables ncurses ui)")
+      ("stdout", "print logger output to stdout (disables ncurses ui, EDIT: obsolete)")
+      ("tui", "enable ncurses ui (disabled by default)")
       ("debug", "enable renderer visual debug")
       ("concurrent-commands", po::value<int>(&options.concurrent_commands), "max. concurrent commands in queue (default: 10)")
       ("concurrent-jobs", po::value<int>(&options.concurrent_jobs), "max. concurrent jobs in queue (default: 10)")
@@ -124,7 +125,7 @@ public:
     options.output = !vm.count("no-output");
     options.render = !vm.count("no-render");
     options.notty = vm.count("notty");
-    options.stdout_ = vm.count("stdout") || vm.count("client");
+    options.stdout_ = !vm.count("tui") || (vm.count("stdout") || vm.count("client"));
     options.compression = vm.count("compression");
     options.rand_seed =
         (rand_seed != std::numeric_limits<double>::max()) ? std::optional<double>(rand_seed) : std::nullopt;
@@ -225,6 +226,8 @@ int main(int argc, char *argv[]) {
     return true;
   };
 
+  // TODO: currently broken feature
+  /*
   if (wire_stdout_and_stderr()) {
     standard_output_to_logger ol(std::cout, "stdout");
     std::cout << "Wired standard output to logger.." << std::endl;
@@ -232,6 +235,7 @@ int main(int argc, char *argv[]) {
     standard_output_to_logger el(std::cerr, "stderr");
     std::cerr << "Wired standard error to logger.." << std::endl;
   }
+  */
 
   logger(DEBUG) << "Welcome to Starcry" << std::endl;
   logger(DEBUG) << "Integrated with v8 " << V8_MAJOR_VERSION << "." << V8_MINOR_VERSION << " build: " << V8_BUILD_NUMBER
