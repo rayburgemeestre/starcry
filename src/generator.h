@@ -16,6 +16,7 @@
 #include "scenesettings.h"
 
 #include "interpreter/bridges.h"
+#include "interpreter/checkpoints.h"
 #include "interpreter/frame_sampler.h"
 #include "interpreter/generator_options.hpp"
 #include "interpreter/initializer.h"
@@ -38,9 +39,6 @@
 #include "util/v8_interact.hpp"
 #include "util/v8_wrapper.hpp"
 
-#include "util/quadtree.h"
-#include "util/unique_group.hpp"
-
 class v8_wrapper;
 class step_calculator;
 class metrics;
@@ -58,6 +56,7 @@ class generator {
   friend class instantiator;
   friend class job_mapper;
   friend class object_lookup;
+  friend class checkpoints;
 
   std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
@@ -104,12 +103,15 @@ class generator {
   instantiator instantiator_;
   job_mapper job_mapper_;
   object_lookup object_lookup_;
+  checkpoints checkpoints_;
 
   util::random_generator rand_;
   data_staging::attrs global_attrs_;
   std::vector<int64_t> selected_ids_;
 
   const generator_options& generator_opts;
+
+  bool caching_ = false;
 
 public:
   explicit generator(std::shared_ptr<metrics>& metrics,
@@ -124,6 +126,7 @@ public:
             std::optional<int> width = std::nullopt,
             std::optional<int> height = std::nullopt,
             std::optional<double> scale = std::nullopt);
+
   void create_object_instances();
 
   void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance,
@@ -160,6 +163,7 @@ public:
 
   std::unordered_map<std::string, v8::Persistent<v8::Object>>& get_object_definitions_ref();
   std::vector<int64_t> get_transitive_ids(const std::vector<int64_t>& in);
+  void set_checkpoints(std::set<int>& checkpoints);
 
 private:
   bool _generate_frame();

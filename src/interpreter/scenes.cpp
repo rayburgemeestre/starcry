@@ -14,6 +14,19 @@ namespace interpreter {
 
 scenes::scenes(generator& gen) : gen_(gen) {}
 
+scenes scenes::clone() {
+  return scenes{*this};
+}
+
+void scenes::load_from(const scenes& other) {
+  this->scene_shapes = other.scene_shapes;
+  this->scene_shapes_next = other.scene_shapes_next;
+  this->instantiated_objects = other.instantiated_objects;
+  this->scene_shapes_intermediate = other.scene_shapes_intermediate;
+  this->scenesettings = other.scenesettings;
+  this->scenesettings_objs = other.scenesettings_objs;
+}
+
 void scenes::initialize() {
   scenesettings.scene_initialized = std::numeric_limits<size_t>::max();
   scenesettings.scene_initialized_previous = std::numeric_limits<size_t>::max();

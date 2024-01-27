@@ -27,12 +27,16 @@ class scenes : public transaction {
   std::vector<std::vector<data_staging::shape_t>> instantiated_objects;
   std::vector<std::vector<data_staging::shape_t>> scene_shapes_intermediate;
 
-public:
+public:  // temporary
   scene_settings scenesettings;
   std::unordered_map<int64_t, scene_settings> scenesettings_objs;
 
 public:
   explicit scenes(generator& gen);
+  scenes(const scenes& other) = default;
+
+  void load_from(const scenes& other);
+  scenes clone();
 
   void dump();
   void initialize();
@@ -64,7 +68,7 @@ public:
   void set_durations(int64_t unique_id, std::vector<double>& durations);
   void set_desired_duration(int64_t unique_id, double value);
 
-  interpreter::time_settings get_time(scene_settings& settings) const;
+  time_settings get_time(scene_settings& settings) const;
 
   size_t current();
   void set_scene_sub_object(int64_t unique_id);

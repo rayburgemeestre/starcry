@@ -129,6 +129,7 @@ private:
   std::thread notifier_thread;
 
   util::random_generator rand_;
+  std::set<int> checkpoints_;
 
 public:
   starcry(starcry_options& options, std::shared_ptr<v8_wrapper>& context);
@@ -152,6 +153,8 @@ public:
 
   const data::viewpoint& get_viewpoint() const;
   void set_viewpoint(data::viewpoint& vp);
+
+  void set_checkpoint(int frame_number);
 
 private:
   void configure_inotify();

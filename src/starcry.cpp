@@ -307,6 +307,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
                   viewpoint.canvas_w,
                   viewpoint.canvas_h,
                   viewpoint.scale);
+        gen->set_checkpoints(checkpoints);
       } else {
         gen->init(f.script(), options_.rand_seed, f.preview(), features_.caching);
       }
@@ -880,4 +881,8 @@ const std::vector<int64_t> starcry::selected_ids_transitive(std::shared_ptr<job_
     selected_ids_transitive = gen->get_transitive_ids(selected_ids);
   }
   return selected_ids_transitive;
+}
+
+void starcry::set_checkpoint(int frame) {
+  checkpoints_.insert(frame);
 }

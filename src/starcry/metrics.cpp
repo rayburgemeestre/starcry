@@ -134,6 +134,8 @@ std::string metrics::to_json() {
     first_key = jobs_.begin()->first;
 
     for (size_t i = first_key; i <= last_key; i++) {
+      // TODO: this prevents a crash, but figure out why it crashed
+      if (!jobs_.contains(i)) continue;
       const auto &job = jobs_[i];
       size_t queued = 0;
       // size_t rendering = 0;

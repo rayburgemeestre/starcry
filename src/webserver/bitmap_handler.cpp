@@ -55,6 +55,7 @@ void BitmapHandler::onData(seasocks::WebSocket* con, const char* data) {
       if (sc->get_viewpoint().labels) {
         req->enable_metadata_objects();
       }
+      sc->set_checkpoint(json["frame"]);
       sc->add_image_command(req);
     } else {
       const int frame = size_t(json["frame"]);

@@ -39,6 +39,7 @@ generator::generator(std::shared_ptr<metrics>& metrics,
       instantiator_(*this),
       job_mapper_(*this),
       object_lookup_(*this),
+      checkpoints_(*this),
       generator_opts(opts) {}
 
 void generator::init(const std::string& filename,
@@ -69,6 +70,8 @@ void generator::init(const std::string& filename,
 
   // all objects added at this point can be blindly appended
   scenes_.append_instantiated_objects();
+
+  caching_ = caching;
 }
 
 void generator::create_object_instances() {
@@ -244,10 +247,32 @@ void generator::reset_seeds() {
 }
 
 void generator::fast_forward(int frame_of_interest) {
-  fast_forwarder(fast_ff, frame_of_interest, min_intermediates, max_intermediates, [&]() {
-    generate_frame();
-    metrics_->skip_job(job->job_number);
-  });
+  fast_forwarder(
+      fast_ff,
+      frame_of_interest,
+      min_intermediates,
+      max_intermediates,
+      [&]() {
+        generate_frame();
+        metrics_->skip_job(job->job_number);
+      },
+      [&](int goto_frame) {
+        // since we're jumping to a specific frame, we will create a 'fake' entry for the
+        // frame before, and mark it as skipped, right now the web interface (TimeLineComponent)
+        // uses that to give the correct colors to the individual frames.
+        metrics_->register_job(goto_frame - 1, goto_frame - 1, 0, 1);
+        metrics_->skip_job(goto_frame - 1);
+
+        // restore everything from cache for this frame.
+        if (checkpoints_.scenes().contains(goto_frame)) {
+          scenes_.load_from(checkpoints_.scenes().at(goto_frame));
+          std::swap(*job, checkpoints_.job().at(goto_frame));
+          object_lookup_.update();
+          job->frame_number = goto_frame;
+        }
+      },
+      true,
+      checkpoints_.available());
 }
 
 bool generator::generate_frame() {
@@ -267,17 +292,16 @@ bool generator::_generate_frame() {
     metrics_->register_job(job->job_number + 1, job->frame_number, job->chunk, job->num_chunks);
 
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+      if (caching_) {
+        checkpoints_.insert(*job, scenes_);
+      }
+
       genctx = std::make_shared<generator_context>(val, scenes_.scenesettings.current_scene_next);
       auto& i = genctx->i();
 
       auto obj = val.As<v8::Object>();
-      auto scenes = i.v8_array(obj, "scenes");
       auto video = i.v8_obj(obj, "video");
       if (!video->IsObject()) video = v8::Object::New(isolate);
-
-      // auto objects = i.v8_array(obj, "objects");
-      auto current_scene = i.get_index(scenes, scenes_.scenesettings.current_scene_next);
-      if (!current_scene->IsObject()) return;
 
       stepper.reset();
       indexes.clear();
@@ -380,13 +404,13 @@ bool generator::_generate_frame() {
       // cleanup for next iteration
       interactor_.reset();
 
-      metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
+      metrics_->update_steps(job->job_number, attempt, stepper.current_step);
     });
+
+    metrics_->complete_job(job->job_number);
 
     job->job_number++;
     job->frame_number++;
-
-    metrics_->complete_job(job->job_number);
 
     v8::HeapStatistics hs;
     context->isolate->GetHeapStatistics(&hs);
@@ -941,6 +965,10 @@ std::vector<int64_t> generator::get_transitive_ids(const std::vector<int64_t>& u
     logger(WARNING) << "generator::get_transitive_ids: " << ex.what() << std::endl;
   }
   return ret;
+}
+
+void generator::set_checkpoints(std::set<int>& checkpoints) {
+  checkpoints_.set_checkpoints(checkpoints);
 }
 
 }  // namespace interpreter
