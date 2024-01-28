@@ -307,7 +307,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
                   viewpoint.canvas_w,
                   viewpoint.canvas_h,
                   viewpoint.scale);
-        gen->set_checkpoints(checkpoints);
+        gen->set_checkpoints(checkpoints_);
       } else {
         gen->init(f.script(), options_.rand_seed, f.preview(), features_.caching);
       }
