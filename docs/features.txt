@@ -1,0 +1,22 @@
+Starcry is a generative art tool with a declarative interface for creating
+structured objects and defining their behaviors. Inspired by Photoshop, objects
+are hierarchical and support Blending Modes.
+
+Leveraging the V8 JavaScript engine, Starcry allows users to fully customize
+behaviors through scripting, with inspiration taken Processing.
+While offering a more specialized feature set, Starcry has some unique
+capabilities. Here's a list of features:
+
+* Objects can be: circles, ellipses, lines, text, scripts.
+* Objects have general properties, location, behaviors, styling, movement, etc.
+* Objects can be imported from other scripts, to help reduce script complexity.
+* Scenes organize roughly initial setups and give some structure to videos.
+* Objects can be parents of other objects and can also dynamically spawn more objects.
+* Objects can pass on properties to their descendants, or modify their own.
+* Integrated video generation support, easy to generate a video in realtime.
+* EXR image format support for individual frames, for more powerful post-processing capabilities.
+* Motion blur can be enabled or disabled.
+* Various Perlin Noise textures available, and flexible gradients system.
+* Out-of-the-box gravity behavior feature, and dynamic object interactions.
+* First-class support for object intersections in the UI (W.I.P.).
+* Vector-based design, enabling resizing to any resolution
