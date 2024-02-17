@@ -1,0 +1,67 @@
+_ = {
+  'gradients': {
+    'dex': [
+      {'position': 0, 'r': 0, 'g': 0, 'b': 0, 'a': 1},
+      {'position': 0.1, 'r': 0, 'g': 0, 'b': 0, 'a': 1},
+      {'position': 0.12, 'r': 207 / 255., 'g': 74 / 255., 'b': 118 / 255, 'a': 1},
+      {'position': 0.2, 'r': 207 / 255., 'g': 74 / 255., 'b': 118 / 255, 'a': 1},
+      {'position': 0.35, 'r': 207 / 255., 'g': 74 / 255., 'b': 118 / 255, 'a': 1},
+      {'position': 0.4, 'r': 56 / 255., 'g': 53 / 255., 'b': 156 / 255, 'a': 1},
+      {'position': 0.45, 'r': 56 / 255., 'g': 53 / 255., 'b': 156 / 255, 'a': 1},
+      {'position': 0.50, 'r': 207 / 255., 'g': 74 / 255., 'b': 118 / 255, 'a': 1},
+      {'position': 0.55, 'r': 207 / 255., 'g': 74 / 255., 'b': 118 / 255, 'a': 1},
+      {'position': 0.60, 'r': 207 / 255., 'g': 74 / 255., 'b': 118 / 255, 'a': 1},
+      {'position': 0.62, 'r': 84 / 255., 'g': 184 / 255., 'b': 227 / 255, 'a': 1},
+      {'position': 0.80, 'r': 84 / 255., 'g': 184 / 255., 'b': 227 / 255, 'a': 1},
+      {'position': 0.84, 'r': 207 / 255., 'g': 74 / 255., 'b': 118 / 255, 'a': 1},
+      {'position': 0.88, 'r': 207 / 255., 'g': 74 / 255., 'b': 118 / 255, 'a': 1},
+      {'position': 0.9, 'r': 47 / 255., 'g': 89 / 255., 'b': 66 / 255, 'a': 1},
+      {'position': 0.98, 'r': 47 / 255., 'g': 89 / 255., 'b': 66 / 255, 'a': 1},
+      {'position': 1.0, 'r': 47 / 255., 'g': 89 / 255., 'b': 66 / 255, 'a': 0},
+    ],
+  },
+  'textures': {
+    'clouds1': {
+      'type': 'perlin',
+      'size': 3000.,
+      'octaves': 7,
+      'persistence': 0.45,
+      'percentage': 1.0,
+      'scale': 100.,
+      'range': [0.0, 0.0, 1.0, 1.0],
+      'strength': 1.0,
+      'speed': 1.,
+    },
+  },
+  'objects': {
+    'obj0': {
+      'type': 'circle',
+      'gradient': 'dex',
+      'x': 0,
+      'y': 0,
+      'props': {},
+      'subobj': [],
+      'radius': 0,
+      'radiussize': 400.0,
+      'init': function() {},
+    },
+  },
+  'video': {
+    'fps': 25,
+    'width': 1920,
+    'height': 1080,
+    'scale': 1.0,
+    'rand_seed': 5,
+    'granularity': 1,
+    'minimize_steps_per_object': false,
+    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
+    'grain_for_opacity': false,
+  },
+  'preview': {
+    'width': 512,
+    'height': 512,
+  },
+  'scenes': [
+    {'name': 'scene1', 'duration': 5.0, 'objects': [{'id': 'obj0', 'x': 0, 'y': 0, 'z': 0, 'props': {}}]},
+  ]
+};
