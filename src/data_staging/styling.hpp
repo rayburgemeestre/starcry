@@ -11,8 +11,8 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "data/blending_type.hpp"
 #include "data/texture_3d.hpp"
-
-#include "util/logger.h"
+#include "data/texture_effect.hpp"
+#include "data/zernike_type.hpp"
 
 namespace data_staging {
 class styling {
@@ -26,6 +26,8 @@ private:
   int64_t seed_;
   double hue_;
   data::texture_3d texture_3d_ = data::texture_3d::raw;
+  data::zernike_type zernike_type_ = data::zernike_type::version1;
+  data::texture_effect texture_effect_ = data::texture_effect::opacity;
   double texture_offset_x_ = 0;
   double texture_offset_y_ = 0;
 
@@ -87,6 +89,14 @@ public:
     return texture_3d_;
   }
 
+  data::zernike_type zernike_type() const {
+    return zernike_type_;
+  }
+
+  data::texture_effect texture_effect() const {
+    return texture_effect_;
+  }
+
   double texture_offset_x() const {
     return texture_offset_x_;
   }
@@ -103,12 +113,20 @@ public:
     texture_3d_ = value;
   }
 
+  void set_zernike_type(data::zernike_type value) {
+    zernike_type_ = value;
+  }
+
   void set_texture_offset_x(double value) {
     texture_offset_x_ = value;
   }
 
   void set_texture_offset_y(double value) {
     texture_offset_y_ = value;
+  }
+
+  void set_texture_effect(data::texture_effect value) {
+    texture_effect_ = value;
   }
 
   const decltype(textures_)& get_textures_cref() const {

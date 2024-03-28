@@ -836,6 +836,7 @@ std::string starcry::serialize_shapes_to_json(std::vector<std::vector<data::shap
           {"label", shape.label.empty() ? shape.id : shape.label},
           {"level", shape.level},
           {"gradient", shape.gradient_id_str},
+          {"texture", shape.texture_id_str},
           {"x", shape.x},
           {"y", shape.y},
           {"x2", shape.x2},

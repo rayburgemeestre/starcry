@@ -5,6 +5,8 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 
 #include "interpreter/object_bridge.h"
+#include "data/texture_effect.hpp"
+#include "data/zernike_type.hpp"
 #include "data_staging/shape.hpp"
 #include "generator.h"
 #include "util/logger.h"
@@ -185,6 +187,30 @@ template <typename T>
 void object_bridge<T>::set_recursive_scale(double value) const {
   data_staging::shape_t var = *shape_stack.back();
   return shape_stack.back()->generic_ref().set_recursive_scale(value);
+}
+
+template <typename T>
+data::zernike_type object_bridge<T>::get_zernike_type() const {
+  data_staging::shape_t var = *shape_stack.back();
+  return shape_stack.back()->styling_cref().zernike_type();
+}
+
+template <typename T>
+void object_bridge<T>::set_zernike_type(data::zernike_type value) const {
+  data_staging::shape_t var = *shape_stack.back();
+  return shape_stack.back()->styling_ref().set_zernike_type(value);
+}
+
+template <typename T>
+data::texture_effect object_bridge<T>::get_texture_effect() const {
+  data_staging::shape_t var = *shape_stack.back();
+  return shape_stack.back()->styling_cref().texture_effect();
+}
+
+template <typename T>
+void object_bridge<T>::set_texture_effect(data::texture_effect value) const {
+  data_staging::shape_t var = *shape_stack.back();
+  return shape_stack.back()->styling_ref().set_texture_effect(value);
 }
 
 // @add_field@

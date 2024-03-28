@@ -43,8 +43,11 @@ void instantiate_object_copy_fields(v8_interact& i,
                      "text_size",
                      "texture",
                      "texture_3d",
+                     "texture_effect",
                      "texture_offset_x",
                      "texture_offset_y",
+                     "zernike_type",
+                     "texture_effect",
                      "unique_group",
                      "vel_x",
                      "vel_x2",
@@ -225,6 +228,12 @@ instantiator::instantiate_object_from_scene(
       }
       if (i.has_field(instance, "texture_offset_y")) {
         c.styling_ref().set_texture_offset_y(i.integer_number(instance, "texture_offset_y"));
+      }
+      if (i.has_field(instance, "effect")) {
+        c.styling_ref().set_texture_effect(i.integer_number(instance, "effect"));
+      }
+      if (i.has_field(instance, "zernike_type")) {
+        c.styling_ref().set_zernike_type(i.integer_number(instance, "zernike_type"));
       }
       if (i.has_field(instance, "gradient")) {
         c.styling_ref().set_gradient(i.str(instance, "gradient"));

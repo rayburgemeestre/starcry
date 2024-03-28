@@ -203,6 +203,7 @@ image &rendering_engine::_render(size_t thread_num,
         shape.gradients_.emplace_back(1.0, data::gradient{});
         shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
         shape.gradients_[0].second.colors.emplace_back(std::make_tuple(1.0, data::color{1.0, 1, 1, 1}));
+        shape.texture_id_str = "";
         shape.blending_ = data::blending_type::normal;
         return shape;
       };

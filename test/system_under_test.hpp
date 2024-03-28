@@ -165,7 +165,8 @@ double sut::compare(const std::string& file1, const std::string& file2) {
     std::remove("/tmp/diff.png");
     std::remove("/tmp/diff.txt");
     double rmse = 1.;
-    if (std::regex_search(s, match, std::regex(R"(\d+ \(([\d.]+)\))"))) {
+    // string: 1.06663 (1.62758e-05)
+    if (std::regex_search(s, match, std::regex(R"([\d.]+ \(([\d.-]+(?:e[\d.-]+)?)\))"))) {
         rmse = std::stod(match[1]);
     }
     return rmse;

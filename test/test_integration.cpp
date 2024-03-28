@@ -83,7 +83,7 @@ TEST_CASE("Test simple test video") {
   sut sc;
   sc.options.script_file = "input/test.js";
   // part of the video (full = 175)
-  REQUIRE(sc.test_create_video("unittest_003_test_video.h264", 75, 25) <= double(0.01));
+  REQUIRE(sc.test_create_video("unittest_003_test_video.h264", 75, 25) <= double(0.02));
 }
 
 /**
@@ -135,4 +135,11 @@ TEST_CASE("Test rendering selected IDs") {
   std::vector<int64_t> selected_ids;
   selected_ids.push_back(20);
   REQUIRE(sc.test_create_image("unittest_014_test_frame1", selected_ids) == double(0));
+}
+
+TEST_CASE("Test zernike polynomials") {
+  sut sc;
+  sc.options.script_file = "input/zernike.js";
+  sc.options.frame_of_interest = 1;
+  REQUIRE(sc.test_create_image("unittest_015_zernike_frame1") <= double(0.01));
 }

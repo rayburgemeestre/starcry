@@ -18,6 +18,8 @@
 #include "data/gradient.hpp"
 #include "data/texture.hpp"
 #include "data/texture_3d.hpp"
+#include "data/texture_effect.hpp"
+#include "data/zernike_type.hpp"
 
 namespace data {
 
@@ -70,9 +72,12 @@ struct shape {
   std::vector<std::pair<double, gradient>> gradients_;
   std::vector<std::pair<double, texture>> textures;
   texture_3d texture_3d_ = texture_3d::raw;
+  zernike_type zernike_type_ = zernike_type::version1;
+  texture_effect texture_effect_ = texture_effect::opacity;
   double texture_offset_x = 0;
   double texture_offset_y = 0;
   std::string gradient_id_str;
+  std::string texture_id_str;
   blending_type blending_ = blending_type::normal;
   std::map<int, size_t> indexes;
   double seed = 0;
@@ -124,9 +129,12 @@ struct shape {
        gradients_,
        textures,
        texture_3d_,
+       zernike_type_,
+       texture_effect_,
        texture_offset_x,
        texture_offset_y,
        gradient_id_str,
+       texture_id_str,
        blending_,
        indexes,
        seed,

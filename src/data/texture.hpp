@@ -5,12 +5,7 @@
  */
 #pragma once
 
-#include <algorithm>  // for std::clamp
 #include <noise.hpp>
-#include "cereal/types/tuple.hpp"
-#include "cereal/types/vector.hpp"
-
-#include "data/color.hpp"
 #include "util/math.h"
 
 namespace data {
@@ -20,8 +15,15 @@ struct texture {
     perlin,
     fractal,
     turbulence,
+    zernike_1,
+    zernike_2,
   };
   noise_type type;
+  enum texture_effect {
+    opacity_effect,
+    color_effect,
+  };
+  texture_effect effect;
   double size;
   int octaves;
   double persistence;
@@ -37,6 +39,11 @@ struct texture {
   // animation speed
   double speed;
 
+  double m;
+  double n;
+  double rho;
+  double theta;
+
   texture() {}
 
   double get(double ratio, double x, double y, double z, double context_scale = 1., double seed = 1.) const {
@@ -46,6 +53,51 @@ struct texture {
       use_type = SimplexNoise::NoiseTypeEnum::FRACTALNOISE;
     } else if (type == noise_type::turbulence) {
       use_type = SimplexNoise::NoiseTypeEnum::TURBULENCE;
+    } else if (type == noise_type::zernike_1 || type == noise_type::zernike_2) {
+      double ret = 1;
+      const auto factorial = [](double n) {
+        double result = 1.;
+        for (size_t i = 2; i <= n; i++) {
+          result *= i;
+        }
+        return result;
+      };
+
+      const auto zernikeRadial = [&factorial](double n, double m, double rho) {
+        double radial = 0.0;
+        const auto absM = std::abs(m);
+        for (size_t k = 0; k <= (n - absM) / 2; k++) {
+          const auto numerator = std::pow(-1., k) * factorial(n - k);
+          const auto denominator = factorial(k) * factorial((n + absM) / 2. - k) * factorial((n - absM) / 2. - k);
+          radial += (numerator / denominator) * std::pow(rho, n - 2. * k);
+        }
+        return radial;
+      };
+
+      const auto size = 1.;
+      const auto centerX = 0.0;
+      const auto centerY = 0.0;
+      const auto rho = 2. * std::sqrt(std::pow(x - centerX, 2.) + std::pow(y - centerY, 2.)) / size;
+      const auto theta = std::atan2(y - centerY, x - centerX);
+
+      if (type == noise_type::zernike_1) {
+        const auto zValue = zernikeRadial(n, m, rho) * std::cos(m * theta);
+        const auto brightness = std::abs(zValue);
+        ret = 1.0 - brightness;
+      } else if (type == noise_type::zernike_2) {
+        auto zValue = 0.0;
+        if (rho <= 1.0) {  // Ensure we're within the unit disk
+          const auto radialComponent = zernikeRadial(n, m, rho);
+          const auto angularComponent = m >= 0 ? std::cos(m * theta) : std::sin(-m * theta);
+          zValue = radialComponent * angularComponent;
+        } else {
+          zValue = 0;  // Outside the unit disk
+        }
+        const auto brightness = zValue;
+        ret = 1.0 - brightness;
+      }
+      ret *= ratio;
+      return ret;
     }
     double perlin = noise.simplexNoise(use_type,
                                        size,
@@ -122,7 +174,7 @@ struct texture {
 
   template <class Archive>
   void serialize(Archive &ar) {
-    ar(type, size, octaves, persistence, percentage, scale, fromX, begin, end, toX, strength, speed);
+    ar(type, effect, size, octaves, persistence, percentage, scale, fromX, begin, end, toX, strength, speed);
   }
 };
 

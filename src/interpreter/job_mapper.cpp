@@ -84,11 +84,16 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     new_shape.texture_offset_x = shape.styling_cref().texture_offset_x();
     new_shape.texture_offset_y = shape.styling_cref().texture_offset_y();
 
+    new_shape.zernike_type_ = shape.styling_cref().zernike_type();
+    new_shape.texture_effect_ = shape.styling_cref().texture_effect();
+
     // temp hack
     std::string namespace_;
     std::string gradient_id;
+    std::string texture_id;
     if constexpr (!std::is_same_v<T, data_staging::script>) {
       gradient_id = shape.styling_cref().gradient();
+      texture_id = shape.styling_cref().texture();
       new_shape.hue = shape.styling_cref().hue();
     }
 
@@ -116,6 +121,8 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     } else {
       new_shape.gradient_id_str += "[mixed]";
     }
+
+    new_shape.texture_id_str = texture_id;
 
     new_shape.z = 0;
     // new_shape.vel_x = vel_x;

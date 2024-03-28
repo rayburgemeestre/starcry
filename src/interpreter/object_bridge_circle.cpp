@@ -257,6 +257,8 @@ object_bridge<data_staging::circle>::object_bridge(interpreter::generator* gener
       .property("texture_3d", &object_bridge::get_texture_3d, &object_bridge::set_texture_3d)
       .property("texture_offset_x", &object_bridge::get_texture_offset_x, &object_bridge::set_texture_offset_x)
       .property("texture_offset_y", &object_bridge::get_texture_offset_y, &object_bridge::set_texture_offset_y)
+      .property("texture_effect", &object_bridge::get_texture_effect, &object_bridge::set_texture_effect)
+      .property("zernike_type", &object_bridge::get_zernike_type, &object_bridge::set_zernike_type)
       .function("attr", &object_bridge::get_attr)
       .function("set_attr", &object_bridge::set_attr)
       .function("spawn", &object_bridge::spawn)

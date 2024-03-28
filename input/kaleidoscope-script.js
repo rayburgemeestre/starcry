@@ -127,7 +127,7 @@ _ = {
         script.video.scale = 1.0 + (logn(t, 100) * 1);
         // this.scale = this.props.scale
         this.radiussize = 5 * this.props.scale;
-        //this.radiussize = 2;
+        // this.radiussize = 2;
       },
       'blending_type': blending_type.add,
       'scale': 1.0,

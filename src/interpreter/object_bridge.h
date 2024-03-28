@@ -69,6 +69,8 @@ public:
   std::string get_gradient() const;
   std::string get_texture() const;
   data::texture_3d get_texture_3d() const;
+  data::zernike_type get_zernike_type() const;
+  data::texture_effect get_texture_effect() const;
   double get_texture_offset_x() const;
   double get_texture_offset_y() const;
   double get_recursive_scale() const;
@@ -106,6 +108,8 @@ public:
   void set_gradient(const std::string& gradient) const;
   void set_texture(const std::string& value) const;
   void set_texture_3d(data::texture_3d value) const;
+  void set_zernike_type(data::zernike_type value) const;
+  void set_texture_effect(data::texture_effect value) const;
   void set_texture_offset_x(double x) const;
   void set_texture_offset_y(double y) const;
   void set_recursive_scale(double value) const;

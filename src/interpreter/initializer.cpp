@@ -5,6 +5,8 @@
  */
 
 #include "initializer.h"
+#include "data/texture_effect.hpp"
+#include "data/zernike_type.hpp"
 #include "generator.h"
 #include "scripting.h"
 #include "util/v8_interact.hpp"
@@ -145,6 +147,13 @@ void initializer::reset_context() {
       .const_("noise_3d_simplex", data::texture_3d::noise_3d_simplex)
       .const_("noise_3d_coords", data::texture_3d::noise_3d_coords);
   gen_.context->context->module("texture_3d", consts_2);
+  v8pp::module consts_3(gen_.context->isolate);
+  consts_3.const_("version1", data::zernike_type::version1).const_("version2", data::zernike_type::version2);
+  gen_.context->context->module("zernike_type", consts_3);
+
+  v8pp::module consts_4(gen_.context->isolate);
+  consts_4.const_("opacity", data::texture_effect::opacity).const_("color", data::texture_effect::color);
+  gen_.context->context->module("texture_effect", consts_4);
 }
 
 void initializer::init_user_script() {
@@ -354,6 +363,9 @@ void initializer::init_textures() {
       auto texture_settings = i.get(texture_objects, texture_id).As<v8::Object>();
       auto id = v8_str(isolate, texture_id.As<v8::String>());
       auto type = i.str(texture_settings, "type");
+      auto zernike_type = i.integer_number(texture_settings, "zernike_type");
+      auto texture_effect = i.integer_number(texture_settings, "effect");
+      // perlin
       gen_.textures[id].size = i.double_number(texture_settings, "size");
       gen_.textures[id].octaves = i.integer_number(texture_settings, "octaves");
       gen_.textures[id].persistence = i.double_number(texture_settings, "persistence");
@@ -362,14 +374,27 @@ void initializer::init_textures() {
       auto range = i.v8_array(texture_settings, "range");
       gen_.textures[id].strength = i.double_number(texture_settings, "strength");
       gen_.textures[id].speed = i.double_number(texture_settings, "speed");
-      if (range->Length() == 4) {
-        data::texture::noise_type use_type = data::texture::noise_type::perlin;
-        if (type == "fractal") {
-          use_type = data::texture::noise_type::fractal;
-        } else if (type == "turbulence") {
-          use_type = data::texture::noise_type::turbulence;
+      // zernikes
+      gen_.textures[id].m = i.double_number(texture_settings, "m");
+      gen_.textures[id].n = i.double_number(texture_settings, "n");
+      gen_.textures[id].rho = i.double_number(texture_settings, "rho");
+      gen_.textures[id].theta = i.double_number(texture_settings, "theta");
+
+      data::texture::noise_type use_type = data::texture::noise_type::perlin;
+      if (type == "fractal") {
+        use_type = data::texture::noise_type::fractal;
+      } else if (type == "turbulence") {
+        use_type = data::texture::noise_type::turbulence;
+      } else if (type == "zernike") {
+        if (zernike_type == data::zernike_type::version1) {
+          use_type = data::texture::noise_type::zernike_1;
+        } else if (zernike_type == data::zernike_type::version2) {
+          use_type = data::texture::noise_type::zernike_2;
         }
-        gen_.textures[id].type = use_type;
+      }
+      gen_.textures[id].type = use_type;
+      gen_.textures[id].effect = data::texture::texture_effect(texture_effect);
+      if (range->Length() == 4) {
         gen_.textures[id].fromX = i.double_number(range, 0);
         gen_.textures[id].begin = i.double_number(range, 1);
         gen_.textures[id].end = i.double_number(range, 2);

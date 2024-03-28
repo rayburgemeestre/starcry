@@ -218,6 +218,8 @@ object_bridge<data_staging::line>::object_bridge(interpreter::generator* generat
       .property("texture_3d", &object_bridge::get_texture_3d, &object_bridge::set_texture_3d)
       .property("texture_offset_x", &object_bridge::get_texture_offset_x, &object_bridge::set_texture_offset_x)
       .property("texture_offset_y", &object_bridge::get_texture_offset_y, &object_bridge::set_texture_offset_y)
+      .property("texture_effect", &object_bridge::get_texture_effect, &object_bridge::set_texture_effect)
+      .property("zernike_type", &object_bridge::get_zernike_type, &object_bridge::set_zernike_type)
       .function("destroy", &object_bridge::destroy)
       .property("props", &object_bridge::get_properties_local_ref)
       .property("gradient", &object_bridge::get_gradient, &object_bridge::set_gradient)
