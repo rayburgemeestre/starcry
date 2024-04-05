@@ -30,7 +30,9 @@ find_package(V8 REQUIRED)
 find_package(Boost 1.52 COMPONENTS program_options system date_time thread chrono REQUIRED)
 find_package(Threads)
 
-set(COMMON_FLAGS "-std=c++23 -fno-omit-frame-pointer -Wall -mssse3 -DV8_COMPRESS_POINTERS -DV8_ENABLE_SANDBOX")
+# CLion 2023.3 doesn't like c++23 here?
+#set(COMMON_FLAGS "-std=c++23 -fno-omit-frame-pointer -Wall -mssse3 -DV8_COMPRESS_POINTERS -DV8_ENABLE_SANDBOX")
+set(COMMON_FLAGS "-std=c++20 -fno-omit-frame-pointer -Wall -mssse3 -DV8_COMPRESS_POINTERS -DV8_ENABLE_SANDBOX")
 set(DEBUG_FLAGS "-O0 -g")
 set(RELEASE_FLAGS "-O2 -funsigned-char -pedantic -pthread")  # TODO: support --ffast-math
 
