@@ -27,6 +27,8 @@
 #include "interpreter/positioner.h"
 #include "interpreter/scenes.h"
 
+#include "core/fps_progress.hpp"
+
 #include "data/job.hpp"
 #include "data/settings.hpp"
 #include "data/texture.hpp"
@@ -112,6 +114,7 @@ class generator {
   const generator_options& generator_opts;
 
   bool caching_ = false;
+  fps_progress fps_progress_;
 
 public:
   explicit generator(std::shared_ptr<metrics>& metrics,

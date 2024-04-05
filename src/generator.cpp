@@ -419,6 +419,7 @@ bool generator::_generate_frame() {
     logger(INFO) << "Memory usage: " << total_usage << " GB. "
                  << "V8 Heap: " << v8_usage << " GB. "
                  << "Other: " << (total_usage - v8_usage) << " GB." << std::endl;
+    fps_progress_.inc();
   } catch (abort_exception& ex) {
     std::cout << "[caught] " << ex.what() << " (abort)" << std::endl;
     std::exit(0);
