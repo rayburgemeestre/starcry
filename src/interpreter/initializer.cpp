@@ -170,8 +170,11 @@ void initializer::init_user_script() {
   const auto source = std::string("script = ") + std::string(begin, end);
   gen_.context->run("cache = typeof cache == 'undefined' ? {} : cache;");
   gen_.context->run("script = {\"video\": {}};");
-  gen_.context->run(source);
-
+  try {
+    gen_.context->run(source);
+  } catch (std::runtime_error& ex) {
+    logger(WARNING) << "Exception occurred loading user script:\n" << ex.what() << std::endl;
+  }
   v8::HandleScope hs(gen_.context->context->isolate());
   gen_.bridges_.init();
 }
@@ -258,6 +261,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         if (i.has_field(video, "extra_grain")) settings_.extra_grain = i.double_number(video, "extra_grain");
         if (i.has_field(video, "update_positions")) settings_.update_positions = i.boolean(video, "update_positions");
         if (i.has_field(video, "dithering")) settings_.dithering = i.boolean(video, "dithering");
+        if (i.has_field(video, "gamma")) settings_.gamma = i.double_number(video, "gamma");
         if (i.has_field(video, "min_intermediates"))
           gen_.min_intermediates = i.integer_number(video, "min_intermediates");
         if (i.has_field(video, "max_intermediates"))

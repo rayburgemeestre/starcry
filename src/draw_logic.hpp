@@ -968,10 +968,11 @@ public:
     // clr.a = 1.;
 
     // ------------gamma corr.------------
-    // const auto gamma = 0.5;
-    // clr.r = std::pow(clr.r, gamma);
-    // clr.g = std::pow(clr.g, gamma);
-    // clr.b = std::pow(clr.b, gamma);
+    if (settings.gamma) {
+      clr.r = std::pow(clr.r, settings.gamma);
+      clr.g = std::pow(clr.g, settings.gamma);
+      clr.b = std::pow(clr.b, settings.gamma);
+    }
     // ------------gamma corr.------------
 
     // was:
