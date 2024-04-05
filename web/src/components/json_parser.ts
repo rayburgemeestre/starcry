@@ -57,7 +57,18 @@ export class JsonWithObjectsParser {
     let previous_char = ' ';
     let previous_char_pos = 0;
     let previous_char2 = ' ';
-    let in_blending_type = false;
+    type Flags = {
+      blending_type: boolean;
+      zernike_type: boolean;
+      texture_effect: boolean;
+    };
+
+    type FlagsDictionary = {
+      [key: string]: boolean;
+    };
+
+    const flags: FlagsDictionary = { blending_type: false, zernike_type: false, texture_effect: false };
+
     for (let i = 0; i < this.json_str.length; i++) {
       const s: string = this.json_str[i];
 
@@ -137,21 +148,30 @@ export class JsonWithObjectsParser {
         function_num++;
       }
       if (!in_string) {
-        if ((in_blending_type as boolean) && ',;'.indexOf(s) !== -1) {
-          trail += '"';
-          in_blending_type = false;
-        }
-        if (
-          !in_function &&
-          !(in_blending_type as boolean) &&
-          s === 'b' &&
-          this.json_str.substr(i, 'blending_type'.length) === 'blending_type' &&
-          previous_char !== '"'
-        ) {
-          in_blending_type = true;
-          trail += '"b'; // stringize it
-          continue;
-        }
+        const handleType = function (key: string, flag: string, first_char: string) {
+          // End of type
+          if (flags[flag] && ',;\r\n'.indexOf(s) !== -1) {
+            trail += '"';
+            flags[flag] = false;
+          }
+          // Start of type
+          if (
+            !in_function &&
+            !flags[flag] &&
+            s === first_char &&
+            this.json_str.substr(i, key.length) === key &&
+            previous_char !== '"'
+          ) {
+            flags[flag] = true;
+            trail += '"' + first_char; // stringize it
+            return true; // Indicating that we should "continue" in the calling code.
+          }
+          return false; // Indicating no need to "continue" in the calling code.
+        }.bind(this);
+
+        if (handleType.call(this, 'blending_type', 'blending_type', 'b')) continue;
+        if (handleType.call(this, 'zernike_type', 'zernike_type', 'z')) continue;
+        if (handleType.call(this, 'texture_effect', 'texture_effect', 't')) continue;
       }
       if (in_function === false) {
         if (',;'.indexOf(s) !== -1 && previous_char === '.' && '0123456789'.indexOf(previous_char2) !== -1) {
