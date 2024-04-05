@@ -69,7 +69,7 @@ script = {
     'init_scale': 0.5,
     'rand_seed': 1,
     'granularity': 100,
-    'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
+    // 'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
     'minimize_steps_per_object': false,
     'grain_for_opacity': false,
     'min_intermediates': 1,

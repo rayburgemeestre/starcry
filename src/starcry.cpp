@@ -537,6 +537,9 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       }
       add_frame_to_streamer();
       return last_frame;
+    } else {
+      // Always use checkerboard for interactive mode.
+      pixels_vec_insert_checkers_background(pixels, width, height);
     }
 
     add_frame_to_streamer();
