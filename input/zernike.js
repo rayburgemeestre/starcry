@@ -28,7 +28,10 @@ script = {
             'radiussize': radius,
             'texture': 'zern' + (i + 1),
             'zernike_type': zernike_type.version1,
-            'attrs': {'text': 'zernike #' + (i + 1)},
+            'attrs': {
+              'text': 'zernike #' + (i + 1) + ' n=' + script.textures['zern' + (i + 1)].n +
+                  ',m=' + script.textures['zern' + (i + 1)].m + ''
+            },
           });
           x += radius * 2;
           if (x > (1920 - radius)) {
@@ -108,7 +111,7 @@ function get_textures() {
       if ((n - Math.abs(m)) % 2 === 0) {  // if n - |m| is even
         nmPairs.push([n, m]);
         if (nmPairs.length >= totalPairs) {
-          break; // reached desired num of pairs
+          break;  // reached desired num of pairs
         }
       }
     }
