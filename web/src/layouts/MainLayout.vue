@@ -469,9 +469,9 @@ export default defineComponent({
     }.bind(obj);
 
     obj.pinchHandler = ({ offset: [d, a], pinching }) => {
-      const zoom = d / 256;
-      debug_text.value = 1 + zoom;
-      viewpoint_store.scale = 1 + zoom;
+      const zoom = d / 10000;
+      // debug_text.value = 1 + zoom;
+      viewpoint_store.scale = Math.min(Math.max(0, 1 + zoom), 100);
       // set({ zoom: d, rotateZ: a })
     };
 
