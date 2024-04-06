@@ -125,8 +125,13 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     new_shape.texture_id_str = texture_id;
 
     new_shape.z = 0;
-    // new_shape.vel_x = vel_x;
-    // new_shape.vel_y = vel_y;
+    // TODO: more types of shapes could use velocity properties
+    if constexpr (std::is_same_v<T, data_staging::circle>) {
+      auto vel = shape.movement_cref().velocity();
+      new_shape.velocity = shape.movement_cref().velocity_speed();
+      new_shape.vel_x = vel.x;
+      new_shape.vel_y = vel.y;
+    }
     if constexpr (!std::is_same_v<T, data_staging::script>) {
       new_shape.blending_ = shape.styling_cref().blending_type();
     }

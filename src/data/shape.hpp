@@ -53,6 +53,7 @@ struct shape {
   double x2 = 0;
   double y2 = 0;
   double z2 = 0;
+  double velocity = 0;
   double vel_x = 0;
   double vel_y = 0;
   shape_type type = shape_type::none;
@@ -110,6 +111,7 @@ struct shape {
        x2,
        y2,
        z2,
+       velocity,
        vel_x,
        vel_y,
        type,
