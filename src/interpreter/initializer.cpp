@@ -308,6 +308,7 @@ void initializer::init_gradients() {
     v8_interact i;
     auto obj = val.As<v8::Object>();
     auto gradient_objects = i.v8_obj(obj, "gradients");
+    if (gradient_objects->IsNullOrUndefined()) return;
     auto gradient_fields = gradient_objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
     for (size_t k = 0; k < gradient_fields->Length(); k++) {
       auto gradient_id = i.get_index(gradient_fields, k);
@@ -437,6 +438,7 @@ void initializer::init_object_definitions() {
           v8_interact i;
           auto obj = val.As<v8::Object>();
           auto object_definitions = i.v8_obj(obj, "objects");
+          if (object_definitions->IsNullOrUndefined()) return;
           auto object_definitions_fields = object_definitions->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
           for (size_t k = 0; k < object_definitions_fields->Length(); k++) {
             auto object_id = i.get_index(object_definitions_fields, k);
