@@ -261,3 +261,39 @@ TEST_CASE( "Shape class sizes" ) {
   REQUIRE(sizeof(data_staging::text) < sizeof(data_staging::shape_t));
   REQUIRE(sizeof(data_staging::script) < sizeof(data_staging::shape_t));
 }
+
+#include "util/memory_tracker.hpp"
+
+TEST_CASE( "Memory tracking" ) {
+  memory_tracker mt("bitmap");
+  mt.update_memory(10000);
+  {
+    memory_tracker mt2("bitmap", 1000);
+    tracked_memory::instance().print_report();
+  }
+  tracked_memory::instance().print_report();
+}
+
+TEST_CASE("Memory tracking threads") {
+  memory_tracker mt1("xxx", 100);
+
+  std::thread t1([&]() {
+    memory_tracker mt1("bitmap1");
+    mt1.update_memory(10000);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  });
+  std::thread t2([&]() {
+    memory_tracker mt2("bitmap2");
+    mt2.update_memory(20000);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  });
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  tracked_memory::instance().print_report();
+
+  t1.join();
+  t2.join();
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  tracked_memory::instance().print_report();
+}
