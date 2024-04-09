@@ -64,6 +64,7 @@ public:
       ("frame-offset", po::value<size_t>(&options.frame_offset), "frame offset (used to skip rendering frames)")
       ("seed", po::value<double>(&rand_seed), "override the random seed used")
       ("num_threads,t", po::value<size_t>(&options.num_worker_threads), "number of local render threads (default 1)")
+      ("num_ffmpeg_threads,ft", po::value<int>(&options.num_ffmpeg_threads), "number of threads for ffmpeg encoding")
       ("num_chunks,c", po::value<size_t>(&options.num_chunks), "number of chunks to chop frame into (default 1)")
       ("server", po::value<std::string>(&options.host), "start server to allow dynamic renderers (default no)")
       ("client", po::value<std::string>(&options.host), "start client renderer, connect to host")
@@ -85,6 +86,7 @@ public:
       ("stdout", "print logger output to stdout (disables ncurses ui, EDIT: obsolete)")
       ("tui", "enable ncurses ui (disabled by default)")
       ("debug", "enable renderer visual debug")
+      ("single", "change all settings to enforce single-threaded processing")
       ("concurrent-commands", po::value<int>(&options.concurrent_commands), "max. concurrent commands in queue (default: 10)")
       ("concurrent-jobs", po::value<int>(&options.concurrent_jobs), "max. concurrent jobs in queue (default: 10)")
       ("concurrent-frames", po::value<int>(&options.concurrent_frames), "max. concurrent frames in queue (default: 10)")
@@ -96,13 +98,22 @@ public:
       ("granularity", po::value<int>(&options.generator_opts.custom_granularity), "custom canvas granularity");
     // clang-format on
 
+    po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
+
+    if (vm.count("single")) {
+      options.num_chunks = 1;
+      options.num_worker_threads = 1;
+      options.concurrent_commands = 1;
+      options.concurrent_jobs = 1;
+      options.concurrent_frames = 1;
+      options.num_ffmpeg_threads = 1;
+    }
+
     if (vm.count("grain")) {
       options.generator_opts.custom_grain = true;
     } else if (vm.count("nograin")) {
       options.generator_opts.custom_grain = false;
     }
-
-    po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
 
     if (vm.count("help")) {
       std::cerr << argv[0] << " [ <script> ] [ <output> ]" << std::endl << std::endl << desc << "\n";

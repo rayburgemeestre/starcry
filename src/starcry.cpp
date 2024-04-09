@@ -255,6 +255,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
             "output_seed_{}_{}x{}-{}.h264", gen->get_seed(), (int)gen->width(), (int)gen->height(), scriptname));
       }
       framer = std::make_unique<frame_streamer>(v.output_file(), stream_mode);
+      framer->set_num_threads(options().num_ffmpeg_threads);
       framer->set_log_callback([&](int level, const std::string& line) {
         metrics_->log_callback(level, line);
       });

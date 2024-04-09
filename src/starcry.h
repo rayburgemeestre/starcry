@@ -91,6 +91,8 @@ struct starcry_options {
   int concurrent_jobs = 10;
   int concurrent_frames = 10;
 
+  int num_ffmpeg_threads = -1;
+
   generator_options generator_opts;
 };
 
