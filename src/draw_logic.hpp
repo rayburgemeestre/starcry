@@ -166,10 +166,16 @@ public:
       int abs_y_top = static_cast<int>(circle_y - rel_y + 0.5) - 1;
       int abs_y_bottom = static_cast<int>(circle_y + rel_y + 0.5);
 
+      if (abs_y_bottom < 0) {
+        rel_y -= abs_y_bottom;
+        continue;
+      }
+      if ((abs_y_top + radius_outer_circle) >= static_cast<int>(this->canvas_h_)) {
+        break;
+      }
+
       box.update_y(abs_y_top);
       box.update_y(abs_y_bottom);
-
-      if ((abs_y_top < 0) && (abs_y_bottom > static_cast<int>(height_))) break;
 
       int hxcl_outer = half_chord_length<decltype(radius_outer_circle), double>(radius_outer_circle, rel_y);
       int hxcl_inner = 0;
@@ -180,6 +186,14 @@ public:
       for (int rel_x = hxcl_inner; rel_x < hxcl_outer; rel_x++) {
         int abs_x_left = static_cast<int>(circle_x - rel_x + 0.5) - 1;
         int abs_x_right = static_cast<int>(circle_x + rel_x + 0.5) - 1;
+
+        if (abs_x_right < 0) {
+          rel_x -= abs_x_right;
+          continue;
+        }
+        if ((abs_x_right - radius_outer_circle) >= static_cast<int>(this->canvas_w_)) {
+          break;
+        }
 
         box.update_x(abs_x_left);
         box.update_x(abs_x_right);
@@ -290,10 +304,16 @@ public:
       int abs_y_top = static_cast<int>(ellipse_y - rel_y + 0.5) - 1;
       int abs_y_bottom = static_cast<int>(ellipse_y + rel_y + 0.5);
 
+      if (abs_y_bottom < 0) {
+        rel_y -= abs_y_bottom;
+        continue;
+      }
+      if ((abs_y_top + radius_outer_circle) >= static_cast<int>(this->canvas_h_)) {
+        break;
+      }
+
       box.update_y(abs_y_top);
       box.update_y(abs_y_bottom);
-
-      if ((abs_y_top < 0) && (abs_y_bottom > static_cast<int>(height_))) break;
 
       int hxcl_outer = half_chord_length<decltype(radius_outer_circle), double>(radius_outer_circle, rel_y);
       int hxcl_inner = 0;
@@ -304,6 +324,14 @@ public:
       for (int rel_x = hxcl_inner; rel_x < hxcl_outer; rel_x++) {
         int abs_x_left = static_cast<int>(ellipse_x - rel_x + 0.5) - 1;
         int abs_x_right = static_cast<int>(ellipse_x + rel_x + 0.5) - 1;
+
+        if (abs_x_right < 0) {
+          rel_x -= abs_x_right;
+          continue;
+        }
+        if ((abs_x_right - radius_outer_circle) >= static_cast<int>(this->canvas_w_)) {
+          break;
+        }
 
         box.update_x(abs_x_left);
         box.update_x(abs_x_right);
@@ -418,14 +446,15 @@ public:
           absX = textX + bitmap_x - half_text_width;
           absY = textY + bitmap_y - full_text_height;  // TODO: should be half, but full looks more centered.
         }
-        if (absX < 0 || absX >= width_) continue;
-        if (absY < 0 || absY >= height_) continue;
+        if (absX < 0 || absX >= width_) goto skip;
+        if (absY < 0 || absY >= height_) goto skip;
         if (std::isnan(absX) || std::isnan(absY)) continue;
         bound_box.update_x(absX);
         bound_box.update_y(absY);
         render_pixel(bmp, shape, textX, textY, absX, absY, c, opacity, settings);
       }
     }
+  skip:
     return bound_box;
   }
 
