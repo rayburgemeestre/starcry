@@ -9,16 +9,22 @@
 
 #include "data/bounding_box.hpp"
 #include "data/color.hpp"
+#include "util/memory_tracker.hpp"
 
 class image {
 private:
   std::vector<data::color> pixels_;
   size_t width;
   size_t height;
+  memory_tracker mt;
 
 public:
   image() : image(0, 0) {}
-  image(size_t width, size_t height) : pixels_(width * height, {0, 0, 0, 0}), width(width), height(height) {}
+  image(size_t width, size_t height)
+      : pixels_(width * height, {0, 0, 0, 0}),
+        width(width),
+        height(height),
+        mt("image", width * height * sizeof(data::color)) {}
 
   std::vector<data::color> &pixels() {
     return pixels_;
@@ -62,6 +68,8 @@ public:
     } else if (pixels_.size() < size) {
       std::fill_n(std::back_inserter(pixels_), size - pixels_.size(), data::color{0, 0, 0, 0});
     }
+    assert(pixels_.size() == size);
+    mt.update_memory(width * height * sizeof(data::color));
   }
 
   data::color &get(const int &x, const int &y) {
