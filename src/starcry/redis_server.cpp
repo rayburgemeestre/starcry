@@ -45,6 +45,7 @@ std::tuple<std::string, std::string> split(auto& msg) {
 
 void redis_server::run() {
   runner = std::thread([this]() {
+    set_thread_name("redis_server::thread");
     while (running) {
       try {
         redis = std::make_unique<Redis>(host);
@@ -143,6 +144,7 @@ void redis_server::run() {
     }
   });
   job_waiter = std::thread([this]() {
+    set_thread_name("job_waiter::thread");
     while (running) {
       // wait till we have something
       if (!sc.jobs->has_items(0)) {

@@ -13,6 +13,7 @@
 #include <thread>
 
 #include "util/logger.h"
+#include "util/threadname.hpp"
 
 class fps_progress {
   std::chrono::high_resolution_clock::time_point start;
@@ -31,6 +32,7 @@ public:
         runner(&fps_progress::start_fps_monitoring_thread, this) {}
 
   void start_fps_monitoring_thread() {
+    set_thread_name("fps_progress::thread");
     while (active) {
       std::unique_lock<std::mutex> l(mut);
       cv.wait_for(l, std::chrono::milliseconds(1000), [&]() -> bool {

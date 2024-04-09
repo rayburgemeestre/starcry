@@ -6,12 +6,9 @@
 #include "data/frame_request.hpp"
 #include "starcry.h"
 #include "util/logger.h"
-#include "util/threadname.hpp"
 #include "webserver.h"
 
-ShapesHandler::ShapesHandler(starcry* sc) : sc(sc) {
-  set_thread_name("ShapesHandler");
-}
+ShapesHandler::ShapesHandler(starcry* sc) : sc(sc) {}
 
 void ShapesHandler::onConnect(seasocks::WebSocket* con) {
   _cons.insert(con);

@@ -11,11 +11,8 @@ using json = nlohmann::json;
 
 #include "data/viewpoint.hpp"
 #include "util/logger.h"
-#include "util/threadname.hpp"
 
-ViewPointHandler::ViewPointHandler(starcry* sc) : sc(sc) {
-  set_thread_name("ViewPointHandler");
-}
+ViewPointHandler::ViewPointHandler(starcry* sc) : sc(sc) {}
 
 void ViewPointHandler::onConnect(seasocks::WebSocket* con) {
   _cons.insert(con);

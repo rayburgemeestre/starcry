@@ -12,6 +12,8 @@
 #include <mutex>
 #include <thread>
 
+#include "util/threadname.hpp"
+
 class delayed_executor {
 private:
   std::function<void()> fun;
@@ -39,6 +41,7 @@ public:
     if (!t.joinable()) {
       t = std::thread([=]() {
         std::unique_lock<std::mutex> lock(mut);
+        set_thread_name("delayed_exec");
         while (true) {
           cv.wait_until(lock, time, [=]() {
             return stop;

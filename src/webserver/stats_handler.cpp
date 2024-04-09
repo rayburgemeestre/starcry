@@ -4,12 +4,9 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #include "starcry.h"
-#include "util/threadname.hpp"
 #include "webserver.h"
 
-StatsHandler::StatsHandler(starcry* sc) : sc(sc) {
-  set_thread_name("StatsHandler");
-}
+StatsHandler::StatsHandler(starcry* sc) : sc(sc) {}
 
 void StatsHandler::onConnect(seasocks::WebSocket* con) {
   _cons.insert(con);

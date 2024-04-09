@@ -7,12 +7,9 @@
 #include "data/frame_request.hpp"
 #include "starcry.h"
 #include "util/logger.h"
-#include "util/threadname.hpp"
 #include "webserver.h"
 
-ImageHandler::ImageHandler(starcry* sc) : sc(sc) {
-  set_thread_name("ImageHandler");
-}
+ImageHandler::ImageHandler(starcry* sc) : sc(sc) {}
 
 void ImageHandler::onConnect(seasocks::WebSocket* con) {
   _cons.insert(con);

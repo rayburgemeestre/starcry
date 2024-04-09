@@ -10,6 +10,8 @@
 #include <mutex>
 #include <thread>
 
+#include "util/threadname.hpp"
+
 class delayed_exit {
 public:
   delayed_exit(int timeout_seconds) : timeout_seconds(timeout_seconds), job_done(false) {
@@ -29,6 +31,7 @@ public:
 
   void wait_and_exit() {
     std::unique_lock<std::mutex> lock(mtx);
+    set_thread_name("delayed_exit");
     if (!cv.wait_for(lock, std::chrono::seconds(timeout_seconds), [this]() {
           return job_done;
         })) {

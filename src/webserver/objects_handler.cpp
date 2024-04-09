@@ -6,12 +6,9 @@
 #include "data/frame_request.hpp"
 #include "starcry.h"
 #include "util/logger.h"
-#include "util/threadname.hpp"
 #include "webserver.h"
 
-ObjectsHandler::ObjectsHandler(starcry* sc) : sc(sc) {
-  set_thread_name("ObjectsHandler");
-}
+ObjectsHandler::ObjectsHandler(starcry* sc) : sc(sc) {}
 
 void ObjectsHandler::onConnect(seasocks::WebSocket* con) {
   _cons.insert(con);

@@ -5,7 +5,6 @@
  */
 #include "starcry.h"
 #include "util/logger.h"
-#include "util/threadname.hpp"
 #include "webserver.h"
 
 #include "nlohmann/json.hpp"
@@ -14,9 +13,7 @@ using json = nlohmann::json;
 #include <filesystem>
 #include <sstream>
 
-ScriptHandler::ScriptHandler(starcry* sc) : sc(sc) {
-  set_thread_name("ScriptHandler");
-}
+ScriptHandler::ScriptHandler(starcry* sc) : sc(sc) {}
 
 void ScriptHandler::set_script(const std::string& script) {
   script_ = script;

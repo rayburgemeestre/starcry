@@ -12,6 +12,8 @@
 #include <mutex>
 #include <thread>
 
+#include "util/threadname.hpp"
+
 class periodic_executor {
 private:
   std::function<void()> fun;
@@ -41,6 +43,7 @@ public:
     }
     if (!t.joinable()) {
       t = std::thread([=, this]() {
+        set_thread_name("periodic_exec");
         while (!stop) {
           std::unique_lock<std::mutex> lock(mut);
           fun();

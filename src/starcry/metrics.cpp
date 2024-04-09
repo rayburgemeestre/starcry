@@ -6,6 +6,7 @@
 
 #include "starcry/metrics.h"
 #include "util/logger.h"
+#include "util/threadname.hpp"
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
@@ -46,6 +47,7 @@ void metrics::set_script(const std::string &script) {
 
 void metrics::init() {
   curses = std::thread([&, this]() {
+    set_thread_name("metrics::thread");
     if (notty) {
       initialized = true;
       std::unique_lock<std::mutex> lock(cv_mut);

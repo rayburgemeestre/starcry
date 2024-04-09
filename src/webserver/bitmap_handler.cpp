@@ -10,13 +10,10 @@
 #include "data/video_request.hpp"
 #include "nlohmann/json.hpp"
 #include "util/logger.h"
-#include "util/threadname.hpp"
 
 using json = nlohmann::json;
 
-BitmapHandler::BitmapHandler(starcry* sc) : sc(sc) {
-  set_thread_name("BitmapHandler");
-}
+BitmapHandler::BitmapHandler(starcry* sc) : sc(sc) {}
 
 void BitmapHandler::onConnect(seasocks::WebSocket* con) {
   _cons.insert(con);

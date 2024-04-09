@@ -12,6 +12,8 @@
 #include <mutex>
 #include <thread>
 
+#include "util/threadname.hpp"
+
 class limited_executor {
 private:
   std::function<void()> fun;
@@ -42,6 +44,7 @@ public:
     if (!t.joinable()) {
       t = std::thread([=]() {
         std::unique_lock<std::mutex> lock(mut);
+        set_thread_name("limited_exec");
         fun();
         cv.wait_until(lock, std::chrono::high_resolution_clock::now() + delay, [=]() {
           return stop;
