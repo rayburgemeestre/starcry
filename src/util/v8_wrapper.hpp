@@ -76,7 +76,8 @@ public:
 inline v8_wrapper::v8_wrapper(std::string filename) : context(nullptr), platform(nullptr), filename_(filename) {
   v8::V8::InitializeExternalStartupData("starcry");
 #if V8_MAJOR_VERSION >= 6
-  platform = v8::platform::NewDefaultPlatform();
+  platform = v8::platform::NewDefaultPlatform(1);
+  v8::V8::SetFlagsFromString("--lite-mode");
 #else
   platform = v8::platform::CreateDefaultPlatform();
 #endif
