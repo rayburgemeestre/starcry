@@ -398,7 +398,7 @@ bool generator::_generate_frame() {
 
       scalesettings.commit();
       scenes_.commit();
-      scenes_.memory_dump();
+      // scenes_.memory_dump();
       if (generator_opts.debug) {
         debug_print_next();
       }

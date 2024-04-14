@@ -39,6 +39,7 @@ public:
   scenes clone();
 
   void dump();
+  void memory_dump();
   void initialize();
   void add_scene();
   void append_instantiated_objects();

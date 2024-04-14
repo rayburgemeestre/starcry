@@ -234,6 +234,21 @@ void scenes::dump() {
   details(this->scene_shapes_intermediate);
 }
 
+void scenes::memory_dump() {
+  const auto size_in_megabytes = [](auto& f) {
+    size_t t = 0;
+    for (const auto& x : f) {
+      t += (x.size() * sizeof(data_staging::shape_t));
+    }
+    return t / 1024. / 1024.;
+  };
+  logger(DEBUG) << "scenes::memory_dump:" << std::endl;
+  logger(DEBUG) << "- scene_shapes.size() = " << size_in_megabytes(this->scene_shapes) << " MB." << std::endl;
+  logger(DEBUG) << "- scene_shapes_next.size() = " << size_in_megabytes(this->scene_shapes_next) << " MB." << std::endl;
+  logger(DEBUG) << "- scene_shapes_intermediate.size() = " << size_in_megabytes(this->scene_shapes_intermediate)
+                << " MB." << std::endl;
+}
+
 void scenes::reset_scene_shapes_intermediates() {
   scene_shapes_intermediate = scene_shapes;
 #ifdef DEBUG2
