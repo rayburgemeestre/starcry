@@ -15,7 +15,7 @@ void checkpoints::set_checkpoints(std::set<int>& checkpoints) {
   checkpoints_ = checkpoints;
 }
 
-std::map<int, scenes>& checkpoints::scenes() {
+std::map<int, scenes>& checkpoints::get_scenes() {
   return checkpoint_data_scenes_;
 }
 

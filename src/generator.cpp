@@ -264,8 +264,8 @@ void generator::fast_forward(int frame_of_interest) {
         metrics_->skip_job(goto_frame - 1);
 
         // restore everything from cache for this frame.
-        if (checkpoints_.scenes().contains(goto_frame)) {
-          scenes_.load_from(checkpoints_.scenes().at(goto_frame));
+        if (checkpoints_.get_scenes().contains(goto_frame)) {
+          scenes_.load_from(checkpoints_.get_scenes().at(goto_frame));
           std::swap(*job, checkpoints_.job().at(goto_frame));
           object_lookup_.update();
           job->frame_number = goto_frame;

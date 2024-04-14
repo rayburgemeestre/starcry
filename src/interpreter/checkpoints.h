@@ -21,7 +21,7 @@ class checkpoints {
 public:
   explicit checkpoints(generator& gen);
   void set_checkpoints(std::set<int>& checkpoints);
-  std::map<int, scenes>& scenes();
+  std::map<int, scenes>& get_scenes();
   std::map<int, data::job>& job();
   std::set<int>& defined();
   std::set<int>& available();
