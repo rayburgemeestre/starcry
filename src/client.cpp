@@ -129,27 +129,29 @@ void mainloop(void *arg) {
 void render_shapes_to_texture() {
   data::settings settings_;
   std::shared_ptr<metrics> tmp = nullptr;
-  auto &bmp = engine.render(0,
-                            job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
-                            job.chunk,
-                            job.num_chunks,
-                            tmp,
-                            job.background_color,
-                            job.shapes,
-                            0,
-                            0,
-                            job.offset_x,
-                            job.offset_y,
-                            job.canvas_w,
-                            job.canvas_h,
-                            job.width,
-                            job.height,
-                            job.scale,
-                            job.scales,
-                            false,
-                            settings_,
-                            false /* debug */,
-                            {});
+  image bmp;
+  engine.render(bmp,
+                0,
+                job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
+                job.chunk,
+                job.num_chunks,
+                tmp,
+                job.background_color,
+                job.shapes,
+                0,
+                0,
+                job.offset_x,
+                job.offset_y,
+                job.canvas_w,
+                job.canvas_h,
+                job.width,
+                job.height,
+                job.scale,
+                job.scales,
+                false,
+                settings_,
+                false /* debug */,
+                {});
   if (texture == nullptr && renderer == nullptr) {
     return;
   }
