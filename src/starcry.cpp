@@ -543,6 +543,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       return last_frame;
     } else {
       // Always use checkerboard for interactive mode.
+      // TODO: this needs to double check if it can insert, not overflow
       pixels_vec_insert_checkers_background(pixels, width, height);
     }
 
