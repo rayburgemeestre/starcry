@@ -18,7 +18,7 @@ _ = {
       'y': 0,
       'props': {'subobj': []},
       'radius': 0,
-      'radiussize': 10.0,
+      'radiussize': 0.0,
       'init': function() {
         let n = 10;
         for (let i = 0; i < n; i++)
@@ -61,8 +61,8 @@ _ = {
       //      'toroidal': 't1',
       'blending_type': blending_type.add,
       'gradient': 'white',
-      'radius': 10,
-      'radiussize': 10.0,
+      'radius': 0,
+      'radiussize': 0.0,
       'props': {'subobj': []},
       'init': function() {
         this.props.seed = rand();
