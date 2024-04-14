@@ -421,6 +421,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
     if (v.raw_video()) {
       msg->set_raw(bmp.pixels());
     }
+    msg->suspend();
     return msg;
   }
 
@@ -683,6 +684,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
           pixels.reserve(reserve_size);
           pixels_raw.reserve(reserve_size2);
           for (auto& chunk : pos->second) {
+            chunk->unsuspend();
             pixels.insert(std::end(pixels), std::begin(chunk->pixels), std::end(chunk->pixels));
             pixels_raw.insert(std::end(pixels_raw), std::begin(chunk->pixels_raw), std::end(chunk->pixels_raw));
             chunk->pixels.clear();

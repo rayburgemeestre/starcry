@@ -8,6 +8,22 @@
 
 #include <string>
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-builtins"
+#endif
+#include <boost/uuid/uuid.hpp>             // for uuid
+#include <boost/uuid/uuid_generators.hpp>  // for uuid_generators
+#include <boost/uuid/uuid_io.hpp>          // for to_string
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+#include <fmt/core.h>
+
+#include "cereal/archives/binary.hpp"
+#include "cereal/types/map.hpp"
+#include "cereal/types/vector.hpp"
+
 #include "message_type.hpp"
 
 #include "data/color.hpp"
@@ -101,6 +117,8 @@ public:
   uint32_t height = 0;
   std::string ID;  // ???
 
+  std::string suspend_id;
+
   render_msg(std::shared_ptr<job_message> original_job_message, std::string buf)
       : original_job_message(original_job_message), buffer(std::move(buf)) {
     _init();
@@ -140,6 +158,62 @@ public:
   }
   void set_height(uint32_t h) {
     height = h;
+  }
+
+  void suspend() {
+    boost::uuids::random_generator generator;
+    boost::uuids::uuid uuid1 = generator();
+    suspend_id = to_string(uuid1);
+
+    std::ostringstream os;
+    cereal::BinaryOutputArchive archive_out(os);
+    archive_out(this->buffer);
+    archive_out(this->pixels);
+    archive_out(this->pixels_raw);
+
+    this->buffer.clear();
+    this->pixels.clear();
+    this->pixels_raw.clear();
+    this->buffer.shrink_to_fit();
+    this->pixels.shrink_to_fit();
+    this->pixels_raw.shrink_to_fit();
+
+    std::string filename = fmt::format("/tmp/render_msg_buffer-{}", suspend_id);
+
+    std::ofstream outfile(filename);
+    if (!outfile.is_open()) {
+      throw std::runtime_error("failed to open suspend serialization file");
+    }
+    outfile << os.str();
+    outfile.close();
+  }
+
+  void unsuspend() {
+    std::string filename = fmt::format("/tmp/render_msg_buffer-{}", suspend_id);
+
+    std::ifstream infile(filename, std::ios::binary);
+    if (!infile.is_open()) {
+      // not suspended, no need to restore
+      return;
+    }
+
+    std::ostringstream os;
+    os << infile.rdbuf();
+
+    infile.close();
+
+    std::istringstream is(os.str());
+    cereal::BinaryInputArchive archive_in(is);
+
+    try {
+      archive_in(this->buffer);
+      archive_in(this->pixels);
+      archive_in(this->pixels_raw);
+    } catch (const cereal::Exception& e) {
+      logger(ERROR) << "Deserialization failed: " << e.what() << std::endl;
+      throw;
+    }
+    unlink(filename.c_str());
   }
 
 private:
