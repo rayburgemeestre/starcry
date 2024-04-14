@@ -53,61 +53,62 @@ inline int round_to_int(double_type in) {
 #endif
 #endif
 
-image &rendering_engine::render(size_t thread_num,
-                                size_t job_num,
-                                size_t chunk_num,
-                                size_t num_chunks,
-                                std::shared_ptr<metrics> &metrics,
-                                const data::color &bg_color,
-                                const std::vector<std::vector<data::shape>> &shapes,
-                                double view_x,
-                                double view_y,
-                                uint32_t offset_x,
-                                uint32_t offset_y,
-                                uint32_t canvas_w,
-                                uint32_t canvas_h,
-                                uint32_t width,
-                                uint32_t height,
-                                double top_scale,
-                                std::vector<double> scales,
-                                bool verbose,
-                                const data::settings &settings,
-                                double debug,
-                                const std::vector<int64_t> &selected_ids) {
-  auto _exec = [&](uint32_t width, uint32_t height, uint32_t extra_offset_x, uint32_t extra_offset_y) -> image & {
-    return _render(thread_num,
-                   job_num,
-                   chunk_num,
-                   metrics,
-                   bg_color,
-                   shapes,
-                   view_x,
-                   view_y,
-                   offset_x + extra_offset_x,
-                   offset_y + extra_offset_y,
-                   canvas_w,
-                   canvas_h,
-                   width,
-                   height,
-                   top_scale,
-                   scales,
-                   verbose,
-                   settings,
-                   debug,
-                   selected_ids);
-  };
-  // in case -c 1 is specified, we try to 'auto chunk' the image based on number of motion blur frames
+void rendering_engine::render(image &target_bmp,
+                              size_t thread_num,
+                              size_t job_num,
+                              size_t chunk_num,
+                              size_t num_chunks,
+                              std::shared_ptr<metrics> &metrics,
+                              const data::color &bg_color,
+                              const std::vector<std::vector<data::shape>> &shapes,
+                              double view_x,
+                              double view_y,
+                              uint32_t offset_x,
+                              uint32_t offset_y,
+                              uint32_t canvas_w,
+                              uint32_t canvas_h,
+                              uint32_t width,
+                              uint32_t height,
+                              double top_scale,
+                              std::vector<double> scales,
+                              bool verbose,
+                              const data::settings &settings,
+                              double debug,
+                              const std::vector<int64_t> &selected_ids) {
+  auto _exec =
+      [&](image &target_bmp, uint32_t width, uint32_t height, uint32_t extra_offset_x, uint32_t extra_offset_y) {
+        return _render(target_bmp,
+                       thread_num,
+                       job_num,
+                       chunk_num,
+                       metrics,
+                       bg_color,
+                       shapes,
+                       view_x,
+                       view_y,
+                       offset_x + extra_offset_x,
+                       offset_y + extra_offset_y,
+                       canvas_w,
+                       canvas_h,
+                       width,
+                       height,
+                       top_scale,
+                       scales,
+                       verbose,
+                       settings,
+                       debug,
+                       selected_ids);
+      };
+  // in case -c 0 is specified, we try to 'auto chunk' the image based on number of motion blur frames
   // the worst-case is having each pixel change, meaning memory usage multiplies the entire image size
   // times the number of motion blur frames.
-  if (scales.size() <= 1 && num_chunks > 1) {
-    return _exec(width, height, 0, 0);
+  if (scales.size() <= 1 && num_chunks >= 1) {
+    return _exec(target_bmp, width, height, 0, 0);
   }
 
-  if (!cumulative_bitmap) {
-    cumulative_bitmap = std::make_shared<bitmap_wrapper>();
-  }
+  // auto-chunking below.
 
-  auto &bmp = cumulative_bitmap->get(static_cast<int>(width), static_cast<int>(height));
+  target_bmp.resize(static_cast<int>(width), static_cast<int>(height));
 
   util::ImageSplitter<uint32_t> imagesplitter{width, height};
   // This can introduce some overhead, but at least prevents issues with running out of memory
@@ -117,47 +118,46 @@ image &rendering_engine::render(size_t thread_num,
   const auto rectangles =
       imagesplitter.split(uint32_t(scales.size()), util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
 
-  auto &bmp_pixels = bmp.pixels();
+  auto &bmp_pixels = target_bmp.pixels();
   size_t bmp_pixels_index = 0;
   for (auto &rectangle : rectangles) {
-    auto &tmp = _exec(rectangle.width(), rectangle.height(), rectangle.x(), rectangle.y());
+    bitmap_wrapper bitmap;
+    auto &tmp = bitmap.get(rectangle.width(), rectangle.height());
+    _exec(tmp, rectangle.width(), rectangle.height(), rectangle.x(), rectangle.y());
     auto &pixels = tmp.pixels();
     std::copy(pixels.begin(), pixels.end(), bmp_pixels.begin() + static_cast<long>(bmp_pixels_index));
     // std::memcpy(bmp_pixels.data() + bmp_pixels_index, pixels.data(), pixels.size() * sizeof(data::color));
     bmp_pixels_index += pixels.size();
   }
-  return bmp;
 }
 
-image &rendering_engine::_render(size_t thread_num,
-                                 size_t job_num,
-                                 size_t chunk_num,
-                                 std::shared_ptr<metrics> &metrics,
-                                 const data::color &bg_color,
-                                 const std::vector<std::vector<data::shape>> &shapes,
-                                 double view_x,
-                                 double view_y,
-                                 uint32_t offset_x,
-                                 uint32_t offset_y,
-                                 uint32_t canvas_w,
-                                 uint32_t canvas_h,
-                                 uint32_t width,
-                                 uint32_t height,
-                                 double top_scale,
-                                 std::vector<double> scales,
-                                 bool verbose,
-                                 const data::settings &settings,
-                                 double debug,
-                                 const std::vector<int64_t> &selected_ids) {
+void rendering_engine::_render(image &target_bmp,
+                               size_t thread_num,
+                               size_t job_num,
+                               size_t chunk_num,
+                               std::shared_ptr<metrics> &metrics,
+                               const data::color &bg_color,
+                               const std::vector<std::vector<data::shape>> &shapes,
+                               double view_x,
+                               double view_y,
+                               uint32_t offset_x,
+                               uint32_t offset_y,
+                               uint32_t canvas_w,
+                               uint32_t canvas_h,
+                               uint32_t width,
+                               uint32_t height,
+                               double top_scale,
+                               std::vector<double> scales,
+                               bool verbose,
+                               const data::settings &settings,
+                               double debug,
+                               const std::vector<int64_t> &selected_ids) {
   if (!draw_logic_) {
     draw_logic_ = std::make_shared<draw_logic::draw_logic>();
   }
-  if (!bitmap) {
-    bitmap = std::make_shared<bitmap_wrapper>();
-  }
-  auto &bmp = bitmap->get(width, height);
+  target_bmp.resize(width, height);
 
-  bmp.clear_to_color(bg_color);
+  target_bmp.clear_to_color(bg_color);
 
   double scale_ratio = canvas_h / 1080.;  //(top_scale / 1080.) * canvas_h;  // std::min(canvas_w, canvas_h);
 
@@ -169,7 +169,7 @@ image &rendering_engine::_render(size_t thread_num,
   draw_logic_->center(view_x, view_y);
   draw_logic_->offset(offset_x, offset_y);
 
-  if (shapes.empty()) return bmp;
+  if (shapes.empty()) return;
 
 #ifndef EMSCRIPTEN
 #ifndef SC_CLIENT
@@ -180,10 +180,10 @@ image &rendering_engine::_render(size_t thread_num,
   if (debug) {
     double r = double(offset_y) / double(canvas_h), g = 0, b = 0, a = 1;
     for (auto i = uint32_t(0); i < width; i++) {
-      bmp.set(i, 0, r, g, b, a);
+      target_bmp.set(i, 0, r, g, b, a);
     }
     for (auto i = uint32_t(0); i < height; i++) {
-      bmp.set(width / 2, i, r, g, b, a);
+      target_bmp.set(width / 2, i, r, g, b, a);
     }
     scope_exit se([&]() {
       const auto ct = [&](double offset_y, const std::string &text) {
@@ -208,12 +208,14 @@ image &rendering_engine::_render(size_t thread_num,
         return shape;
       };
 
-      draw_logic_->render_text(bmp, ct(0, fmt::format("canvas: ({}, {})", canvas_w, canvas_h)), 1., settings, true);
-      draw_logic_->render_text(bmp, ct(20, fmt::format("size: ({}, {})", width, height)), 1., settings, true);
-      draw_logic_->render_text(bmp, ct(60, fmt::format("offset: ({}, {})", offset_x, offset_y)), 1., settings, true);
-      draw_logic_->render_text(bmp, ct(80, fmt::format("view: ({}, {})", view_x, view_y)), 1., settings, true);
-      draw_logic_->render_text(bmp, ct(100, fmt::format("scale: {}", top_scale)), 1., settings, true);
-      draw_logic_->render_text(bmp, ct(120, fmt::format("scale ratio: {}", scale_ratio)), 1., settings, true);
+      draw_logic_->render_text(
+          target_bmp, ct(0, fmt::format("canvas: ({}, {})", canvas_w, canvas_h)), 1., settings, true);
+      draw_logic_->render_text(target_bmp, ct(20, fmt::format("size: ({}, {})", width, height)), 1., settings, true);
+      draw_logic_->render_text(
+          target_bmp, ct(60, fmt::format("offset: ({}, {})", offset_x, offset_y)), 1., settings, true);
+      draw_logic_->render_text(target_bmp, ct(80, fmt::format("view: ({}, {})", view_x, view_y)), 1., settings, true);
+      draw_logic_->render_text(target_bmp, ct(100, fmt::format("scale: {}", top_scale)), 1., settings, true);
+      draw_logic_->render_text(target_bmp, ct(120, fmt::format("scale ratio: {}", scale_ratio)), 1., settings, true);
     });
   }
 
@@ -244,16 +246,16 @@ image &rendering_engine::_render(size_t thread_num,
         bounding_box box;
         switch (shape.type) {
           case data::shape_type::circle:
-            box = draw_logic_->render_circle(bmp, shape, opacity, settings);
+            box = draw_logic_->render_circle(target_bmp, shape, opacity, settings);
             break;
           case data::shape_type::ellipse:
-            box = draw_logic_->render_ellipse(bmp, shape, opacity, settings);
+            box = draw_logic_->render_ellipse(target_bmp, shape, opacity, settings);
             break;
           case data::shape_type::line:
-            draw_logic_->render_line(bmp, shape, opacity, settings);
+            draw_logic_->render_line(target_bmp, shape, opacity, settings);
             break;
           case data::shape_type::text:
-            box = draw_logic_->render_text(bmp, shape, opacity, settings);
+            box = draw_logic_->render_text(target_bmp, shape, opacity, settings);
             break;
           case data::shape_type::script:
           case data::shape_type::none:
@@ -287,16 +289,16 @@ image &rendering_engine::_render(size_t thread_num,
           if (!update) {
             switch (shape.type) {
               case data::shape_type::circle:
-                box = draw_logic_->render_circle(bmp, shape, opacity, settings);
+                box = draw_logic_->render_circle(target_bmp, shape, opacity, settings);
                 break;
               case data::shape_type::ellipse:
-                box = draw_logic_->render_ellipse(bmp, shape, opacity, settings);
+                box = draw_logic_->render_ellipse(target_bmp, shape, opacity, settings);
                 break;
               case data::shape_type::line:
-                draw_logic_->render_line(bmp, shape, opacity, settings);
+                draw_logic_->render_line(target_bmp, shape, opacity, settings);
                 break;
               case data::shape_type::text:
-                box = draw_logic_->render_text(bmp, shape, opacity, settings);
+                box = draw_logic_->render_text(target_bmp, shape, opacity, settings);
                 break;
               case data::shape_type::script:
               case data::shape_type::none:
@@ -305,16 +307,16 @@ image &rendering_engine::_render(size_t thread_num,
           } else {
             switch (shape.type) {
               case data::shape_type::circle:
-                box.update(draw_logic_->render_circle(bmp, shape, opacity, settings));
+                box.update(draw_logic_->render_circle(target_bmp, shape, opacity, settings));
                 break;
               case data::shape_type::ellipse:
-                box.update(draw_logic_->render_ellipse(bmp, shape, opacity, settings));
+                box.update(draw_logic_->render_ellipse(target_bmp, shape, opacity, settings));
                 break;
               case data::shape_type::line:
-                draw_logic_->render_line(bmp, shape, opacity, settings);
+                draw_logic_->render_line(target_bmp, shape, opacity, settings);
                 break;
               case data::shape_type::text:
-                box.update(draw_logic_->render_text(bmp, shape, opacity, settings));
+                box.update(draw_logic_->render_text(target_bmp, shape, opacity, settings));
                 break;
               case data::shape_type::script:
               case data::shape_type::none:
@@ -323,7 +325,7 @@ image &rendering_engine::_render(size_t thread_num,
           }
           warp_view -= double(warp_value);
           draw_logic_->center(view_x, view_y);
-          if (debug) draw_logic_->render_bounding_box(bmp, box);
+          if (debug) draw_logic_->render_bounding_box(target_bmp, box);
         };
         if (warp_view_x && warp_x) draw_warped(shape, scale, view_x, warp_view_x, box_x, view_x, view_y);
         if (warp_view_y && warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y);
@@ -336,16 +338,16 @@ image &rendering_engine::_render(size_t thread_num,
           draw_logic_->scale(scale * scale_ratio);
           switch (shape.type) {
             case data::shape_type::circle:
-              box.update(draw_logic_->render_circle(bmp, shape, opacity, settings));
+              box.update(draw_logic_->render_circle(target_bmp, shape, opacity, settings));
               break;
             case data::shape_type::ellipse:
-              box.update(draw_logic_->render_ellipse(bmp, shape, opacity, settings));
+              box.update(draw_logic_->render_ellipse(target_bmp, shape, opacity, settings));
               break;
             case data::shape_type::line:
-              draw_logic_->render_line(bmp, shape, opacity, settings);
+              draw_logic_->render_line(target_bmp, shape, opacity, settings);
               break;
             case data::shape_type::text:
-              box.update(draw_logic_->render_text(bmp, shape, opacity, settings));
+              box.update(draw_logic_->render_text(target_bmp, shape, opacity, settings));
               break;
             case data::shape_type::script:
             case data::shape_type::none:
@@ -355,7 +357,7 @@ image &rendering_engine::_render(size_t thread_num,
           if (warp_view_y && warp_y) draw_warped(shape, scale, view_y, warp_view_y, box_y, view_x, view_y, true);
         }
         // TODO: comment out entire blug to find some bugs in blending_types.js
-        if (debug) draw_logic_->render_bounding_box(bmp, box);
+        if (debug) draw_logic_->render_bounding_box(target_bmp, box);
         box.normalize(width, height);
         box_x.normalize(width, height);
         box_y.normalize(width, height);
@@ -374,10 +376,10 @@ image &rendering_engine::_render(size_t thread_num,
             const auto &color_dat = q.second;
             const auto col = ref.get_color(color_dat);
             // TODO: design is suffering a bit, draw_logic_ needs a refactoring
-            draw_logic_->blend_the_pixel(bmp, shape.blending_.type(), x, y, col.a, col);
+            draw_logic_->blend_the_pixel(target_bmp, shape.blending_.type(), x, y, col.a, col);
           }
         }
-        if (debug) draw_logic_->render_bounding_box(bmp, box);
+        if (debug) draw_logic_->render_bounding_box(target_bmp, box);
       }
 #ifndef EMSCRIPTEN
 #ifndef SC_CLIENT
@@ -386,9 +388,8 @@ image &rendering_engine::_render(size_t thread_num,
 #endif
 #endif
     }
-    return bmp;
+    return;
   }
-  return bmp;
 }
 
 void rendering_engine::write_image(image &bmp, int width, int height, std::string filename) {

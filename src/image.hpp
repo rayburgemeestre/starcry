@@ -55,11 +55,7 @@ private:
 
 public:
   image() : image(0, 0) {}
-  image(size_t width, size_t height)
-      : pixels_(width * height, {0, 0, 0, 0}),
-        width(width),
-        height(height)
-  {
+  image(size_t width, size_t height) : pixels_(width * height, {0, 0, 0, 0}), width(width), height(height) {
     image_repository::instance().register_image(this);
   }
 
