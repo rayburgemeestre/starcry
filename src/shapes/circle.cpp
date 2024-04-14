@@ -32,6 +32,18 @@ bool circle::intersects(const rectangle& range) const {
   return distanceSquared < p;
 }
 
+bool circle::is_fully_contained_within(const rectangle& range) const {
+  double abs_left = pos.x - radius;
+  double abs_right = pos.x + radius;
+  double abs_top = pos.y - radius;
+  double abs_bottom = pos.y + radius;
+
+  bool is_inside = (abs_left >= range.top_left.x) && (abs_right <= range.bottom_right.x) &&
+                   (abs_top >= range.top_left.y) && (abs_bottom <= range.bottom_right.y);
+
+  return is_inside;
+}
+
 bool circle::overlaps(const circle& other) const {
   double distanceX = pos.x - other.pos.x;
   double distanceY = pos.y - other.pos.y;
