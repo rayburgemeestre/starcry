@@ -5,26 +5,72 @@
  */
 #pragma once
 
+#include <cassert>
+#include <mutex>
+#include <set>
 #include <vector>
 
 #include "data/bounding_box.hpp"
 #include "data/color.hpp"
-#include "util/memory_tracker.hpp"
+#include "util/logger.h"
+
+class image;
+
+class image_repository {
+public:
+  static image_repository &instance() {
+    static image_repository instance;
+    return instance;
+  }
+
+  std::set<image *> images_;
+  mutable std::mutex mutex_;
+
+  void register_image(image *img) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    images_.insert(img);
+  }
+
+  void unregister_image(image *img) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (images_.contains(img)) {
+      images_.erase(img);
+    }
+  }
+
+  void print();
+
+  image_repository() = default;
+
+public:
+  image_repository(const image_repository &) = delete;
+  image_repository &operator=(const image_repository &) = delete;
+};
 
 class image {
 private:
   std::vector<data::color> pixels_;
   size_t width;
   size_t height;
-  memory_tracker mt;
 
 public:
   image() : image(0, 0) {}
   image(size_t width, size_t height)
       : pixels_(width * height, {0, 0, 0, 0}),
         width(width),
-        height(height),
-        mt("image", width * height * sizeof(data::color)) {}
+        height(height)
+  {
+    image_repository::instance().register_image(this);
+  }
+
+  image(const image &) = delete;
+  void operator=(const image &) = delete;
+  image(const image &&) = delete;
+  void operator=(const image &&) = delete;
+
+  ~image() {
+    image_repository::instance().unregister_image(this);
+  }
 
   std::vector<data::color> &pixels() {
     return pixels_;
@@ -69,7 +115,7 @@ public:
       std::fill_n(std::back_inserter(pixels_), size - pixels_.size(), data::color{0, 0, 0, 0});
     }
     assert(pixels_.size() == size);
-    mt.update_memory(width * height * sizeof(data::color));
+    // pixels_.shrink_to_fit();
   }
 
   data::color &get(const int &x, const int &y) {
@@ -96,3 +142,11 @@ public:
     // memset((data::color *)(&(pixels_[0])), 0x00, pixels_.size() * sizeof(data::color) * sizeof(char));
   }
 };
+
+inline void image_repository::print() {
+  size_t total_bytes = 0;
+  for (auto *img : images_) {
+    total_bytes += (img->pixels().size() * sizeof(data::color));
+  }
+  logger(DEBUG) << "TOTAL  in GB: " << (total_bytes / 1024. / 1024. / 1024.) << std::endl;
+}

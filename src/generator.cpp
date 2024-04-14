@@ -20,6 +20,7 @@
 #include "starcry/metrics.h"
 #include "util/logger.h"
 #include "util/math.h"
+#include "image.hpp"
 #include "util/memory_usage.hpp"
 #include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
@@ -397,6 +398,7 @@ bool generator::_generate_frame() {
 
       scalesettings.commit();
       scenes_.commit();
+      scenes_.memory_dump();
       if (generator_opts.debug) {
         debug_print_next();
       }
@@ -419,6 +421,7 @@ bool generator::_generate_frame() {
     logger(INFO) << "Memory usage: " << total_usage << " GB. "
                  << "V8 Heap: " << v8_usage << " GB. "
                  << "Other: " << (total_usage - v8_usage) << " GB." << std::endl;
+    image_repository::instance().print();
     fps_progress_.inc();
   } catch (abort_exception& ex) {
     std::cout << "[caught] " << ex.what() << " (abort)" << std::endl;
