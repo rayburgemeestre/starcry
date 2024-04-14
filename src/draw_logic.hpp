@@ -15,6 +15,8 @@
 #include "data/settings.hpp"
 #include "data/shape.hpp"
 #include "data/texture.hpp"
+#include "shapes/circle.h"
+
 #ifndef EMSCRIPTEN
 #include "util/logger.h"
 #endif
@@ -157,118 +159,51 @@ public:
     int radius_outer_circle = round_to_int(radius + radius_size + 1);
     int radius_inner_circle = round_to_int(radius - radius_size - 1);
 
-    for (int rel_y = 0; rel_y < radius_outer_circle; rel_y++) {
-      // Below a -1 has been added, due to an off-by-one error that happens only in case objects are
-      // moving at fast(er?) velocity, and becomes noticeable as scanlines if you are rendering with > 1 chunks.
-      // I fixed this here, as well as added - 1 to bottom left and right as "abs_y_bottom - 1".
-      // In the end this was the easier fixed, for some reason extending the radius_outer_circle with more pixels
-      // doesn't have an effect.
-      int abs_y_top = static_cast<int>(circle_y - rel_y + 0.5) - 1;
-      int abs_y_bottom = static_cast<int>(circle_y + rel_y + 0.5);
+    int abs_y_min = static_cast<int>(circle_y - radius_outer_circle + 0.5);
+    int abs_y_max = static_cast<int>(circle_y + radius_outer_circle + 0.5);
 
-      if (abs_y_bottom < 0) {
-        rel_y -= abs_y_bottom;
+    circle c(position(circle_x, circle_y), radius, radius_size);
+    rectangle r(position(-offset_x_, -offset_y_), canvas_w_, canvas_h_);
+    if (!c.intersects(r)) {
+      return box;
+    }
+
+    int start_y = std::max(abs_y_min, 0);
+    int end_y = std::min(abs_y_max, int(canvas_h_));
+
+    for (int y = start_y; y < end_y; y++) {
+      box.update_y(y);
+
+      const auto rel_y = y - circle_y;
+      // assert(static_cast<int>(std::abs(rel_y)) <= radius_outer_circle);
+      if (static_cast<int>(std::abs(rel_y)) > radius_outer_circle) {
         continue;
       }
-      if ((abs_y_top + radius_outer_circle) >= static_cast<int>(this->canvas_h_)) {
-        break;
-      }
-
-      box.update_y(abs_y_top);
-      box.update_y(abs_y_bottom);
-
       int hxcl_outer = half_chord_length<decltype(radius_outer_circle), double>(radius_outer_circle, rel_y);
       int hxcl_inner = 0;
 
-      if (radius_inner_circle >= rel_y)
+      if (static_cast<int>(std::abs(rel_y)) <= radius_inner_circle)
         hxcl_inner = half_chord_length<decltype(radius_inner_circle), double>(radius_inner_circle, rel_y);
 
-      for (int rel_x = hxcl_inner; rel_x < hxcl_outer; rel_x++) {
-        int abs_x_left = static_cast<int>(circle_x - rel_x + 0.5) - 1;
-        int abs_x_right = static_cast<int>(circle_x + rel_x + 0.5) - 1;
+      int abs_x_min = std::max(static_cast<int>(circle_x - hxcl_outer + 0.5) - 1, 0);
+      int abs_x_max = std::min(static_cast<int>(circle_x + hxcl_outer + 0.5) + 1, int(canvas_w_));
 
-        if (abs_x_right < 0) {
-          rel_x -= abs_x_right;
-          continue;
-        }
-        if ((abs_x_right - radius_outer_circle) >= static_cast<int>(this->canvas_w_)) {
-          break;
-        }
+      int abs_x_min2 = std::max(static_cast<int>(circle_x - hxcl_inner + 0.5), 0);
+      int abs_x_max2 = std::min(static_cast<int>(circle_x + hxcl_inner + 0.5), int(canvas_w_));
 
-        box.update_x(abs_x_left);
-        box.update_x(abs_x_right);
-
-        double diff_from_center = reuse_sqrt ? distance<double>(abs_x_left, circle_x, abs_y_top, circle_y) : -1;
-
-        render_circle_pixel(bmp,
-                            shape,
-                            radius,
-                            radius_size,
-                            circle_x,
-                            circle_y,
-                            abs_x_left,
-                            abs_y_top,
-                            diff_from_center,
-                            opacity,
-                            settings);
-
-        // bottom left
-        if (rel_y != 0)
-          render_circle_pixel(bmp,
-                              shape,
-                              radius,
-                              radius_size,
-                              circle_x,
-                              circle_y,
-                              abs_x_left,
-                              abs_y_bottom - 1,  // workaround for off-by-one error
-                              diff_from_center,
-                              opacity,
-                              settings);
-
-        // top right
-        if (rel_x != 0)
-          render_circle_pixel(bmp,
-                              shape,
-                              radius,
-                              radius_size,
-                              circle_x,
-                              circle_y,
-                              abs_x_right,
-                              abs_y_top,
-                              diff_from_center,
-                              opacity,
-                              settings);
-        // bottom right
-        if (rel_x != 0 && rel_y != 0)
-          render_circle_pixel(bmp,
-                              shape,
-                              radius,
-                              radius_size,
-                              circle_x,
-                              circle_y,
-                              abs_x_right,
-                              abs_y_bottom - 1,  // workaround for off-by-one error
-                              diff_from_center,
-                              opacity,
-                              settings);
+      for (int x = abs_x_min; x < abs_x_min2; x++) {
+        box.update_x(x);
+        double diff_from_center = reuse_sqrt ? distance<double>(x, circle_x, y, circle_y) : -1;
+        render_circle_pixel(
+            bmp, shape, radius, radius_size, circle_x, circle_y, x, y, diff_from_center, opacity, settings);
+      }
+      for (int x = abs_x_max2; x < abs_x_max; x++) {
+        box.update_x(x);
+        double diff_from_center = reuse_sqrt ? distance<double>(x, circle_x, y, circle_y) : -1;
+        render_circle_pixel(
+            bmp, shape, radius, radius_size, circle_x, circle_y, x, y, diff_from_center, opacity, settings);
       }
     }
-
-    // DEBUG: debug distance
-    // care about > 50 dist.
-    //    if (shape.dist < 50)
-    //      return box;
-    //
-    //    data::shape text_shape = shape;
-    //    text_shape.y -= 10;
-    //    text_shape.type = data::shape_type::text;
-    //    std::stringstream ss;
-    //    ss << "dist=" << shape.dist;
-    //    text_shape.text = ss.str();
-    //    text_shape.text_fixed = true;
-    //    text_shape.text_size = 30;
-    //    render_text(bmp, text_shape, 1., settings);
     return box;
   }
 
@@ -295,81 +230,45 @@ public:
     int radius_outer_circle = round_to_int(radius + radius_size + 1);
     int radius_inner_circle = round_to_int(radius_inner - radius_size - 1);
 
-    for (int rel_y = 0; rel_y < radius_outer_circle; rel_y++) {
-      // Below a -1 has been added, due to an off-by-one error that happens only in case objects are
-      // moving at fast(er?) velocity, and becomes noticeable as scanlines if you are rendering with > 1 chunks.
-      // I fixed this here, as well as added - 1 to bottom left and right as "abs_y_bottom - 1".
-      // In the end this was the easier fixed, for some reason extending the radius_outer_circle with more pixels
-      // doesn't have an effect.
-      int abs_y_top = static_cast<int>(ellipse_y - rel_y + 0.5) - 1;
-      int abs_y_bottom = static_cast<int>(ellipse_y + rel_y + 0.5);
+    int abs_y_min = static_cast<int>(ellipse_y - radius_outer_circle + 0.5);
+    int abs_y_max = static_cast<int>(ellipse_y + radius_outer_circle + 0.5) + 1;
 
-      if (abs_y_bottom < 0) {
-        rel_y -= abs_y_bottom;
+    circle c(position(ellipse_x, ellipse_y), radius, radius_size);
+    rectangle r(position(-offset_x_, -offset_y_), canvas_w_, canvas_h_);
+    if (!c.intersects(r)) {
+      return box;
+    }
+
+    int start_y = std::max(abs_y_min, 0);
+    int end_y = std::min(abs_y_max, int(canvas_h_));
+
+    for (int y = start_y; y < end_y; y++) {
+      box.update_y(y);
+
+      const auto rel_y = y - ellipse_y;
+      if (static_cast<int>(std::abs(rel_y)) > radius_outer_circle) {
         continue;
       }
-      if ((abs_y_top + radius_outer_circle) >= static_cast<int>(this->canvas_h_)) {
-        break;
-      }
-
-      box.update_y(abs_y_top);
-      box.update_y(abs_y_bottom);
-
+      assert(static_cast<int>(std::abs(rel_y)) <= radius_outer_circle);
       int hxcl_outer = half_chord_length<decltype(radius_outer_circle), double>(radius_outer_circle, rel_y);
       int hxcl_inner = 0;
 
-      if (radius_inner_circle >= rel_y)
-        hxcl_inner = half_chord_length<decltype(radius_inner_circle), double>(radius_inner_circle, rel_y);
+      if (radius_inner_circle >= std::abs(y - ellipse_y))
+        hxcl_inner = half_chord_length<decltype(radius_inner_circle), double>(radius_inner_circle, y - ellipse_y);
 
-      for (int rel_x = hxcl_inner; rel_x < hxcl_outer; rel_x++) {
-        int abs_x_left = static_cast<int>(ellipse_x - rel_x + 0.5) - 1;
-        int abs_x_right = static_cast<int>(ellipse_x + rel_x + 0.5) - 1;
+      int abs_x_min = std::max(static_cast<int>(ellipse_x - hxcl_outer + 0.5), 0);
+      int abs_x_max = std::min(static_cast<int>(ellipse_x + hxcl_outer + 0.5), int(canvas_w_));
 
-        if (abs_x_right < 0) {
-          rel_x -= abs_x_right;
-          continue;
-        }
-        if ((abs_x_right - radius_outer_circle) >= static_cast<int>(this->canvas_w_)) {
-          break;
-        }
+      int abs_x_min2 = std::max(static_cast<int>(ellipse_x - hxcl_inner + 0.5), 0);
+      int abs_x_max2 = std::min(static_cast<int>(ellipse_x + hxcl_inner + 0.5), int(canvas_w_));
 
-        box.update_x(abs_x_left);
-        box.update_x(abs_x_right);
-
-        render_ellipse_pixel(
-            bmp, shape, a, b, radius_size, ellipse_x, ellipse_y, abs_x_left, abs_y_top, opacity, settings);
-
-        // bottom left
-        if (rel_y != 0)
-          render_ellipse_pixel(bmp,
-                               shape,
-                               a,
-                               b,
-                               radius_size,
-                               ellipse_x,
-                               ellipse_y,
-                               abs_x_left,
-                               abs_y_bottom - 1,  // workaround for off-by-one error
-                               opacity,
-                               settings);
-
-        // top right
-        if (rel_x != 0)
-          render_ellipse_pixel(
-              bmp, shape, a, b, radius_size, ellipse_x, ellipse_y, abs_x_right, abs_y_top, opacity, settings);
-        // bottom right
-        if (rel_x != 0 && rel_y != 0)
-          render_ellipse_pixel(bmp,
-                               shape,
-                               a,
-                               b,
-                               radius_size,
-                               ellipse_x,
-                               ellipse_y,
-                               abs_x_right,
-                               abs_y_bottom - 1,  // workaround for off-by-one error
-                               opacity,
-                               settings);
+      for (int x = abs_x_min; x < abs_x_min2; x++) {
+        box.update_x(x);
+        render_ellipse_pixel(bmp, shape, a, b, radius_size, ellipse_x, ellipse_y, x, y, opacity, settings);
+      }
+      for (int x = abs_x_max2; x < abs_x_max; x++) {
+        box.update_x(x);
+        render_ellipse_pixel(bmp, shape, a, b, radius_size, ellipse_x, ellipse_y, x, y, opacity, settings);
       }
     }
     return box;
@@ -429,7 +328,9 @@ public:
     // copy text from bitmap to our bmp canvas
     double absX = 0;
     double absY = 0;
-    const auto the_box = font_[font_name][index]->box();
+    auto the_box = font_[font_name][index]->box();
+    the_box.normalize(canvas_w_, canvas_h_);
+
     const auto bitmap_width = font_[font_name][index]->bitmap_width();
     for (int bitmap_y = the_box.top_left.y; bitmap_y < the_box.bottom_right.y; bitmap_y++) {
       for (int bitmap_x = the_box.top_left.x; bitmap_x < the_box.bottom_right.x; bitmap_x++) {
@@ -446,15 +347,14 @@ public:
           absX = textX + bitmap_x - half_text_width;
           absY = textY + bitmap_y - full_text_height;  // TODO: should be half, but full looks more centered.
         }
-        if (absX < 0 || absX >= width_) goto skip;
-        if (absY < 0 || absY >= height_) goto skip;
+        if (absX < 0 || absX >= width_) continue;
+        if (absY < 0 || absY >= height_) continue;
         if (std::isnan(absX) || std::isnan(absY)) continue;
         bound_box.update_x(absX);
         bound_box.update_y(absY);
         render_pixel(bmp, shape, textX, textY, absX, absY, c, opacity, settings);
       }
     }
-  skip:
     return bound_box;
   }
 
