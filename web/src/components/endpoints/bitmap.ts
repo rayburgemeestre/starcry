@@ -2,6 +2,7 @@ import { StarcryAPI } from 'components/api';
 import { useScriptStore } from 'stores/script';
 import { useBitmapStore } from 'stores/bitmap';
 import { watch } from 'vue';
+import { useStatsStore } from 'stores/stats';
 
 export function create_bitmap_endpoint() {
   const script_store = useScriptStore();
@@ -34,9 +35,13 @@ export function create_bitmap_endpoint() {
     }
   );
 
+  const stats_store = useStatsStore();
   watch(
     () => bitmap_store.outbox.length,
     function () {
+      stats_store.render_status = '';
+      stats_store.render_label = 'please wait';
+      stats_store.render_value = 'V8 is busy';
       for (const msg of bitmap_store.outbox) {
         self.send(JSON.stringify(msg));
         bitmap_store.outbox = [];

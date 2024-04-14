@@ -4,7 +4,20 @@
     <q-btn :loading="bitmap_store.loading" color="secondary" @click="render_current_frame" style="width: 100%"
       >Render</q-btn
     >
+
     <br />
+    <br />
+    <q-field outlined :model-value="stats_store.render_status" label-slot>
+      <template v-slot:control>
+        <div class="self-center full-width no-outline" tabindex="0">{{ stats_store.render_status }}</div>
+      </template>
+
+      <template v-slot:label v-if="stats_store.render_label">
+        {{ stats_store.render_label }}:
+        <span class="q-px-sm text-white text-italic rounded-borders">{{ stats_store.render_value }}</span>
+      </template>
+    </q-field>
+
     <br />
     <q-btn color="secondary" style="width: 50%">Previous</q-btn>
     <q-btn color="secondary" style="width: 50%">Next</q-btn>
@@ -57,6 +70,7 @@ import { useViewpointStore } from 'stores/viewpoint';
 import { useScriptStore } from 'stores/script';
 import { useBitmapStore } from 'stores/bitmap';
 import { serialize_viewpoint } from 'components/endpoints/viewpoint';
+import { useStatsStore } from 'stores/stats';
 
 const columns = [
   {
@@ -79,6 +93,7 @@ let viewpoint_store = storeToRefs(useViewpointStore());
 let script_store = useScriptStore();
 let script_store_refs = storeToRefs(useScriptStore());
 let bitmap_store = useBitmapStore();
+let stats_store = useStatsStore();
 
 let rows = ref([]);
 for (let v in viewpoint_store) {
@@ -155,6 +170,7 @@ export default defineComponent({
       video_width,
       video_height,
 
+      stats_store,
       script_store,
       reset_values: function () {
         viewpoint_store_raw.reset();

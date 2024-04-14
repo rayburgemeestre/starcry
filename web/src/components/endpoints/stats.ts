@@ -26,7 +26,9 @@ export function create_stats_endpoint() {
         let rendered = -1;
         let queued = -1;
         const jobs = buffer.data.jobs || [];
+        let last_job = null;
         for (const job of jobs) {
+          last_job = job;
           if (job.state == 'SKIPPED') {
             skipped = Math.max(skipped, job.number);
           } else if (job.state == 'RENDERING') {
@@ -36,6 +38,11 @@ export function create_stats_endpoint() {
           } else if (job.state == 'QUEUED') {
             queued = Math.max(queued, job.number);
           }
+        }
+        if (last_job) {
+          stats_store.render_status = last_job.state;
+          stats_store.render_label = last_job.state.indexOf('RENDER') !== -1 ? 'Time' : 'Frame';
+          stats_store.render_value = last_job.render_time || last_job.number;
         }
         script_store.job_skipped = skipped;
         script_store.job_rendering = rendering;
