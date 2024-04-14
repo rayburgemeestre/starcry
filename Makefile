@@ -269,6 +269,14 @@ profile:  ## run starcry with valgrind's callgrind for profiling
 	# valgrind --tool=callgrind ./build/starcry --no-render --stdout input/test.js
 	ls -althrst | tail -n 1
 
+valgrind:
+	valgrind --leak-check=full ./build/starcry input/motion.js  --no-output
+
+profile-memory:
+	#valgrind --tool=massif --massif-out-file=massif.out.starcry ./build/starcry input/sampling.js --gui
+	valgrind --tool=massif --time-unit=B --detailed-freq=1 --max-snapshots=50  --massif-out-file=massif.out.starcry ./build/starcry input/motion.js --no-output
+	massif-visualizer massif.out.starcry
+
 download-integration-test-reference:
 	wget https://cppse.nl/reference.tar.gz
 	tar -zxvf reference.tar.gz
