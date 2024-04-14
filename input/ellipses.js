@@ -63,6 +63,7 @@ _ = {
     'rand_seed': 5,
     'granularity': 1,
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
+    'grain_for_opacity': false,
   },
   'preview': {
     'width': 512,
