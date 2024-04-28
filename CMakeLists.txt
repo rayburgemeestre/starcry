@@ -82,6 +82,18 @@ else()
 endif()
 install (TARGETS starcry DESTINATION bin)
 
+# starcry-fastmath
+add_executable(starcry-fastmath ${starcry_SOURCES})
+configure_links(starcry-fastmath)
+if (SANITIZER)
+    target_link_libraries(starcry PRIVATE -static-libgcc -static-libstdc++ /usr/lib/llvm-15/lib/clang/15.0.7/lib/linux/libclang_rt.asan-x86_64.a)
+else()
+    target_link_libraries(starcry PRIVATE -static-libgcc -static-libstdc++)
+endif()
+add_definitions("-ffast-math -O3")
+install (TARGETS starcry-fastmath DESTINATION bin)
+
+
 # sc_client (starcry debug client)
 file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp" "src/perlin.cpp" "src/texture.cpp" "src/stb.cpp" "src/util/logger.cpp")
 add_executable(sc_client ${sc_client_SOURCES})

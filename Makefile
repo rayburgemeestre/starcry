@@ -41,6 +41,12 @@ build:  ## build starcry binary using docker (with clang)
 	                    cmake --build build --target starcry -j $$(nproc) && \
 	                    strip --strip-debug build/starcry)
 
+.PHONY: build-fastmath
+build-fastmath:  ## build starcry binary using docker (with clang)
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
+	                    cmake --build build --target starcry-fastmath -j $$(nproc) && \
+	                    strip --strip-debug build/starcry-fastmath)
+
 .PHONY: all
 all:  ## build all binaries in cmake
 	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \

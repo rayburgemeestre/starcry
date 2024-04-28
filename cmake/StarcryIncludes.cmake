@@ -3,7 +3,6 @@ include_directories(
         "/opt/cppse/build/v8pp/include/"  # for v8pp
         "/opt/cppse/build/v8pp/include/v8"  # for v8
         "/opt/cppse/build/v8pp/include/v8/include" # for v8
-        "/opt/cppse/build/benchmarklib/include/"
         "/opt/cppse/build/boost/include/"
         "/opt/cppse/build/ffmpeg/include/"
         "/opt/cppse/build/fastpfor/include/"
