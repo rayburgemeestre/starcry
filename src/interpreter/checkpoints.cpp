@@ -9,7 +9,7 @@
 
 namespace interpreter {
 
-checkpoints::checkpoints(generator& gen) : gen_(gen) {}
+checkpoints::checkpoints(generator& gen) {}
 
 void checkpoints::set_checkpoints(std::set<int>& checkpoints) {
   checkpoints_ = checkpoints;

@@ -28,7 +28,7 @@ public:
   void insert(data::job& job, interpreter::scenes& scenes);
 
 private:
-  generator& gen_;
+  // generator& gen_;
 
   std::set<int> checkpoints_;
   std::set<int> checkpoints_available_;

@@ -20,13 +20,17 @@
 
 #pragma clang diagnostic pop
 
+#ifdef __GNUC__
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wvolatile"
+// #pragma GCC diagnostic ignored "-Wvolatile"
+#endif
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-volatile"
 __link(RScroller) __link(RScrollBar)
 #pragma clang diagnostic pop
+#ifdef __GNUC__
 #pragma GCC diagnostic pop
+#endif
 
 #include <cstdlib>
 #include <cstring>
