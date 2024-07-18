@@ -13,11 +13,16 @@ class v8_wrapper;
 namespace interpreter {
 class gradient_manager;
 class texture_manager;
+class toroidal_manager;
 class generator;  // soon remove
 
 class initializer {
 public:
-  explicit initializer(generator& gen, gradient_manager& gm, texture_manager& tm, std::shared_ptr<v8_wrapper> context);
+  explicit initializer(generator& gen,
+                       gradient_manager& gm,
+                       texture_manager& tm,
+                       toroidal_manager& toroidalman,
+                       std::shared_ptr<v8_wrapper> context);
 
   void initialize_all(const std::string& filename,
                       std::optional<double> rand_seed,
@@ -44,6 +49,7 @@ private:
   generator& gen_;
   gradient_manager& gradient_manager_;
   texture_manager& texture_manager_;
+  toroidal_manager& toroidal_manager_;
   std::shared_ptr<v8_wrapper> context_;
 };
 }  // namespace interpreter

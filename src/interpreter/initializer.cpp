@@ -15,6 +15,8 @@
 #include "scripting.h"
 #include "texture_factory.h"
 #include "texture_manager.h"
+#include "toroidal_factory.h"
+#include "toroidal_manager.h"
 #include "util/v8_interact.hpp"
 #include "v8pp/module.hpp"
 
@@ -24,8 +26,16 @@ v8::Local<v8::Context> current_context_native(std::shared_ptr<v8_wrapper>& wrapp
   return wrapper_context->context->isolate()->GetCurrentContext();
 }
 
-initializer::initializer(generator& gen, gradient_manager& gm, texture_manager& tm, std::shared_ptr<v8_wrapper> context)
-    : gen_(gen), gradient_manager_(gm), texture_manager_(tm), context_(std::move(context)) {}
+initializer::initializer(generator& gen,
+                         gradient_manager& gm,
+                         texture_manager& tm,
+                         toroidal_manager& toroidalman,
+                         std::shared_ptr<v8_wrapper> context)
+    : gen_(gen),
+      gradient_manager_(gm),
+      texture_manager_(tm),
+      toroidal_manager_(toroidalman),
+      context_(std::move(context)) {}
 
 void initializer::initialize_all(const std::string& filename,
                                  std::optional<double> rand_seed,
@@ -358,6 +368,7 @@ void initializer::init_textures() {
 }
 
 void initializer::init_toroidals() {
+  // toroidal_manager_.clear();
   context_->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i;
     auto obj = val.As<v8::Object>();
@@ -368,11 +379,8 @@ void initializer::init_toroidals() {
       auto toroidal_id = i.get_index(toroidal_fields, k);
       auto toroidal_settings = i.get(toroidal_objects, toroidal_id).As<v8::Object>();
       auto id = v8_str(isolate, toroidal_id.As<v8::String>());
-      auto type = i.str(toroidal_settings, "type");
-      gen_.toroidals[id].width = i.integer_number(toroidal_settings, "width");
-      gen_.toroidals[id].height = i.integer_number(toroidal_settings, "height");
-      gen_.toroidals[id].x = i.integer_number(toroidal_settings, "x");
-      gen_.toroidals[id].y = i.integer_number(toroidal_settings, "y");
+      auto new_toroidal = toroidal_factory::create_from_object(i, toroidal_settings);
+      toroidal_manager_.add_toroidal(id, new_toroidal);
     }
   });
 }

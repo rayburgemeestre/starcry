@@ -28,6 +28,7 @@
 #include "interpreter/positioner.h"
 #include "interpreter/scenes.h"
 #include "interpreter/texture_manager.h"
+#include "interpreter/toroidal_manager.h"
 
 #include "core/fps_progress.hpp"
 
@@ -98,6 +99,7 @@ class generator {
 
   gradient_manager gradient_manager_;
   texture_manager texture_manager_;
+  toroidal_manager toroidal_manager_;
 
   initializer initializer_;
   bridges bridges_;
