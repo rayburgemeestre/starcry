@@ -23,7 +23,7 @@
 #include "interpreter/initializer.h"
 #include "interpreter/instantiator.h"
 #include "interpreter/interactor.h"
-#include "interpreter/job_mapper.h"
+#include "interpreter/job_to_shape_mapper.h"
 #include "interpreter/object_lookup.h"
 #include "interpreter/positioner.h"
 #include "interpreter/scenes.h"
@@ -59,7 +59,7 @@ class generator {
   friend class positioner;
   friend class interactor;
   friend class instantiator;
-  friend class job_mapper;
+  friend class job_to_shape_mapper;
   friend class object_lookup;
   friend class checkpoints;
 
@@ -107,7 +107,7 @@ class generator {
   positioner positioner_;
   interactor interactor_;
   instantiator instantiator_;
-  job_mapper job_mapper_;
+  job_to_shape_mapper job_shape_mapper_;
   object_lookup object_lookup_;
   checkpoints checkpoints_;
 

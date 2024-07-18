@@ -38,7 +38,7 @@ generator::generator(std::shared_ptr<metrics>& metrics,
       positioner_(*this),
       interactor_(*this, toroidal_manager_),
       instantiator_(*this),
-      job_mapper_(*this, gradient_manager_, texture_manager_),
+      job_shape_mapper_(*this, gradient_manager_, texture_manager_),
       object_lookup_(*this),
       checkpoints_(*this),
       generator_opts(opts) {}
@@ -352,7 +352,7 @@ bool generator::_generate_frame() {
           // above update functions could have triggered spawning of new objects
           insert_newly_created_objects();
 
-          job_mapper_.convert_objects_to_render_job(sc, video);
+          job_shape_mapper_.convert_objects_to_render_job(sc, video);
 
           scenes_.commit_scene_shapes_intermediates();
 

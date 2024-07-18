@@ -15,10 +15,10 @@ class generator;
 class gradient_manager;
 class texture_manager;
 
-class job_mapper {
+class job_to_shape_mapper {
 private:
 public:
-  explicit job_mapper(generator& gen, gradient_manager& gm, texture_manager& tm);
+  explicit job_to_shape_mapper(generator& gen, gradient_manager& gm, texture_manager& tm);
 
   void convert_objects_to_render_job(step_calculator& sc, v8::Local<v8::Object> video);
 

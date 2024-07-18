@@ -4,16 +4,16 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include "job_mapper.h"
+#include "job_to_shape_mapper.h"
 #include "abort_exception.hpp"
 #include "generator.h"
 #include "gradient_manager.h"
 
 namespace interpreter {
-job_mapper::job_mapper(generator& gen, gradient_manager& gm, texture_manager& tm)
+job_to_shape_mapper::job_to_shape_mapper(generator& gen, gradient_manager& gm, texture_manager& tm)
     : gen_(gen), gradient_manager_(gm), texture_manager_(tm) {}
 
-void job_mapper::convert_objects_to_render_job(step_calculator& sc, v8::Local<v8::Object> video) {
+void job_to_shape_mapper::convert_objects_to_render_job(step_calculator& sc, v8::Local<v8::Object> video) {
   //  // Risking doing this for nothing, as this may still be discarded, we'll translate all the instances to
   //  // objects ready for rendering Note that we save object states for multiple "steps" per frame if needed.
   //  for (size_t index = 0; index < next_instances->Length(); index++) {
@@ -32,9 +32,9 @@ void job_mapper::convert_objects_to_render_job(step_calculator& sc, v8::Local<v8
   }
 }
 
-void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
-                                              step_calculator& sc,
-                                              v8::Local<v8::Object> video) {
+void job_to_shape_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
+                                                       step_calculator& sc,
+                                                       v8::Local<v8::Object> video) {
   data::shape new_shape;
 
   // @add_field@
@@ -219,7 +219,7 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
 }
 
 template <typename T>
-void job_mapper::copy_gradient_from_object_to_shape(
+void job_to_shape_mapper::copy_gradient_from_object_to_shape(
     T& source_object,
     data::shape& destination_shape,
     const std::unordered_map<std::string, data::gradient>& known_gradients_map) {
@@ -241,7 +241,7 @@ void job_mapper::copy_gradient_from_object_to_shape(
 }
 
 template <typename T>
-void job_mapper::copy_texture_from_object_to_shape(
+void job_to_shape_mapper::copy_texture_from_object_to_shape(
     T& source_object,
     data::shape& destination_shape,
     const std::unordered_map<std::string, data::texture>& known_textures_map) {
