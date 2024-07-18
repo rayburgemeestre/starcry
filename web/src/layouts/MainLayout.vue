@@ -424,16 +424,19 @@ export default defineComponent({
     }.bind(obj);
 
     obj.update_size = function () {
-      let cvs = document.getElementById('canvas').parentNode.getBoundingClientRect();
+      let canvas: HTMLCanvasElement | null = document.getElementById('canvas') as HTMLCanvasElement;
+      let canvas2: HTMLCanvasElement | null = document.getElementById('canvas2') as HTMLCanvasElement;
+      let cvs = (canvas.parentNode as HTMLCanvasElement).getBoundingClientRect();
       let header = document.querySelector('.q-header').getBoundingClientRect();
       let footer = document.querySelector('.q-footer').getBoundingClientRect();
       let w = Math.floor(cvs['width']);
       let h = Math.floor(footer['y'] - header['height']);
-      document.getElementById('canvas').width = w;
-      document.getElementById('canvas').height = h;
-      if (document.getElementById('container3')) {
-        document.getElementById('container3').style.width = w + 'px';
-        document.getElementById('container3').style.height = h + 'px';
+      canvas.width = w;
+      canvas.height = h;
+      let container3: HTMLElement | null = document.getElementById('container3');
+      if (container3) {
+        container3.style.width = w + 'px';
+        container3.style.height = h + 'px';
       }
       if (Math.abs(previous_w - w) < 2 && Math.abs(previous_h - h) < 2) {
         return;
@@ -441,8 +444,10 @@ export default defineComponent({
 
       script_store.re_render_editor_sidepane++;
 
-      document.getElementById('canvas2').width = w;
-      document.getElementById('canvas2').height = h;
+      if (canvas2) {
+        canvas2.width = w;
+        canvas2.height = h;
+      }
       try {
         Module.stop();
       } catch (e) {

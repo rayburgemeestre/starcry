@@ -31,7 +31,6 @@
     >
     </q-table>
   </div>
-  <!--
   <div class="q-pa-md flex flex-center">
     <q-knob
       :min="5"
@@ -102,12 +101,9 @@
       class="q-ma-md"
     />
   </div>
-  -->
-  <!--
-  <div>TODO debug page</div>
-  <div>{{ status }}</div>
-  <pre v-for="msg in msgs" :key="msg.type">{{ pretty(msg) }}<hr></pre>
-  -->
+  <!--  <div>TODO debug page</div>-->
+  <!--  <div>{{ status }}</div>-->
+  <!--  <pre v-for="msg in msgs" :key="msg.type">{{ pretty(msg) }}<hr></pre>-->
 </template>
 
 <script lang="ts">
@@ -116,7 +112,6 @@ import { useStatsStore } from 'stores/stats';
 export default defineComponent({
   name: 'DebugPage',
   setup() {
-    let rows = ref([]);
     let rows_piper = ref([]);
     const stats_store = useStatsStore();
 
@@ -132,7 +127,6 @@ export default defineComponent({
       value3: ref(80),
       value4: ref(35),
       value5: ref(70),
-      rows,
       columns: [
         {
           name: 'thread',
