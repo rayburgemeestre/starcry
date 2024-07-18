@@ -8,8 +8,10 @@ _ = {
   },
   'toroidal': {
     't1': {
-      'width': 1920 / 2.,
-      'height': 1080 / 2.,
+      // 'x': -100,
+      // 'y': -100,
+      'width': 500,
+      'height': 500,
     }
   },
   'objects': {
@@ -23,15 +25,15 @@ _ = {
       'props': {'t': 1},
       'subobj': [],
       'radius': 0,
-      'radiussize': 150.0,
+      'radiussize': 80.0,
       'angle': 0.,
       'init': function() {},
       'time': function(t, e, s) {
-        // transition to zooming out
-        if (this.props.t == 2) {
-          script.video.scale = 1.;
-        }
-        this.opacity = s + 1 === this.props.s ? 1.0 : 0.;
+        // // transition to zooming out
+        // if (this.props.t == 2) {
+        //   script.video.scale = 1.;
+        // }
+        // this.opacity = s + 1 === this.props.s ? 1.0 : 0.;
       },
     },
     'box': {
@@ -39,10 +41,10 @@ _ = {
       'y': 0,
       'subobj': [],
       'init': function() {
-        this.spawn({'id': 'line', 'x': -(1920 / 4), 'y': -(1080 / 4), 'x2': (1920 / 4), 'y2': -(1080 / 4)});
-        this.spawn({'id': 'line', 'x': -(1920 / 4), 'y': -(1080 / 4), 'x2': -(1920 / 4), 'y2': (1080 / 4)});
-        this.spawn({'id': 'line', 'x': -(1920 / 4), 'y': (1080 / 4), 'x2': (1920 / 4), 'y2': (1080 / 4)});
-        this.spawn({'id': 'line', 'x': (1920 / 4), 'y': (1080 / 4), 'x2': (1920 / 4), 'y2': -(1080 / 4)});
+        this.spawn({'id': 'line', 'x': -(250), 'y': -(250), 'x2': (250), 'y2': -(250)});
+        this.spawn({'id': 'line', 'x': -(250), 'y': -(250), 'x2': -(250), 'y2': (250)});
+        this.spawn({'id': 'line', 'x': -(250), 'y': (250), 'x2': (250), 'y2': (250)});
+        this.spawn({'id': 'line', 'x': (250), 'y': (250), 'x2': (250), 'y2': -(250)});
       },
       'time': function() {},
     },
@@ -57,13 +59,13 @@ _ = {
   },
   'video': {
     'fps': 30,
-    'width': 1920,
-    'height': 1080,
-    'scale': 1.5,
+    'width': 1000,
+    'height': 1000,
+    'scale_ratio': false,
+    // 'scale': 1.0,
+    'scale': 0.5,
     'rand_seed': 5,
     'granularity': 1,
-    // 'min_intermediates': 5.,
-    // 'max_intermediates': 50.,
     'grain_for_opacity': true,
     'bg_color': {r: 0, g: 0, b: 0, a: 1},
   },
@@ -72,75 +74,21 @@ _ = {
   },
   'scenes': [
     {
-      'name': 'horizontal warp',
-      'duration': 2.,
-      'objects': [
-        {'id': 'circle', 'x': 700, 'y': 0, 'z': 0, 'velocity': 1, 'vel_x': -10, 'vel_y': 0, 'props': {'s': 1}},
-      ]
-    },
-    {
-      'name': 'vertical warp',
-      'duration': 2.,
-      'objects': [
-        {'id': 'circle', 'x': 0, 'y': 700, 'z': 0, 'velocity': 1, 'vel_x': 0, 'vel_y': -10, 'props': {'s': 2}},
-      ]
-    },
-    {
-      'name': 'diagonal warp',
-      'duration': 2.,
-      'objects': [
-        {'id': 'circle', 'x': 700, 'y': 700, 'z': 0, 'velocity': 1, 'vel_x': -10, 'vel_y': -10, 'props': {'s': 3}},
-      ]
-    },
-    {
-      'name': 'transition',
-      'duration': 0.5,
-      'objects': [
-        {'id': 'circle', 'x': 0, 'y': 0, 'z': 0, 'velocity': 1, 'vel_x': -10, 'vel_y': -10, 'props': {'t': 2}},
-      ]
-    },
-    {
       'name': 'horizontal warp - zoom out',
       'duration': 2.,
       'objects': [
         {
           'id': 'circle',
           'label': 'circle2',
-          'x': 700,
-          'y': 0,
+          'x': -100,
+          'y': -100,
           'z': 0,
-          'velocity': 1,
-          'vel_x': -10,
-          'vel_y': 0,
+          'velocity': 10,
+          'vel_x': -3,
+          'vel_y': -5,
           'props': {'s': 5}
         },
-        {'id': 'box', 'x': 0, 'y': 0, 'z': 0},
-      ]
-    },
-    {
-      'name': 'vertical warp - zoom out',
-      'duration': 2,
-      'objects': [
-        {
-          'id': 'circle',
-          'label': 'circle3',
-          'x': 0,
-          'y': 700,
-          'z': 0,
-          'velocity': 1,
-          'vel_x': 0,
-          'vel_y': -10,
-          'props': {'s': 6}
-        },
-        {'id': 'box', 'x': 0, 'y': 0, 'z': 0},
-      ]
-    },
-    {
-      'name': 'diagonal warp - zoom out',
-      'duration': 2,
-      'objects': [
-        {'id': 'circle', 'x': 700, 'y': 700, 'z': 0, 'velocity': 1, 'vel_x': -10, 'vel_y': -10, 'props': {'s': 7}},
-        {'id': 'box', 'x': 0, 'y': 0, 'z': 0},
+        {'id': 'box', 'x': -100, 'y': -100, 'z': 0},
       ]
     },
   ]

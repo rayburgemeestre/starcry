@@ -32,7 +32,8 @@ public:
   bool destroy_if_duplicate(const std::string& ug, data_staging::shape_t& shape);
 
 private:
-  void update_object_toroidal(data_staging::toroidal& toroidal_data, double& x, double& y);
+  void update_object_toroidal(
+      data_staging::toroidal& toroidal_data, double& x, double& y, double& diff_x, double& diff_y);
   void handle_collisions(data_staging::shape_t& instance);
   void handle_collision(data_staging::circle& object_bridge,
                         data_staging::circle& instance2,

@@ -97,6 +97,8 @@ struct shape {
   bool motion_blur = true;
   int warp_width = 0;
   int warp_height = 0;
+  int warp_x = 0;
+  int warp_y = 0;
 
   double dist = 0.;
   int steps = 0.;
@@ -152,6 +154,8 @@ struct shape {
        motion_blur,
        warp_width,
        warp_height,
+       warp_x,
+       warp_y,
        dist,
        steps);
   }

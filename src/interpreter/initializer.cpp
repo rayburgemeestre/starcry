@@ -423,6 +423,8 @@ void initializer::init_toroidals() {
       auto type = i.str(toroidal_settings, "type");
       gen_.toroidals[id].width = i.integer_number(toroidal_settings, "width");
       gen_.toroidals[id].height = i.integer_number(toroidal_settings, "height");
+      gen_.toroidals[id].x = i.integer_number(toroidal_settings, "x");
+      gen_.toroidals[id].y = i.integer_number(toroidal_settings, "y");
     }
   });
 }

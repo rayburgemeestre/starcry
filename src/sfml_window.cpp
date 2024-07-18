@@ -73,6 +73,7 @@ void sfml_window::toggle_window() {
 
 void sfml_window::update_window() {
   std::unique_lock lock(mut);
+  if (!window.isOpen()) return;
   sf::Context context;
   sf::View view = window.getDefaultView();
   view.setCenter({static_cast<float>(cached_canvas_w / 2.0), static_cast<float>(cached_canvas_h / 2.0)});

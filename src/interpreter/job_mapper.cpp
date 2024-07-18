@@ -60,6 +60,8 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     auto shape_opacity = shape.generic_cref().opacity();
     auto warp_width = shape.toroidal_ref().warp_width();
     auto warp_height = shape.toroidal_ref().warp_height();
+    auto warp_x = shape.toroidal_ref().warp_x();
+    auto warp_y = shape.toroidal_ref().warp_x();
 
     // auto text_font = i.has_field(instance, "text_font") ? i.str(instance, "text_font") : "";
 
@@ -144,6 +146,8 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     // new_shape.motion_blur = motion_blur;
     new_shape.warp_width = warp_width;
     new_shape.warp_height = warp_height;
+    new_shape.warp_x = warp_x;
+    new_shape.warp_y = warp_y;
 
     // wrap this in a proper add method
     if (gen_.stepper.next_step != gen_.stepper.max_step) {

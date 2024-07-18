@@ -24,6 +24,7 @@
 #include "util/motionblur_buffer.hpp"
 #include "util/noise_mappers.hpp"
 #include "util/random.hpp"
+#include "util/render_math.hpp"
 #include "util/text_drawer.hpp"
 
 namespace draw_logic {
@@ -162,6 +163,9 @@ public:
     int abs_y_min = static_cast<int>(circle_y - radius_outer_circle + 0.5);
     int abs_y_max = static_cast<int>(circle_y + radius_outer_circle + 0.5);
 
+    int abs_x_min = static_cast<int>(circle_x - radius_outer_circle + 0.5);
+    int abs_x_max = static_cast<int>(circle_x + radius_outer_circle + 0.5);
+
     circle c(position(circle_x, circle_y), radius, radius_size);
     rectangle r(position(-offset_x_, -offset_y_), canvas_w_, canvas_h_);
     if (!c.intersects(r)) {
@@ -171,9 +175,12 @@ public:
     int start_y = std::max(abs_y_min, 0);
     int end_y = std::min(abs_y_max, int(canvas_h_));
 
-    for (int y = start_y; y < end_y; y++) {
-      box.update_y(y);
+    box.update_y(start_y);
+    box.update_y(end_y);
+    box.update_x(abs_x_min);
+    box.update_x(abs_x_max);
 
+    for (int y = start_y; y < end_y; y++) {
       const auto rel_y = y - circle_y;
       // assert(static_cast<int>(std::abs(rel_y)) <= radius_outer_circle);
       if (static_cast<int>(std::abs(rel_y)) > radius_outer_circle) {
@@ -192,13 +199,11 @@ public:
       int abs_x_max2 = std::min(static_cast<int>(circle_x + hxcl_inner + 0.5), int(canvas_w_));
 
       for (int x = abs_x_min; x < abs_x_min2; x++) {
-        box.update_x(x);
         double diff_from_center = reuse_sqrt ? distance<double>(x, circle_x, y, circle_y) : -1;
         render_circle_pixel(
             bmp, shape, radius, radius_size, circle_x, circle_y, x, y, diff_from_center, opacity, settings);
       }
       for (int x = abs_x_max2; x < abs_x_max; x++) {
-        box.update_x(x);
         double diff_from_center = reuse_sqrt ? distance<double>(x, circle_x, y, circle_y) : -1;
         render_circle_pixel(
             bmp, shape, radius, radius_size, circle_x, circle_y, x, y, diff_from_center, opacity, settings);
@@ -1055,28 +1060,28 @@ public:
 
   void render_bounding_box(image &bmp, const bounding_box &box) {
     int counter = 0;
-    for (auto x = box.top_left.x; x <= box.bottom_right.x; ++x) {
-      if (x < 0 || x > width_) continue;
+    for (auto x = std::max(box.top_left.x, 0.0); x <= std::min(box.bottom_right.x, static_cast<double>(width_)); ++x) {
+      if (x < 0 || x >= width_) continue;
       auto clr = data::color{1., 1., 1., 0.5};
       if (counter < 10) {
         clr = data::color{1., 0., 0., 0.5};
       }
-      if (box.top_left.y >= 0 && box.top_left.y <= height_)
+      if (box.top_left.y >= 0 && box.top_left.y < height_)
         blend_the_pixel(bmp, data::blending_type::normal, x, box.top_left.y, 1., clr);
-      if (box.bottom_right.y >= 0 && box.bottom_right.y <= height_)
+      if (box.bottom_right.y >= 0 && box.bottom_right.y < height_)
         blend_the_pixel(bmp, data::blending_type::normal, x, box.bottom_right.y, 1., clr);
       counter++;
     }
     counter = 0;
-    for (auto y = box.top_left.y; y <= box.bottom_right.y; ++y) {
-      if (y < 0 || y > height_) continue;
+    for (auto y = std::max(box.top_left.y, 0.0); y <= std::min(box.bottom_right.y, static_cast<double>(height_)); ++y) {
+      if (y < 0 || y >= height_) continue;
       auto clr = data::color{1., 1., 1., 0.5};
       if (counter < 10) {
         clr = data::color{1., 0., 0., 0.5};
       }
-      if (box.top_left.x >= 0 && box.top_left.x <= width_)
+      if (box.top_left.x >= 0 && box.top_left.x < width_)
         blend_the_pixel(bmp, data::blending_type::normal, box.top_left.x, y, 1., clr);
-      if (box.bottom_right.x >= 0 && box.bottom_right.x <= width_)
+      if (box.bottom_right.x >= 0 && box.bottom_right.x < width_)
         blend_the_pixel(bmp, data::blending_type::normal, box.bottom_right.x, y, 1., clr);
       counter++;
     }
@@ -1096,6 +1101,16 @@ private:
     return ((shape.y2 - center_y_) * scale_ * shape.scale * shape.recursive_scale) - offset_y_ + canvas_h_ / 2;
   }
 
+public:
+  double to_shape_x(const data::shape &shape, double abs_x) {
+    return ((abs_x - canvas_w_ / 2 + offset_x_) / (scale_ * shape.scale * shape.recursive_scale)) + center_x_;
+  }
+
+  double to_shape_y(const data::shape &shape, double abs_y) {
+    return ((abs_y - canvas_h_ / 2 + offset_y_) / (scale_ * shape.scale * shape.recursive_scale)) + center_y_;
+  }
+
+private:
   bool flag_ = false;
   double scale_;
   double center_x_;

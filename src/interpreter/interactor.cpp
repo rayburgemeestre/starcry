@@ -23,8 +23,13 @@ void interactor::update_interactions() {
     if constexpr (std::is_same_v<T, data_staging::circle> || std::is_same_v<T, data_staging::script>) {
       double x = shape.transitive_location_cref().position_cref().x;
       double y = shape.transitive_location_cref().position_cref().y;
-      // TODO:
-      update_object_toroidal(shape.toroidal_ref(), x, y);
+      double diff_x = 0;
+      double diff_y = 0;
+      update_object_toroidal(shape.toroidal_ref(), x, y, diff_x, diff_y);
+      shape.transitive_location_ref().position_ref().x = x;
+      shape.transitive_location_ref().position_ref().y = y;
+      shape.location_ref().position_ref().x += diff_x;
+      shape.location_ref().position_ref().y += diff_y;
       const auto collision_group = shape.behavior_cref().collision_group();
       const auto gravity_group = shape.behavior_cref().gravity_group();
       const auto unique_group = shape.behavior_cref().unique_group();
@@ -185,34 +190,45 @@ bool interactor::destroy_if_duplicate(const std::string& unique_group, data_stag
   return destroyed;
 }
 
-void interactor::update_object_toroidal(data_staging::toroidal& toroidal_data, double& x, double& y) {
+void interactor::update_object_toroidal(
+    data_staging::toroidal& toroidal_data, double& x, double& y, double& diff_x, double& diff_y) {
   if (toroidal_data.group().empty()) return;
 
   auto the_width = gen_.toroidals[toroidal_data.group()].width;
   auto the_height = gen_.toroidals[toroidal_data.group()].height;
-  auto diff_x = 0;
-  auto diff_y = 0;
+  auto x_offset = gen_.toroidals[toroidal_data.group()].x;
+  auto y_offset = gen_.toroidals[toroidal_data.group()].y;
 
-  while (x + (the_width / 2) < 0) {
-    x += the_width;
-    diff_x += the_width;
+  diff_x = 0;
+  diff_y = 0;
+
+  auto box_top_left_x = x_offset - (the_width / 2);
+  auto box_top_left_y = y_offset - (the_height / 2);
+  auto box_bottom_right_x = x_offset + (the_width / 2);
+  auto box_bottom_right_y = y_offset + (the_height / 2);
+
+  // do the warp
+  if (x < box_top_left_x) {
+    x = box_bottom_right_x - (box_top_left_x - x);
+    diff_x = the_width;
   }
-  while (y + (the_height / 2) < 0) {
-    y += the_height;
-    diff_y += the_height;
+  if (y < box_top_left_y) {
+    y = box_bottom_right_y - (box_top_left_y - y);
+    diff_y = the_height;
   }
-  while (x + (the_width / 2) > the_width) {
-    x -= the_width;
-    diff_x -= the_width;
+  if (x > box_bottom_right_x) {
+    x = box_top_left_x + (x - box_bottom_right_x);
+    diff_x = -the_width;
   }
-  while (y + (the_height / 2) > the_height) {
-    y -= the_height;
-    diff_y -= the_height;
+  if (y > box_bottom_right_y) {
+    y = box_top_left_y + (y - box_bottom_right_y);
+    diff_y = -the_height;
   }
-  const auto warped_dist = get_distance(0, 0, diff_x, diff_y);
+
   toroidal_data.set_warp_width(the_width);
   toroidal_data.set_warp_height(the_height);
-  toroidal_data.set_warp_dist(warped_dist);
+  toroidal_data.set_warp_x(x_offset);
+  toroidal_data.set_warp_y(y_offset);
 }
 
 void interactor::handle_collisions(data_staging::shape_t& shape) {

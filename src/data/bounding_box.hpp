@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <limits>
 #include <ostream>
+#include <tuple>
 
 #include "data/coord.hpp"
 
@@ -52,9 +53,18 @@ public:
     if (bottom_right.y > height) bottom_right.y = height;
   }
 
+  [[nodiscard]] std::tuple<bool, bool, bool, bool> collides(const bounding_box& other) const {
+    bool left_overlap = other.bottom_right.x > top_left.x && other.top_left.x < top_left.x;
+    bool right_overlap = other.top_left.x < bottom_right.x && other.bottom_right.x > bottom_right.x;
+    // y axis apparently cut off one pixel before, so we do >= and <= instead of > and <.
+    bool top_overlap = other.bottom_right.y >= top_left.y && other.top_left.y <= top_left.y;
+    bool bottom_overlap = other.top_left.y <= bottom_right.y && other.bottom_right.y >= bottom_right.y;
+    return std::make_tuple(left_overlap, right_overlap, top_overlap, bottom_overlap);
+  }
+
   friend std::ostream& operator<<(std::ostream& stream, const bounding_box& b) {
-    stream << "#box{" << b.top_left.x << "," << b.top_left.y << " - " << b.bottom_right.x << "," << b.bottom_right.y
-           << "}";
+    stream << "#box{" << int(b.top_left.x) << "," << int(b.top_left.y) << " - " << int(b.bottom_right.x) << ","
+           << int(b.bottom_right.y) << "}";
     return stream;
   }
 };

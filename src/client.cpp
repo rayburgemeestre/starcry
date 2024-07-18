@@ -130,28 +130,26 @@ void render_shapes_to_texture() {
   data::settings settings_;
   std::shared_ptr<metrics> tmp = nullptr;
   image bmp;
-  engine.render(bmp,
-                0,
-                job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
-                job.chunk,
-                job.num_chunks,
-                tmp,
-                job.background_color,
-                job.shapes,
-                0,
-                0,
-                job.offset_x,
-                job.offset_y,
-                job.canvas_w,
-                job.canvas_h,
-                job.width,
-                job.height,
-                job.scale,
-                job.scales,
-                false,
-                settings_,
-                false /* debug */,
-                {});
+  render_params params{
+      0,
+      job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
+      job.chunk,
+      job.num_chunks,
+      tmp,
+      job.background_color,
+      job.shapes,
+      0,
+      0,
+      job.canvas_w,
+      job.canvas_h,
+      job.scale,
+      job.scales,
+      false,
+      settings_,
+      false /* debug */,
+      {},
+  };
+  engine.render(bmp, params, job.offset_x, job.offset_y, job.width, job.height);
   if (texture == nullptr && renderer == nullptr) {
     return;
   }
@@ -384,7 +382,7 @@ std::vector<int> get_gradient_colors(std::string gradient_definition, int width)
     converter.colors.emplace_back(index, data::color{r, g, b, 1.});
     converter.colors.emplace_back(1.0, data::color{r, g, b, 0.});
   } else {
-    for (const auto color_line : json_obj) {
+    for (const auto &color_line : json_obj) {
       const auto pos = color_line["position"];
       const auto r = color_line["r"];
       const auto g = color_line["g"];

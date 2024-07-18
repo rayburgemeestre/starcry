@@ -115,6 +115,7 @@ public:
   }
 
   data::color &get(const int &x, const int &y) {
+    assert((y * width) + x < pixels_.size());
     return pixels_[(y * width) + x];
   }
 

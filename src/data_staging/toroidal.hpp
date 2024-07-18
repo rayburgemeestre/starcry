@@ -13,7 +13,8 @@ private:
   std::string group_;
   double warp_width_;
   double warp_height_;
-  double warp_dist_;
+  double warp_x_;
+  double warp_y_;
 
 public:
   const std::string& group() const {
@@ -25,8 +26,11 @@ public:
   double warp_height() const {
     return warp_height_;
   }
-  double warp_dist() const {
-    return warp_dist_;
+  double warp_x() const {
+    return warp_x_;
+  }
+  double warp_y() const {
+    return warp_y_;
   }
 
   void set_group(const std::string& group) {
@@ -38,8 +42,11 @@ public:
   void set_warp_height(double warp_height) {
     warp_height_ = warp_height;
   }
-  void set_warp_dist(double warp_dist) {
-    warp_dist_ = warp_dist;
+  void set_warp_x(double warp_x) {
+    warp_x_ = warp_x;
+  }
+  void set_warp_y(double warp_y) {
+    warp_y_ = warp_y;
   }
 };
 }  // namespace data_staging

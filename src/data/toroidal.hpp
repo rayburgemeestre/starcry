@@ -12,14 +12,16 @@
 namespace data {
 
 struct toroidal {
-  int width{};
-  int height{};
+  int width{0};
+  int height{0};
+  int x{0};
+  int y{0};
 
   toroidal() {}
 
   template <class Archive>
   void serialize(Archive &ar) {
-    ar(width, height);
+    ar(width, height, x, y);
   }
 };
 

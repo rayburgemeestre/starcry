@@ -189,28 +189,25 @@ void starcry::render_job(size_t thread_num,
                          const std::vector<int64_t>& selected_ids) {
   prctl(PR_SET_NAME, fmt::format("sc {} {}/{}", job.frame_number, job.chunk, job.num_chunks).c_str(), NULL, NULL, NULL);
 
-  engine.render(bmp,
-                thread_num,
-                job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
-                job.chunk,
-                job.num_chunks,
-                metrics_,
-                job.background_color,
-                job.shapes,
-                job.view_x,
-                job.view_y,
-                job.offset_x,
-                job.offset_y,
-                job.canvas_w,
-                job.canvas_h,
-                job.width,
-                job.height,
-                job.scale,
-                job.scales,
-                options_.level == log_level::debug,
-                settings,
-                options_.debug || get_viewpoint().debug,
-                selected_ids);
+  render_params params{thread_num,
+                       job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
+                       job.chunk,
+                       job.num_chunks,
+                       metrics_,
+                       job.background_color,
+                       job.shapes,
+                       job.view_x,
+                       job.view_y,
+                       job.canvas_w,
+                       job.canvas_h,
+                       job.scale,
+                       job.scales,
+                       options_.level == log_level::debug,
+                       settings,
+                       options_.debug || get_viewpoint().debug,
+                       selected_ids};
+
+  engine.render(bmp, params, job.offset_x, job.offset_y, job.width, job.height);
 }
 
 // MARK1 transform instruction into job (using generator)
