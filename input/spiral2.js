@@ -102,6 +102,7 @@ _ = {
     'gravity_G': 0.02,
     'gravity_constrain_dist_min': 5.,
     'gravity_constrain_dist_max': 5.,
+    'perlin_noise': true,
   },
   'preview': {
     'width': 512,
