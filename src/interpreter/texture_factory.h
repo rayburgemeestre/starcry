@@ -5,20 +5,21 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 #pragma once
 
+#include <memory>
 #include <string>
-
 #include "util/v8_interact.hpp"
 
+class v8_interact;
+
 namespace data {
-struct gradient;
+struct texture;
 }
 
 namespace interpreter {
 
-class gradient_factory {
+class texture_factory {
 public:
-  static data::gradient create_from_array(const v8::Local<v8::Array>& positions, v8_interact& i);
-  static data::gradient create_from_string(const std::string& color_string);
+  static data::texture create_from_object(v8_interact& i, v8::Local<v8::Object>& texture_settings);
 };
 
 }  // namespace interpreter

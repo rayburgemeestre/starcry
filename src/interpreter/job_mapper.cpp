@@ -10,7 +10,8 @@
 #include "gradient_manager.h"
 
 namespace interpreter {
-job_mapper::job_mapper(generator& gen, gradient_manager& gm) : gen_(gen), gradient_manager_(gm) {}
+job_mapper::job_mapper(generator& gen, gradient_manager& gm, texture_manager& tm)
+    : gen_(gen), gradient_manager_(gm), texture_manager_(tm) {}
 
 void job_mapper::convert_objects_to_render_job(step_calculator& sc, v8::Local<v8::Object> video) {
   //  // Risking doing this for nothing, as this may still be discarded, we'll translate all the instances to
@@ -81,7 +82,7 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     new_shape.textures.clear();
 
     copy_gradient_from_object_to_shape(shape, new_shape, gradient_manager_.gradients_map());
-    copy_texture_from_object_to_shape(shape, new_shape, gen_.textures);
+    copy_texture_from_object_to_shape(shape, new_shape, texture_manager_.textures_map());
 
     new_shape.texture_3d_ = shape.styling_cref().texture_3d();
     new_shape.texture_offset_x = shape.styling_cref().texture_offset_x();
@@ -240,9 +241,10 @@ void job_mapper::copy_gradient_from_object_to_shape(
 }
 
 template <typename T>
-void job_mapper::copy_texture_from_object_to_shape(T& source_object,
-                                                   data::shape& destination_shape,
-                                                   std::unordered_map<std::string, data::texture>& known_textures_map) {
+void job_mapper::copy_texture_from_object_to_shape(
+    T& source_object,
+    data::shape& destination_shape,
+    const std::unordered_map<std::string, data::texture>& known_textures_map) {
   if constexpr (!std::is_same_v<T, data_staging::script>) {
     std::string namespace_ = source_object.meta_cref().namespace_name();
     std::string texture_id = namespace_ + source_object.styling_ref().texture();
@@ -250,13 +252,13 @@ void job_mapper::copy_texture_from_object_to_shape(T& source_object,
     if (!texture_id.empty()) {
       if (destination_shape.textures.empty()) {
         if (known_textures_map.find(texture_id) != known_textures_map.end()) {
-          destination_shape.textures.emplace_back(1.0, known_textures_map[texture_id]);
+          destination_shape.textures.emplace_back(1.0, known_textures_map.at(texture_id));
         }
       }
     }
 
     for (const auto& [opacity, texture_id] : source_object.styling_ref().get_textures_cref()) {
-      destination_shape.textures.emplace_back(opacity, known_textures_map[texture_id]);
+      destination_shape.textures.emplace_back(opacity, known_textures_map.at(texture_id));
     }
   }
 }

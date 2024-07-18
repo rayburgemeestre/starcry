@@ -27,6 +27,7 @@
 #include "interpreter/object_lookup.h"
 #include "interpreter/positioner.h"
 #include "interpreter/scenes.h"
+#include "interpreter/texture_manager.h"
 
 #include "core/fps_progress.hpp"
 
@@ -75,7 +76,6 @@ class generator {
   double tolerated_granularity = 1;
   bool minimize_steps_per_object = true;
   size_t use_fps = 25;
-  std::unordered_map<std::string, data::texture> textures;
   std::unordered_map<std::string, data::toroidal> toroidals;
   std::unordered_map<size_t, std::map<int, size_t>> indexes;
   frame_stepper stepper;
@@ -97,6 +97,7 @@ class generator {
   bool debug_;
 
   gradient_manager gradient_manager_;
+  texture_manager texture_manager_;
 
   initializer initializer_;
   bridges bridges_;

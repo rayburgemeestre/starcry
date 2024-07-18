@@ -5,7 +5,9 @@
  */
 #pragma once
 
+#include <cstring>
 #include <noise.hpp>
+
 #include "util/math.h"
 
 namespace data {

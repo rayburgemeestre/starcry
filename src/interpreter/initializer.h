@@ -5,23 +5,28 @@
  */
 #pragma once
 
+#include <memory>
 #include <optional>
 
+class v8_wrapper;
+
 namespace interpreter {
-class generator;
 class gradient_manager;
+class texture_manager;
+class generator;  // soon remove
 
 class initializer {
 public:
-  explicit initializer(generator& gen, gradient_manager& gm);
+  explicit initializer(generator& gen, gradient_manager& gm, texture_manager& tm, std::shared_ptr<v8_wrapper> context);
 
-  void initialize_all(std::optional<double> rand_seed,
+  void initialize_all(const std::string& filename,
+                      std::optional<double> rand_seed,
                       bool preview,
                       std::optional<int> width,
                       std::optional<int> height,
                       std::optional<double> scale);
 
-  void init_context();
+  void init_context(const std::string& filename);
   void init_user_script();
   void init_video_meta_info(std::optional<double> rand_seed,
                             bool preview,
@@ -38,5 +43,7 @@ private:
 
   generator& gen_;
   gradient_manager& gradient_manager_;
+  texture_manager& texture_manager_;
+  std::shared_ptr<v8_wrapper> context_;
 };
 }  // namespace interpreter

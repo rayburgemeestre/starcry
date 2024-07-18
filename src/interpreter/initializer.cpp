@@ -5,11 +5,16 @@
  */
 
 #include "initializer.h"
+
+#include <utility>
+
 #include "data/texture_effect.hpp"
 #include "data/zernike_type.hpp"
 #include "generator.h"
 #include "gradient_factory.h"
 #include "scripting.h"
+#include "texture_factory.h"
+#include "texture_manager.h"
 #include "util/v8_interact.hpp"
 #include "v8pp/module.hpp"
 
@@ -19,14 +24,16 @@ v8::Local<v8::Context> current_context_native(std::shared_ptr<v8_wrapper>& wrapp
   return wrapper_context->context->isolate()->GetCurrentContext();
 }
 
-initializer::initializer(generator& gen, gradient_manager& gm) : gen_(gen), gradient_manager_(gm) {}
+initializer::initializer(generator& gen, gradient_manager& gm, texture_manager& tm, std::shared_ptr<v8_wrapper> context)
+    : gen_(gen), gradient_manager_(gm), texture_manager_(tm), context_(std::move(context)) {}
 
-void initializer::initialize_all(std::optional<double> rand_seed,
+void initializer::initialize_all(const std::string& filename,
+                                 std::optional<double> rand_seed,
                                  bool preview,
                                  std::optional<int> width,
                                  std::optional<int> height,
                                  std::optional<double> scale) {
-  init_context();
+  init_context(filename);
   init_user_script();
   init_video_meta_info(rand_seed, preview, width, height, scale);
   init_gradients();
@@ -35,79 +42,78 @@ void initializer::initialize_all(std::optional<double> rand_seed,
   init_object_definitions();
 }
 
-void initializer::init_context() {
-  gen_.context->set_filename(gen_.filename());
+void initializer::init_context(const std::string& filename) {
+  context_->set_filename(filename);
   reset_context();
 }
 
 void initializer::reset_context() {
-  gen_.context->reset();
+  context_->reset();
 
-  gen_.context->add_fun("output", &output_fun);
-  gen_.context->add_fun("rand", [&]() {
+  context_->add_fun("output", &output_fun);
+  context_->add_fun("rand", [&]() {
     return rand_fun(gen_.rand_);
   });
-  gen_.context->add_fun("rand1", [&](v8::Local<v8::Number> index) {
+  context_->add_fun("rand1", [&](v8::Local<v8::Number> index) {
     gen_.rand_.set_index(index->ToNumber(v8::Isolate::GetCurrent()->GetCurrentContext()).ToLocalChecked()->Value());
     return rand_fun(gen_.rand_);
   });
-  gen_.context->add_fun("attr", [&](v8::Local<v8::String> str) -> v8::Local<v8::Value> {
+  context_->add_fun("attr", [&](v8::Local<v8::String> str) -> v8::Local<v8::Value> {
     return gen_.global_attrs_.get(v8_str(v8::Isolate::GetCurrent(), str));
   });
-  gen_.context->add_fun(
-      "set_attr", [&](v8::Local<v8::String> key, v8::Local<v8::String> value) -> v8::Local<v8::Value> {
-        gen_.global_attrs_.set(v8_str(v8::Isolate::GetCurrent(), key), v8_str(v8::Isolate::GetCurrent(), value));
-        return v8::Boolean::New(v8::Isolate::GetCurrent(), true);
-      });
-  gen_.context->add_fun("set_attr3",
-                        [&](v8::Local<v8::String> object_id,
-                            v8::Local<v8::String> key,
-                            v8::Local<v8::String> value) -> v8::Local<v8::Value> {
-                          const auto str = v8_str(v8::Isolate::GetCurrent(), object_id);
-                          const auto object_id_long = std::stoll(str);
-                          bool ret = false;
-                          if (gen_.object_lookup_.contains(object_id_long)) {
-                            auto& object_ref = gen_.object_lookup_.at(object_id_long).get();
-                            meta_callback(object_ref, [&](auto& cc) {
-                              cc.attrs_ref().set(v8_str(v8::Isolate::GetCurrent(), key),
-                                                 v8_str(v8::Isolate::GetCurrent(), value));
-                              ret = true;
-                            });
-                          }
-                          return v8::Boolean::New(v8::Isolate::GetCurrent(), ret);
+  context_->add_fun("set_attr", [&](v8::Local<v8::String> key, v8::Local<v8::String> value) -> v8::Local<v8::Value> {
+    gen_.global_attrs_.set(v8_str(v8::Isolate::GetCurrent(), key), v8_str(v8::Isolate::GetCurrent(), value));
+    return v8::Boolean::New(v8::Isolate::GetCurrent(), true);
+  });
+  context_->add_fun("set_attr3",
+                    [&](v8::Local<v8::String> object_id,
+                        v8::Local<v8::String> key,
+                        v8::Local<v8::String> value) -> v8::Local<v8::Value> {
+                      const auto str = v8_str(v8::Isolate::GetCurrent(), object_id);
+                      const auto object_id_long = std::stoll(str);
+                      bool ret = false;
+                      if (gen_.object_lookup_.contains(object_id_long)) {
+                        auto& object_ref = gen_.object_lookup_.at(object_id_long).get();
+                        meta_callback(object_ref, [&](auto& cc) {
+                          cc.attrs_ref().set(v8_str(v8::Isolate::GetCurrent(), key),
+                                             v8_str(v8::Isolate::GetCurrent(), value));
+                          ret = true;
                         });
-  gen_.context->add_fun("get_object", [&](v8::Local<v8::Number> unique_id) -> v8::Local<v8::Object> {
+                      }
+                      return v8::Boolean::New(v8::Isolate::GetCurrent(), ret);
+                    });
+  context_->add_fun("get_object", [&](v8::Local<v8::Number> unique_id) -> v8::Local<v8::Object> {
     return gen_.get_object(
         unique_id->ToNumber(v8::Isolate::GetCurrent()->GetCurrentContext()).ToLocalChecked()->Value());
   });
-  gen_.context->add_fun("angled_velocity", &angled_velocity);
-  gen_.context->add_fun("random_velocity", [&]() {
+  context_->add_fun("angled_velocity", &angled_velocity);
+  context_->add_fun("random_velocity", [&]() {
     return random_velocity(gen_.rand_);
   });
-  gen_.context->add_fun("random_velocity1", [&](v8::Local<v8::Number> index) {
+  context_->add_fun("random_velocity1", [&](v8::Local<v8::Number> index) {
     gen_.rand_.set_index(index->ToNumber(v8::Isolate::GetCurrent()->GetCurrentContext()).ToLocalChecked()->Value());
     return random_velocity(gen_.rand_);
   });
-  gen_.context->add_fun("expf", &expf_fun);
-  gen_.context->add_fun("logn", &logn_fun);
-  gen_.context->add_fun("clamp", &math::clamp<double>);
-  gen_.context->add_fun("squared", &squared);
-  gen_.context->add_fun("squared_dist", &squared_dist);
-  gen_.context->add_fun("get_distance", &get_distance);
-  gen_.context->add_fun("get_angle", &get_angle);
-  gen_.context->add_fun("triangular_wave", &triangular_wave);
-  gen_.context->add_fun("blending_type_str", &data::blending_type::to_str);
-  gen_.context->add_fun("texture_3d_str", &data::texture_3d::to_str);
-  gen_.context->add_fun("frame_number", [&]() {
+  context_->add_fun("expf", &expf_fun);
+  context_->add_fun("logn", &logn_fun);
+  context_->add_fun("clamp", &math::clamp<double>);
+  context_->add_fun("squared", &squared);
+  context_->add_fun("squared_dist", &squared_dist);
+  context_->add_fun("get_distance", &get_distance);
+  context_->add_fun("get_angle", &get_angle);
+  context_->add_fun("triangular_wave", &triangular_wave);
+  context_->add_fun("blending_type_str", &data::blending_type::to_str);
+  context_->add_fun("texture_3d_str", &data::texture_3d::to_str);
+  context_->add_fun("frame_number", [&]() {
     return gen_.job->frame_number;
   });
-  gen_.context->add_fun("exit", &my_exit);
+  context_->add_fun("exit", &my_exit);
 
-  gen_.context->add_include_fun();
+  context_->add_include_fun();
 
   // add blending constants
-  v8::HandleScope scope(gen_.context->context->isolate());
-  v8pp::module consts(gen_.context->isolate);
+  v8::HandleScope scope(context_->context->isolate());
+  v8pp::module consts(context_->isolate);
   consts.const_("normal", data::blending_type::normal)
       .const_("lighten", data::blending_type::lighten)
       .const_("darken", data::blending_type::darken)
@@ -137,8 +143,8 @@ void initializer::reset_context() {
       .const_("saturation", data::blending_type::saturation)
       .const_("color", data::blending_type::color)
       .const_("luminosity", data::blending_type::luminosity);
-  gen_.context->context->module("blending_type", consts);
-  v8pp::module consts_2(gen_.context->isolate);
+  context_->context->module("blending_type", consts);
+  v8pp::module consts_2(context_->isolate);
   consts_2.const_("raw", data::texture_3d::raw)
       .const_("radial_displacement", data::texture_3d::radial_displacement)
       .const_("radial_compression", data::texture_3d::radial_compression)
@@ -147,14 +153,14 @@ void initializer::reset_context() {
       .const_("spherical", data::texture_3d::spherical)
       .const_("noise_3d_simplex", data::texture_3d::noise_3d_simplex)
       .const_("noise_3d_coords", data::texture_3d::noise_3d_coords);
-  gen_.context->context->module("texture_3d", consts_2);
-  v8pp::module consts_3(gen_.context->isolate);
+  context_->context->module("texture_3d", consts_2);
+  v8pp::module consts_3(context_->isolate);
   consts_3.const_("version1", data::zernike_type::version1).const_("version2", data::zernike_type::version2);
-  gen_.context->context->module("zernike_type", consts_3);
+  context_->context->module("zernike_type", consts_3);
 
-  v8pp::module consts_4(gen_.context->isolate);
+  v8pp::module consts_4(context_->isolate);
   consts_4.const_("opacity", data::texture_effect::opacity).const_("color", data::texture_effect::color);
-  gen_.context->context->module("texture_effect", consts_4);
+  context_->context->module("texture_effect", consts_4);
 }
 
 void initializer::init_user_script() {
@@ -169,14 +175,14 @@ void initializer::init_user_script() {
     begin++;
   }
   const auto source = std::string("script = ") + std::string(begin, end);
-  gen_.context->run("cache = typeof cache == 'undefined' ? {} : cache;");
-  gen_.context->run("script = {\"video\": {}};");
+  context_->run("cache = typeof cache == 'undefined' ? {} : cache;");
+  context_->run("script = {\"video\": {}};");
   try {
-    gen_.context->run(source);
+    context_->run(source);
   } catch (std::runtime_error& ex) {
     logger(WARNING) << "Exception occurred loading user script:\n" << ex.what() << std::endl;
   }
-  v8::HandleScope hs(gen_.context->context->isolate());
+  v8::HandleScope hs(context_->context->isolate());
   gen_.bridges_.init();
 }
 
@@ -186,15 +192,15 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
                                        std::optional<int> height,
                                        std::optional<double> scale) {
   // "run_array" is a bit of a misnomer, this only invokes the callback once
-  gen_.context->run_array(
+  context_->run_array(
       "script", [this, &preview, &rand_seed, &width, &height, &scale](v8::Isolate* isolate, v8::Local<v8::Value> val) {
         v8_interact i;
-        auto video_value = v8_index_object(current_context_native(gen_.context), val, "video");
+        auto video_value = v8_index_object(current_context_native(context_), val, "video");
         auto video = video_value->IsObject() ? video_value.As<v8::Object>() : v8::Object::New(isolate);
         if (preview) {
           v8::Local<v8::Object> preview_obj;
-          if (v8_index_object(current_context_native(gen_.context), val, "preview")->IsObject()) {
-            preview_obj = v8_index_object(current_context_native(gen_.context), val, "preview").As<v8::Object>();
+          if (v8_index_object(current_context_native(context_), val, "preview")->IsObject()) {
+            preview_obj = v8_index_object(current_context_native(context_), val, "preview").As<v8::Object>();
           } else {
             preview_obj = v8::Object::New(isolate);
           }
@@ -306,7 +312,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
 
 void initializer::init_gradients() {
   gradient_manager_.clear();
-  gen_.context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  context_->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i;
     auto obj = val.As<v8::Object>();
     auto gradient_objects = i.v8_obj(obj, "gradients");
@@ -332,8 +338,8 @@ void initializer::init_gradients() {
 }
 
 void initializer::init_textures() {
-  gen_.textures.clear();
-  gen_.context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  texture_manager_.clear();
+  context_->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i;
     auto obj = val.As<v8::Object>();
     if (!i.has_field(obj, "textures")) {
@@ -345,50 +351,14 @@ void initializer::init_textures() {
       auto texture_id = i.get_index(texture_fields, k);
       auto texture_settings = i.get(texture_objects, texture_id).As<v8::Object>();
       auto id = v8_str(isolate, texture_id.As<v8::String>());
-      auto type = i.str(texture_settings, "type");
-      auto zernike_type = i.integer_number(texture_settings, "zernike_type");
-      auto texture_effect = i.integer_number(texture_settings, "effect");
-      // perlin
-      gen_.textures[id].size = i.double_number(texture_settings, "size");
-      gen_.textures[id].octaves = i.integer_number(texture_settings, "octaves");
-      gen_.textures[id].persistence = i.double_number(texture_settings, "persistence");
-      gen_.textures[id].percentage = i.double_number(texture_settings, "percentage");
-      gen_.textures[id].scale = i.double_number(texture_settings, "scale");
-      auto range = i.v8_array(texture_settings, "range");
-      gen_.textures[id].strength = i.double_number(texture_settings, "strength");
-      gen_.textures[id].speed = i.double_number(texture_settings, "speed");
-      // zernikes
-      gen_.textures[id].m = i.double_number(texture_settings, "m");
-      gen_.textures[id].n = i.double_number(texture_settings, "n");
-      gen_.textures[id].rho = i.double_number(texture_settings, "rho");
-      gen_.textures[id].theta = i.double_number(texture_settings, "theta");
-
-      data::texture::noise_type use_type = data::texture::noise_type::perlin;
-      if (type == "fractal") {
-        use_type = data::texture::noise_type::fractal;
-      } else if (type == "turbulence") {
-        use_type = data::texture::noise_type::turbulence;
-      } else if (type == "zernike") {
-        if (zernike_type == data::zernike_type::version1) {
-          use_type = data::texture::noise_type::zernike_1;
-        } else if (zernike_type == data::zernike_type::version2) {
-          use_type = data::texture::noise_type::zernike_2;
-        }
-      }
-      gen_.textures[id].type = use_type;
-      gen_.textures[id].effect = data::texture::texture_effect(texture_effect);
-      if (range->Length() == 4) {
-        gen_.textures[id].fromX = i.double_number(range, 0);
-        gen_.textures[id].begin = i.double_number(range, 1);
-        gen_.textures[id].end = i.double_number(range, 2);
-        gen_.textures[id].toX = i.double_number(range, 3);
-      }
+      auto new_texture = texture_factory::create_from_object(i, texture_settings);
+      texture_manager_.add_texture(id, new_texture);
     }
   });
 }
 
 void initializer::init_toroidals() {
-  gen_.context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  context_->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i;
     auto obj = val.As<v8::Object>();
     if (!i.has_field(obj, "toroidal")) return;
@@ -408,30 +378,29 @@ void initializer::init_toroidals() {
 }
 
 void initializer::init_object_definitions() {
-  gen_.context->run("var object_definitions = {}");
-  gen_.context->enter_object(
-      "object_definitions", [this](v8::Isolate* isolate, v8::Local<v8::Value> object_definitions) {
-        // we keep stuff here to avoid overwrites, we might be able to get rid of this in the future
-        // but it's a one-time overhead, so doesn't matter too much.
-        auto defs_storage = object_definitions.As<v8::Object>();
-        gen_.context->enter_object("script", [&, this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-          v8_interact i;
-          auto obj = val.As<v8::Object>();
-          auto object_definitions = i.v8_obj(obj, "objects");
-          if (object_definitions->IsNullOrUndefined()) return;
-          auto object_definitions_fields = object_definitions->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
-          for (size_t k = 0; k < object_definitions_fields->Length(); k++) {
-            auto object_id = i.get_index(object_definitions_fields, k);
-            auto object_id_str = i.str(object_definitions_fields, k);
-            logger(DEBUG) << "Importing object " << object_id_str << std::endl;
-            auto object_definition = i.get(object_definitions, object_id).As<v8::Object>();
-            i.set_field(defs_storage, object_id, object_definition);
-            auto obj_from_storage = i.get(defs_storage, object_id).As<v8::Object>();
-            auto id = v8_str(isolate, object_id.As<v8::String>());
-            gen_.object_definitions_map[id].Reset(isolate, obj_from_storage);
-          }
-        });
-      });
+  context_->run("var object_definitions = {}");
+  context_->enter_object("object_definitions", [this](v8::Isolate* isolate, v8::Local<v8::Value> object_definitions) {
+    // we keep stuff here to avoid overwrites, we might be able to get rid of this in the future
+    // but it's a one-time overhead, so doesn't matter too much.
+    auto defs_storage = object_definitions.As<v8::Object>();
+    context_->enter_object("script", [&, this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+      v8_interact i;
+      auto obj = val.As<v8::Object>();
+      auto object_definitions = i.v8_obj(obj, "objects");
+      if (object_definitions->IsNullOrUndefined()) return;
+      auto object_definitions_fields = object_definitions->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+      for (size_t k = 0; k < object_definitions_fields->Length(); k++) {
+        auto object_id = i.get_index(object_definitions_fields, k);
+        auto object_id_str = i.str(object_definitions_fields, k);
+        logger(DEBUG) << "Importing object " << object_id_str << std::endl;
+        auto object_definition = i.get(object_definitions, object_id).As<v8::Object>();
+        i.set_field(defs_storage, object_id, object_definition);
+        auto obj_from_storage = i.get(defs_storage, object_id).As<v8::Object>();
+        auto id = v8_str(isolate, object_id.As<v8::String>());
+        gen_.object_definitions_map[id].Reset(isolate, obj_from_storage);
+      }
+    });
+  });
 }
 
 }  // namespace interpreter

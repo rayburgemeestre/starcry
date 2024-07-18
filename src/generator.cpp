@@ -31,14 +31,14 @@ generator::generator(std::shared_ptr<metrics>& metrics,
                      const generator_options& opts)
     : context(context),
       metrics_(metrics),
-      initializer_(*this, gradient_manager_),
+      initializer_(*this, gradient_manager_, texture_manager_, context),
       bridges_(*this),
       scenes_(*this),
       sampler_(*this),
       positioner_(*this),
       interactor_(*this),
       instantiator_(*this),
-      job_mapper_(*this, gradient_manager_),
+      job_mapper_(*this, gradient_manager_, texture_manager_),
       object_lookup_(*this),
       checkpoints_(*this),
       generator_opts(opts) {}
@@ -55,7 +55,7 @@ void generator::init(const std::string& filename,
   job = std::make_shared<data::job>();
   job->frame_number = frame_number;
 
-  initializer_.initialize_all(rand_seed, preview, width, height, scale);
+  initializer_.initialize_all(filename_, rand_seed, preview, width, height, scale);
 
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     genctx = std::make_shared<generator_context>(val, 0);
