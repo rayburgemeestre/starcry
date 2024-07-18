@@ -12,6 +12,7 @@
 #include "data/zernike_type.hpp"
 #include "generator.h"
 #include "gradient_factory.h"
+#include "job_mapper.h"
 #include "scripting.h"
 #include "texture_factory.h"
 #include "texture_manager.h"
@@ -35,14 +36,17 @@ initializer::initializer(generator& gen,
       gradient_manager_(gm),
       texture_manager_(tm),
       toroidal_manager_(toroidalman),
-      context_(std::move(context)) {}
+      context_(std::move(context)),
+      job_mapper_(nullptr) {}
 
-void initializer::initialize_all(const std::string& filename,
+void initializer::initialize_all(std::shared_ptr<data::job> job,
+                                 const std::string& filename,
                                  std::optional<double> rand_seed,
                                  bool preview,
                                  std::optional<int> width,
                                  std::optional<int> height,
                                  std::optional<double> scale) {
+  job_mapper_ = std::make_shared<job_mapper>(job);
   init_context(filename);
   init_user_script();
   init_video_meta_info(rand_seed, preview, width, height, scale);
@@ -115,7 +119,7 @@ void initializer::reset_context() {
   context_->add_fun("blending_type_str", &data::blending_type::to_str);
   context_->add_fun("texture_3d_str", &data::texture_3d::to_str);
   context_->add_fun("frame_number", [&]() {
-    return gen_.job->frame_number;
+    return job_mapper_->get_frame_number();
   });
   context_->add_fun("exit", &my_exit);
 
@@ -287,10 +291,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         if (i.has_field(video, "fast_ff")) gen_.fast_ff = i.boolean(video, "fast_ff");
         if (i.has_field(video, "bg_color")) {
           auto bg = i.v8_obj(video, "bg_color");
-          gen_.job->background_color.r = i.double_number(bg, "r");
-          gen_.job->background_color.g = i.double_number(bg, "g");
-          gen_.job->background_color.b = i.double_number(bg, "b");
-          gen_.job->background_color.a = i.double_number(bg, "a");
+          job_mapper_->map_background_color(i, bg);
         }
         if (i.has_field(video, "sample")) {
           auto sample = i.get(video, "sample").As<v8::Object>();
@@ -302,10 +303,8 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         gen_.max_frames = duration * gen_.use_fps;
         gen_.metrics_->set_total_frames(gen_.max_frames);
 
-        gen_.job->width = gen_.canvas_w;
-        gen_.job->height = gen_.canvas_h;
-        gen_.job->canvas_w = gen_.canvas_w;
-        gen_.job->canvas_h = gen_.canvas_h;
+        job_mapper_->set_canvas(gen_.canvas_w, gen_.canvas_h);
+
         double use_scale = i.double_number(video, "scale", 1.);
         if (scale) {
           use_scale = *scale;
@@ -313,7 +312,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         if (gen_.generator_opts.custom_scale) {
           use_scale = gen_.generator_opts.custom_scale;
         }
-        gen_.job->scale = use_scale;
+        job_mapper_->set_scale(use_scale);
         gen_.scalesettings.video_scale = use_scale;
         gen_.scalesettings.video_scale_next = use_scale;
         gen_.scalesettings.video_scale_intermediate = use_scale;

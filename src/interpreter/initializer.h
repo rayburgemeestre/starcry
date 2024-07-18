@@ -10,11 +10,16 @@
 
 class v8_wrapper;
 
+namespace data {
+struct job;
+}
+
 namespace interpreter {
 class gradient_manager;
 class texture_manager;
 class toroidal_manager;
 class generator;  // soon remove
+class job_mapper;
 
 class initializer {
 public:
@@ -24,7 +29,8 @@ public:
                        toroidal_manager& toroidalman,
                        std::shared_ptr<v8_wrapper> context);
 
-  void initialize_all(const std::string& filename,
+  void initialize_all(std::shared_ptr<data::job> job,
+                      const std::string& filename,
                       std::optional<double> rand_seed,
                       bool preview,
                       std::optional<int> width,
@@ -51,5 +57,6 @@ private:
   texture_manager& texture_manager_;
   toroidal_manager& toroidal_manager_;
   std::shared_ptr<v8_wrapper> context_;
+  std::shared_ptr<job_mapper> job_mapper_;
 };
 }  // namespace interpreter

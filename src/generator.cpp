@@ -55,7 +55,7 @@ void generator::init(const std::string& filename,
   job = std::make_shared<data::job>();
   job->frame_number = frame_number;
 
-  initializer_.initialize_all(filename_, rand_seed, preview, width, height, scale);
+  initializer_.initialize_all(job, filename_, rand_seed, preview, width, height, scale);
 
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     genctx = std::make_shared<generator_context>(val, 0);
