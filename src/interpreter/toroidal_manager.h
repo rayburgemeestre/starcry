@@ -17,6 +17,7 @@ class toroidal_manager {
 public:
   void add_toroidal(const std::string& id, data::toroidal& toroidal);
   void clear();
+  const data::toroidal& get(const std::string& id);
   const std::unordered_map<std::string, data::toroidal>& toroidals_map();
 
 private:

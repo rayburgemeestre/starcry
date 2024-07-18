@@ -17,6 +17,7 @@
 
 namespace interpreter {
 class generator;
+class toroidal_manager;
 
 class interactor {
 private:
@@ -25,7 +26,7 @@ private:
   std::map<std::string, unique_group> unique_groups;
 
 public:
-  explicit interactor(generator& gen);
+  explicit interactor(generator& gen, toroidal_manager& tm);
 
   void reset();
   void update_interactions();
@@ -50,5 +51,6 @@ private:
                       double constrain_dist_max) const;
 
   generator& gen_;
+  toroidal_manager& toroidal_manager_;
 };
 }  // namespace interpreter

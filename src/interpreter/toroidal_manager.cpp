@@ -16,6 +16,10 @@ void toroidal_manager::clear() {
   toroidals_.clear();
 }
 
+const data::toroidal& toroidal_manager::get(const std::string& id) {
+  return toroidals_.at(id);
+}
+
 const std::unordered_map<std::string, data::toroidal>& toroidal_manager::toroidals_map() {
   return toroidals_;
 }

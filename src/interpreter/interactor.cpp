@@ -10,7 +10,7 @@
 
 namespace interpreter {
 
-interactor::interactor(generator& gen) : gen_(gen) {}
+interactor::interactor(generator& gen, toroidal_manager& tm) : gen_(gen), toroidal_manager_(tm) {}
 
 void interactor::reset() {
   qts.clear();
@@ -194,10 +194,10 @@ void interactor::update_object_toroidal(
     data_staging::toroidal& toroidal_data, double& x, double& y, double& diff_x, double& diff_y) {
   if (toroidal_data.group().empty()) return;
 
-  auto the_width = gen_.toroidals[toroidal_data.group()].width;
-  auto the_height = gen_.toroidals[toroidal_data.group()].height;
-  auto x_offset = gen_.toroidals[toroidal_data.group()].x;
-  auto y_offset = gen_.toroidals[toroidal_data.group()].y;
+  auto the_width = toroidal_manager_.get(toroidal_data.group()).width;
+  auto the_height = toroidal_manager_.get(toroidal_data.group()).height;
+  auto x_offset = toroidal_manager_.get(toroidal_data.group()).x;
+  auto y_offset = toroidal_manager_.get(toroidal_data.group()).y;
 
   diff_x = 0;
   diff_y = 0;

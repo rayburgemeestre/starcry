@@ -77,7 +77,6 @@ class generator {
   double tolerated_granularity = 1;
   bool minimize_steps_per_object = true;
   size_t use_fps = 25;
-  std::unordered_map<std::string, data::toroidal> toroidals;
   std::unordered_map<size_t, std::map<int, size_t>> indexes;
   frame_stepper stepper;
   int attempt = 0;
