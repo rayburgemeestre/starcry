@@ -19,6 +19,7 @@
 #include "interpreter/checkpoints.h"
 #include "interpreter/frame_sampler.h"
 #include "interpreter/generator_options.hpp"
+#include "interpreter/gradient_manager.h"
 #include "interpreter/initializer.h"
 #include "interpreter/instantiator.h"
 #include "interpreter/interactor.h"
@@ -74,7 +75,6 @@ class generator {
   double tolerated_granularity = 1;
   bool minimize_steps_per_object = true;
   size_t use_fps = 25;
-  std::unordered_map<std::string, data::gradient> gradients;
   std::unordered_map<std::string, data::texture> textures;
   std::unordered_map<std::string, data::toroidal> toroidals;
   std::unordered_map<size_t, std::map<int, size_t>> indexes;
@@ -95,6 +95,8 @@ class generator {
 
   std::shared_ptr<generator_context> genctx;
   bool debug_;
+
+  gradient_manager gradient_manager_;
 
   initializer initializer_;
   bridges bridges_;

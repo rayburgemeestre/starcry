@@ -31,7 +31,7 @@ generator::generator(std::shared_ptr<metrics>& metrics,
                      const generator_options& opts)
     : context(context),
       metrics_(metrics),
-      initializer_(*this),
+      initializer_(*this, gradient_manager_),
       bridges_(*this),
       scenes_(*this),
       sampler_(*this),

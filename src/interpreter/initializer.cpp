@@ -8,6 +8,7 @@
 #include "data/texture_effect.hpp"
 #include "data/zernike_type.hpp"
 #include "generator.h"
+#include "gradient_factory.h"
 #include "scripting.h"
 #include "util/v8_interact.hpp"
 #include "v8pp/module.hpp"
@@ -18,7 +19,7 @@ v8::Local<v8::Context> current_context_native(std::shared_ptr<v8_wrapper>& wrapp
   return wrapper_context->context->isolate()->GetCurrentContext();
 }
 
-initializer::initializer(generator& gen) : gen_(gen) {}
+initializer::initializer(generator& gen, gradient_manager& gm) : gen_(gen), gradient_manager_(gm) {}
 
 void initializer::initialize_all(std::optional<double> rand_seed,
                                  bool preview,
@@ -304,7 +305,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
 }
 
 void initializer::init_gradients() {
-  gen_.gradients.clear();
+  gradient_manager_.clear();
   gen_.context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i;
     auto obj = val.As<v8::Object>();
@@ -317,39 +318,15 @@ void initializer::init_gradients() {
       auto id = v8_str(isolate, gradient_id.As<v8::String>());
       // This code is duplicated in client.cpp, because there we are not dealing with V8 Javascript
       // objects, but nlohmann json objects.
+      data::gradient new_gradient;
       if (gradient_value->IsArray()) {
-        auto positions = gradient_value.As<v8::Array>();
-        for (size_t l = 0; l < positions->Length(); l++) {
-          auto position = i.get_index(positions, l).As<v8::Object>();
-          auto pos = i.double_number(position, "position");
-          auto r = i.double_number(position, "r");
-          auto g = i.double_number(position, "g");
-          auto b = i.double_number(position, "b");
-          auto a = i.double_number(position, "a");
-          gen_.gradients[id].colors.emplace_back(pos, data::color{r, g, b, a});
-        }
+        new_gradient = gradient_factory::create_from_array(gradient_value.As<v8::Array>(), i);
       } else if (gradient_value->IsString()) {
         auto color_string_obj = gradient_value.As<v8::String>();
         auto color_string = v8_str(isolate, color_string_obj);
-        auto r = std::stoi(color_string.substr(1, 2), nullptr, 16) / 255.;
-        auto g = std::stoi(color_string.substr(3, 2), nullptr, 16) / 255.;
-        auto b = std::stoi(color_string.substr(5, 2), nullptr, 16) / 255.;
-        double index = 0.9;
-        if (color_string.length() >= 8 && color_string[7] == '@') {
-          // String is for example '#ffffff@0.9', keep only the 0.9 part
-          try {
-            auto remainder = std::stod(color_string.substr(8));
-            index = std::clamp(remainder, 0.0, 1.0);
-          } catch (const std::invalid_argument& e) {
-            logger(DEBUG) << "Invalid argument: " << e.what() << std::endl;
-          } catch (const std::out_of_range& e) {
-            logger(DEBUG) << "Out of range: " << e.what() << std::endl;
-          }
-        }
-        gen_.gradients[id].colors.emplace_back(0.0, data::color{r, g, b, 1.});
-        gen_.gradients[id].colors.emplace_back(index, data::color{r, g, b, 1.});
-        gen_.gradients[id].colors.emplace_back(1.0, data::color{r, g, b, 0.});
+        new_gradient = gradient_factory::create_from_string(color_string);
       }
+      gradient_manager_.add_gradient(id, new_gradient);
     }
   });
 }

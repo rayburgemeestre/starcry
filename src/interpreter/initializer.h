@@ -9,10 +9,11 @@
 
 namespace interpreter {
 class generator;
+class gradient_manager;
 
 class initializer {
 public:
-  explicit initializer(generator &gen);
+  explicit initializer(generator& gen, gradient_manager& gm);
 
   void initialize_all(std::optional<double> rand_seed,
                       bool preview,
@@ -35,6 +36,7 @@ public:
 private:
   void reset_context();
 
-  generator &gen_;
+  generator& gen_;
+  gradient_manager& gradient_manager_;
 };
 }  // namespace interpreter
