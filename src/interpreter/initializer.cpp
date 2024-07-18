@@ -262,6 +262,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         if (i.has_field(video, "update_positions")) settings_.update_positions = i.boolean(video, "update_positions");
         if (i.has_field(video, "dithering")) settings_.dithering = i.boolean(video, "dithering");
         if (i.has_field(video, "gamma")) settings_.gamma = i.double_number(video, "gamma");
+        if (i.has_field(video, "scale_ratio")) settings_.scale_ratio = i.boolean(video, "scale_ratio");
         if (i.has_field(video, "min_intermediates"))
           gen_.min_intermediates = i.integer_number(video, "min_intermediates");
         if (i.has_field(video, "max_intermediates"))
