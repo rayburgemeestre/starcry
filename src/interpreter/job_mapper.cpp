@@ -7,9 +7,10 @@
 #include "job_mapper.h"
 #include "abort_exception.hpp"
 #include "generator.h"
+#include "gradient_manager.h"
 
 namespace interpreter {
-job_mapper::job_mapper(generator& gen) : gen_(gen) {}
+job_mapper::job_mapper(generator& gen, gradient_manager& gm) : gen_(gen), gradient_manager_(gm) {}
 
 void job_mapper::convert_objects_to_render_job(step_calculator& sc, v8::Local<v8::Object> video) {
   //  // Risking doing this for nothing, as this may still be discarded, we'll translate all the instances to
@@ -79,7 +80,7 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     new_shape.gradients_.clear();
     new_shape.textures.clear();
 
-    copy_gradient_from_object_to_shape(shape, new_shape, gen_.gradients);
+    copy_gradient_from_object_to_shape(shape, new_shape, gradient_manager_.gradients_map());
     copy_texture_from_object_to_shape(shape, new_shape, gen_.textures);
 
     new_shape.texture_3d_ = shape.styling_cref().texture_3d();
@@ -103,9 +104,9 @@ void job_mapper::convert_object_to_render_job(data_staging::shape_t& shape,
     if (!gradient_id.empty()) {
       new_shape.gradient_id_str = gradient_id;
       if (new_shape.gradients_.empty()) {  // instead of if-statement we can also clear() the array
-        auto& known_gradients_map = gen_.gradients;
+        const auto& known_gradients_map = gradient_manager_.gradients_map();
         if (known_gradients_map.contains(gradient_id)) {
-          new_shape.gradients_.emplace_back(1.0, known_gradients_map[gradient_id]);
+          new_shape.gradients_.emplace_back(1.0, known_gradients_map.at(gradient_id));
         } else {
           new_shape.gradients_.emplace_back(1.0, data::gradient{});
           new_shape.gradients_[0].second.colors.emplace_back(0.0, data::color{1.0, 1, 1, 1});
@@ -220,7 +221,7 @@ template <typename T>
 void job_mapper::copy_gradient_from_object_to_shape(
     T& source_object,
     data::shape& destination_shape,
-    std::unordered_map<std::string, data::gradient>& known_gradients_map) {
+    const std::unordered_map<std::string, data::gradient>& known_gradients_map) {
   if constexpr (!std::is_same_v<T, data_staging::script>) {
     std::string namespace_ = source_object.meta_cref().namespace_name();
     std::string gradient_id = namespace_ + source_object.styling_ref().gradient();
@@ -228,12 +229,12 @@ void job_mapper::copy_gradient_from_object_to_shape(
     if (!gradient_id.empty()) {
       if (destination_shape.gradients_.empty()) {
         if (known_gradients_map.find(gradient_id) != known_gradients_map.end()) {
-          destination_shape.gradients_.emplace_back(1.0, known_gradients_map[gradient_id]);
+          destination_shape.gradients_.emplace_back(1.0, known_gradients_map.at(gradient_id));
         }
       }
     }
     for (const auto& [opacity, gradient_id] : source_object.styling_ref().get_gradients_cref()) {
-      destination_shape.gradients_.emplace_back(opacity, known_gradients_map[gradient_id]);
+      destination_shape.gradients_.emplace_back(opacity, known_gradients_map.at(gradient_id));
     }
   }
 }

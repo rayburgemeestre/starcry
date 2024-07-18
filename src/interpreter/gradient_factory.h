@@ -21,4 +21,4 @@ public:
   static data::gradient create_from_string(const std::string& color_string);
 };
 
-}
+}  // namespace interpreter

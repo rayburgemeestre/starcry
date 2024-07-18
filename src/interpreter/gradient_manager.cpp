@@ -16,4 +16,8 @@ void gradient_manager::clear() {
   gradients_.clear();
 }
 
+const std::unordered_map<std::string, data::gradient>& gradient_manager::gradients_map() {
+  return gradients_;
 }
+
+}  // namespace interpreter

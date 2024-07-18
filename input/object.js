@@ -19,9 +19,20 @@ _ = {
       'strength': 1.0,
       'speed': 1.,
     },
+    'zernike1':
+        {'type': 'zernike', 'n': 7, 'm': -3, 'zernike_type': zernike_type.version1, 'effect': texture_effect.opacity}
   },
   'objects': {
     'main': {
+      'init': function() {
+        this.spawn({'id': 'main1'});
+        this.spawn({'id': 'main2'});
+      },
+      'time': function(t, e, s, T) {
+        // how do we tween between objects...
+      }
+    },
+    'main1': {
       'x': 0,
       'y': 0,
       'props': {},
@@ -31,9 +42,28 @@ _ = {
       'radiussize': 20.0,
       'angle': 0.,
       'init': function() {},
-      'time': function(t, e, scene) {},
+      'time': function(t, e, scene) {
+        this.opacity = 1.0 - t;
+      },
       'gradient': 'white',
       'texture': 'clouds1',
+    },
+    'main2': {
+      'x': 0,
+      'y': 0,
+      'props': {},
+      'subobj': [],
+      'radius': 0,
+      //'radiussize': 100.0,
+      'radiussize': 20.0,
+      'angle': 0.,
+      'init': function() {},
+      'time': function(t, e, scene) {
+        this.opacity = t;
+      },
+      'gradient': 'white',
+      //'texture': 'clouds1',
+      'texture': 'zernike1',
     },
   },
   'video': {
@@ -46,12 +76,13 @@ _ = {
     'minimize_steps_per_object': false,
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
     'grain_for_opacity': false,
+    'gamma': 1.0,
   },
   'preview': {
     'width': 512,
     'height': 512,
   },
   'scenes': [
-    {'name': 'scene', 'duration': 5.0, 'objects': [{'id': 'main', 'x': 0, 'y': 0, 'z': 0, 'props': {}}]},
+    {'name': 'scene', 'duration': 5.0, 'objects': [{'id': 'main', 'x': 0, 'y': 0, 'z': 0}]},
   ]
 };

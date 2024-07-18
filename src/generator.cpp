@@ -38,7 +38,7 @@ generator::generator(std::shared_ptr<metrics>& metrics,
       positioner_(*this),
       interactor_(*this),
       instantiator_(*this),
-      job_mapper_(*this),
+      job_mapper_(*this, gradient_manager_),
       object_lookup_(*this),
       checkpoints_(*this),
       generator_opts(opts) {}

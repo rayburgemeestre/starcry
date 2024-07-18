@@ -12,11 +12,12 @@
 
 namespace interpreter {
 class generator;
+class gradient_manager;
 
 class job_mapper {
 private:
 public:
-  explicit job_mapper(generator& gen);
+  explicit job_mapper(generator& gen, gradient_manager& gm);
 
   void convert_objects_to_render_job(step_calculator& sc, v8::Local<v8::Object> video);
 
@@ -26,12 +27,13 @@ private:
   template <typename T>
   void copy_gradient_from_object_to_shape(T& source_object,
                                           data::shape& destination_shape,
-                                          std::unordered_map<std::string, data::gradient>& known_gradients_map);
+                                          const std::unordered_map<std::string, data::gradient>& known_gradients_map);
   template <typename T>
   void copy_texture_from_object_to_shape(T& source_object,
                                          data::shape& destination_shape,
                                          std::unordered_map<std::string, data::texture>& known_textures_map);
 
   generator& gen_;
+  gradient_manager& gradient_manager_;
 };
 }  // namespace interpreter
