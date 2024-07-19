@@ -30,8 +30,8 @@ namespace data_staging {
 class line {
 private:
   meta meta_;
-  location line_start_;
-  location line_end_;
+  mutable location line_start_;
+  mutable location line_end_;
   location transitive_line_start_;
   location transitive_line_end_;
   movement movement_line_start_;
@@ -147,6 +147,16 @@ public:
   }
   const std::vector<cascade>& cascades_in() const {
     return cascades_in_;
+  }
+
+  [[nodiscard]] const data_staging::location location_cref() const {
+    return location_ref();
+  }
+  data_staging::location location_ref() const {
+    location center(vector2d((line_start_.position().x - line_end_.position().x / 2.0),
+                             (line_start_.position().y - line_end_.position().y / 2.0)),
+                    0);
+    return center;
   }
 };
 }  // namespace data_staging

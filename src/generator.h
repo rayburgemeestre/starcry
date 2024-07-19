@@ -17,6 +17,7 @@
 
 #include "interpreter/bridges.h"
 #include "interpreter/checkpoints.h"
+#include "interpreter/debug_printer.h"
 #include "interpreter/frame_sampler.h"
 #include "interpreter/generator_options.hpp"
 #include "interpreter/gradient_manager.h"
@@ -62,11 +63,11 @@ class generator {
   friend class job_to_shape_mapper;
   friend class object_lookup;
   friend class checkpoints;
+  friend class debug_printer;
 
   std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
   std::shared_ptr<data::job> job;
-  std::vector<std::reference_wrapper<data_staging::shape_t>> stack;
 
   uint32_t frame_number = 0;
 
@@ -110,6 +111,8 @@ class generator {
   job_to_shape_mapper job_shape_mapper_;
   object_lookup object_lookup_;
   checkpoints checkpoints_;
+
+  debug_printer debug_printer_;
 
   util::random_generator rand_;
   data_staging::attrs global_attrs_;
@@ -174,10 +177,6 @@ public:
 
 private:
   bool _generate_frame();
-
-  void debug_print_all();
-  void debug_print_next();
-  void debug_print(std::vector<data_staging::shape_t>& shapes);
 };
 
 }  // namespace interpreter

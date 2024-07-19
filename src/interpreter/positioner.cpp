@@ -92,7 +92,6 @@ void positioner::update_object_positions() {
 }
 
 void positioner::update_rotations() {
-  auto& stack = gen_.stack;
   const auto handle_pass1 = [&]<typename T>(data_staging::shape_t& abstract_shape, T& shape, data_staging::meta& meta) {
     if (meta.level() >= 0) {
       if (int64_t(stack.size()) <= meta.level()) {

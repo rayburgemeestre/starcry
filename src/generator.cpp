@@ -16,6 +16,7 @@
 #include "core/delayed_exit.hpp"
 #include "image.hpp"
 #include "interpreter/abort_exception.hpp"
+#include "interpreter/debug_printer.h"
 #include "interpreter/fast_forwarder.hpp"
 #include "scripting.h"
 #include "starcry/metrics.h"
@@ -41,6 +42,7 @@ generator::generator(std::shared_ptr<metrics>& metrics,
       job_shape_mapper_(*this, gradient_manager_, texture_manager_),
       object_lookup_(*this),
       checkpoints_(*this),
+      debug_printer_(*this),
       generator_opts(opts) {}
 
 void generator::init(const std::string& filename,
@@ -400,7 +402,7 @@ bool generator::_generate_frame() {
       scenes_.commit();
       // scenes_.memory_dump();
       if (generator_opts.debug) {
-        debug_print_next();
+        debug_printer_.debug_print_next();
       }
 
       // cleanup for next iteration
@@ -863,85 +865,6 @@ v8::Local<v8::Object> generator::get_object(int64_t object_unique_id) {
 
 std::unordered_map<std::string, v8::Persistent<v8::Object>>& generator::get_object_definitions_ref() {
   return object_definitions_map;
-}
-
-void generator::debug_print_all() {
-  logger(DEBUG) << "==[ debug print: next (" << scenes_.next_shapes_current_scene().size() << ") ]==" << std::endl;
-  debug_print(scenes_.next_shapes_current_scene());
-
-  logger(DEBUG) << "==[ debug print: intermediate (" << scenes_.intermediate_shapes_current_scene().size()
-                << ") ]==" << std::endl;
-  debug_print(scenes_.intermediate_shapes_current_scene());
-
-  logger(DEBUG) << "==[ debug print: current (" << scenes_.shapes_current_scene().size() << ") ]==" << std::endl;
-  debug_print(scenes_.shapes_current_scene());
-}
-
-void generator::debug_print_next() {
-  debug_print(scenes_.next_shapes_current_scene());
-}
-
-void generator::debug_print(std::vector<data_staging::shape_t>& shapes) {
-  const auto print_meta = [](data_staging::meta& meta,
-                             data_staging::location& loc,
-                             data_staging::movement& mov,
-                             data_staging::behavior& beh,
-                             data_staging::generic& gen,
-                             data_staging::styling& sty) {
-    logger(INFO) << "uid=" << meta.unique_id() << ", puid=" << meta.parent_uid() << ", id=" << meta.id()
-                 << ", level=" << meta.level() << ", namespace=" << meta.namespace_name() << " @ "
-                 << loc.position_cref().x << "," << loc.position_cref().y << " +" << mov.velocity().x << ","
-                 << mov.velocity().y << ", last_collide=" << beh.last_collide() << ", mass=" << gen.mass()
-                 << ", angle = " << gen.angle() << ", gravity_group=" << beh.gravity_group()
-                 << ", opacity=" << gen.opacity() << ", texture = " << sty.texture()
-                 << ", gradient = " << sty.gradient() << ", unique_group = " << beh.unique_group()
-                 << ", destroyed = " << std::boolalpha << meta.is_destroyed() << ", scale = " << gen.scale()
-                 << std::endl;
-  };
-  for (auto& shape : shapes) {
-    meta_visit(
-        shape,
-        [&](data_staging::circle& shape) {
-          print_meta(shape.meta_ref(),
-                     shape.location_ref(),
-                     shape.movement_ref(),
-                     shape.behavior_ref(),
-                     shape.generic_ref(),
-                     shape.styling_ref());
-        },
-        [&](data_staging::ellipse& shape) {
-          print_meta(shape.meta_ref(),
-                     shape.location_ref(),
-                     shape.movement_ref(),
-                     shape.behavior_ref(),
-                     shape.generic_ref(),
-                     shape.styling_ref());
-        },
-        [&](data_staging::line& shape) {
-          print_meta(shape.meta_ref(),
-                     shape.line_start_ref(),
-                     shape.movement_line_start_ref(),
-                     shape.behavior_ref(),
-                     shape.generic_ref(),
-                     shape.styling_ref());
-        },
-        [&](data_staging::text& shape) {
-          print_meta(shape.meta_ref(),
-                     shape.location_ref(),
-                     shape.movement_ref(),
-                     shape.behavior_ref(),
-                     shape.generic_ref(),
-                     shape.styling_ref());
-        },
-        [&](data_staging::script& shape) {
-          print_meta(shape.meta_ref(),
-                     shape.location_ref(),
-                     shape.movement_ref(),
-                     shape.behavior_ref(),
-                     shape.generic_ref(),
-                     shape.styling_ref());
-        });
-  }
 }
 
 std::vector<int64_t> generator::get_transitive_ids(const std::vector<int64_t>& unique_ids) {

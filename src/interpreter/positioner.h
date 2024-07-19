@@ -13,6 +13,7 @@ class generator;
 class positioner {
 private:
   generator& gen_;
+  std::vector<std::reference_wrapper<data_staging::shape_t>> stack;
 
 public:
   explicit positioner(generator& gen);

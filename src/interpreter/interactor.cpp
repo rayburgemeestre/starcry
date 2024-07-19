@@ -68,7 +68,6 @@ void interactor::update_interactions() {
   };
 
   // first pass transitive xy become set
-  gen_.stack.clear();
   for (auto& abstract_shape : gen_.scenes_.next_shapes_current_scene()) {
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& c) {
