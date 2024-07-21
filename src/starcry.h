@@ -172,5 +172,5 @@ private:
   std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);
   void handle_frame(std::shared_ptr<render_msg> job_msg);
   static std::string serialize_shapes_to_json(std::vector<std::vector<data::shape>>& shapes);
-  const std::vector<int64_t> selected_ids_transitive(std::shared_ptr<job_message>& job);
+  std::vector<int64_t> selected_ids_transitive(std::shared_ptr<job_message>& job);
 };

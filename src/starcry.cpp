@@ -269,19 +269,15 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
         continue;
       }
       // TODO: duplicated code
-      util::ImageSplitter<uint32_t> is{job_copy->canvas_w, job_copy->canvas_h};
       if (v.num_chunks() == 1) {
         jobs->push(std::make_shared<job_message>(cmd_def, job_copy));
       } else {
         metrics_->resize_job(job_copy->job_number, v.num_chunks());
+        util::ImageSplitter<uint32_t> is{job_copy->canvas_w, job_copy->canvas_h};
         const auto rectangles = is.split(v.num_chunks(), util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
+        interpreter::job_mapper jm(job_copy);
         for (size_t i = 0, counter = 1; i < rectangles.size(); i++) {
-          job_copy->width = rectangles[i].width();
-          job_copy->height = rectangles[i].height();
-          job_copy->offset_x = rectangles[i].x();
-          job_copy->offset_y = rectangles[i].y();
-          job_copy->chunk = counter;
-          job_copy->num_chunks = v.num_chunks();
+          jm.map_rectangle(rectangles[i], counter, v.num_chunks());
           counter++;
           jobs->push(std::make_shared<job_message>(cmd_def, std::make_shared<data::job>(*job_copy)));
         }
@@ -856,7 +852,7 @@ std::string starcry::serialize_shapes_to_json(std::vector<std::vector<data::shap
   return shapes_json.dump();
 }
 
-const std::vector<int64_t> starcry::selected_ids_transitive(std::shared_ptr<job_message>& job) {
+std::vector<int64_t> starcry::selected_ids_transitive(std::shared_ptr<job_message>& job) {
   const std::vector<int64_t> selected_ids = ([&]() {
     {
       if (const auto& instruction = std::dynamic_pointer_cast<frame_instruction>(job->original_instruction)) {
@@ -868,7 +864,7 @@ const std::vector<int64_t> starcry::selected_ids_transitive(std::shared_ptr<job_
     return std::vector<int64_t>{};
   })();
   std::vector<int64_t> selected_ids_transitive;
-  if (selected_ids.size() > 0) {
+  if (!selected_ids.empty()) {
     selected_ids_transitive = gen->get_transitive_ids(selected_ids);
   }
   return selected_ids_transitive;
