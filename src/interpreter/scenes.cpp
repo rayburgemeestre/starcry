@@ -145,10 +145,10 @@ void scenes::prepare_scene() {
   if (scenesettings.parent_offset != -1) {
     const auto desired_duration =
         scenesettings.desired_duration != -1 ? scenesettings.desired_duration : scenesettings.scenes_duration;
-    const auto perc_of_t = desired_duration / this->scenesettings.scenes_duration;  // e.g. 0.33
-    const auto Tstart = scenesettings.parent_offset;                                // e.g. 0.50
-    const auto Tend = scenesettings.parent_offset + perc_of_t;                      // e.g. 0.83
-    const auto T = (t - Tstart) / (Tend - Tstart);                                  // e.g. 0.91
+    const auto perc_of_t = desired_duration / scenesettings.scenes_duration;  // e.g. 0.33
+    const auto Tstart = scenesettings.parent_offset;                          // e.g. 0.50
+    const auto Tend = scenesettings.parent_offset + perc_of_t;                // e.g. 0.83
+    const auto T = (t - Tstart) / (Tend - Tstart);                            // e.g. 0.91
     const auto E = e;
     auto S = std::clamp((T - scenesettings.offset_next) / next_scene_duration, 0., 1.);
     return time_settings{T, E, S};

@@ -28,6 +28,8 @@ TEST_CASE("Test complex image") {
   sc.options.script_file = "input/script.js";
   sc.options.frame_of_interest = 1;
   REQUIRE(sc.test_create_image("unittest_005_script_frame1") == double(0));
+  sc.options.frame_of_interest = 50;
+  REQUIRE(sc.test_create_image("unittest_005_script_frame50") == double(0));
 }
 
 TEST_CASE("Test different perlin noise functions") {

@@ -5,7 +5,6 @@
  */
 
 #include "positioner.h"
-#include <cstdint>
 
 #include "generator.h"
 
@@ -32,7 +31,6 @@ void positioner::update_object_positions() {
       if (scenesettings_from_object_id == -1) {
         gen_.update_time(abstract_shape, shape.meta_cref().id(), gen_.scenes_.scenesettings);
       } else {
-        // TODO:
         gen_.update_time(
             abstract_shape, shape.meta_cref().id(), gen_.scenes_.scenesettings_objs[scenesettings_from_object_id]);
       }
