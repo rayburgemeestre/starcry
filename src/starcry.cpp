@@ -27,6 +27,7 @@
 #include "util/logger.h"
 #include "webserver.h"
 
+#include "interpreter/job_mapper.h"
 #include "starcry/metrics.h"
 #include "starcry/redis_client.h"
 #include "starcry/redis_server.h"
@@ -319,40 +320,22 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     gen->generate_frame();
 
     auto the_job = gen->get_job();
+    interpreter::job_mapper jm(the_job);
+    jm.map_viewpoint(viewpoint);
 
-    if (viewpoint.canvas_w) {
-      the_job->canvas_w = viewpoint.canvas_w;
-      the_job->width = viewpoint.canvas_w;
-    }
-    if (viewpoint.canvas_h) {
-      the_job->canvas_h = viewpoint.canvas_h;
-      the_job->height = viewpoint.canvas_h;
-    }
-
-    util::ImageSplitter<uint32_t> is{the_job->canvas_w, the_job->canvas_h};
-
-    the_job->scale *= viewpoint.scale;
-    the_job->view_x = viewpoint.offset_x;
-    the_job->view_y = viewpoint.offset_y;
-    the_job->output_file = f.output_file();
+    jm.map_output_file(f.output_file());
 
     if (f.num_chunks() == 1) {
-      the_job->last_frame = f.last_frame();
+      jm.map_last_frame(f.last_frame());
       jobs->push(std::make_shared<job_message>(cmd_def, the_job));
     } else {
       metrics_->resize_job(the_job->job_number, f.num_chunks());
+      util::ImageSplitter<uint32_t> is{the_job->canvas_w, the_job->canvas_h};
       const auto rectangles = is.split(f.num_chunks(), util::ImageSplitter<uint32_t>::Mode::SplitHorizontal);
       for (size_t i = 0, counter = 1; i < rectangles.size(); i++) {
-        the_job->width = rectangles[i].width();
-        the_job->height = rectangles[i].height();
-        the_job->offset_x = rectangles[i].x();
-        the_job->offset_y = rectangles[i].y();
-        the_job->chunk = counter;
-        the_job->num_chunks = f.num_chunks();
+        jm.map_rectangle(rectangles[i], counter, f.num_chunks());
         counter++;
-
-        the_job->job_number = std::numeric_limits<uint32_t>::max();
-        the_job->last_frame = f.last_frame();
+        jm.map_last_frame(f.last_frame());
         jobs->push(std::make_shared<job_message>(cmd_def, std::make_shared<data::job>(*the_job)));
       }
     }

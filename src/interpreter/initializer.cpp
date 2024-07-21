@@ -303,7 +303,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         gen_.max_frames = duration * gen_.use_fps;
         gen_.metrics_->set_total_frames(gen_.max_frames);
 
-        job_mapper_->set_canvas(gen_.canvas_w, gen_.canvas_h);
+        job_mapper_->map_canvas(gen_.canvas_w, gen_.canvas_h);
 
         double use_scale = i.double_number(video, "scale", 1.);
         if (scale) {
@@ -312,7 +312,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         if (gen_.generator_opts.custom_scale) {
           use_scale = gen_.generator_opts.custom_scale;
         }
-        job_mapper_->set_scale(use_scale);
+        job_mapper_->map_scale(use_scale);
         gen_.scalesettings.video_scale = use_scale;
         gen_.scalesettings.video_scale_next = use_scale;
         gen_.scalesettings.video_scale_intermediate = use_scale;
