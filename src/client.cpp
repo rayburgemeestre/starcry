@@ -149,7 +149,7 @@ void render_shapes_to_texture() {
       false /* debug */,
       {},
   };
-  engine.render(bmp, params, job.offset_x, job.offset_y, job.width, job.height);
+  bmp = engine.render(params, job.offset_x, job.offset_y, job.width, job.height);
   if (texture == nullptr && renderer == nullptr) {
     return;
   }

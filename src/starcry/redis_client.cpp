@@ -81,7 +81,7 @@ void redis_client::run(bitmap_wrapper& bitmap, rendering_engine& engine) {
         archive(settings);
         archive(include_objects_json);
         archive(selected_ids_transitive);
-        auto& bmp = bitmap.get(job.width, job.height);
+        image bmp;
         size_t num_shapes = 0;
         for (const auto& shapez : job.shapes) {
           num_shapes += shapez.size();
@@ -101,7 +101,7 @@ void redis_client::run(bitmap_wrapper& bitmap, rendering_engine& engine) {
 
         {
           delayed_exit de(10);
-          sc.render_job(getpid(), engine, job, bmp, settings, selected_ids_transitive);
+          bmp = sc.render_job(getpid(), engine, job, settings, selected_ids_transitive);
           // We could, instead of sending the JSON string, also choose to let
           // the redis_server handle this serialization, and save some network
           // bandwidth.

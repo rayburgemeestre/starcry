@@ -22,7 +22,6 @@
 
 class v8_wrapper;
 class sfml_window;
-class bitmap_wrapper;
 class rendering_engine;
 class webserver;
 class frame_streamer;
@@ -106,7 +105,6 @@ private:
   starcry_options options_;
   feature_settings features_;
 
-  std::map<int, std::shared_ptr<bitmap_wrapper>> bitmaps;
   std::shared_ptr<interpreter::generator> gen;
   std::map<int, std::shared_ptr<rendering_engine>> engines;
   std::shared_ptr<pipeline_system> system;
@@ -161,12 +159,11 @@ public:
 private:
   void configure_inotify();
 
-  void render_job(size_t thread_num,
-                  rendering_engine& engine,
-                  const data::job& job,
-                  image& bmp,
-                  const data::settings& settings,
-                  const std::vector<int64_t>& selected_ids = {});
+  image render_job(size_t thread_num,
+                   rendering_engine& engine,
+                   const data::job& job,
+                   const data::settings& settings,
+                   const std::vector<int64_t>& selected_ids = {});
 
   void command_to_jobs(std::shared_ptr<instruction> cmd_def);
   std::shared_ptr<render_msg> job_to_frame(size_t i, std::shared_ptr<job_message> job_msg);

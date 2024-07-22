@@ -32,8 +32,9 @@ void process_rectangles(image &target_bmp,
 #endif
 #endif
 
-void rendering_engine::render(
-    image &target_bmp, render_params &params, uint32_t offset_x, uint32_t offset_y, uint32_t width, uint32_t height) {
+image rendering_engine::render(
+    render_params &params, uint32_t offset_x, uint32_t offset_y, uint32_t width, uint32_t height) {
+  image target_bmp;
   auto _exec =
       [&](image &target_bmp, uint32_t width, uint32_t height, uint32_t extra_offset_x, uint32_t extra_offset_y) {
         return _render(target_bmp, params, offset_x + extra_offset_x, offset_y + extra_offset_y, width, height);
@@ -42,13 +43,15 @@ void rendering_engine::render(
   // the worst-case is having each pixel change, meaning memory usage multiplies the entire image size
   // times the number of motion blur frames.
   if (params.scales.size() <= 1 && params.num_chunks >= 1) {
-    return _exec(target_bmp, width, height, 0, 0);
+    _exec(target_bmp, width, height, 0, 0);
+    return target_bmp;
   }
 
   // auto chunking into rectangular chunks
   target_bmp.resize(static_cast<int>(width), static_cast<int>(height));
   auto rectangles = create_rectangles(width, height, params.scales.size());
   process_rectangles(target_bmp, rectangles, _exec);
+  return target_bmp;
 }
 
 std::vector<util::rectangle<uint32_t>> create_rectangles(uint32_t width, uint32_t height, size_t scale_size) {

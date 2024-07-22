@@ -59,11 +59,6 @@ public:
     image_repository::instance().register_image(this);
   }
 
-  image(const image &) = delete;
-  void operator=(const image &) = delete;
-  image(const image &&) = delete;
-  void operator=(const image &&) = delete;
-
   ~image() {
     image_repository::instance().unregister_image(this);
   }

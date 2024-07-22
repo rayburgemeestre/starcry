@@ -42,7 +42,7 @@ struct render_params {
 
 class rendering_engine {
 public:
-  void render(image &bmp, render_params &params, uint32_t offset_x, uint32_t offset_y, uint32_t width, uint32_t height);
+  image render(render_params &params, uint32_t offset_x, uint32_t offset_y, uint32_t width, uint32_t height);
 
   void write_image(image &bmp, int width, int height, std::string filename);
 

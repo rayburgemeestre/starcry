@@ -53,7 +53,6 @@ using json = nlohmann::json;
 starcry::starcry(starcry_options& options, std::shared_ptr<v8_wrapper>& context)
     : context(context),
       options_(options),
-      bitmaps({}),
       gen(nullptr),
       engines({}),
       system(std::make_shared<pipeline_system>(false)),
@@ -182,12 +181,11 @@ void starcry::add_video_command(std::shared_ptr<data::video_request> req) {
   cmds->push(std::make_shared<video_instruction>(req));
 }
 
-void starcry::render_job(size_t thread_num,
-                         rendering_engine& engine,
-                         const data::job& job,
-                         image& bmp,
-                         const data::settings& settings,
-                         const std::vector<int64_t>& selected_ids) {
+image starcry::render_job(size_t thread_num,
+                          rendering_engine& engine,
+                          const data::job& job,
+                          const data::settings& settings,
+                          const std::vector<int64_t>& selected_ids) {
   prctl(PR_SET_NAME, fmt::format("sc {} {}/{}", job.frame_number, job.chunk, job.num_chunks).c_str(), NULL, NULL, NULL);
 
   render_params params{thread_num,
@@ -208,7 +206,7 @@ void starcry::render_job(size_t thread_num,
                        options_.debug || get_viewpoint().debug,
                        selected_ids};
 
-  engine.render(bmp, params, job.offset_x, job.offset_y, job.width, job.height);
+  return engine.render(params, job.offset_x, job.offset_y, job.width, job.height);
 }
 
 // MARK1 transform instruction into job (using generator)
@@ -365,8 +363,6 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
   }
 
   // render
-  // TODO: unused!
-  auto& bmp = bitmaps[i]->get(0, 0);
   data::settings settings = gen->settings();
   if (job.job_number == std::numeric_limits<uint32_t>::max()) {
     metrics_->set_frame_mode();
@@ -381,7 +377,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
     return ret;
   })();
 
-  render_job(i, *engines[i], job, bmp, settings, selected_ids_transitive);
+  image bmp = render_job(i, *engines[i], job, settings, selected_ids_transitive);
 
   if (job.job_number == std::numeric_limits<uint32_t>::max()) {
     metrics_->complete_render_job(i, job.frame_number, job.chunk);
@@ -756,7 +752,6 @@ void starcry::setup_server(const std::string& host) {
     const auto renderer_name = fmt::format("renderer-{}", i);
     metrics_->register_thread(i, fmt::format("L{}", i));
     engines[i] = std::make_shared<rendering_engine>();
-    bitmaps[i] = std::make_shared<bitmap_wrapper>();
     system->spawn_transformer<job_message>(renderer_name,
                                            std::bind(&starcry::job_to_frame, this, i, std::placeholders::_1),
                                            jobs,
