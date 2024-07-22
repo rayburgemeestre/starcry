@@ -43,7 +43,6 @@ namespace seasocks {
 class WebSocket;
 }
 
-class command_handler;
 class metrics;
 
 struct feature_settings {

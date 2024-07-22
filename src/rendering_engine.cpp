@@ -8,13 +8,13 @@
 
 #include "bitmap_wrapper.hpp"
 #include "rendering_engine.h"
+#include "rendering_engine/debug.h"
 
 #include <fmt/core.h>
 
 #ifndef EMSCRIPTEN
 #include "util/image_utils.h"
 #endif
-#include "util/scope_exit.hpp"
 
 using namespace std;
 
@@ -114,52 +114,7 @@ void rendering_engine::_render(
 #endif
 
   if (params.debug) {
-    double r = double(offset_y) / double(params.canvas_h), g = 0, b = 0, a = 1;
-    for (auto i = uint32_t(0); i < width; i++) {
-      target_bmp.set(i, 0, r, g, b, a);
-    }
-    for (auto i = uint32_t(0); i < height; i++) {
-      target_bmp.set(width / 2, i, r, g, b, a);
-    }
-    scope_exit se([&]() {
-      const auto ct = [&](double offset_y, const std::string &text) {
-        data::shape shape;  // = shape;
-        shape.x = 0;
-        shape.y = offset_y;
-        shape.r = 1;
-        shape.g = 1;
-        shape.b = 1;
-        shape.opacity = 1;
-        shape.type = data::shape_type::text;
-        shape.text = text;
-        shape.text_fixed = true;
-        shape.text_size = 15;
-        shape.align = "left";
-        shape.gradient_id_str = "";
-        shape.gradients_.emplace_back(1.0, data::gradient{});
-        shape.gradients_[0].second.colors.emplace_back(std::make_tuple(0.0, data::color{1.0, 1, 1, 1}));
-        shape.gradients_[0].second.colors.emplace_back(std::make_tuple(1.0, data::color{1.0, 1, 1, 1}));
-        shape.texture_id_str = "";
-        shape.blending_ = data::blending_type::normal;
-        return shape;
-      };
-
-      draw_logic_->render_text(target_bmp,
-                               ct(0, fmt::format("canvas: ({}, {})", params.canvas_w, params.canvas_h)),
-                               1.,
-                               params.settings,
-                               true);
-      draw_logic_->render_text(
-          target_bmp, ct(20, fmt::format("size: ({}, {})", width, height)), 1., params.settings, true);
-      draw_logic_->render_text(
-          target_bmp, ct(60, fmt::format("offset: ({}, {})", offset_x, offset_y)), 1., params.settings, true);
-      draw_logic_->render_text(
-          target_bmp, ct(80, fmt::format("view: ({}, {})", params.view_x, params.view_y)), 1., params.settings, true);
-      draw_logic_->render_text(
-          target_bmp, ct(100, fmt::format("scale: {}", params.top_scale)), 1., params.settings, true);
-      draw_logic_->render_text(
-          target_bmp, ct(120, fmt::format("scale ratio: {}", scale_ratio)), 1., params.settings, true);
-    });
+    draw_debug(target_bmp, draw_logic_, params, offset_x, offset_y, width, height, scale_ratio);
   }
 
   if (!params.shapes.empty()) {
@@ -308,14 +263,4 @@ void rendering_engine::draw_captured_pixels(image &target_bmp,
       draw_logic_->blend_the_pixel(target_bmp, shape.blending_.type(), x, y, col.a, col);
     }
   }
-}
-
-void rendering_engine::write_image(image &bmp, int width, int height, std::string filename) {
-#ifndef EMSCRIPTEN
-#ifndef SC_CLIENT
-  png::image<png::rgba_pixel> image(width, height);
-  copy_to_png(rand_, bmp.pixels(), width, height, image, false);
-  image.write(filename);
-#endif
-#endif
 }

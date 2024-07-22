@@ -3,9 +3,12 @@ This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-#pragma once
 
-#include <optional>
+#include <cmath>
+
+#include "data/texture_3d.hpp"
+#include "noise.hpp"
+#include "noise_mappers.h"
 
 std::optional<std::pair<double, double>> map_spherical(double x, double y, double r) {
   const auto imageWidth = r;
@@ -64,7 +67,7 @@ std::optional<std::pair<double, double>> map_radial(
 
 // maps points from a 2D plane to 3D Simplex noise coordinates and returns the corresponding noise values along with the
 // mapped coordinates
-std::optional<std::tuple<double, double, double>> map_noise(auto& shape, double x, double y, double r) {
+std::optional<std::tuple<double, double, double>> map_noise(const data::shape& shape, double x, double y, double r) {
   const auto imageWidth = r;
   auto nx = x / r;
   auto ny = y / r;

@@ -22,7 +22,7 @@
 #endif
 #include "util/math.h"
 #include "util/motionblur_buffer.hpp"
-#include "util/noise_mappers.hpp"
+#include "util/noise_mappers.h"
 #include "util/random.hpp"
 #include "util/render_math.hpp"
 #include "util/text_drawer.hpp"
@@ -522,7 +522,8 @@ public:
       bool has_intersection_x2 = false;
 
       auto process_intersection = [&](const auto &aline) {
-        if (!aline.horizontal() && min(aline.y, aline.y2) <= current_y && max(aline.y, aline.y2) >= current_y) {
+        if (!aline.horizontal() && std::min(aline.y, aline.y2) <= current_y &&
+            std::max(aline.y, aline.y2) >= current_y) {
           if (aline.vertical()) {  // Todo: change to IsVertical()?
             // Horizontal line, intersection with an infinite line within
             //  y-range, cannot have another X then aline.x or aline.x2
@@ -551,8 +552,8 @@ public:
         // Without the fix you will see the final column of pixels in the first row, fixing only the first TODO item
         // will move this column to the last column on the screen, aand the change from <= to < will get rid of this
         // last column
-        int x_left = min(intersection_x1, intersection_x2) - 1;  // TODO: figure out why this - 1 is needed!
-        int x_right = max(intersection_x1, intersection_x2);
+        int x_left = std::min(intersection_x1, intersection_x2) - 1;  // TODO: figure out why this - 1 is needed!
+        int x_right = std::max(intersection_x1, intersection_x2);
         // Do not loop through unnecessary pixels
         if (x_left < 0) x_left = 0;
         if (x_right > static_cast<int>(width_)) x_right = static_cast<int>(width_);
@@ -603,8 +604,8 @@ public:
             }
           }
 
-          if ((intersect_x >= min(aline.x, aline.x2) && intersect_x <= max(aline.x, aline.x2)) ||
-              (intersect_y >= min(aline.y, aline.y2) && intersect_y <= max(aline.y, aline.y2))) {
+          if ((intersect_x >= std::min(aline.x, aline.x2) && intersect_x <= std::max(aline.x, aline.x2)) ||
+              (intersect_y >= std::min(aline.y, aline.y2) && intersect_y <= std::max(aline.y, aline.y2))) {
             double dist_from_center_line = sqrt(squared_dist(x, intersect_x) + squared_dist(current_y, intersect_y));
             double normalized_dist_from_center = (dist_pixel / dist_max);
             double normalized_dist_from_line = (dist_from_center_line / aline.size);
