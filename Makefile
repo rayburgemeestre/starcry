@@ -84,6 +84,7 @@ client:  ## build webassembly javascript file using docker
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ --std=c++20 -s WASM=1 -s USE_SDL=2 -O3 --bind \
 	                    -o web/public/client.js src/client.cpp src/stb.cpp src/util/logger.cpp \
 	                    src/shapes/position.cpp src/shapes/circle.cpp src/shapes/rectangle.cpp \
+	                    src/util/noise_mappers.cpp src/rendering_engine/debug.cpp \
 	                    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
 	                    -I./libs/json/single_include/ \
 	                    -I/opt/cppse/build/v8pp/include/v8 -I/opt/cppse/build/v8pp/include/ \
