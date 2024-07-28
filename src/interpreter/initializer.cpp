@@ -178,11 +178,11 @@ void initializer::reset_context() {
 }
 
 void initializer::init_user_script() {
-  std::ifstream stream(gen_.filename().c_str());
-  if (!stream && gen_.filename() != "-") {
-    throw std::runtime_error("could not locate file " + gen_.filename());
+  std::ifstream stream(gen_.config().filename.c_str());
+  if (!stream && gen_.config().filename != "-") {
+    throw std::runtime_error("could not locate file " + gen_.config().filename);
   }
-  std::istreambuf_iterator<char> begin(gen_.filename() == "-" ? std::cin : stream), end;
+  std::istreambuf_iterator<char> begin(gen_.config().filename == "-" ? std::cin : stream), end;
   // remove "_ =" part from script (which is a workaround to silence 'not in use' linting)
   if (*begin == '_') {
     while (*begin != '=') begin++;
@@ -251,67 +251,61 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
           n /= duration;
         });
 
-        gen_.use_fps = i.double_number(video, "fps", 25);
-        gen_.canvas_w = i.double_number(video, "width", 1920);
-        gen_.canvas_h = i.double_number(video, "height", 1080);
+        gen_.config().fps = i.double_number(video, "fps", 25);
+        gen_.state().canvas_w = i.double_number(video, "width", 1920);
+        gen_.state().canvas_h = i.double_number(video, "height", 1080);
         if (width && height) {
-          gen_.canvas_w = *width;
-          gen_.canvas_h = *height;
-        }
-        if (gen_.generator_opts.custom_width) {
-          gen_.canvas_w = gen_.generator_opts.custom_width;
-        }
-        if (gen_.generator_opts.custom_height) {
-          gen_.canvas_h = gen_.generator_opts.custom_height;
+          gen_.state().canvas_w = *width;
+          gen_.state().canvas_h = *height;
         }
 
-        gen_.seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
-        gen_.tolerated_granularity = i.double_number(video, "granularity", 1);
-        if (gen_.generator_opts.custom_granularity) {
-          gen_.tolerated_granularity = gen_.generator_opts.custom_granularity;
+        double use_scale = i.double_number(video, "scale", 1.);
+        if (scale) {
+          use_scale = *scale;
         }
-        gen_.minimize_steps_per_object = i.boolean(video, "minimize_steps_per_object", false);
+
         auto& settings_ = gen_.settings_;
+
+        if (gen_.generator_opts.custom_scale) use_scale = gen_.generator_opts.custom_scale;
+        if (gen_.generator_opts.custom_width) gen_.state().canvas_w = gen_.generator_opts.custom_width;
+        if (gen_.generator_opts.custom_height) gen_.state().canvas_h = gen_.generator_opts.custom_height;
+        if (gen_.generator_opts.custom_granularity)
+          gen_.config().tolerated_granularity = gen_.generator_opts.custom_granularity;
+        if (gen_.generator_opts.custom_grain) settings_.grain_for_opacity = *gen_.generator_opts.custom_grain;
+
+        gen_.state().seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
+        gen_.config().tolerated_granularity = i.double_number(video, "granularity", 1);
+        gen_.config().minimize_steps_per_object = i.boolean(video, "minimize_steps_per_object", false);
         if (i.has_field(video, "perlin_noise")) settings_.perlin_noise = i.boolean(video, "perlin_noise");
         if (i.has_field(video, "motion_blur")) settings_.motion_blur = i.boolean(video, "motion_blur");
         if (i.has_field(video, "grain_for_opacity"))
           settings_.grain_for_opacity = i.boolean(video, "grain_for_opacity");
-        if (gen_.generator_opts.custom_grain) {
-          settings_.grain_for_opacity = *gen_.generator_opts.custom_grain;
-        }
         if (i.has_field(video, "extra_grain")) settings_.extra_grain = i.double_number(video, "extra_grain");
         if (i.has_field(video, "update_positions")) settings_.update_positions = i.boolean(video, "update_positions");
         if (i.has_field(video, "dithering")) settings_.dithering = i.boolean(video, "dithering");
         if (i.has_field(video, "gamma")) settings_.gamma = i.double_number(video, "gamma");
         if (i.has_field(video, "scale_ratio")) settings_.scale_ratio = i.boolean(video, "scale_ratio");
         if (i.has_field(video, "min_intermediates"))
-          gen_.min_intermediates = i.integer_number(video, "min_intermediates");
+          gen_.config().min_intermediates = i.integer_number(video, "min_intermediates");
         if (i.has_field(video, "max_intermediates"))
-          gen_.max_intermediates = i.integer_number(video, "max_intermediates");
-        if (i.has_field(video, "fast_ff")) gen_.fast_ff = i.boolean(video, "fast_ff");
+          gen_.config().max_intermediates = i.integer_number(video, "max_intermediates");
+        if (i.has_field(video, "fast_ff")) gen_.config().fast_ff = i.boolean(video, "fast_ff");
         if (i.has_field(video, "bg_color")) {
           auto bg = i.v8_obj(video, "bg_color");
           job_mapper_->map_background_color(i, bg);
         }
         if (i.has_field(video, "sample")) {
           auto sample = i.get(video, "sample").As<v8::Object>();
-          gen_.sampler_.set_sample_include(i.double_number(sample, "include"), gen_.use_fps);  // seconds
-          gen_.sampler_.set_sample_exclude(i.double_number(sample, "exclude"), gen_.use_fps);  // seconds
+          gen_.sampler_.set_sample_include(i.double_number(sample, "include"), gen_.config().fps);  // seconds
+          gen_.sampler_.set_sample_exclude(i.double_number(sample, "exclude"), gen_.config().fps);  // seconds
         }
-        gen_.rand_.set_seed(gen_.seed);
+        gen_.rand_.set_seed(gen_.state().seed);
 
-        gen_.max_frames = duration * gen_.use_fps;
-        gen_.metrics_->set_total_frames(gen_.max_frames);
+        gen_.state().max_frames = duration * gen_.config().fps;
+        gen_.metrics_->set_total_frames(gen_.state().max_frames);
 
-        job_mapper_->map_canvas(gen_.canvas_w, gen_.canvas_h);
+        job_mapper_->map_canvas(gen_.state().canvas_w, gen_.state().canvas_h);
 
-        double use_scale = i.double_number(video, "scale", 1.);
-        if (scale) {
-          use_scale = *scale;
-        }
-        if (gen_.generator_opts.custom_scale) {
-          use_scale = gen_.generator_opts.custom_scale;
-        }
         job_mapper_->map_scale(use_scale);
         gen_.scalesettings.video_scale = use_scale;
         gen_.scalesettings.video_scale_next = use_scale;

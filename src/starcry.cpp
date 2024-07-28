@@ -238,7 +238,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     if (v.offset_frames() > 0) {
       current_frame = v.offset_frames();
     }
-    double use_fps = gen->fps();
+    double use_fps = gen->config().fps;
     if (!framer && options().output && instruction->video().output_file() != "/dev/null") {
       auto stream_mode = frame_streamer::stream_mode::FILE;
       auto output_file = v.output_file();
@@ -248,8 +248,11 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       }
       if (v.output_file().empty()) {
         auto scriptname = fs::path(script_).stem().string();
-        v.set_output_file(fmt::format(
-            "output_seed_{}_{}x{}-{}.h264", gen->get_seed(), (int)gen->width(), (int)gen->height(), scriptname));
+        v.set_output_file(fmt::format("output_seed_{}_{}x{}-{}.h264",
+                                      gen->state().seed,
+                                      (int)gen->state().canvas_w,
+                                      (int)gen->state().canvas_h,
+                                      scriptname));
       }
       framer = std::make_unique<frame_streamer>(v.output_file(), stream_mode);
       framer->set_num_threads(options().num_ffmpeg_threads);
@@ -258,7 +261,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       });
     }
     size_t bitrate = (500 * 1024 * 8);  // TODO: make configurable
-    if (framer) framer->initialize(bitrate, gen->width(), gen->height(), use_fps);
+    if (framer) framer->initialize(bitrate, gen->state().canvas_w, gen->state().canvas_h, use_fps);
     while (true) {
       auto ret = gen->generate_frame();
       auto job_copy = std::make_shared<data::job>(*gen->get_job());
@@ -678,9 +681,9 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
 
           finished = process(width, height, pixels, pixels_raw, last_frame);
 
-          save_images(gen->filename(),
+          save_images(gen->config().filename,
                       rand_,
-                      gen->get_seed(),
+                      gen->state().seed,
                       gen->settings().dithering,
                       pixels_raw,
                       width,

@@ -117,8 +117,8 @@ void scenes::prepare_scene() {
 /* inline */ interpreter::time_settings scenes::get_time(scene_settings& scenesettings) const {
   auto& stepper = gen_.stepper;
   auto& job = gen_.job;
-  auto& max_frames = gen_.max_frames;
-  auto& use_fps = gen_.use_fps;
+  auto& max_frames = gen_.state().max_frames;
+  auto& use_fps = gen_.config().fps;
   // Intermediate frames between 0 and 1, for two: [0.5, 1.0]
   // This will make vibrations look really vibrating, as back and forth will be rendered differently
   // auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step));

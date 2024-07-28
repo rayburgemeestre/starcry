@@ -95,7 +95,7 @@ install (TARGETS starcry DESTINATION bin)
 
 
 # sc_client (starcry debug client)
-file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp" "src/perlin.cpp" "src/texture.cpp" "src/stb.cpp" "src/util/logger.cpp")
+file(GLOB_RECURSE sc_client_SOURCES "src/client.cpp" "src/perlin.cpp" "src/texture.cpp" "src/stb.cpp" "src/util/logger.cpp" "src/rendering_engine/debug.cpp" "src/shapes/*.cpp" "src/util/noise_mappers.cpp")
 add_executable(sc_client ${sc_client_SOURCES})
 target_compile_definitions(sc_client PUBLIC SC_CLIENT)
 target_link_libraries(sc_client PRIVATE -lSDL2)

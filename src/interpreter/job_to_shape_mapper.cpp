@@ -52,7 +52,7 @@ void job_to_shape_mapper::convert_object_to_render_job(data_staging::shape_t& sh
 
     // auto radius = shape.radius();           // i.double_number(instance, "radius");
     // auto radiussize = shape.radius_size();  // i.double_number(instance, "radiussize");
-    auto seed = gen_.seed;
+    auto seed = gen_.state().seed;
     if constexpr (std::is_same_v<T, data_staging::circle> || std::is_same_v<T, data_staging::line>) {
       seed = shape.styling_cref().seed();
     }

@@ -53,11 +53,11 @@ void generator::init(const std::string& filename,
                      std::optional<int> height,
                      std::optional<double> scale) {
   prctl(PR_SET_NAME, "native generator thread");
-  filename_ = filename;
+  config().filename = filename;
   job = std::make_shared<data::job>();
-  job->frame_number = frame_number;
+  job->frame_number = 0;
 
-  initializer_.initialize_all(job, filename_, rand_seed, preview, width, height, scale);
+  initializer_.initialize_all(job, config().filename, rand_seed, preview, width, height, scale);
 
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     genctx = std::make_shared<generator_context>(val, 0);
@@ -66,7 +66,7 @@ void generator::init(const std::string& filename,
   scenes_.initialize();
 
   // reset random number generator
-  rand_.set_seed(seed);
+  rand_.set_seed(state().seed);
 
   // set_scene requires generator_context to be set
   scenes_.set_scene(0);
@@ -74,7 +74,7 @@ void generator::init(const std::string& filename,
   // all objects added at this point can be blindly appended
   scenes_.append_instantiated_objects();
 
-  caching_ = caching;
+  config().caching = caching;
 }
 
 void generator::create_object_instances() {
@@ -251,10 +251,10 @@ void generator::reset_seeds() {
 
 void generator::fast_forward(int frame_of_interest) {
   fast_forwarder(
-      fast_ff,
+      config().fast_ff,
       frame_of_interest,
-      min_intermediates,
-      max_intermediates,
+      config().min_intermediates,
+      config().max_intermediates,
       [&]() {
         generate_frame();
         metrics_->skip_job(job->job_number);
@@ -279,7 +279,7 @@ void generator::fast_forward(int frame_of_interest) {
 }
 
 bool generator::generate_frame() {
-  return sampler_.sample(use_fps, [&](bool skip) {
+  return sampler_.sample(config().fps, [&](bool skip) {
     auto ret = _generate_frame();
     if (skip) job->job_number--;
     return ret;
@@ -295,7 +295,7 @@ bool generator::_generate_frame() {
     metrics_->register_job(job->job_number + 1, job->frame_number, job->chunk, job->num_chunks);
 
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-      if (caching_) {
+      if (config().caching) {
         checkpoints_.insert(*job, scenes_);
       }
 
@@ -308,16 +308,16 @@ bool generator::_generate_frame() {
 
       stepper.reset();
       indexes.clear();
-      attempt = 0;
-      max_dist_found = std::numeric_limits<double>::max();
+      int attempt = 0;
+      double max_dist_found = std::numeric_limits<double>::max();
       scalesettings.reset();
 
-      if (min_intermediates > 0.) {
-        update_steps(min_intermediates);
+      if (config().min_intermediates > 0.) {
+        update_steps(config().min_intermediates);
       }
 
       static const auto max_attempts = 2;
-      while (max_dist_found > tolerated_granularity && !stepper.frozen) {
+      while (max_dist_found > config().tolerated_granularity && !stepper.frozen) {
         if (++attempt >= max_attempts) {
           stepper.freeze();
         }
@@ -349,7 +349,7 @@ bool generator::_generate_frame() {
 
           interactor_.update_interactions();  // toroidal, collisions, gravity, dedupe
 
-          update_object_distances();  // calculate distance and steps
+          update_object_distances(&attempt, &max_dist_found);  // calculate distance and steps
 
           // above update functions could have triggered spawning of new objects
           insert_newly_created_objects();
@@ -368,13 +368,13 @@ bool generator::_generate_frame() {
         }
         if (!detected_too_many_steps) {
           // didn't bail out with break above
-          if (stepper.max_step == max_intermediates) {
+          if (stepper.max_step == config().max_intermediates) {
             // config doesn't allow finer granularity any way, break.
             break;
           }
-          if (stepper.max_step > max_intermediates) {
+          if (stepper.max_step > config().max_intermediates) {
             logger(DEBUG) << "stepper.max_step > max_intermediates -> " << stepper.max_step << " > "
-                          << max_intermediates << std::endl;
+                          << config().max_intermediates << std::endl;
             throw abort_exception("stepper max exceeds max. intermediates");
           }
         }
@@ -431,8 +431,8 @@ bool generator::_generate_frame() {
   } catch (std::exception& ex) {
     std::cout << "[caught] " << ex.what() << std::endl;
   }
-  job->last_frame = job->frame_number == max_frames;
-  return job->frame_number != max_frames;
+  job->last_frame = job->frame_number == state().max_frames;
+  return job->frame_number != state().max_frames;
 }
 
 void generator::revert_all_changes(v8_interact& i) {
@@ -520,7 +520,7 @@ void generator::insert_newly_created_objects() {
   object_lookup_.update();
 }
 
-void generator::update_object_distances() {
+void generator::update_object_distances(int* attempt, double* max_dist_found) {
   stepper.reset_current();
   const auto handle = [&](data_staging::shape_t& abstract_shape, data_staging::meta& meta) {
     const auto instance_uid = meta.unique_id();
@@ -529,18 +529,18 @@ void generator::update_object_distances() {
       return;
     }
     const double dist = get_max_travel_of_object(abstract_shape, find->second.get());
-    if (dist > max_dist_found) {
-      max_dist_found = dist;
+    if (dist > *max_dist_found) {
+      *max_dist_found = dist;
     }
     const auto steps = update_steps(dist);
 
     static std::unordered_map<int64_t, int> recorded_steps;
 
-    meta.set_distance(max_dist_found);
-    if (attempt == 1) {
+    meta.set_distance(*max_dist_found);
+    if (*attempt == 1) {
       meta.set_steps(steps);
       recorded_steps[instance_uid] = steps;
-    } else if (attempt > 1) {
+    } else if (*attempt > 1) {
       meta.set_steps(recorded_steps[instance_uid]);
     }
   };
@@ -604,9 +604,9 @@ void generator::update_time(data_staging::shape_t& instance,
 }
 
 int generator::update_steps(double dist) {
-  auto steps = round(std::max(1.0, fabs(dist) / tolerated_granularity));
-  if (steps > max_intermediates) {
-    steps = max_intermediates;
+  auto steps = round(std::max(1.0, fabs(dist) / config().tolerated_granularity));
+  if (steps > config().max_intermediates) {
+    steps = config().max_intermediates;
   }
   stepper.update(steps);
   return steps;
@@ -677,28 +677,8 @@ std::shared_ptr<data::job> generator::get_job() const {
   return job;
 }
 
-double generator::fps() const {
-  return use_fps;
-}
-
-int32_t generator::width() const {
-  return canvas_w;
-}
-
-int32_t generator::height() const {
-  return canvas_h;
-}
-
-double generator::get_seed() const {
-  return seed;
-}
-
 data::settings generator::settings() const {
   return settings_;
-}
-
-std::string generator::filename() const {
-  return filename_;
 }
 
 v8::Local<v8::Value> generator::get_attr(data_staging::shape_t& spawner, v8::Local<v8::String> field) {
@@ -896,6 +876,14 @@ std::vector<int64_t> generator::get_transitive_ids(const std::vector<int64_t>& u
 
 void generator::set_checkpoints(std::set<int>& checkpoints) {
   checkpoints_.set_checkpoints(checkpoints);
+}
+
+generator_state& generator::state() {
+  return state_;
+}
+
+generator_config& generator::config() {
+  return config_;
 }
 
 }  // namespace interpreter

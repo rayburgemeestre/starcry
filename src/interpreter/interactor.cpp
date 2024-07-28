@@ -35,15 +35,19 @@ void interactor::update_interactions() {
       const auto unique_group = shape.behavior_cref().unique_group();
 
       if (!collision_group.empty()) {
-        qts.try_emplace(
-            collision_group,
-            quadtree(rectangle(position(-gen_.width() / 2, -gen_.height() / 2), gen_.width(), gen_.height()), 32));
+        qts.try_emplace(collision_group,
+                        quadtree(rectangle(position(-gen_.state().canvas_w / 2, -gen_.state().canvas_h / 2),
+                                           gen_.state().canvas_w,
+                                           gen_.state().canvas_h),
+                                 32));
         qts[collision_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
       }
       if (!gravity_group.empty()) {
-        qts_gravity.try_emplace(
-            gravity_group,
-            quadtree(rectangle(position(-gen_.width() / 2, -gen_.height() / 2), gen_.width(), gen_.height()), 32));
+        qts_gravity.try_emplace(gravity_group,
+                                quadtree(rectangle(position(-gen_.state().canvas_w / 2, -gen_.state().canvas_h / 2),
+                                                   gen_.state().canvas_w,
+                                                   gen_.state().canvas_h),
+                                         32));
         qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
       }
       if (!unique_group.empty()) {

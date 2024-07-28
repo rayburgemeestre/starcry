@@ -65,37 +65,22 @@ class generator {
   friend class checkpoints;
   friend class debug_printer;
 
+  generator_state state_;
+  generator_config config_;
+
   std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
   std::shared_ptr<data::job> job;
 
-  uint32_t frame_number = 0;
-
-  size_t max_frames = 0;
-  int32_t canvas_w = 0;
-  int32_t canvas_h = 0;
-  double seed = 1;
-  double tolerated_granularity = 1;
-  bool minimize_steps_per_object = true;
-  size_t use_fps = 25;
   std::unordered_map<size_t, std::map<int, size_t>> indexes;
   frame_stepper stepper;
-  int attempt = 0;
-  double max_dist_found = std::numeric_limits<double>::max();
 
   std::unordered_map<std::string, v8::Persistent<v8::Object>> object_definitions_map;
   data::settings settings_;
 
-  int min_intermediates = 1.;
-  int max_intermediates = 30.;
-  bool fast_ff = false;
-
   scale_settings scalesettings;
 
-  std::string filename_;
-
   std::shared_ptr<generator_context> genctx;
-  bool debug_;
 
   gradient_manager gradient_manager_;
   texture_manager texture_manager_;
@@ -120,7 +105,6 @@ class generator {
 
   const generator_options& generator_opts;
 
-  bool caching_ = false;
   fps_progress fps_progress_;
 
 public:
@@ -146,21 +130,15 @@ public:
   void fast_forward(int frame_of_interest);
   bool generate_frame();
   void revert_all_changes(v8_interact& i);
-  void create_new_mappings();
   void insert_newly_created_objects();
-  void update_object_distances();
+  void update_object_distances(int* attempt, double* max_dist_found);
   void update_time(data_staging::shape_t& object_bridge, const std::string& instance_id, scene_settings& scenesettings);
   int update_steps(double dist);
   static double get_max_travel_of_object(data_staging::shape_t& shape_now, data_staging::shape_t& shape_prev);
 
   std::shared_ptr<data::job> get_job() const;
 
-  double fps() const;
-  int32_t width() const;
-  int32_t height() const;
-  double get_seed() const;
   data::settings settings() const;
-  std::string filename() const;
 
   v8::Local<v8::Value> get_attr(data_staging::shape_t& spawner, v8::Local<v8::String> field);
 
@@ -174,6 +152,9 @@ public:
   std::unordered_map<std::string, v8::Persistent<v8::Object>>& get_object_definitions_ref();
   std::vector<int64_t> get_transitive_ids(const std::vector<int64_t>& in);
   void set_checkpoints(std::set<int>& checkpoints);
+
+  generator_state& state();
+  generator_config& config();
 
 private:
   bool _generate_frame();
