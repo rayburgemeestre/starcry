@@ -608,48 +608,33 @@ double generator::get_max_travel_of_object(data_staging::shape_t& shape_now, dat
   double radius_now = 0;
   double radius_prev = 0;
 
-  meta_visit(
-      shape_now,
-      [&xy_now, &radius_now](data_staging::circle& shape) {
-        xy_now = shape.transitive_location_ref().position_cref();
-        radius_now = shape.radius() + shape.radius_size();
-      },
-      [&xy_now](data_staging::ellipse& shape) {
-        xy_now = shape.transitive_location_ref().position_cref();
-        // ...
-      },
-      [&xy_now, &xy2_now, &compare_xy2](data_staging::line& shape) {
-        xy_now = shape.transitive_line_start_ref().position_cref();
-        xy2_now = shape.transitive_line_end_ref().position_cref();
-        compare_xy2 = true;
-      },
-      [&xy_now](data_staging::text& shape) {
-        xy_now = shape.transitive_location_ref().position_cref();
-      },
-      [&xy_now](data_staging::script& shape) {
-        xy_now = shape.transitive_location_ref().position_cref();
-      });
+  auto process_shape = []<typename XY, typename XY2, typename Radius>(
+                           auto& shape, XY& xy, XY2* xy2, Radius* radius, bool* compare_xy2) {
+    if constexpr (std::is_same_v<std::decay_t<decltype(shape)>, data_staging::circle>) {
+      xy = shape.transitive_location_ref().position_cref();
+      if (radius) *radius = shape.radius() + shape.radius_size();
+    } else if constexpr (std::is_same_v<std::decay_t<decltype(shape)>, data_staging::ellipse>) {
+      xy = shape.transitive_location_ref().position_cref();
+      // ... (add any ellipse-specific logic here)
+    } else if constexpr (std::is_same_v<std::decay_t<decltype(shape)>, data_staging::line>) {
+      xy = shape.transitive_line_start_ref().position_cref();
+      if (xy2) *xy2 = shape.transitive_line_end_ref().position_cref();
+      if (compare_xy2) *compare_xy2 = true;
+    } else if constexpr (std::is_same_v<std::decay_t<decltype(shape)>, data_staging::text> ||
+                         std::is_same_v<std::decay_t<decltype(shape)>, data_staging::script>) {
+      xy = shape.transitive_location_ref().position_cref();
+    } else {
+      static_assert(!sizeof(shape), "Unsupported shape type");
+    }
+  };
 
-  meta_visit(
-      shape_prev,
-      [&xy_prev, &radius_prev](data_staging::circle& shape) {
-        xy_prev = shape.transitive_location_ref().position_cref();
-        radius_prev = shape.radius() + shape.radius_size();
-      },
-      [&xy_prev](data_staging::ellipse& shape) {
-        xy_prev = shape.transitive_location_ref().position_cref();
-        // ...
-      },
-      [&xy_prev, &xy2_prev](data_staging::line& shape) {
-        xy_prev = shape.transitive_line_start_ref().position_cref();
-        xy2_prev = shape.transitive_line_end_ref().position_cref();
-      },
-      [&xy_prev](data_staging::text& shape) {
-        xy_prev = shape.transitive_location_ref().position_cref();
-      },
-      [&xy_prev](data_staging::script& shape) {
-        xy_prev = shape.transitive_location_ref().position_cref();
-      });
+  meta_callback(shape_now, [&](auto& shape) {
+    process_shape(shape, xy_now, &xy2_now, &radius_now, &compare_xy2);
+  });
+
+  meta_callback(shape_prev, [&](auto& shape) {
+    process_shape(shape, xy_prev, &xy2_prev, &radius_prev, nullptr);
+  });
 
   auto dist = xy_now.distance_to(xy_prev);
   if (compare_xy2) dist = std::max(dist, xy2_now.distance_to(xy2_prev));

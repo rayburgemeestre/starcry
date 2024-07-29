@@ -165,31 +165,21 @@ bool interactor::destroy_if_duplicate(const std::string& unique_group, data_stag
     destroyed = true;
   };
 
-  meta_visit(
-      shape,
-      [&](data_staging::circle& c) {
-        unique_groups[unique_group].query(
-            destroy_shape, c.transitive_location_ref().position_ref().x, c.transitive_location_ref().position_ref().y);
-      },
-      [&](data_staging::ellipse& e) {
-        unique_groups[unique_group].query(
-            destroy_shape, e.transitive_location_ref().position_ref().x, e.transitive_location_ref().position_ref().y);
-      },
-      [&](data_staging::line& l) {
-        unique_groups[unique_group].query(destroy_shape,
-                                          l.transitive_line_start_ref().position_ref().x,
-                                          l.transitive_line_start_ref().position_ref().y,
-                                          l.transitive_line_end_ref().position_ref().x,
-                                          l.transitive_line_end_ref().position_ref().y);
-      },
-      [&](data_staging::text& t) {
-        unique_groups[unique_group].query(
-            destroy_shape, t.transitive_location_ref().position_ref().x, t.transitive_location_ref().position_ref().y);
-      },
-      [&](data_staging::script& s) {
-        unique_groups[unique_group].query(
-            destroy_shape, s.transitive_location_ref().position_ref().x, s.transitive_location_ref().position_ref().y);
-      });
+  auto query_shape = [&](auto& shape) {
+    if constexpr (std::is_same_v<std::decay_t<decltype(shape)>, data_staging::line>) {
+      unique_groups[unique_group].query(destroy_shape,
+                                        shape.transitive_line_start_ref().position_ref().x,
+                                        shape.transitive_line_start_ref().position_ref().y,
+                                        shape.transitive_line_end_ref().position_ref().x,
+                                        shape.transitive_line_end_ref().position_ref().y);
+    } else {
+      unique_groups[unique_group].query(destroy_shape,
+                                        shape.transitive_location_ref().position_ref().x,
+                                        shape.transitive_location_ref().position_ref().y);
+    }
+  };
+
+  meta_callback(shape, query_shape);
   return destroyed;
 }
 

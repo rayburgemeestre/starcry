@@ -189,48 +189,35 @@ void positioner::handle_rotations(data_staging::shape_t& shape,
     }
   };
 
-  meta_visit(
-      shape,
-      [&handle, &new_position](data_staging::circle& c) {
-        handle(c);
-        c.transitive_location_ref().position_ref().x = new_position.x;
-        c.transitive_location_ref().position_ref().y = new_position.y;
-      },
-      [&handle, &new_position](data_staging::ellipse& e) {
-        handle(e);
-        e.transitive_location_ref().position_ref().x = new_position.x;
-        e.transitive_location_ref().position_ref().y = new_position.y;
-      },
-      [&handle, &new_position, &new_position2](data_staging::line& l) {
-        handle(l);
-        bool skip_start = false, skip_end = false;
-        for (const auto& cascade_in : l.cascades_in()) {
-          if (cascade_in.type() == cascade_type::start) {
-            skip_start = true;
-          }
-          if (cascade_in.type() == cascade_type::end) {
-            skip_end = true;
-          }
+  auto process_shape = [&](auto& shape) {
+    handle(shape);
+
+    if constexpr (std::is_same_v<std::decay_t<decltype(shape)>, data_staging::line>) {
+      bool skip_start = false, skip_end = false;
+      for (const auto& cascade_in : shape.cascades_in()) {
+        if (cascade_in.type() == cascade_type::start) {
+          skip_start = true;
         }
-        if (!skip_start) {
-          l.transitive_line_start_ref().position_ref().x = new_position.x;
-          l.transitive_line_start_ref().position_ref().y = new_position.y;
+        if (cascade_in.type() == cascade_type::end) {
+          skip_end = true;
         }
-        if (!skip_end) {
-          l.transitive_line_end_ref().position_ref().x = new_position2.x;
-          l.transitive_line_end_ref().position_ref().y = new_position2.y;
-        }
-      },
-      [&handle, &new_position](data_staging::text& t) {
-        handle(t);
-        t.transitive_location_ref().position_ref().x = new_position.x;
-        t.transitive_location_ref().position_ref().y = new_position.y;
-      },
-      [&handle, &new_position](data_staging::script& s) {
-        handle(s);
-        s.transitive_location_ref().position_ref().x = new_position.x;
-        s.transitive_location_ref().position_ref().y = new_position.y;
-      });
+      }
+
+      if (!skip_start) {
+        shape.transitive_line_start_ref().position_ref().x = new_position.x;
+        shape.transitive_line_start_ref().position_ref().y = new_position.y;
+      }
+      if (!skip_end) {
+        shape.transitive_line_end_ref().position_ref().x = new_position2.x;
+        shape.transitive_line_end_ref().position_ref().y = new_position2.y;
+      }
+    } else {
+      shape.transitive_location_ref().position_ref().x = new_position.x;
+      shape.transitive_location_ref().position_ref().y = new_position.y;
+    }
+  };
+
+  meta_callback(shape, process_shape);
 }
 
 void positioner::revert_position_updates() {
