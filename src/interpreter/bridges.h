@@ -25,6 +25,22 @@ public:
   bridges(generator& gen);
   void init();
 
+  template <typename T>
+  auto& get() {
+    if constexpr (std::is_same_v<T, data_staging::circle>)
+      return circle();
+    else if constexpr (std::is_same_v<T, data_staging::ellipse>)
+      return ellipse();
+    else if constexpr (std::is_same_v<T, data_staging::line>)
+      return line();
+    else if constexpr (std::is_same_v<T, data_staging::script>)
+      return script();
+    else if constexpr (std::is_same_v<T, data_staging::text>)
+      return text();
+    else
+      static_assert(!sizeof(T));
+  }
+
   std::shared_ptr<object_bridge<data_staging::circle>>& circle();
   std::shared_ptr<object_bridge<data_staging::ellipse>>& ellipse();
   std::shared_ptr<object_bridge<data_staging::line>>& line();

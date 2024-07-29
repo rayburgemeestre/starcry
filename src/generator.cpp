@@ -572,23 +572,9 @@ void generator::update_time(data_staging::shape_t& instance,
                    time_settings.time);
         object_bridge->pop_object();
       };
-      meta_visit(
-          instance,
-          [&](data_staging::circle& c) {
-            handle_time_for_shape(c, bridges_.circle());
-          },
-          [&](data_staging::ellipse& e) {
-            handle_time_for_shape(e, bridges_.ellipse());
-          },
-          [&](data_staging::line& l) {
-            handle_time_for_shape(l, bridges_.line());
-          },
-          [&](data_staging::text& t) {
-            handle_time_for_shape(t, bridges_.text());
-          },
-          [&](data_staging::script& s) {
-            handle_time_for_shape(s, bridges_.script());
-          });
+      meta_callback(instance, [&](auto& shape) {
+        handle_time_for_shape(shape, bridges_.get<std::decay_t<decltype(shape)>>());
+      });
     }
   };
 
