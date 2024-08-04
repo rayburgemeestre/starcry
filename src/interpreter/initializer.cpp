@@ -27,17 +27,41 @@ v8::Local<v8::Context> current_context_native(std::shared_ptr<v8_wrapper>& wrapp
   return wrapper_context->context->isolate()->GetCurrentContext();
 }
 
-initializer::initializer(generator& gen,
-                         gradient_manager& gm,
+initializer::initializer(gradient_manager& gm,
                          texture_manager& tm,
                          toroidal_manager& toroidalman,
-                         std::shared_ptr<v8_wrapper> context)
-    : gen_(gen),
-      gradient_manager_(gm),
+                         std::shared_ptr<v8_wrapper> context,
+                         std::shared_ptr<metrics> metrics,
+                         util::random_generator& rand_gen,
+                         data_staging::attrs& global_attrs,
+                         data::settings& settings,
+                         object_lookup& lookup,
+                         scenes& scenes_,
+                         scale_settings& scalesettings,
+                         bridges& bridges,
+                         frame_sampler& sampler,
+                         std::unordered_map<std::string, v8::Persistent<v8::Object>>& object_definitions_map,
+                         const generator_options& options,
+                         generator_state& state,
+                         generator_config& config)
+    : gradient_manager_(gm),
       texture_manager_(tm),
       toroidal_manager_(toroidalman),
       context_(std::move(context)),
-      job_mapper_(nullptr) {}
+      job_mapper_(nullptr),
+      metrics_(std::move(metrics)),
+      rand_gen_(rand_gen),
+      global_attrs_(global_attrs),
+      settings_(settings),
+      object_lookup_(lookup),
+      scenes_(scenes_),
+      scalesettings_(scalesettings),
+      bridges_(bridges),
+      sampler_(sampler),
+      object_definitions_map_(object_definitions_map),
+      options_(options),
+      state_(state),
+      config_(config) {}
 
 void initializer::initialize_all(std::shared_ptr<data::job> job,
                                  const std::string& filename,
@@ -66,17 +90,17 @@ void initializer::reset_context() {
 
   context_->add_fun("output", &output_fun);
   context_->add_fun("rand", [&]() {
-    return rand_fun(gen_.rand_);
+    return rand_fun(rand_gen_);
   });
   context_->add_fun("rand1", [&](v8::Local<v8::Number> index) {
-    gen_.rand_.set_index(index->ToNumber(v8::Isolate::GetCurrent()->GetCurrentContext()).ToLocalChecked()->Value());
-    return rand_fun(gen_.rand_);
+    rand_gen_.set_index(index->ToNumber(v8::Isolate::GetCurrent()->GetCurrentContext()).ToLocalChecked()->Value());
+    return rand_fun(rand_gen_);
   });
   context_->add_fun("attr", [&](v8::Local<v8::String> str) -> v8::Local<v8::Value> {
-    return gen_.global_attrs_.get(v8_str(v8::Isolate::GetCurrent(), str));
+    return global_attrs_.get(v8_str(v8::Isolate::GetCurrent(), str));
   });
   context_->add_fun("set_attr", [&](v8::Local<v8::String> key, v8::Local<v8::String> value) -> v8::Local<v8::Value> {
-    gen_.global_attrs_.set(v8_str(v8::Isolate::GetCurrent(), key), v8_str(v8::Isolate::GetCurrent(), value));
+    global_attrs_.set(v8_str(v8::Isolate::GetCurrent(), key), v8_str(v8::Isolate::GetCurrent(), value));
     return v8::Boolean::New(v8::Isolate::GetCurrent(), true);
   });
   context_->add_fun("set_attr3",
@@ -86,8 +110,8 @@ void initializer::reset_context() {
                       const auto str = v8_str(v8::Isolate::GetCurrent(), object_id);
                       const auto object_id_long = std::stoll(str);
                       bool ret = false;
-                      if (gen_.object_lookup_.contains(object_id_long)) {
-                        auto& object_ref = gen_.object_lookup_.at(object_id_long).get();
+                      if (object_lookup_.contains(object_id_long)) {
+                        auto& object_ref = object_lookup_.at(object_id_long).get();
                         meta_callback(object_ref, [&](auto& cc) {
                           cc.attrs_ref().set(v8_str(v8::Isolate::GetCurrent(), key),
                                              v8_str(v8::Isolate::GetCurrent(), value));
@@ -97,16 +121,16 @@ void initializer::reset_context() {
                       return v8::Boolean::New(v8::Isolate::GetCurrent(), ret);
                     });
   context_->add_fun("get_object", [&](v8::Local<v8::Number> unique_id) -> v8::Local<v8::Object> {
-    return gen_.get_object(
+    return object_lookup_.get_object(
         unique_id->ToNumber(v8::Isolate::GetCurrent()->GetCurrentContext()).ToLocalChecked()->Value());
   });
   context_->add_fun("angled_velocity", &angled_velocity);
   context_->add_fun("random_velocity", [&]() {
-    return random_velocity(gen_.rand_);
+    return random_velocity(rand_gen_);
   });
   context_->add_fun("random_velocity1", [&](v8::Local<v8::Number> index) {
-    gen_.rand_.set_index(index->ToNumber(v8::Isolate::GetCurrent()->GetCurrentContext()).ToLocalChecked()->Value());
-    return random_velocity(gen_.rand_);
+    rand_gen_.set_index(index->ToNumber(v8::Isolate::GetCurrent()->GetCurrentContext()).ToLocalChecked()->Value());
+    return random_velocity(rand_gen_);
   });
   context_->add_fun("expf", &expf_fun);
   context_->add_fun("logn", &logn_fun);
@@ -178,11 +202,11 @@ void initializer::reset_context() {
 }
 
 void initializer::init_user_script() {
-  std::ifstream stream(gen_.config().filename.c_str());
-  if (!stream && gen_.config().filename != "-") {
-    throw std::runtime_error("could not locate file " + gen_.config().filename);
+  std::ifstream stream(config_.filename.c_str());
+  if (!stream && config_.filename != "-") {
+    throw std::runtime_error("could not locate file " + config_.filename);
   }
-  std::istreambuf_iterator<char> begin(gen_.config().filename == "-" ? std::cin : stream), end;
+  std::istreambuf_iterator<char> begin(config_.filename == "-" ? std::cin : stream), end;
   // remove "_ =" part from script (which is a workaround to silence 'not in use' linting)
   if (*begin == '_') {
     while (*begin != '=') begin++;
@@ -197,7 +221,7 @@ void initializer::init_user_script() {
     logger(WARNING) << "Exception occurred loading user script:\n" << ex.what() << std::endl;
   }
   v8::HandleScope hs(context_->context->isolate());
-  gen_.bridges_.init();
+  bridges_.init();
 }
 
 void initializer::init_video_meta_info(std::optional<double> rand_seed,
@@ -230,17 +254,17 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
           i.recursively_copy_object(video, preview_obj);
         }
 
-        auto& duration = gen_.scenes_.scenesettings.scenes_duration;
-        auto& durations = gen_.scenes_.scenesettings.scene_durations;
+        auto& duration = scenes_.scenesettings.scenes_duration;
+        auto& durations = scenes_.scenesettings.scene_durations;
         durations.clear();
         auto obj = val.As<v8::Object>();
         auto scenes = i.v8_array(obj, "scenes");
-        gen_.scenes_.reset();
-        gen_.object_definitions_map.clear();
+        scenes_.reset();
+        object_definitions_map_.clear();
         // TODO: put this in a meaningful function?
-        gen_.object_lookup_.reset();
+        object_lookup_.reset();
         for (size_t I = 0; I < scenes->Length(); I++) {
-          gen_.scenes_.add_scene();
+          scenes_.add_scene();
           auto current_scene = i.get_index(scenes, I);
           if (!current_scene->IsObject()) continue;
           auto sceneobj = current_scene.As<v8::Object>();
@@ -251,12 +275,12 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
           n /= duration;
         });
 
-        gen_.config().fps = i.double_number(video, "fps", 25);
-        gen_.state().canvas_w = i.double_number(video, "width", 1920);
-        gen_.state().canvas_h = i.double_number(video, "height", 1080);
+        config_.fps = i.double_number(video, "fps", 25);
+        state_.canvas_w = i.double_number(video, "width", 1920);
+        state_.canvas_h = i.double_number(video, "height", 1080);
         if (width && height) {
-          gen_.state().canvas_w = *width;
-          gen_.state().canvas_h = *height;
+          state_.canvas_w = *width;
+          state_.canvas_h = *height;
         }
 
         double use_scale = i.double_number(video, "scale", 1.);
@@ -264,18 +288,15 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
           use_scale = *scale;
         }
 
-        auto& settings_ = gen_.settings_;
+        if (options_.custom_scale) use_scale = options_.custom_scale;
+        if (options_.custom_width) state_.canvas_w = options_.custom_width;
+        if (options_.custom_height) state_.canvas_h = options_.custom_height;
+        if (options_.custom_granularity) config_.tolerated_granularity = options_.custom_granularity;
+        if (options_.custom_grain) settings_.grain_for_opacity = *options_.custom_grain;
 
-        if (gen_.generator_opts.custom_scale) use_scale = gen_.generator_opts.custom_scale;
-        if (gen_.generator_opts.custom_width) gen_.state().canvas_w = gen_.generator_opts.custom_width;
-        if (gen_.generator_opts.custom_height) gen_.state().canvas_h = gen_.generator_opts.custom_height;
-        if (gen_.generator_opts.custom_granularity)
-          gen_.config().tolerated_granularity = gen_.generator_opts.custom_granularity;
-        if (gen_.generator_opts.custom_grain) settings_.grain_for_opacity = *gen_.generator_opts.custom_grain;
-
-        gen_.state().seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
-        gen_.config().tolerated_granularity = i.double_number(video, "granularity", 1);
-        gen_.config().minimize_steps_per_object = i.boolean(video, "minimize_steps_per_object", false);
+        state_.seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
+        config_.tolerated_granularity = i.double_number(video, "granularity", 1);
+        config_.minimize_steps_per_object = i.boolean(video, "minimize_steps_per_object", false);
         if (i.has_field(video, "perlin_noise")) settings_.perlin_noise = i.boolean(video, "perlin_noise");
         if (i.has_field(video, "motion_blur")) settings_.motion_blur = i.boolean(video, "motion_blur");
         if (i.has_field(video, "grain_for_opacity"))
@@ -286,30 +307,30 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         if (i.has_field(video, "gamma")) settings_.gamma = i.double_number(video, "gamma");
         if (i.has_field(video, "scale_ratio")) settings_.scale_ratio = i.boolean(video, "scale_ratio");
         if (i.has_field(video, "min_intermediates"))
-          gen_.config().min_intermediates = i.integer_number(video, "min_intermediates");
+          config_.min_intermediates = i.integer_number(video, "min_intermediates");
         if (i.has_field(video, "max_intermediates"))
-          gen_.config().max_intermediates = i.integer_number(video, "max_intermediates");
-        if (i.has_field(video, "fast_ff")) gen_.config().fast_ff = i.boolean(video, "fast_ff");
+          config_.max_intermediates = i.integer_number(video, "max_intermediates");
+        if (i.has_field(video, "fast_ff")) config_.fast_ff = i.boolean(video, "fast_ff");
         if (i.has_field(video, "bg_color")) {
           auto bg = i.v8_obj(video, "bg_color");
           job_mapper_->map_background_color(i, bg);
         }
         if (i.has_field(video, "sample")) {
           auto sample = i.get(video, "sample").As<v8::Object>();
-          gen_.sampler_.set_sample_include(i.double_number(sample, "include"), gen_.config().fps);  // seconds
-          gen_.sampler_.set_sample_exclude(i.double_number(sample, "exclude"), gen_.config().fps);  // seconds
+          sampler_.set_sample_include(i.double_number(sample, "include"), config_.fps);  // seconds
+          sampler_.set_sample_exclude(i.double_number(sample, "exclude"), config_.fps);  // seconds
         }
-        gen_.rand_.set_seed(gen_.state().seed);
+        rand_gen_.set_seed(state_.seed);
 
-        gen_.state().max_frames = duration * gen_.config().fps;
-        gen_.metrics_->set_total_frames(gen_.state().max_frames);
+        state_.max_frames = duration * config_.fps;
+        metrics_->set_total_frames(state_.max_frames);
 
-        job_mapper_->map_canvas(gen_.state().canvas_w, gen_.state().canvas_h);
+        job_mapper_->map_canvas(state_.canvas_w, state_.canvas_h);
 
         job_mapper_->map_scale(use_scale);
-        gen_.scalesettings.video_scale = use_scale;
-        gen_.scalesettings.video_scale_next = use_scale;
-        gen_.scalesettings.video_scale_intermediate = use_scale;
+        scalesettings_.video_scale = use_scale;
+        scalesettings_.video_scale_next = use_scale;
+        scalesettings_.video_scale_intermediate = use_scale;
       });
 }
 
@@ -398,7 +419,7 @@ void initializer::init_object_definitions() {
         i.set_field(defs_storage, object_id, object_definition);
         auto obj_from_storage = i.get(defs_storage, object_id).As<v8::Object>();
         auto id = v8_str(isolate, object_id.As<v8::String>());
-        gen_.object_definitions_map[id].Reset(isolate, obj_from_storage);
+        object_definitions_map_[id].Reset(isolate, obj_from_storage);
       }
     });
   });

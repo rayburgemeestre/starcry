@@ -33,6 +33,8 @@ public:
   map_type::iterator end_intermediate();
   std::reference_wrapper<data_staging::shape_t>& at_intermediate(int64_t id);
 
+  v8::Local<v8::Object> get_object(int64_t object_unique_id);
+
 private:
   generator& gen_;
 
