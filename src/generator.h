@@ -25,6 +25,7 @@
 #include "interpreter/instantiator.h"
 #include "interpreter/interactor.h"
 #include "interpreter/job_to_shape_mapper.h"
+#include "interpreter/object_definitions.h"
 #include "interpreter/object_lookup.h"
 #include "interpreter/positioner.h"
 #include "interpreter/scenes.h"
@@ -75,7 +76,7 @@ class generator {
   std::unordered_map<size_t, std::map<int, size_t>> indexes;
   frame_stepper stepper;
 
-  std::unordered_map<std::string, v8::Persistent<v8::Object>> object_definitions_map;
+  object_definitions definitions_;
   data::settings settings_;
 
   scale_settings scalesettings;
@@ -148,7 +149,6 @@ public:
   int64_t spawn_object_at_parent(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
   static int64_t destroy(data_staging::shape_t& spawner);
 
-  std::unordered_map<std::string, v8::Persistent<v8::Object>>& get_object_definitions_ref();
   std::vector<int64_t> get_transitive_ids(const std::vector<int64_t>& in);
   void set_checkpoints(std::set<int>& checkpoints);
 

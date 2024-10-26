@@ -45,16 +45,16 @@ generator::generator(std::shared_ptr<metrics>& metrics,
                    scalesettings,
                    bridges_,
                    sampler_,
-                   object_definitions_map,
+                   definitions_,
                    opts,
                    state_,
                    config_),
-      bridges_(*this),
+      bridges_(*this, definitions_),
       scenes_(*this),
       sampler_(*this),
       positioner_(*this),
-      interactor_(*this, toroidal_manager_),
-      instantiator_(*this),
+      interactor_(*this, toroidal_manager_, definitions_),
+      instantiator_(*this, definitions_),
       job_shape_mapper_(*this, gradient_manager_, texture_manager_),
       object_lookup_(*this),
       checkpoints_(*this),
@@ -236,7 +236,7 @@ void generator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> crea
 
     i.set_field(genctx->objects, object_dst_id, object_src);
     auto val = i.get(objects, object_src_id);
-    object_definitions_map[object_dst_id].Reset(i.get_isolate(), val.As<v8::Object>());
+    definitions_.update(object_dst_id, val.As<v8::Object>());
   }
 
   // make sure we start from the current 'global' time as an offset
@@ -573,8 +573,8 @@ void generator::update_time(data_staging::shape_t& instance,
   auto& i = genctx->i();
   const auto time_settings = scenes_.get_time(scenesettings);
   const auto execute = [&](double scene_time) {
-    if (const auto find = object_definitions_map.find(instance_id); find != object_definitions_map.end()) {
-      const auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
+    if (const auto find = definitions_.get(instance_id, true); find) {
+      const auto object_definition = *find;
       const auto handle_time_for_shape = [&](auto& c, auto& object_bridge) {
         // TODO: check if the object has an "time" function, or we can just skip this entire thing
         c.meta_ref().set_time(scene_time);
@@ -696,12 +696,12 @@ int64_t generator::spawn_object2(data_staging::shape_t& spawner, v8::Local<v8::O
   auto uid = i.integer_number(line_obj, "unique_id");
 
   // create __point__ object definition
-  if (object_definitions_map.find("__point__") == object_definitions_map.end()) {
+  if (!definitions_.contains("__point__")) {
     auto self_def = v8::Object::New(i.get_isolate());
     i.set_field(self_def, "x", v8::Number::New(i.get_isolate(), 0));
     i.set_field(self_def, "y", v8::Number::New(i.get_isolate(), 0));
     i.set_field(genctx->objects.Get(i.get_isolate()), "__point__", self_def);
-    object_definitions_map["__point__"].Reset(i.get_isolate(), self_def);
+    definitions_.update("__point__", self_def);
   }
 
   // spawn one, we do this so we can get full transitive x and y for the line start
@@ -802,10 +802,6 @@ int64_t generator::destroy(data_staging::shape_t& caller) {
     shape.meta_ref().set_destroyed();
   });
   return ret;
-}
-
-std::unordered_map<std::string, v8::Persistent<v8::Object>>& generator::get_object_definitions_ref() {
-  return object_definitions_map;
 }
 
 std::vector<int64_t> generator::get_transitive_ids(const std::vector<int64_t>& unique_ids) {

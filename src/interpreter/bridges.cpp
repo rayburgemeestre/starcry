@@ -6,14 +6,14 @@
 #include "bridges.h"
 
 namespace interpreter {
-bridges::bridges(generator& gen) : gen_(gen) {}
+bridges::bridges(generator& gen, object_definitions& definitions) : gen_(gen), definitions_(definitions) {}
 
 void bridges::init() {
-  object_bridge_circle = std::make_shared<object_bridge<data_staging::circle>>(&gen_);
-  object_bridge_ellipse = std::make_shared<object_bridge<data_staging::ellipse>>(&gen_);
-  object_bridge_line = std::make_shared<object_bridge<data_staging::line>>(&gen_);
-  object_bridge_text = std::make_shared<object_bridge<data_staging::text>>(&gen_);
-  object_bridge_script = std::make_shared<object_bridge<data_staging::script>>(&gen_);
+  object_bridge_circle = std::make_shared<object_bridge<data_staging::circle>>(&gen_, definitions_);
+  object_bridge_ellipse = std::make_shared<object_bridge<data_staging::ellipse>>(&gen_, definitions_);
+  object_bridge_line = std::make_shared<object_bridge<data_staging::line>>(&gen_, definitions_);
+  object_bridge_text = std::make_shared<object_bridge<data_staging::text>>(&gen_, definitions_);
+  object_bridge_script = std::make_shared<object_bridge<data_staging::script>>(&gen_, definitions_);
 }
 
 std::shared_ptr<object_bridge<data_staging::circle>>& bridges::circle() {

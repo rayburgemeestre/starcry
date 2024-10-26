@@ -138,7 +138,9 @@ void object_bridge<data_staging::script>::set_velocity(double vel) {
 }
 
 template <>
-object_bridge<data_staging::script>::object_bridge(interpreter::generator* generator) : generator_(generator) {
+object_bridge<data_staging::script>::object_bridge(interpreter::generator* generator,
+                                                   interpreter::object_definitions& definitions)
+    : generator_(generator), definitions_(definitions) {
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
   // @add_field@
   object_bridge_class  // .template ctor<int>()

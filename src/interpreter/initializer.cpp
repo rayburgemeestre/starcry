@@ -40,7 +40,7 @@ initializer::initializer(gradient_manager& gm,
                          scale_settings& scalesettings,
                          bridges& bridges,
                          frame_sampler& sampler,
-                         std::unordered_map<std::string, v8::Persistent<v8::Object>>& object_definitions_map,
+                         object_definitions& definitions,
                          const generator_options& options,
                          generator_state& state,
                          generator_config& config)
@@ -58,7 +58,7 @@ initializer::initializer(gradient_manager& gm,
       scalesettings_(scalesettings),
       bridges_(bridges),
       sampler_(sampler),
-      object_definitions_map_(object_definitions_map),
+      definitions_(definitions),
       options_(options),
       state_(state),
       config_(config) {}
@@ -260,7 +260,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         auto obj = val.As<v8::Object>();
         auto scenes = i.v8_array(obj, "scenes");
         scenes_.reset();
-        object_definitions_map_.clear();
+        definitions_.clear();
         // TODO: put this in a meaningful function?
         object_lookup_.reset();
         for (size_t I = 0; I < scenes->Length(); I++) {
@@ -419,7 +419,7 @@ void initializer::init_object_definitions() {
         i.set_field(defs_storage, object_id, object_definition);
         auto obj_from_storage = i.get(defs_storage, object_id).As<v8::Object>();
         auto id = v8_str(isolate, object_id.As<v8::String>());
-        object_definitions_map_[id].Reset(isolate, obj_from_storage);
+        definitions_.update(id, obj_from_storage);
       }
     });
   });

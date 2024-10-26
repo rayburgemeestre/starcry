@@ -16,11 +16,12 @@ void instantiate_object_copy_fields(v8_interact& i,
                                     v8::Local<v8::Object> new_instance);
 
 class generator;
+class object_definitions;
 
 class instantiator {
 private:
 public:
-  explicit instantiator(generator& gen);
+  explicit instantiator(generator& gen, object_definitions& definitions);
 
   void instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
                                                      int debug_level = 0,
@@ -46,6 +47,7 @@ private:
   void write_back_copy(T& copy);
 
   generator& gen_;
+  object_definitions& definitions_;
   util::random_generator rand_;
   int64_t counter = 0;
 };

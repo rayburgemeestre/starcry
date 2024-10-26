@@ -89,7 +89,7 @@ void recursively_build_stack_for_object(auto& new_stack,
   });
 }
 
-instantiator::instantiator(generator& gen) : gen_(gen) {}
+instantiator::instantiator(generator& gen, object_definitions& definitions) : gen_(gen), definitions_(definitions) {}
 
 void instantiator::instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
                                                                  int debug_level,
@@ -162,7 +162,7 @@ instantiator::instantiate_object_from_scene(
 
   // TODO: make sure this is the only source..., and get rid of genctx->objects usage
   if (!object_prototype->IsObject()) {
-    object_prototype = gen_.object_definitions_map[object_id].Get(isolate);
+    object_prototype = *definitions_.get(object_id);
   }
 
   // instantiate the prototype into newly allocated javascript object
@@ -193,7 +193,8 @@ instantiator::instantiate_object_from_scene(
     return gen_.scenes_.instantiated_objects_current_scene().back();
   };
 
-  const auto type = i.str(gen_.object_definitions_map[object_id], "type", "");
+  auto& obj = definitions_.get_persistent(object_id);
+  const auto type = i.str(obj, "type", "");
   bool check_uniqueness = false;
   std::string unique_group = "";
 
@@ -301,8 +302,9 @@ instantiator::instantiate_object_from_scene(
         throw abort_exception(fmt::format("object_id ({}) not found in definitions map", object_id));
       }
 #endif
-      i.call_fun(gen_.object_definitions_map[object_id],  // object definition
-                 bridge->instance(),                      // bridged object is "this"
+      auto obj = *definitions_.get(object_id);
+      i.call_fun(obj,                 // object definition
+                 bridge->instance(),  // bridged object is "this"
                  "init");
       bridge->pop_object();
       write_back_copy(copy);

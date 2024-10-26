@@ -193,7 +193,9 @@ void object_bridge<data_staging::text>::set_seed(int64_t new_value) const {
 }
 
 template <>
-object_bridge<data_staging::text>::object_bridge(interpreter::generator* generator) : generator_(generator) {
+object_bridge<data_staging::text>::object_bridge(interpreter::generator* generator,
+                                                 interpreter::object_definitions& definitions)
+    : generator_(generator), definitions_(definitions) {
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
   // @add_field@
   object_bridge_class  // .template ctor<int>()

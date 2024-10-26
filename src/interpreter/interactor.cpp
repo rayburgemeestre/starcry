@@ -7,10 +7,12 @@
 #include "interactor.h"
 #include "abort_exception.hpp"
 #include "generator.h"
+#include "object_definitions.h"
 
 namespace interpreter {
 
-interactor::interactor(generator& gen, toroidal_manager& tm) : gen_(gen), toroidal_manager_(tm) {}
+interactor::interactor(generator& gen, toroidal_manager& tm, object_definitions& definitions)
+    : gen_(gen), toroidal_manager_(tm), definitions_(definitions) {}
 
 void interactor::reset() {
   qts.clear();
@@ -322,9 +324,11 @@ void interactor::handle_collision(data_staging::circle& instance,
   instance2.behavior_ref().set_last_collide(unique_id);
 
   // collide callback
-  auto find = gen_.object_definitions_map.find(instance.meta_cref().id());
-  if (find != gen_.object_definitions_map.end()) {
-    auto object_definition = v8::Local<v8::Object>::New(i.get_isolate(), find->second);
+  // NOTE: the old code was doing a creation of a new instance, pass true as 2nd param to get() below to get back that
+  // behavior
+  auto find = definitions_.get(instance.meta_cref().id());
+  if (find) {
+    auto object_definition = *find;
     auto handle_collide_for_shape = [&](auto& c, auto& object_bridge, auto other_unique_id) {
       object_bridge->push_object(c);
       i.call_fun(object_definition, object_bridge->instance(), "collide", other_unique_id);

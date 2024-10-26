@@ -30,11 +30,9 @@ void object_bridge<T>::pop_object() {
   if constexpr (!std::is_same_v<T, data_staging::script>) {
     if (gradients_accessed_) {
       // shape_stack.back()->styling_ref().set_gradients_dirty();
-      auto& defs = this->generator_->get_object_definitions_ref();
       auto obj_id = shape_stack.back()->meta_cref().id();
-      auto find = defs.find(obj_id);
-      if (find != defs.end()) {
-        auto& def = find->second;
+      if (definitions_.contains(obj_id)) {
+        auto& def = definitions_.get_persistent(obj_id);
         shape_stack.back()->styling_ref().commit(def);
       }
     }

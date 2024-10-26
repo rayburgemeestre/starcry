@@ -44,6 +44,7 @@ class object_lookup;
 class scenes;
 class bridges;
 class frame_sampler;
+class object_definitions;
 
 class initializer {
 public:
@@ -60,7 +61,7 @@ public:
                        scale_settings& scalesettings,
                        bridges& bridges,
                        frame_sampler& sampler,
-                       std::unordered_map<std::string, v8::Persistent<v8::Object>>& object_definitions_map,
+                       object_definitions& definitions,
                        const generator_options& options,
                        generator_state& state,
                        generator_config& config);
@@ -102,7 +103,7 @@ private:
   scale_settings& scalesettings_;
   bridges& bridges_;
   frame_sampler& sampler_;
-  std::unordered_map<std::string, v8::Persistent<v8::Object>>& object_definitions_map_;
+  object_definitions& definitions_;
   const generator_options& options_;
   generator_state& state_;
   generator_config& config_;
