@@ -89,7 +89,11 @@ void recursively_build_stack_for_object(auto& new_stack,
   });
 }
 
-instantiator::instantiator(generator& gen, object_definitions& definitions) : gen_(gen), definitions_(definitions) {}
+instantiator::instantiator(generator& gen,
+                           object_definitions& definitions,
+                           initializer& initializer,
+                           object_lookup& object_lookup)
+    : gen_(gen), definitions_(definitions), initializer_(initializer), object_lookup_(object_lookup) {}
 
 void instantiator::instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
                                                                  int debug_level,
@@ -119,7 +123,7 @@ void instantiator::instantiate_additional_objects_from_new_scene(v8::Persistent<
     auto instantiated_object = instantiate_object_from_scene(i, scene_obj, parent_object);
     if (instantiated_object) {
       auto [created_instance, shape_ref, shape_copy] = *instantiated_object;
-      gen_.create_bookkeeping_for_script_objects(created_instance, shape_copy, debug_level + 1);
+      create_bookkeeping_for_script_objects(created_instance, shape_copy, debug_level + 1);
     }
   }
 }
@@ -297,11 +301,11 @@ instantiator::instantiate_object_from_scene(
       auto copy = std::get<T>((*shape_ref).get());
       bridge->push_object(copy);
 
-#ifdef DEBUG2
-      if (!gen_.object_definitions_map.contains(object_id)) {
+      // TODO: had an issue with removing this check for debug builds
+      if (!definitions_.contains(object_id)) {
         throw abort_exception(fmt::format("object_id ({}) not found in definitions map", object_id));
       }
-#endif
+
       auto obj = *definitions_.get(object_id);
       i.call_fun(obj,                 // object definition
                  bridge->instance(),  // bridged object is "this"
@@ -433,7 +437,7 @@ instantiator::instantiate_object_from_scene(
 
     std::vector<std::reference_wrapper<data_staging::shape_t>> new_stack;
     recursively_build_stack_for_object(
-        new_stack, shape_ref.get(), gen_.object_lookup_, gen_.scenes_.instantiated_objects_current_scene());
+        new_stack, shape_ref.get(), object_lookup_, gen_.scenes_.instantiated_objects_current_scene());
     // reverse new_stack
     std::reverse(new_stack.begin(), new_stack.end());
 
@@ -538,6 +542,157 @@ void instantiator::write_back_copy(T& copy) {
     });
     index++;
   }
+}
+
+void instantiator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance,
+                                                         const data_staging::shape_t& created_shape,
+                                                         int debug_level) {
+  auto& i = gen_.genctx->i();
+
+  // only do extra work for script objects
+  if (i.str(created_instance, "type") != "script") {
+    return;
+  }
+
+  // created shape namespace
+  std::string created_shape_namespace;
+  data_staging::attrs obj_attrs;
+  double scale = 1.;
+  meta_callback(created_shape, [&]<typename T>(T& shape) {
+    created_shape_namespace = shape.meta_cref().namespace_name();
+    obj_attrs = shape.attrs_cref();
+    scale = shape.generic_cref().scale();
+  });
+
+  const auto unique_id = i.integer_number(created_instance, "unique_id");
+  const auto id = i.str(created_instance, "id");
+  const auto namespace_ = created_shape_namespace;
+  logger(DEBUG) << std::string(debug_level, ' ') << "Bookkeeping for: " << id << " (namespace: " << namespace_ << ")"
+                << std::endl;
+  i.set_field(created_instance, "namespace", v8_str(i.get_context(), namespace_));
+  const auto file = i.str(created_instance, "file");
+  const auto specified_duration = i.has_field(created_instance, "duration")
+                                      ? i.double_number(created_instance, "duration")
+                                      : static_cast<double>(-1);
+
+  // read the entire script from disk
+  std::ifstream stream(file);
+  std::istreambuf_iterator<char> begin(stream), end;
+  // remove "_ =" part from script (which is a workaround to silence 'not in use' linting)
+  if (*begin == '_') {
+    while (*begin != '=') begin++;
+    begin++;
+  }
+
+  static std::atomic<int> uidx = 0;
+  int use_index = uidx++;
+  // evaluate script into temporary variable
+  const auto source = fmt::format("var tmp{} = {};", use_index, std::string(begin, end));
+  gen_.context->run(source);
+  auto tmp = i.get_global(fmt::format("tmp{}", use_index)).As<v8::Object>();
+
+  // process scenes and make the scenes relative, initialize helper objs etc
+  auto scenes = i.v8_array(tmp, "scenes");
+  {
+    auto duration = gen_.scenes_.get_duration(unique_id);
+    std::vector<double> durations;
+    for (size_t I = 0; I < scenes->Length(); I++) {
+      auto current_scene = i.get_index(scenes, I);
+      if (!current_scene->IsObject()) continue;
+      auto sceneobj = current_scene.As<v8::Object>();
+      duration += i.double_number(sceneobj, "duration");
+      durations.push_back(i.double_number(sceneobj, "duration"));
+    }
+    std::for_each(durations.begin(), durations.end(), [&duration](double& n) {
+      n /= duration;
+    });
+    gen_.scenes_.set_duration(unique_id, duration);
+    gen_.scenes_.set_durations(unique_id, durations);
+    gen_.scenes_.set_desired_duration(unique_id, specified_duration);
+  }
+
+  // make the scenes a property of the created instance (even though we probably won't need it for now)
+  i.set_field(created_instance, "scenes", scenes);  // TODO: remove?
+
+  // import all gradients from script
+  auto gradients = i.v8_obj(tmp, "gradients");
+  auto gradient_fields = gradients->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+  for (size_t k = 0; k < gradient_fields->Length(); k++) {
+    auto gradient_src_id = i.get_index(gradient_fields, k);
+    auto gradient_dst_id = namespace_ + i.str(gradient_fields, k);
+    i.set_field(gen_.genctx->gradients, gradient_dst_id, i.get(gradients, gradient_src_id));
+  }
+  initializer_.init_gradients();
+
+  // import all textures from script
+  auto textures = i.v8_obj(tmp, "textures");
+  if (textures->IsObject()) {
+    auto texture_fields = textures->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+    for (size_t k = 0; k < texture_fields->Length(); k++) {
+      auto texture_src_id = i.get_index(texture_fields, k);
+      auto texture_dst_id = namespace_ + i.str(texture_fields, k);
+      i.set_field(gen_.genctx->textures, texture_dst_id, i.get(textures, texture_src_id));
+    }
+    initializer_.init_textures();
+  }
+
+  // import all object definitions from script
+  auto objects = i.v8_obj(tmp, "objects");
+  auto objects_fields = objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
+  for (size_t k = 0; k < objects_fields->Length(); k++) {
+    auto object_src_id = i.get_index(objects_fields, k);
+    auto object_dst_id = namespace_ + i.str(objects_fields, k);
+    auto object_src = i.get(objects, object_src_id);
+    auto object_src_obj = object_src.As<v8::Object>();
+    logger(DEBUG) << std::string(debug_level, ' ') << "Importing object " << i.str(objects_fields, k)
+                  << " as: " << object_dst_id << ", from: " << fmt::format("tmp{}", use_index) << " and file: " << file
+                  << " , points to: " << i.str(object_src_obj, "file") << std::endl;
+
+    // also copy all the stuff from the object definition
+    i.recursively_copy_object(created_instance, object_src_obj);
+
+    // also copy attrs to these objects imported by script
+    if (!i.has_field(object_src_obj, "attrs")) {
+      i.set_field(object_src_obj, "attrs", v8::Object::New(i.get_isolate()));
+    }
+    auto attrs = i.get(object_src_obj, "attrs").As<v8::Object>();
+    for (const auto& str : obj_attrs.get_strings()) {
+      i.set_field(attrs, str.first, v8_str(i.get_context(), str.second));
+    }
+    for (const auto& num : obj_attrs.get_numbers()) {
+      i.set_field(attrs, num.first, v8::Number::New(i.get_isolate(), num.second));
+    }
+    i.set_field(object_src_obj, "attrs", attrs);
+
+    // also copy scale as recursive_scale to all objects, but combine/merge if it already has a value (by multiplying)
+    double existing_recursive_scale = i.double_number(object_src_obj, "recursive_scale", 1.0);
+    i.set_field(object_src_obj, "recursive_scale", v8::Number::New(i.get_isolate(), existing_recursive_scale * scale));
+
+    i.set_field(gen_.genctx->objects, object_dst_id, object_src);
+    auto val = i.get(objects, object_src_id);
+    definitions_.update(object_dst_id, val.As<v8::Object>());
+  }
+
+  // make sure we start from the current 'global' time as an offset
+  gen_.scenes_.scenesettings_objs[unique_id].parent_offset = gen_.scenes_.get_time(gen_.scenes_.scenesettings).time;
+
+  // sub object starts at scene zero
+  gen_.scenes_.set_scene_sub_object(unique_id);
+
+  // recurse for each object in the "sub" scene
+  auto current_scene = i.get_index(scenes, gen_.scenes_.scenesettings_objs[unique_id].current_scene_next);
+  if (current_scene->IsObject()) {
+    auto o = current_scene.As<v8::Object>();
+    auto scene_objects = i.v8_array(o, "objects");
+    // TODO: why is it needed to convert these v8::Local objects? They seem to be garbage collected otherwise during
+    // execution.
+    v8::Persistent<v8::Array> tmp;
+    tmp.Reset(i.get_isolate(), scene_objects);
+    instantiate_additional_objects_from_new_scene(tmp, debug_level + 1, &created_shape);
+  }
+
+  // clean-up temporary variable that referenced the entire imported script
+  gen_.context->run(fmt::format("tmp{} = undefined;", use_index));
 }
 
 }  // namespace interpreter

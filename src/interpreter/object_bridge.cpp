@@ -57,32 +57,32 @@ void object_bridge<T>::set_attr(v8::Local<v8::String> key, v8::Local<v8::String>
 template <typename T>
 int64_t object_bridge<T>::spawn(v8::Local<v8::Object> obj) {
   data_staging::shape_t var = *shape_stack.back();
-  return generator_->spawn_object(var, obj);
+  return spawner_.spawn_object(var, obj);
 }
 
 template <typename T>
 int64_t object_bridge<T>::spawn2(v8::Local<v8::Object> line_obj, int64_t obj1) {
   data_staging::shape_t var = *shape_stack.back();
-  return generator_->spawn_object2(var, line_obj, obj1);
+  return spawner_.spawn_object2(var, line_obj, obj1);
 }
 
 template <typename T>
 int64_t object_bridge<T>::spawn3(v8::Local<v8::Object> line_obj, int64_t obj1, int64_t obj2) {
   data_staging::shape_t var = *shape_stack.back();
-  return generator_->spawn_object3(var, line_obj, obj1, obj2);
+  return spawner_.spawn_object3(var, line_obj, obj1, obj2);
 }
 
 template <typename T>
 int64_t object_bridge<T>::spawn_parent(v8::Local<v8::Object> line_obj) {
   data_staging::shape_t var = *shape_stack.back();
-  return generator_->spawn_object_at_parent(var, line_obj);
+  return spawner_.spawn_object_at_parent(var, line_obj);
 }
 
 template <typename T>
 int64_t object_bridge<T>::destroy() {
   data_staging::shape_t var = *shape_stack.back();
   // this operates on a copy
-  auto ret = generator_->destroy(var);
+  auto ret = spawner_.destroy(var);
   // we swap the copy with the real one, to keep changes (such as set_destroyed())
   std::swap(std::get<T>(var), *shape_stack.back());
   return ret;

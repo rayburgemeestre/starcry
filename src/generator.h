@@ -29,6 +29,7 @@
 #include "interpreter/object_lookup.h"
 #include "interpreter/positioner.h"
 #include "interpreter/scenes.h"
+#include "interpreter/spawner.h"
 #include "interpreter/texture_manager.h"
 #include "interpreter/toroidal_manager.h"
 
@@ -36,8 +37,6 @@
 
 #include "data/job.hpp"
 #include "data/settings.hpp"
-#include "data/texture.hpp"
-#include "data/toroidal.hpp"
 #include "data_staging/shape.hpp"
 
 #include "util/frame_stepper.hpp"
@@ -65,6 +64,7 @@ class generator {
   friend class object_lookup;
   friend class checkpoints;
   friend class debug_printer;
+  friend class spawner;
 
   generator_state state_;
   generator_config config_;
@@ -88,6 +88,7 @@ class generator {
   toroidal_manager toroidal_manager_;
 
   initializer initializer_;
+  spawner spawner_;
   bridges bridges_;
   scenes scenes_;
   frame_sampler sampler_;
@@ -124,9 +125,6 @@ public:
 
   void create_object_instances();
 
-  void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance,
-                                             const data_staging::shape_t& created_shape,
-                                             int debug_level = 0);
   void reset_seeds();
   void fast_forward(int frame_of_interest);
   bool generate_frame();
@@ -141,13 +139,8 @@ public:
 
   data::settings settings() const;
 
+  // TODO: remove, or move to spawner?
   v8::Local<v8::Value> get_attr(data_staging::shape_t& spawner, v8::Local<v8::String> field);
-
-  int64_t spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
-  int64_t spawn_object2(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1);
-  int64_t spawn_object3(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1, int64_t obj2);
-  int64_t spawn_object_at_parent(data_staging::shape_t& spawner, v8::Local<v8::Object> obj);
-  static int64_t destroy(data_staging::shape_t& spawner);
 
   std::vector<int64_t> get_transitive_ids(const std::vector<int64_t>& in);
   void set_checkpoints(std::set<int>& checkpoints);

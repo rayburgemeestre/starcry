@@ -11,8 +11,8 @@
 
 namespace interpreter {
 
-interactor::interactor(generator& gen, toroidal_manager& tm, object_definitions& definitions)
-    : gen_(gen), toroidal_manager_(tm), definitions_(definitions) {}
+interactor::interactor(generator& gen, toroidal_manager& tm, object_definitions& definitions, spawner& spawner)
+    : gen_(gen), toroidal_manager_(tm), definitions_(definitions), spawner_(spawner) {}
 
 void interactor::reset() {
   qts.clear();
@@ -163,7 +163,7 @@ bool interactor::destroy_if_duplicate(const std::string& unique_group, data_stag
   // auto& created_instance = instance;
 
   const auto destroy_shape = [&]() {
-    gen_.destroy(shape);
+    spawner_.destroy(shape);
     destroyed = true;
   };
 

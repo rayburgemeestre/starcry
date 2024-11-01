@@ -5,15 +5,18 @@
  */
 #include "bridges.h"
 
+#include "interpreter/spawner.h"
+
 namespace interpreter {
-bridges::bridges(generator& gen, object_definitions& definitions) : gen_(gen), definitions_(definitions) {}
+
+bridges::bridges(object_definitions& definitions, spawner& spawner) : definitions_(definitions), spawner_(spawner) {}
 
 void bridges::init() {
-  object_bridge_circle = std::make_shared<object_bridge<data_staging::circle>>(&gen_, definitions_);
-  object_bridge_ellipse = std::make_shared<object_bridge<data_staging::ellipse>>(&gen_, definitions_);
-  object_bridge_line = std::make_shared<object_bridge<data_staging::line>>(&gen_, definitions_);
-  object_bridge_text = std::make_shared<object_bridge<data_staging::text>>(&gen_, definitions_);
-  object_bridge_script = std::make_shared<object_bridge<data_staging::script>>(&gen_, definitions_);
+  object_bridge_circle = std::make_shared<object_bridge<data_staging::circle>>(definitions_, spawner_);
+  object_bridge_ellipse = std::make_shared<object_bridge<data_staging::ellipse>>(definitions_, spawner_);
+  object_bridge_line = std::make_shared<object_bridge<data_staging::line>>(definitions_, spawner_);
+  object_bridge_text = std::make_shared<object_bridge<data_staging::text>>(definitions_, spawner_);
+  object_bridge_script = std::make_shared<object_bridge<data_staging::script>>(definitions_, spawner_);
 }
 
 std::shared_ptr<object_bridge<data_staging::circle>>& bridges::circle() {

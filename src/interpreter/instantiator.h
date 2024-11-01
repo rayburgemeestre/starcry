@@ -17,11 +17,16 @@ void instantiate_object_copy_fields(v8_interact& i,
 
 class generator;
 class object_definitions;
+class initializer;
+class object_lookup;
 
 class instantiator {
 private:
 public:
-  explicit instantiator(generator& gen, object_definitions& definitions);
+  explicit instantiator(generator& gen,
+                        object_definitions& definitions,
+                        initializer& initializer,
+                        object_lookup& object_lookup);
 
   void instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
                                                      int debug_level = 0,
@@ -34,6 +39,10 @@ public:
       const data_staging::shape_t* parent_object);  // it's optional parent
 
   void reset_seeds();
+
+  void create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance,
+                                             const data_staging::shape_t& created_shape,
+                                             int debug_level = 0);
 
 private:
   void _instantiate_object(v8_interact& i,
@@ -48,6 +57,8 @@ private:
 
   generator& gen_;
   object_definitions& definitions_;
+  initializer& initializer_;
+  object_lookup& object_lookup_;
   util::random_generator rand_;
   int64_t counter = 0;
 };

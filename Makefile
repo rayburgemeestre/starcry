@@ -8,8 +8,9 @@ ccache_env = CXX='ccache g++' CC='ccache gcc' CCACHE_SLOPPINESS=file_macro,local
 docker_tty = $$(/bin/sh -c 'if [ "$(interactive)" = "1" ]]; then echo "-t"; else echo ""; fi')
 docker_device_card0 = $$(/bin/sh -c 'if [ -e "/dev/dri/card0" ]]; then echo "--device /dev/dri/card0:/dev/dri/card0"; else echo ""; fi')
 docker_exe_tmp := $$(/bin/sh -c 'if [ $$(which podman) ]; then echo "podman"; else echo "docker"; fi')
-docker_exe:=$(shell if [ $$(which podman) ]; then echo "podman"; else echo "docker"; fi)
-docker_params = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo "--storage-opt ignore_chown_errors=true"; else echo ""; fi')
+docker_exe:=$(shell if [ $$(which podman) ]; then echo "podman --log-level=debug"; else echo "docker"; fi)
+#docker_params = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo "--storage-opt ignore_chown_errors=true"; else echo ""; fi')
+docker_params = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo ""; else echo ""; fi')
 docker_run = $(docker_exe_tmp) $(docker_params) run -i $(docker_tty) --rm \
 	                                            -e _UID=$(uid) -e _GID=$(gid) \
 	                                            -e container=podman \
@@ -138,6 +139,11 @@ format:  ## format source code (build at least once first)
 	                    cmake --build build --target clangformat && \
 						pushd web && npm run format && popd)
 
+format-rootless:  ## format source code (build at least once first)
+	@$(call make-clang, find ./input -name '*.js' -type f | xargs -I{} -n 1 -P 8 clang-format-15 -i {} && \
+	                    cmake --build build --target clangformat && \
+						pushd web && npm run format && popd)
+
 pull:  ## pull the starcry docker build image
 	$(docker_exe) pull docker.io/rayburgemeestre/build-starcry-ubuntu:22.04
 
@@ -241,7 +247,6 @@ push:
 clion:
 	xhost +
 	sudo sysctl kernel.unprivileged_userns_clone=0
-	sudo rm -rf /home/trigen/.config/JetBrains/CLion2023.3/.lock
 	mkdir -p /tmp/ccache-root
 	$(docker_exe) stop starcry_clion || true
 	$(docker_exe) rm starcry_clion || true
@@ -259,7 +264,6 @@ clion-gcc:
 ide_shell:
 	xhost +
 	sudo sysctl kernel.unprivileged_userns_clone=0
-	sudo rm -rf /home/trigen/.config/JetBrains/CLion2023.3/.lock
 	mkdir -p /tmp/ccache-root
 	$(docker_exe) stop starcry_clion || true
 	$(docker_exe) rm starcry_clion || true
@@ -279,7 +283,8 @@ profile:  ## run starcry with valgrind's callgrind for profiling
 	ls -althrst | tail -n 1
 
 valgrind:
-	valgrind --leak-check=full ./build/starcry input/motion.js  --no-output
+	#valgrind --leak-check=full ./build/starcry input/motion.js  --no-output
+	valgrind --leak-check=full ./build/starcry
 
 profile-memory:
 	#valgrind --tool=massif --massif-out-file=massif.out.starcry ./build/starcry input/sampling.js --gui

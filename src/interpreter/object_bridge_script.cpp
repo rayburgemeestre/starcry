@@ -4,7 +4,6 @@ License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 
-#include "generator.h"
 #include "interpreter/object_bridge.h"
 #include "util/v8_interact.hpp"
 
@@ -138,9 +137,9 @@ void object_bridge<data_staging::script>::set_velocity(double vel) {
 }
 
 template <>
-object_bridge<data_staging::script>::object_bridge(interpreter::generator* generator,
-                                                   interpreter::object_definitions& definitions)
-    : generator_(generator), definitions_(definitions) {
+object_bridge<data_staging::script>::object_bridge(interpreter::object_definitions& definitions,
+                                                   interpreter::spawner& spawner)
+    : definitions_(definitions), spawner_(spawner) {
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
   // @add_field@
   object_bridge_class  // .template ctor<int>()

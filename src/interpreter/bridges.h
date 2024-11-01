@@ -6,14 +6,14 @@
 #pragma once
 
 #include "interpreter/object_bridge.h"
-#include "interpreter/object_definitions.h"
 
 namespace interpreter {
 
 class generator;
+class object_definitions;
+class spawner;
 
 class bridges {
-private:
   std::shared_ptr<object_bridge<data_staging::circle>> object_bridge_circle = nullptr;
   std::shared_ptr<object_bridge<data_staging::ellipse>> object_bridge_ellipse = nullptr;
   std::shared_ptr<object_bridge<data_staging::line>> object_bridge_line = nullptr;
@@ -21,7 +21,7 @@ private:
   std::shared_ptr<object_bridge<data_staging::text>> object_bridge_text = nullptr;
 
 public:
-  bridges(generator& gen, object_definitions& definitions);
+  explicit bridges(object_definitions& definitions, spawner& spawner);
   void init();
 
   template <typename T>
@@ -47,8 +47,8 @@ public:
   std::shared_ptr<object_bridge<data_staging::text>>& text();
 
 private:
-  generator& gen_;
   object_definitions& definitions_;
+  spawner& spawner_;
 };
 
 }  // namespace interpreter

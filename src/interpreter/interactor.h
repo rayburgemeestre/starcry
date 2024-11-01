@@ -19,15 +19,15 @@ namespace interpreter {
 class generator;
 class toroidal_manager;
 class object_definitions;
+class spawner;
 
 class interactor {
-private:
   std::map<std::string, quadtree> qts;
   std::map<std::string, quadtree> qts_gravity;
   std::map<std::string, unique_group> unique_groups;
 
 public:
-  explicit interactor(generator& gen, toroidal_manager& tm, object_definitions& definitions);
+  explicit interactor(generator& gen, toroidal_manager& tm, object_definitions& definitions, spawner& spawner);
 
   void reset();
   void update_interactions();
@@ -54,5 +54,6 @@ private:
   generator& gen_;
   toroidal_manager& toroidal_manager_;
   object_definitions& definitions_;
+  spawner& spawner_;
 };
 }  // namespace interpreter
