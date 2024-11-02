@@ -8,10 +8,29 @@
 #include "abort_exception.hpp"
 #include "generator.h"
 #include "gradient_manager.h"
+#include "job_holder.h"
+#include "scalesettings.h"
+#include "scenes.h"
 
 namespace interpreter {
-job_to_shape_mapper::job_to_shape_mapper(generator& gen, gradient_manager& gm, texture_manager& tm)
-    : gen_(gen), gradient_manager_(gm), texture_manager_(tm) {}
+job_to_shape_mapper::job_to_shape_mapper(generator& gen,
+                                         gradient_manager& gm,
+                                         texture_manager& tm,
+                                         job_holder& holder,
+                                         frame_stepper& stepper,
+                                         scenes& scenes,
+                                         scale_settings& scalesettings)
+    : gen_(gen),
+      gradient_manager_(gm),
+      texture_manager_(tm),
+      job_holder_(holder),
+      frame_stepper_(stepper),
+      scenes_(scenes),
+      scalesettings_(scalesettings) {}
+
+void job_to_shape_mapper::reset() {
+  indexes.clear();
+}
 
 void job_to_shape_mapper::convert_objects_to_render_job(step_calculator& sc, v8::Local<v8::Object> video) {
   //  // Risking doing this for nothing, as this may still be discarded, we'll translate all the instances to
@@ -21,7 +40,7 @@ void job_to_shape_mapper::convert_objects_to_render_job(step_calculator& sc, v8:
   //    if (!instance->IsObject()) continue;
   //    convert_object_to_render_job(i, instance, index, sc, video);
   //  }
-  for (auto& shape : gen_.scenes_.next_shapes_current_scene()) {
+  for (auto& shape : scenes_.next_shapes_current_scene()) {
     bool skip = false;
     meta_callback(shape, [&]<typename T>(const T& shape) {
       if (shape.meta_cref().is_destroyed()) {
@@ -152,19 +171,19 @@ void job_to_shape_mapper::convert_object_to_render_job(data_staging::shape_t& sh
     new_shape.warp_y = warp_y;
 
     // wrap this in a proper add method
-    if (gen_.stepper.next_step != gen_.stepper.max_step) {
-      gen_.indexes[shape.meta_cref().unique_id()][gen_.stepper.current_step] =
-          gen_.job->shapes[gen_.stepper.current_step].size();
+    if (frame_stepper_.next_step != frame_stepper_.max_step) {
+      indexes[shape.meta_cref().unique_id()][frame_stepper_.current_step] =
+          job_holder_.get()->shapes[frame_stepper_.current_step].size();
     } else {
-      new_shape.indexes = gen_.indexes[shape.meta_cref().unique_id()];
+      new_shape.indexes = indexes[shape.meta_cref().unique_id()];
     }
-    if (!(gen_.stepper.current_step >= int(gen_.job->shapes.size()))) {
-      gen_.job->shapes[gen_.stepper.current_step].emplace_back(std::move(new_shape));
+    if (!(frame_stepper_.current_step >= int(job_holder_.get()->shapes.size()))) {
+      job_holder_.get()->shapes[frame_stepper_.current_step].emplace_back(std::move(new_shape));
     } else {
       throw abort_exception("current step exceeds shapes size");
     }
-    gen_.job->scale = gen_.scalesettings.video_scale;
-    gen_.job->scales = gen_.scalesettings.video_scales;
+    job_holder_.get()->scale = scalesettings_.video_scale;
+    job_holder_.get()->scales = scalesettings_.video_scales;
   };
 
   // Update level for all objects

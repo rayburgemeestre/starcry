@@ -24,6 +24,7 @@
 #include "interpreter/initializer.h"
 #include "interpreter/instantiator.h"
 #include "interpreter/interactor.h"
+#include "interpreter/job_holder.h"
 #include "interpreter/job_to_shape_mapper.h"
 #include "interpreter/object_definitions.h"
 #include "interpreter/object_lookup.h"
@@ -65,15 +66,15 @@ class generator {
   friend class checkpoints;
   friend class debug_printer;
   friend class spawner;
+  friend class job_holder;
 
   generator_state state_;
   generator_config config_;
 
   std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
-  std::shared_ptr<data::job> job;
+  job_holder job_holder_;
 
-  std::unordered_map<size_t, std::map<int, size_t>> indexes;
   frame_stepper stepper;
 
   object_definitions definitions_;

@@ -7,18 +7,31 @@
 
 #include "data/shape.hpp"
 #include "data_staging/shape.hpp"
+#include "job_holder.h"
 #include "util/step_calculator.hpp"
 #include "util/v8_interact.hpp"
+
+class frame_stepper;
+class scale_settings;
 
 namespace interpreter {
 class generator;
 class gradient_manager;
 class texture_manager;
+class job_holder;
+class scenes;
 
 class job_to_shape_mapper {
-private:
 public:
-  explicit job_to_shape_mapper(generator& gen, gradient_manager& gm, texture_manager& tm);
+  explicit job_to_shape_mapper(generator& gen,
+                               gradient_manager& gm,
+                               texture_manager& tm,
+                               job_holder& holder,
+                               frame_stepper& stepper,
+                               scenes& scenes,
+                               scale_settings& scalesettings);
+
+  void reset();
 
   void convert_objects_to_render_job(step_calculator& sc, v8::Local<v8::Object> video);
 
@@ -37,5 +50,11 @@ private:
   generator& gen_;
   gradient_manager& gradient_manager_;
   texture_manager& texture_manager_;
+  job_holder& job_holder_;
+  frame_stepper& frame_stepper_;
+  scenes& scenes_;
+  scale_settings& scalesettings_;
+
+  std::unordered_map<size_t, std::map<int, size_t>> indexes;
 };
 }  // namespace interpreter

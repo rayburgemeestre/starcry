@@ -7,12 +7,20 @@
 #include "scenes.h"
 
 #include "generator.h"
+#include "job_holder.h"
+#include "util/generator_context.h"
 
 // #define DEBUG2
 
 namespace interpreter {
 
-scenes::scenes(generator& gen) : gen_(gen) {}
+scenes::scenes(generator& gen,
+               std::shared_ptr<v8_wrapper>& context,
+               std::shared_ptr<generator_context>& genctx,
+               instantiator& instantiator,
+               frame_stepper& stepper,
+               job_holder& holder)
+    : gen_(gen), context(context), genctx(genctx), instantiator_(instantiator), stepper(stepper), job_holder_(holder) {}
 
 scenes scenes::clone() {
   return scenes{*this};
@@ -62,7 +70,7 @@ void scenes::set_scene(size_t scene) {
       scenesettings.current_scene_next > scenesettings.scene_initialized) {
     scenesettings.scene_initialized_previous = scenesettings.scene_initialized;  // in case we need to revert
     scenesettings.scene_initialized = scenesettings.current_scene_next;
-    gen_.create_object_instances();
+    create_object_instances();
   }
 #ifdef DEBUG2
   logger(DEBUG) << "##[ scenes::set_scene() ]##" << std::endl;
@@ -115,8 +123,9 @@ void scenes::prepare_scene() {
 }
 
 /* inline */ interpreter::time_settings scenes::get_time(scene_settings& scenesettings) const {
-  auto& stepper = gen_.stepper;
-  auto& job = gen_.job;
+  auto& stepper = this->stepper;
+  auto& job = job_holder_.get_ref();
+  // TODO: move state, config, options etc. into some kind of aggregate
   auto& max_frames = gen_.state().max_frames;
   auto& use_fps = gen_.config().fps;
   // Intermediate frames between 0 and 1, for two: [0.5, 1.0]
@@ -354,6 +363,23 @@ void scenes::_set_scene_sub_object(scene_settings& scenesettings, size_t scene) 
     // TODO: implement:
     //  create_object_instances();
   }
+}
+
+void scenes::create_object_instances() {
+  // This function is called whenever a scene is set. (once per scene)
+  context->enter_object("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+    // enter_objects creates a new isolate, using the old gives issues, so we'll recreate
+    genctx = std::make_shared<generator_context>(val, current());
+    genctx->set_scene(current());
+
+    switch_scene();
+
+    instantiator_.instantiate_additional_objects_from_new_scene(genctx->scene_objects, 0);
+
+    // since this is invoked directly after a scene change, and in the very beginning, make sure this state is part of
+    // the instances "current" frame, or reverting (e.g., due to motion blur requirements) will discard all of this.
+    commit_scene_shapes();
+  });
 }
 
 }  // namespace interpreter

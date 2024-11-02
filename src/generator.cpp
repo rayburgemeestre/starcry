@@ -51,12 +51,12 @@ generator::generator(std::shared_ptr<metrics>& metrics,
                    config_),
       spawner_(genctx, definitions_, instantiator_, object_lookup_, scenes_),
       bridges_(definitions_, spawner_),
-      scenes_(*this),
+      scenes_(*this, context, genctx, instantiator_, stepper, job_holder_),
       sampler_(*this),
       positioner_(*this),
       interactor_(*this, toroidal_manager_, definitions_, spawner_),
       instantiator_(*this, definitions_, initializer_, object_lookup_),
-      job_shape_mapper_(*this, gradient_manager_, texture_manager_),
+      job_shape_mapper_(*this, gradient_manager_, texture_manager_, job_holder_, stepper, scenes_, scalesettings),
       object_lookup_(*this),
       checkpoints_(*this),
       debug_printer_(*this),
@@ -71,10 +71,9 @@ void generator::init(const std::string& filename,
                      std::optional<double> scale) {
   prctl(PR_SET_NAME, "native generator thread");
   config().filename = filename;
-  job = std::make_shared<data::job>();
-  job->frame_number = 0;
+  job_holder_.init();
 
-  initializer_.initialize_all(job, config().filename, rand_seed, preview, width, height, scale);
+  initializer_.initialize_all(job_holder_.get(), config().filename, rand_seed, preview, width, height, scale);
 
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     genctx = std::make_shared<generator_context>(val, 0);
@@ -94,23 +93,6 @@ void generator::init(const std::string& filename,
   config().caching = caching;
 }
 
-void generator::create_object_instances() {
-  // This function is called whenever a scene is set. (once per scene)
-  context->enter_object("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    // enter_objects creates a new isolate, using the old gives issues, so we'll recreate
-    genctx = std::make_shared<generator_context>(val, scenes_.current());
-    genctx->set_scene(scenes_.current());
-
-    scenes_.switch_scene();
-
-    instantiator_.instantiate_additional_objects_from_new_scene(genctx->scene_objects, 0);
-
-    // since this is invoked directly after a scene change, and in the very beginning, make sure this state is part of
-    // the instances "current" frame, or reverting (e.g., due to motion blur requirements) will discard all of this.
-    scenes_.commit_scene_shapes();
-  });
-}
-
 void generator::reset_seeds() {
   instantiator_.reset_seeds();
 }
@@ -123,7 +105,7 @@ void generator::fast_forward(int frame_of_interest) {
       config().max_intermediates,
       [&]() {
         generate_frame();
-        metrics_->skip_job(job->job_number);
+        metrics_->skip_job(job_holder_.get()->job_number);
       },
       [&](int goto_frame) {
         // since we're jumping to a specific frame, we will create a 'fake' entry for the
@@ -135,9 +117,9 @@ void generator::fast_forward(int frame_of_interest) {
         // restore everything from cache for this frame.
         if (checkpoints_.get_scenes().contains(goto_frame)) {
           scenes_.load_from(checkpoints_.get_scenes().at(goto_frame));
-          std::swap(*job, checkpoints_.job().at(goto_frame));
+          std::swap(*job_holder_.get(), checkpoints_.job().at(goto_frame));
           object_lookup_.update();
-          job->frame_number = goto_frame;
+          job_holder_.get()->frame_number = goto_frame;
         }
       },
       true,
@@ -147,7 +129,7 @@ void generator::fast_forward(int frame_of_interest) {
 bool generator::generate_frame() {
   return sampler_.sample(config().fps, [&](bool skip) {
     auto ret = _generate_frame();
-    if (skip) job->job_number--;
+    if (skip) job_holder_.get()->job_number--;
     return ret;
   });
 }
@@ -155,14 +137,17 @@ bool generator::generate_frame() {
 bool generator::_generate_frame() {
   delayed_exit de(10);
   try {
-    job->shapes.clear();
+    job_holder_.get()->shapes.clear();
 
     // job_number is incremented later, hence we do a +1 on the next line.
-    metrics_->register_job(job->job_number + 1, job->frame_number, job->chunk, job->num_chunks);
+    metrics_->register_job(job_holder_.get()->job_number + 1,
+                           job_holder_.get()->frame_number,
+                           job_holder_.get()->chunk,
+                           job_holder_.get()->num_chunks);
 
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
       if (config().caching) {
-        checkpoints_.insert(*job, scenes_);
+        checkpoints_.insert(*job_holder_.get(), scenes_);
       }
 
       genctx = std::make_shared<generator_context>(val, scenes_.scenesettings.current_scene_next);
@@ -173,7 +158,7 @@ bool generator::_generate_frame() {
       if (!video->IsObject()) video = v8::Object::New(isolate);
 
       stepper.reset();
-      indexes.clear();
+      job_shape_mapper_.reset();
       int attempt = 0;
       double max_dist_found = std::numeric_limits<double>::max();
       scalesettings.reset();
@@ -187,15 +172,16 @@ bool generator::_generate_frame() {
         if (++attempt >= max_attempts) {
           stepper.freeze();
         }
-        // logger(DEBUG) << "Generating frame [native] " << job->frame_number << " attempt " << attempt << std::endl;
+        // logger(DEBUG) << "Generating frame [native] " << job_holder_.get()->frame_number << " attempt " << attempt <<
+        // std::endl;
         max_dist_found = 0;
         if (attempt > 1) {
           if (!settings_.motion_blur) break;
           revert_all_changes(i);
         }
         step_calculator sc(stepper.max_step);
-        job->resize_for_num_steps(stepper.max_step);
-        metrics_->set_steps(job->job_number + 1, attempt, stepper.max_step);
+        job_holder_.get()->resize_for_num_steps(stepper.max_step);
+        metrics_->set_steps(job_holder_.get()->job_number + 1, attempt, stepper.max_step);
 
         stepper.rewind();
         bool detected_too_many_steps = false;
@@ -227,10 +213,10 @@ bool generator::_generate_frame() {
           scalesettings.update();
           scenes_.update();
 
-          if (job->shapes.size() != size_t(stepper.max_step)) {
+          if (job_holder_.get()->shapes.size() != size_t(stepper.max_step)) {
             detected_too_many_steps = true;
           }
-          metrics_->update_steps(job->job_number + 1, attempt, stepper.current_step);
+          metrics_->update_steps(job_holder_.get()->job_number + 1, attempt, stepper.current_step);
         }
         if (!detected_too_many_steps) {
           // didn't bail out with break above
@@ -274,13 +260,13 @@ bool generator::_generate_frame() {
       // cleanup for next iteration
       interactor_.reset();
 
-      metrics_->update_steps(job->job_number, attempt, stepper.current_step);
+      metrics_->update_steps(job_holder_.get()->job_number, attempt, stepper.current_step);
     });
 
-    metrics_->complete_job(job->job_number);
+    metrics_->complete_job(job_holder_.get()->job_number);
 
-    job->job_number++;
-    job->frame_number++;
+    job_holder_.get()->job_number++;
+    job_holder_.get()->frame_number++;
 
     v8::HeapStatistics hs;
     context->isolate->GetHeapStatistics(&hs);
@@ -297,13 +283,13 @@ bool generator::_generate_frame() {
   } catch (std::exception& ex) {
     std::cout << "[caught] " << ex.what() << std::endl;
   }
-  job->last_frame = job->frame_number == state().max_frames;
-  return job->frame_number != state().max_frames;
+  job_holder_.get()->last_frame = job_holder_.get()->frame_number == state().max_frames;
+  return job_holder_.get()->frame_number != state().max_frames;
 }
 
 void generator::revert_all_changes(v8_interact& i) {
-  job->shapes.clear();
-  indexes.clear();
+  job_holder_.get()->shapes.clear();
+  job_shape_mapper_.reset();
 
   // reset next and intermediate instances
   scenes_.reset_scene_shapes_next();
@@ -511,7 +497,7 @@ double generator::get_max_travel_of_object(data_staging::shape_t& shape_now, dat
 }
 
 std::shared_ptr<data::job> generator::get_job() const {
-  return job;
+  return job_holder_.get();
 }
 
 data::settings generator::settings() const {
