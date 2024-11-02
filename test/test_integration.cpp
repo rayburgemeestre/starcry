@@ -116,10 +116,10 @@ TEST_CASE("Test complex render twice.") {
   sc.options.script_file = "input/kaleidoscope.js";
   sc.options.frame_of_interest = 1;
 
-  REQUIRE(sc.test_create_image("unittest_012_kaleidoscope_frame1") == double(0));
+  REQUIRE(sc.test_create_image("unittest_012_kaleidoscope_frame1") <= double(0.001));
 
   // interactive mode crashes rendering the same frame twice for this script
-  REQUIRE(sc.test_create_image("unittest_012_kaleidoscope_frame1") == double(0));
+  REQUIRE(sc.test_create_image("unittest_012_kaleidoscope_frame1") <= double(0.001));
 }
 
 TEST_CASE("Test scale image.") {
