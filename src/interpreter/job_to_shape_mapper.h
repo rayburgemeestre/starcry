@@ -13,9 +13,9 @@
 
 class frame_stepper;
 class scale_settings;
+struct generator_state;
 
 namespace interpreter {
-class generator;
 class gradient_manager;
 class texture_manager;
 class job_holder;
@@ -23,13 +23,13 @@ class scenes;
 
 class job_to_shape_mapper {
 public:
-  explicit job_to_shape_mapper(generator& gen,
-                               gradient_manager& gm,
+  explicit job_to_shape_mapper(gradient_manager& gm,
                                texture_manager& tm,
                                job_holder& holder,
                                frame_stepper& stepper,
                                scenes& scenes,
-                               scale_settings& scalesettings);
+                               scale_settings& scalesettings,
+                               generator_state& state);
 
   void reset();
 
@@ -47,13 +47,13 @@ private:
                                          data::shape& destination_shape,
                                          const std::unordered_map<std::string, data::texture>& known_textures_map);
 
-  generator& gen_;
   gradient_manager& gradient_manager_;
   texture_manager& texture_manager_;
   job_holder& job_holder_;
   frame_stepper& frame_stepper_;
   scenes& scenes_;
   scale_settings& scalesettings_;
+  generator_state& state_;
 
   std::unordered_map<size_t, std::map<int, size_t>> indexes;
 };

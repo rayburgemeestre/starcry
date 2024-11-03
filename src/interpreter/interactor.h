@@ -8,6 +8,7 @@
 #include <map>
 #include <string>
 
+#include "generator_options.hpp"
 #include "util/quadtree.h"
 #include "util/unique_group.hpp"
 #include "util/vector_logic.hpp"
@@ -15,11 +16,18 @@
 #include "data/toroidal.hpp"
 #include "data_staging/shape.hpp"
 
+class frame_stepper;
+class generator_context;
+class scene_settings;
+struct generator_state;
+
 namespace interpreter {
-class generator;
 class toroidal_manager;
+class object_lookup;
 class object_definitions;
 class spawner;
+class scenes;
+class bridges;
 
 class interactor {
   std::map<std::string, quadtree> qts;
@@ -27,7 +35,15 @@ class interactor {
   std::map<std::string, unique_group> unique_groups;
 
 public:
-  explicit interactor(generator& gen, toroidal_manager& tm, object_definitions& definitions, spawner& spawner);
+  explicit interactor(std::shared_ptr<generator_context>& genctx,
+                      generator_state& state,
+                      scenes& scenes,
+                      frame_stepper& stepper,
+                      toroidal_manager& tm,
+                      object_definitions& definitions,
+                      object_lookup& object_lookup,
+                      spawner& spawner,
+                      bridges& bridges);
 
   void reset();
   void update_interactions();
@@ -51,9 +67,14 @@ private:
                       double constrain_dist_min,
                       double constrain_dist_max) const;
 
-  generator& gen_;
+  std::shared_ptr<generator_context>& genctx;
+  generator_state& state_;
+  scenes& scenes_;
+  frame_stepper& stepper_;
   toroidal_manager& toroidal_manager_;
   object_definitions& definitions_;
+  object_lookup& object_lookup_;
   spawner& spawner_;
+  bridges& bridges_;
 };
 }  // namespace interpreter

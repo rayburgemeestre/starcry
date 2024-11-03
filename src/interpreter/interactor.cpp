@@ -6,13 +6,35 @@
 
 #include "interactor.h"
 #include "abort_exception.hpp"
-#include "generator.h"
+#include "bridges.h"
 #include "object_definitions.h"
+#include "object_lookup.h"
+#include "scenes.h"
+#include "spawner.h"
+#include "toroidal_manager.h"
+#include "util/frame_stepper.hpp"
+#include "util/generator_context.h"
 
 namespace interpreter {
 
-interactor::interactor(generator& gen, toroidal_manager& tm, object_definitions& definitions, spawner& spawner)
-    : gen_(gen), toroidal_manager_(tm), definitions_(definitions), spawner_(spawner) {}
+interactor::interactor(std::shared_ptr<generator_context>& genctx,
+                       generator_state& state,
+                       scenes& scenes,
+                       frame_stepper& stepper,
+                       toroidal_manager& tm,
+                       object_definitions& definitions,
+                       object_lookup& object_lookup,
+                       spawner& spawner,
+                       bridges& bridges)
+    : genctx(genctx),
+      state_(state),
+      scenes_(scenes),
+      stepper_(stepper),
+      toroidal_manager_(tm),
+      definitions_(definitions),
+      object_lookup_(object_lookup),
+      spawner_(spawner),
+      bridges_(bridges) {}
 
 void interactor::reset() {
   qts.clear();
@@ -37,19 +59,17 @@ void interactor::update_interactions() {
       const auto unique_group = shape.behavior_cref().unique_group();
 
       if (!collision_group.empty()) {
-        qts.try_emplace(collision_group,
-                        quadtree(rectangle(position(-gen_.state().canvas_w / 2, -gen_.state().canvas_h / 2),
-                                           gen_.state().canvas_w,
-                                           gen_.state().canvas_h),
-                                 32));
+        qts.try_emplace(
+            collision_group,
+            quadtree(rectangle(position(-state_.canvas_w / 2, -state_.canvas_h / 2), state_.canvas_w, state_.canvas_h),
+                     32));
         qts[collision_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
       }
       if (!gravity_group.empty()) {
-        qts_gravity.try_emplace(gravity_group,
-                                quadtree(rectangle(position(-gen_.state().canvas_w / 2, -gen_.state().canvas_h / 2),
-                                                   gen_.state().canvas_w,
-                                                   gen_.state().canvas_h),
-                                         32));
+        qts_gravity.try_emplace(
+            gravity_group,
+            quadtree(rectangle(position(-state_.canvas_w / 2, -state_.canvas_h / 2), state_.canvas_w, state_.canvas_h),
+                     32));
         qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
       }
       if (!unique_group.empty()) {
@@ -74,7 +94,7 @@ void interactor::update_interactions() {
   };
 
   // first pass transitive xy become set
-  for (auto& abstract_shape : gen_.scenes_.next_shapes_current_scene()) {
+  for (auto& abstract_shape : scenes_.next_shapes_current_scene()) {
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& c) {
                             handle_pass1(abstract_shape, c, c.meta_ref());
@@ -95,12 +115,12 @@ void interactor::update_interactions() {
   }
 
   // second pass depends on knowing transitive xy
-  for (auto& abstract_shape : gen_.scenes_.next_shapes_current_scene()) {
+  for (auto& abstract_shape : scenes_.next_shapes_current_scene()) {
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& c) {
                             handle_pass2(abstract_shape, c, c.meta_ref());
                             for (const auto& cascade_out : c.cascade_out_cref()) {
-                              auto& other = gen_.object_lookup_.at(cascade_out.unique_id()).get();
+                              auto& other = object_lookup_.at(cascade_out.unique_id()).get();
                               if (auto other_line = std::get_if<data_staging::line>(&other)) {
                                 if (cascade_out.type() == cascade_type::start) {
                                   other_line->line_start_ref().position_ref().x = c.location_ref().position_cref().x;
@@ -124,7 +144,7 @@ void interactor::update_interactions() {
                             // TODO: duplicated code from above with ellipse -> we need to re-use
                             handle_pass2(abstract_shape, e, e.meta_ref());
                             for (const auto& cascade_out : e.cascade_out_cref()) {
-                              auto& other = gen_.object_lookup_.at(cascade_out.unique_id()).get();
+                              auto& other = object_lookup_.at(cascade_out.unique_id()).get();
                               if (auto other_line = std::get_if<data_staging::line>(&other)) {
                                 if (cascade_out.type() == cascade_type::start) {
                                   other_line->line_start_ref().position_ref().x = e.location_ref().position_cref().x;
@@ -253,7 +273,7 @@ void interactor::handle_collisions(data_staging::shape_t& shape) {
     if (radiussize < 1000 /* todo create property of course */) {
       for (const auto& collide : found) {
         const auto unique_id2 = collide.userdata;
-        auto& shape2 = gen_.object_lookup_.at(unique_id2);
+        auto& shape2 = object_lookup_.at(unique_id2);
         try {
           data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
           if (c2.meta_cref().id() != "balls" && c.meta_cref().unique_id() != c2.meta_cref().unique_id()) {
@@ -275,7 +295,7 @@ void interactor::handle_collision(data_staging::circle& instance,
                                   data_staging::circle& instance2,
                                   data_staging::shape_t& shape,
                                   data_staging::shape_t& shape2) {
-  auto& i = gen_.genctx->i();
+  auto& i = genctx->i();
   auto unique_id = instance.meta_cref().unique_id();
   auto unique_id2 = instance2.meta_cref().unique_id();
   auto last_collide = instance.behavior_ref().last_collide();
@@ -336,15 +356,15 @@ void interactor::handle_collision(data_staging::circle& instance,
     };
     auto callback_wrapper = [&]<typename T>(T& shape, int64_t unique_id) {
       if constexpr (std::is_same_v<T, data_staging::circle>) {
-        return handle_collide_for_shape(shape, gen_.bridges_.circle(), unique_id);
+        return handle_collide_for_shape(shape, bridges_.circle(), unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::ellipse>) {
-        return handle_collide_for_shape(shape, gen_.bridges_.ellipse(), unique_id);
+        return handle_collide_for_shape(shape, bridges_.ellipse(), unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::line>) {
-        return handle_collide_for_shape(shape, gen_.bridges_.line(), unique_id);
+        return handle_collide_for_shape(shape, bridges_.line(), unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::text>) {
-        return handle_collide_for_shape(shape, gen_.bridges_.text(), unique_id);
+        return handle_collide_for_shape(shape, bridges_.text(), unique_id);
       } else if constexpr (std::is_same_v<T, data_staging::script>) {
-        return handle_collide_for_shape(shape, gen_.bridges_.script(), unique_id);
+        return handle_collide_for_shape(shape, bridges_.script(), unique_id);
       }
       throw abort_exception("unknown (undefined) object is ignored");
     };
@@ -375,8 +395,8 @@ void interactor::handle_gravity(data_staging::shape_t& shape) {
     auto radius = c.radius();
     auto radiussize = c.radius_size();
 
-    auto& video = gen_.genctx->video_obj;
-    auto& i = gen_.genctx->i();
+    auto& video = genctx->video_obj;
+    auto& i = genctx->i();
     auto G = i.double_number(video, "gravity_G", 1);
     auto range = i.double_number(video, "gravity_range", 1000);
     const auto constrain_dist_min = i.double_number(video, "gravity_constrain_dist_min", 5.);
@@ -393,7 +413,7 @@ void interactor::handle_gravity(data_staging::shape_t& shape) {
     };
     for (const auto& in_range : found) {
       const auto unique_id2 = in_range.userdata;
-      auto shape2 = gen_.object_lookup_.at(unique_id2);
+      auto shape2 = object_lookup_.at(unique_id2);
       if (std::holds_alternative<data_staging::circle>(shape2.get())) {
         data_staging::circle& c2 = std::get<data_staging::circle>(shape2.get());
         handle(c, c2);
@@ -453,7 +473,7 @@ void interactor::handle_gravity(T& instance,
   const auto strength = (G * mass * mass2) / (constrained_distance * constrained_distance);
   auto force = subtract_vector(vec_b, vec_a);
   force = unit_vector(force);
-  force = multiply_vector(force, strength / static_cast<double>(gen_.stepper.max_step));
+  force = multiply_vector(force, strength / static_cast<double>(stepper_.max_step));
   force = divide_vector(force, mass);
 
   acceleration.x += force.x;

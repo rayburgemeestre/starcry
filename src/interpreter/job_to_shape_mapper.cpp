@@ -13,20 +13,20 @@
 #include "scenes.h"
 
 namespace interpreter {
-job_to_shape_mapper::job_to_shape_mapper(generator& gen,
-                                         gradient_manager& gm,
+job_to_shape_mapper::job_to_shape_mapper(gradient_manager& gm,
                                          texture_manager& tm,
                                          job_holder& holder,
                                          frame_stepper& stepper,
                                          scenes& scenes,
-                                         scale_settings& scalesettings)
-    : gen_(gen),
-      gradient_manager_(gm),
+                                         scale_settings& scalesettings,
+                                         generator_state& state)
+    : gradient_manager_(gm),
       texture_manager_(tm),
       job_holder_(holder),
       frame_stepper_(stepper),
       scenes_(scenes),
-      scalesettings_(scalesettings) {}
+      scalesettings_(scalesettings),
+      state_(state) {}
 
 void job_to_shape_mapper::reset() {
   indexes.clear();
@@ -71,7 +71,7 @@ void job_to_shape_mapper::convert_object_to_render_job(data_staging::shape_t& sh
 
     // auto radius = shape.radius();           // i.double_number(instance, "radius");
     // auto radiussize = shape.radius_size();  // i.double_number(instance, "radiussize");
-    auto seed = gen_.state().seed;
+    auto seed = state_.seed;
     if constexpr (std::is_same_v<T, data_staging::circle> || std::is_same_v<T, data_staging::line>) {
       seed = shape.styling_cref().seed();
     }

@@ -9,22 +9,22 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 namespace interpreter {
 
-debug_printer::debug_printer(interpreter::generator& gen) : gen_(gen) {}
+debug_printer::debug_printer(scenes& scenes) : scenes_(scenes) {}
 
 void debug_printer::debug_print_all() {
-  logger(DEBUG) << "==[ debug print: next (" << gen_.scenes_.next_shapes_current_scene().size() << ") ]==" << std::endl;
-  debug_print(gen_.scenes_.next_shapes_current_scene());
+  logger(DEBUG) << "==[ debug print: next (" << scenes_.next_shapes_current_scene().size() << ") ]==" << std::endl;
+  debug_print(scenes_.next_shapes_current_scene());
 
-  logger(DEBUG) << "==[ debug print: intermediate (" << gen_.scenes_.intermediate_shapes_current_scene().size()
+  logger(DEBUG) << "==[ debug print: intermediate (" << scenes_.intermediate_shapes_current_scene().size()
                 << ") ]==" << std::endl;
-  debug_print(gen_.scenes_.intermediate_shapes_current_scene());
+  debug_print(scenes_.intermediate_shapes_current_scene());
 
-  logger(DEBUG) << "==[ debug print: current (" << gen_.scenes_.shapes_current_scene().size() << ") ]==" << std::endl;
-  debug_print(gen_.scenes_.shapes_current_scene());
+  logger(DEBUG) << "==[ debug print: current (" << scenes_.shapes_current_scene().size() << ") ]==" << std::endl;
+  debug_print(scenes_.shapes_current_scene());
 }
 
 void debug_printer::debug_print_next() {
-  debug_print(gen_.scenes_.next_shapes_current_scene());
+  debug_print(scenes_.next_shapes_current_scene());
 }
 
 void debug_printer::debug_print(std::vector<data_staging::shape_t>& shapes) {

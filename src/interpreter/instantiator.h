@@ -9,24 +9,35 @@
 #include "util/random.hpp"
 #include "util/v8_interact.hpp"
 
+class generator_context;
+
 namespace interpreter {
 
 void instantiate_object_copy_fields(v8_interact& i,
                                     v8::Local<v8::Object> scene_obj,
                                     v8::Local<v8::Object> new_instance);
 
-class generator;
 class object_definitions;
 class initializer;
 class object_lookup;
+class scenes;
+class bridges;
+class interactor;
+class positioner;
 
 class instantiator {
 private:
 public:
-  explicit instantiator(generator& gen,
+  explicit instantiator(std::shared_ptr<v8_wrapper>& context,
+                        std::shared_ptr<generator_context>& genctx,
+                        scenes& scenes,
+                        bridges& bridges,
                         object_definitions& definitions,
                         initializer& initializer,
-                        object_lookup& object_lookup);
+                        interactor& interactor,
+                        object_lookup& object_lookup,
+                        positioner& positioner,
+                        data_staging::attrs& attrs);
 
   void instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
                                                      int debug_level = 0,
@@ -55,10 +66,16 @@ private:
   template <typename T>
   void write_back_copy(T& copy);
 
-  generator& gen_;
+  std::shared_ptr<v8_wrapper>& context;
+  std::shared_ptr<generator_context>& genctx;
+  scenes& scenes_;
+  bridges& bridges_;
   object_definitions& definitions_;
   initializer& initializer_;
+  interactor& interactor_;
   object_lookup& object_lookup_;
+  positioner& positioner_;
+  data_staging::attrs& global_attrs_;
   util::random_generator rand_;
   int64_t counter = 0;
 };

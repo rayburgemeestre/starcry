@@ -9,16 +9,17 @@
 #include "data_staging/shape.hpp"
 
 namespace interpreter {
-class generator;  // soon remove
+
+class scenes;
 
 class debug_printer {
 public:
-  explicit debug_printer(generator& gen);
+  explicit debug_printer(scenes& scenes);
   void debug_print_all();
   void debug_print_next();
   void debug_print(std::vector<data_staging::shape_t>& shapes);
 
 private:
-  generator& gen_;
+  scenes& scenes_;
 };
 }  // namespace interpreter

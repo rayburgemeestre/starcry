@@ -10,14 +10,16 @@
 #include <unordered_map>
 #include "data_staging/shape.hpp"
 
+class generator_context;
+
 namespace interpreter {
-class generator;
+class scenes;
 
 class object_lookup {
 public:
   using map_type = std::unordered_map<int64_t, std::reference_wrapper<data_staging::shape_t>>;
 
-  explicit object_lookup(generator& gen);
+  explicit object_lookup(std::shared_ptr<generator_context>& genctx, scenes& scenes);
 
   void update();
   void reset();
@@ -36,7 +38,8 @@ public:
   v8::Local<v8::Object> get_object(int64_t object_unique_id);
 
 private:
-  generator& gen_;
+  std::shared_ptr<generator_context>& genctx;
+  scenes& scenes_;
 
   map_type next_instance_map;
   map_type intermediate_map;

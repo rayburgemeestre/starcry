@@ -7,18 +7,19 @@
 #include "generator.h"
 
 namespace interpreter {
-object_lookup::object_lookup(generator& gen) : gen_(gen) {}
+object_lookup::object_lookup(std::shared_ptr<generator_context>& genctx, scenes& scenes)
+    : genctx(genctx), scenes_(scenes) {}
 
 void object_lookup::update() {
   next_instance_map.clear();
   intermediate_map.clear();
-  for (auto& abstract_shape : gen_.scenes_.next_shapes_current_scene()) {
+  for (auto& abstract_shape : scenes_.next_shapes_current_scene()) {
     // Will we just put copies here now??
     meta_callback(abstract_shape, [&]<typename T>(T& shape) {
       next_instance_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
     });
   }
-  for (auto& abstract_shape : gen_.scenes_.intermediate_shapes_current_scene()) {
+  for (auto& abstract_shape : scenes_.intermediate_shapes_current_scene()) {
     // Will we just put copies here now??
     meta_callback(abstract_shape, [&]<typename T>(T& shape) {
       intermediate_map.insert_or_assign(shape.meta_cref().unique_id(), std::ref(abstract_shape));
@@ -71,7 +72,7 @@ std::reference_wrapper<data_staging::shape_t>& object_lookup::at_intermediate(in
 }
 
 v8::Local<v8::Object> object_lookup::get_object(int64_t object_unique_id) {
-  auto& i = gen_.genctx->i();
+  auto& i = genctx->i();
   // BEGIN: Temporary code (to try out something)
   data_staging::shape_t* obj1o = nullptr;
   auto find1 = find(object_unique_id);
@@ -79,7 +80,7 @@ v8::Local<v8::Object> object_lookup::get_object(int64_t object_unique_id) {
     obj1o = &find1->second.get();
   } else {
     // todo; we need a mapping for this...
-    for (auto& newo : gen_.scenes_.instantiated_objects_current_scene()) {
+    for (auto& newo : scenes_.instantiated_objects_current_scene()) {
       if (auto c = std::get_if<data_staging::circle>(&newo)) {
         if (c->meta_cref().unique_id() == object_unique_id) {
           obj1o = &newo;
