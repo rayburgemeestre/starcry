@@ -14,13 +14,20 @@
 
 namespace interpreter {
 
-scenes::scenes(generator& gen,
-               std::shared_ptr<v8_wrapper>& context,
+scenes::scenes(std::shared_ptr<v8_wrapper>& context,
                std::shared_ptr<generator_context>& genctx,
                instantiator& instantiator,
                frame_stepper& stepper,
-               job_holder& holder)
-    : gen_(gen), context(context), genctx(genctx), instantiator_(instantiator), stepper(stepper), job_holder_(holder) {}
+               job_holder& holder,
+               generator_state& state,
+               generator_config& config)
+    : context(context),
+      genctx(genctx),
+      instantiator_(instantiator),
+      stepper(stepper),
+      job_holder_(holder),
+      state_(state),
+      config_(config) {}
 
 scenes scenes::clone() {
   return scenes{*this};
@@ -126,8 +133,8 @@ void scenes::prepare_scene() {
   auto& stepper = this->stepper;
   auto& job = job_holder_.get_ref();
   // TODO: move state, config, options etc. into some kind of aggregate
-  auto& max_frames = gen_.state().max_frames;
-  auto& use_fps = gen_.config().fps;
+  auto& max_frames = state_.max_frames;
+  auto& use_fps = config_.fps;
   // Intermediate frames between 0 and 1, for two: [0.5, 1.0]
   // This will make vibrations look really vibrating, as back and forth will be rendered differently
   // auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step));

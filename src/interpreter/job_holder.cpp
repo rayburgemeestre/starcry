@@ -22,4 +22,4 @@ std::shared_ptr<data::job>& job_holder::get_ref() {
   return job;
 }
 
-}
+}  // namespace interpreter

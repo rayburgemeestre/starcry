@@ -15,13 +15,12 @@ namespace interpreter {
 
 class job_holder {
   std::shared_ptr<data::job> job;
-public:
 
+public:
   void init();
 
   std::shared_ptr<data::job> get() const;
   std::shared_ptr<data::job>& get_ref();
-
 };
 
-}
+}  // namespace interpreter

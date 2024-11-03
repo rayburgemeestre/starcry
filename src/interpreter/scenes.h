@@ -13,6 +13,8 @@
 
 class generator_context;
 class frame_stepper;
+struct generator_state;
+struct generator_config;
 
 namespace interpreter {
 
@@ -27,13 +29,14 @@ class instantiator;
 class job_holder;
 
 class scenes : public transaction {
-  generator& gen_;
   // TODO: refs to shared ptrs
   std::shared_ptr<v8_wrapper>& context;
   std::shared_ptr<generator_context>& genctx;
   instantiator& instantiator_;
   frame_stepper& stepper;
   job_holder& job_holder_;
+  generator_state& state_;
+  generator_config& config_;
 
   std::vector<std::vector<data_staging::shape_t>> scene_shapes;
   std::vector<std::vector<data_staging::shape_t>> scene_shapes_next;
@@ -45,12 +48,13 @@ public:  // temporary
   std::unordered_map<int64_t, scene_settings> scenesettings_objs;
 
 public:
-  explicit scenes(generator& gen,
-                  std::shared_ptr<v8_wrapper>& context,
+  explicit scenes(std::shared_ptr<v8_wrapper>& context,
                   std::shared_ptr<generator_context>& genctx,
                   instantiator& instantiator,
                   frame_stepper& stepper,
-                  job_holder& job_holder);
+                  job_holder& job_holder,
+                  generator_state& state,
+                  generator_config& config);
   scenes(const scenes& other) = default;
 
   void load_from(const scenes& other);

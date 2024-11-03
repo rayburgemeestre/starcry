@@ -132,7 +132,6 @@ public:
   void revert_all_changes(v8_interact& i);
   void insert_newly_created_objects();
   void update_object_distances(int* attempt, double* max_dist_found);
-  void update_time(data_staging::shape_t& object_bridge, const std::string& instance_id, scene_settings& scenesettings);
   int update_steps(double dist);
   static double get_max_travel_of_object(data_staging::shape_t& shape_now, data_staging::shape_t& shape_prev);
 

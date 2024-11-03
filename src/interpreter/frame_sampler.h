@@ -8,11 +8,10 @@
 #include <functional>
 
 namespace interpreter {
-class generator;
 
 class frame_sampler {
 public:
-  explicit frame_sampler(generator &gen);
+  explicit frame_sampler();
 
   bool sample(size_t use_fps, std::function<bool(bool)> callback);
 

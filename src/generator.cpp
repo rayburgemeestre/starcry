@@ -51,9 +51,9 @@ generator::generator(std::shared_ptr<metrics>& metrics,
                    config_),
       spawner_(genctx, definitions_, instantiator_, object_lookup_, scenes_),
       bridges_(definitions_, spawner_),
-      scenes_(*this, context, genctx, instantiator_, stepper, job_holder_),
-      sampler_(*this),
-      positioner_(*this),
+      scenes_(context, genctx, instantiator_, stepper, job_holder_, state_, config_),
+      // sampler_(),
+      positioner_(genctx, scenes_, stepper, definitions_, object_lookup_, bridges_),
       interactor_(*this, toroidal_manager_, definitions_, spawner_),
       instantiator_(*this, definitions_, initializer_, object_lookup_),
       job_shape_mapper_(*this, gradient_manager_, texture_manager_, job_holder_, stepper, scenes_, scalesettings),
@@ -401,44 +401,6 @@ void generator::update_object_distances(int* attempt, double* max_dist_found) {
       handle(abstract_shape, shape.meta_ref());
     });
   }
-}
-
-void generator::update_time(data_staging::shape_t& instance,
-                            const std::string& instance_id,
-                            scene_settings& scenesettings) {
-  auto& i = genctx->i();
-  const auto time_settings = scenes_.get_time(scenesettings);
-  const auto execute = [&](double scene_time) {
-    if (const auto find = definitions_.get(instance_id, true); find) {
-      const auto object_definition = *find;
-      const auto handle_time_for_shape = [&](auto& c, auto& object_bridge) {
-        // TODO: check if the object has an "time" function, or we can just skip this entire thing
-        c.meta_ref().set_time(scene_time);
-        object_bridge->push_object(c);
-        i.call_fun(object_definition,
-                   object_bridge->instance(),
-                   "time",
-                   scene_time,
-                   time_settings.elapsed,
-                   scenesettings.current_scene_next,
-                   time_settings.time);
-        object_bridge->pop_object();
-      };
-      meta_callback(instance, [&](auto& shape) {
-        handle_time_for_shape(shape, bridges_.get<std::decay_t<decltype(shape)>>());
-      });
-    }
-  };
-
-  if (scenesettings.current_scene_next > scenesettings.current_scene_intermediate) {
-    // Make sure we end previous scene at the very last frame in any case, even though we won't render it.
-    // This may be necessary to finalize some calculations that work with "t" (time), i.e., for rotations.
-    const auto bak = scenesettings.current_scene_next;
-    scenesettings.current_scene_next = scenesettings.current_scene_intermediate;
-    execute(1.0);
-    scenesettings.current_scene_next = bak;
-  }
-  execute(time_settings.scene_time);
 }
 
 int generator::update_steps(double dist) {

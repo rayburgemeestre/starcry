@@ -6,17 +6,32 @@
 
 #include "positioner.h"
 
-#include "generator.h"
+#include "bridges.h"
+#include "object_lookup.h"
+#include "scenes.h"
+#include "util/frame_stepper.hpp"
+#include "util/generator_context.h"
 
 namespace interpreter {
 
-positioner::positioner(generator& gen) : gen_(gen) {}
+positioner::positioner(std::shared_ptr<generator_context>& genctx,
+                       scenes& scenes,
+                       frame_stepper& stepper,
+                       object_definitions& definitions,
+                       object_lookup& lookup,
+                       bridges& bridges)
+    : genctx(genctx),
+      scenes_(scenes),
+      stepper_(stepper),
+      definitions_(definitions),
+      object_lookup_(lookup),
+      bridges_(bridges) {}
 
 void positioner::update_object_positions() {
   int64_t scenesettings_from_object_id = -1;
   int64_t scenesettings_from_object_id_level = -1;
 
-  for (auto& abstract_shape : gen_.scenes_.next_shapes_current_scene()) {
+  for (auto& abstract_shape : scenes_.next_shapes_current_scene()) {
     meta_callback(abstract_shape, [&]<typename T>(T& shape) {
       if constexpr (std::is_same_v<T, data_staging::script>) {
         // TODO: this strategy does not support nested script objects
@@ -29,10 +44,9 @@ void positioner::update_object_positions() {
       }
 
       if (scenesettings_from_object_id == -1) {
-        gen_.update_time(abstract_shape, shape.meta_cref().id(), gen_.scenes_.scenesettings);
+        update_time(abstract_shape, shape.meta_cref().id(), scenes_.scenesettings);
       } else {
-        gen_.update_time(
-            abstract_shape, shape.meta_cref().id(), gen_.scenes_.scenesettings_objs[scenesettings_from_object_id]);
+        update_time(abstract_shape, shape.meta_cref().id(), scenes_.scenesettings_objs[scenesettings_from_object_id]);
       }
 
       // TODO: this was an interesting hack..
@@ -70,7 +84,7 @@ void positioner::update_object_positions() {
         vel_y = shape.movement_cref().velocity().y;
       }
 
-      velocity /= static_cast<double>(gen_.stepper.max_step);
+      velocity /= static_cast<double>(stepper_.max_step);
       x += (vel_x * velocity);
       y += (vel_y * velocity);
       x2 += (vel_x2 * velocity);
@@ -89,6 +103,44 @@ void positioner::update_object_positions() {
   }
 }
 
+void positioner::update_time(data_staging::shape_t& instance,
+                             const std::string& instance_id,
+                             scene_settings& scenesettings) {
+  auto& i = genctx->i();
+  const auto time_settings = scenes_.get_time(scenesettings);
+  const auto execute = [&](double scene_time) {
+    if (const auto find = definitions_.get(instance_id, true); find) {
+      const auto object_definition = *find;
+      const auto handle_time_for_shape = [&](auto& c, auto& object_bridge) {
+        // TODO: check if the object has an "time" function, or we can just skip this entire thing
+        c.meta_ref().set_time(scene_time);
+        object_bridge->push_object(c);
+        i.call_fun(object_definition,
+                   object_bridge->instance(),
+                   "time",
+                   scene_time,
+                   time_settings.elapsed,
+                   scenesettings.current_scene_next,
+                   time_settings.time);
+        object_bridge->pop_object();
+      };
+      meta_callback(instance, [&](auto& shape) {
+        handle_time_for_shape(shape, bridges_.get<std::decay_t<decltype(shape)>>());
+      });
+    }
+  };
+
+  if (scenesettings.current_scene_next > scenesettings.current_scene_intermediate) {
+    // Make sure we end previous scene at the very last frame in any case, even though we won't render it.
+    // This may be necessary to finalize some calculations that work with "t" (time), i.e., for rotations.
+    const auto bak = scenesettings.current_scene_next;
+    scenesettings.current_scene_next = scenesettings.current_scene_intermediate;
+    execute(1.0);
+    scenesettings.current_scene_next = bak;
+  }
+  execute(time_settings.scene_time);
+}
+
 void positioner::update_rotations() {
   const auto handle_pass1 = [&]<typename T>(data_staging::shape_t& abstract_shape, T& shape, data_staging::meta& meta) {
     if (meta.level() >= 0) {
@@ -103,7 +155,7 @@ void positioner::update_rotations() {
 
   // first pass transitive xy become set
   stack.clear();
-  for (auto& abstract_shape : gen_.scenes_.next_shapes_current_scene()) {
+  for (auto& abstract_shape : scenes_.next_shapes_current_scene()) {
     std::visit(overloaded{[](std::monostate) {},
                           [&](data_staging::circle& c) {
                             handle_pass1(abstract_shape, c, c.meta_ref());
@@ -222,11 +274,11 @@ void positioner::handle_rotations(data_staging::shape_t& shape,
 
 void positioner::revert_position_updates() {
   // Copy all x, y from instances to next and intermediates
-  for (auto& abstract_shape : gen_.scenes_.shapes_current_scene()) {
+  for (auto& abstract_shape : scenes_.shapes_current_scene()) {
     meta_callback(abstract_shape, [&]<typename T>(T& shape) {
       auto uid = shape.meta_cref().unique_id();
       if constexpr (std::is_same_v<T, data_staging::line>) {
-        auto& abstract_intermediate = gen_.object_lookup_.at_intermediate(uid);
+        auto& abstract_intermediate = object_lookup_.at_intermediate(uid);
         meta_callback(abstract_intermediate.get(), [&]<typename TT>(TT& intermediate) {
           if constexpr (std::is_same_v<TT, data_staging::line>) {
             intermediate.line_start_ref().position_ref().x = shape.line_start_ref().position_ref().x;
@@ -235,7 +287,7 @@ void positioner::revert_position_updates() {
             intermediate.line_end_ref().position_ref().y = shape.line_end_ref().position_ref().y;
           }
         });
-        auto& abstract_next = gen_.object_lookup_.at(uid);
+        auto& abstract_next = object_lookup_.at(uid);
         meta_callback(abstract_next.get(), [&]<typename TT>(TT& next) {
           if constexpr (std::is_same_v<TT, data_staging::line>) {
             next.line_start_ref().position_ref().x = shape.line_start_ref().position_ref().x;
@@ -245,14 +297,14 @@ void positioner::revert_position_updates() {
           }
         });
       } else {
-        auto& abstract_intermediate = gen_.object_lookup_.at_intermediate(uid);
+        auto& abstract_intermediate = object_lookup_.at_intermediate(uid);
         meta_callback(abstract_intermediate.get(), [&]<typename TT>(TT& intermediate) {
           if constexpr (!std::is_same_v<TT, data_staging::line>) {
             intermediate.location_ref().position_ref().x = shape.location_ref().position_ref().x;
             intermediate.location_ref().position_ref().y = shape.location_ref().position_ref().y;
           }
         });
-        auto& abstract_next = gen_.object_lookup_.at(uid);
+        auto& abstract_next = object_lookup_.at(uid);
         meta_callback(abstract_next.get(), [&]<typename TT>(TT& next) {
           if constexpr (!std::is_same_v<TT, data_staging::line>) {
             next.location_ref().position_ref().x = shape.location_ref().position_ref().x;
