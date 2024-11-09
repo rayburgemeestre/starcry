@@ -11,6 +11,7 @@
 #include <cmath>
 #include <memory>
 
+#include "di.hpp"
 #include "v8pp/module.hpp"
 
 #include "core/delayed_exit.hpp"
@@ -18,7 +19,6 @@
 #include "interpreter/abort_exception.hpp"
 #include "interpreter/debug_printer.h"
 #include "interpreter/fast_forwarder.hpp"
-#include "scripting.h"
 #include "starcry/metrics.h"
 #include "util/logger.h"
 #include "util/math.h"
@@ -27,11 +27,12 @@
 #include "util/vector_logic.hpp"
 
 namespace interpreter {
-generator::generator(std::shared_ptr<metrics>& metrics,
-                     std::shared_ptr<v8_wrapper>& context,
+generator::generator(std::shared_ptr<metrics> metrics,
+                     std::shared_ptr<v8_wrapper> context,
                      const generator_options& opts)
     : context(context),
       metrics_(metrics),
+      genctx(std::make_shared<generator_context>()),
       initializer_(gradient_manager_,
                    texture_manager_,
                    toroidal_manager_,
@@ -72,6 +73,18 @@ generator::generator(std::shared_ptr<metrics>& metrics,
       debug_printer_(scenes_),
       generator_opts(opts) {}
 
+std::shared_ptr<generator> generator::create(std::shared_ptr<metrics> metrics__,
+                                             std::shared_ptr<v8_wrapper> context__,
+                                             const generator_options& opts__) {
+  namespace di = boost::di;
+  auto injector = di::make_injector(di::bind<metrics>().to(metrics__),
+                                    di::bind<v8_wrapper>().to(context__),
+                                    di::bind<generator_options>().to(opts__));
+  return std::make_shared<generator>(metrics__, context__, opts__);
+  // return injector.create<std::shared_ptr<generator>>();
+  // foo->context->recreate_isolate_in_this_thread();
+}
+
 void generator::init(const std::string& filename,
                      std::optional<double> rand_seed,
                      bool preview,
@@ -86,7 +99,7 @@ void generator::init(const std::string& filename,
   initializer_.initialize_all(job_holder_.get(), config().filename, rand_seed, preview, width, height, scale);
 
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    genctx = std::make_shared<generator_context>(val, 0);
+    genctx->init(val, 0);
   });
 
   scenes_.initialize();
@@ -160,7 +173,8 @@ bool generator::_generate_frame() {
         checkpoints_.insert(*job_holder_.get(), scenes_);
       }
 
-      genctx = std::make_shared<generator_context>(val, scenes_.scenesettings.current_scene_next);
+      genctx->init(val, scenes_.scenesettings.current_scene_next);
+
       auto& i = genctx->i();
 
       auto obj = val.As<v8::Object>();

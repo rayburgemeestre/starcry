@@ -33,8 +33,7 @@ public:
   static int64_t destroy(data_staging::shape_t& spawner);
 
 private:
-  // TODO: this is strange to have a reference to a shared ptr
-  std::shared_ptr<generator_context>& genctx;
+  std::shared_ptr<generator_context> genctx;
   object_definitions& definitions_;
   instantiator& instantiator_;
   object_lookup& object_lookup_;

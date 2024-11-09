@@ -20,8 +20,7 @@ class object_definitions;
 class bridges;
 
 class positioner {
-private:
-  std::shared_ptr<generator_context>& genctx;
+  std::shared_ptr<generator_context> genctx;
   scenes& scenes_;
   frame_stepper& stepper_;
   object_definitions& definitions_;

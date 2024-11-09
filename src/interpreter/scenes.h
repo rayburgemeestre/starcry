@@ -29,9 +29,8 @@ class instantiator;
 class job_holder;
 
 class scenes : public transaction {
-  // TODO: refs to shared ptrs
-  std::shared_ptr<v8_wrapper>& context;
-  std::shared_ptr<generator_context>& genctx;
+  std::shared_ptr<v8_wrapper> context;
+  std::shared_ptr<generator_context> genctx;
   instantiator& instantiator_;
   frame_stepper& stepper;
   job_holder& job_holder_;

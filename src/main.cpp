@@ -6,6 +6,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include "di.hpp"
 
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wc11-extensions"
@@ -151,15 +152,19 @@ public:
     if (vm.count("stream")) configure_streaming();
 
     context = std::make_shared<v8_wrapper>(options.script_file);
-    starcry sc(options, context);
+
+    namespace di = boost::di;
+    const auto injector = di::make_injector(di::bind<starcry_options>.to(options), di::bind<v8_wrapper>.to(context));
+    auto sc = injector.create<std::shared_ptr<starcry>>();
+
     if (vm.count("caching")) {
-      sc.features().caching = true;
+      sc->features().caching = true;
     }
 
     if (vm.count("client")) {
-      sc.run_client(options.host);
+      sc->run_client(options.host);
     } else {
-      sc.setup_server(options.host);
+      sc->setup_server(options.host);
 
       if (!options.interactive) {
         bool is_raw = vm.count("raw");
@@ -174,14 +179,14 @@ public:
           }
           req->set_last_frame();
           req->set_output(options.output_file);
-          sc.add_image_command(req);
+          sc->add_image_command(req);
         } else {
           auto req = std::make_shared<data::video_request>(options.script_file,
                                                            options.output_file,
                                                            options.num_chunks,
                                                            options.frame_offset,
-                                                           sc.get_viewpoint().canvas_w,
-                                                           sc.get_viewpoint().canvas_h);
+                                                           sc->get_viewpoint().canvas_w,
+                                                           sc->get_viewpoint().canvas_h);
           req->enable_compressed_video();
           if (is_raw) {
             req->enable_raw_video();
@@ -189,11 +194,11 @@ public:
           if (options.preview) {
             req->set_preview_mode();
           }
-          sc.add_video_command(req);
+          sc->add_video_command(req);
         }
       }
 
-      sc.run();
+      sc->run();
     }
   }
 

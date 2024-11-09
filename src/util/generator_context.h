@@ -32,7 +32,7 @@ public:
 
   generator_context();
   generator_context(const generator_context& other) = delete;
-  generator_context(v8::Local<v8::Value> script_value, size_t current_scene_idx);
+  void init(v8::Local<v8::Value> script_value, size_t current_scene_idx);
 
   void set_scene(size_t current_scene_idx);
 

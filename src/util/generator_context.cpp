@@ -3,11 +3,18 @@
 
 generator_context::generator_context() : v8_interact_instance() {}
 
-generator_context::generator_context(v8::Local<v8::Value> script_value, size_t current_scene_idx)
-    : v8_interact_instance(std::make_unique<v8_interact>()) {
+void generator_context::init(v8::Local<v8::Value> script_value, size_t current_scene_idx) {
+  v8_interact_instance = std::make_unique<v8_interact>();
+
   auto& i = this->i();
+  if (!script_obj.IsEmpty()) {
+    script_obj.Clear();
+  }
   script_obj.Reset(i.get_isolate(), script_value.As<v8::Object>());
   const auto initialize_array = [&](auto& target_object, const std::string& key_field) {
+    if (!target_object.IsEmpty()) {
+      target_object.Clear();
+    }
     if (i.has_field(script_obj, key_field)) {
       target_object.Reset(i.get_isolate(), i.v8_array(script_obj, key_field));
     } else {
@@ -15,6 +22,9 @@ generator_context::generator_context(v8::Local<v8::Value> script_value, size_t c
     }
   };
   const auto initialize_object = [&](auto& target_object, const std::string& key_field) {
+    if (!target_object.IsEmpty()) {
+      target_object.Clear();
+    }
     if (i.has_field(script_obj, key_field)) {
       target_object.Reset(i.get_isolate(), i.v8_obj(script_obj, key_field));
     } else {
@@ -27,6 +37,9 @@ generator_context::generator_context(v8::Local<v8::Value> script_value, size_t c
   if (scenes_array->Length() == 0) {
     throw std::runtime_error("No scenes defined in script");
   }
+  if (!current_scene_val.IsEmpty()) {
+    current_scene_val.Clear();
+  }
   current_scene_val.Reset(i.get_isolate(), i.get_index(scenes, 0));
   initialize_object(objects, "objects");
   initialize_object(gradients, "gradients");
@@ -37,6 +50,11 @@ generator_context::generator_context(v8::Local<v8::Value> script_value, size_t c
 void generator_context::set_scene(size_t current_scene_idx) {
   auto& i = this->i();
 
+  if (!current_scene_val.IsEmpty()) {
+    current_scene_val.Clear();
+    scene_objects.Clear();
+    current_scene_obj.Clear();
+  }
   current_scene_val.Reset(i.get_isolate(), i.get_index(scenes, current_scene_idx));
   v8::Local<v8::Value> v = current_scene_val.Get(i.get_isolate());
   v8::Local<v8::Object> vo = v->ToObject(i.get_isolate()->GetCurrentContext()).ToLocalChecked();

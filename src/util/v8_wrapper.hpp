@@ -25,8 +25,9 @@ namespace fs = std::filesystem;
 class v8_wrapper {
 public:
   v8_wrapper(std::string filename);
-
   ~v8_wrapper();
+  v8_wrapper(const v8_wrapper&) = delete;
+  v8_wrapper(v8_wrapper&&) = delete;
 
   void recreate_isolate_in_this_thread();
 
