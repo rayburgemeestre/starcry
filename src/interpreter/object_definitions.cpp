@@ -23,7 +23,7 @@ std::optional<v8::Local<v8::Object>> object_definitions::get(const std::string& 
       auto new_object = v8::Local<v8::Object>::New(v8::Isolate::GetCurrent(), it->second);
       return new_object;
     }
-    it->second.Get(v8::Isolate::GetCurrent());
+    return it->second.Get(v8::Isolate::GetCurrent());
   }
   return std::nullopt;
 }
