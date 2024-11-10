@@ -23,6 +23,5 @@ include_directories(
         "${CMAKE_CURRENT_SOURCE_DIR}/libs/piper/include/"
         "${CMAKE_CURRENT_SOURCE_DIR}/libs/perlin_noise/"
         "${CMAKE_CURRENT_SOURCE_DIR}/libs/stb/"
-        "${CMAKE_CURRENT_SOURCE_DIR}/libs/boost/"
         "/usr/include/SDL2/"
 )

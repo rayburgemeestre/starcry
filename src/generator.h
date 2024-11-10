@@ -54,6 +54,20 @@ class vector2d;
 namespace interpreter {
 
 class generator {
+  friend class initializer;
+  friend class bridges;
+  friend class scenes;
+  friend class frame_sampler;
+  friend class positioner;
+  friend class interactor;
+  friend class instantiator;
+  friend class job_to_shape_mapper;
+  friend class object_lookup;
+  friend class checkpoints;
+  friend class debug_printer;
+  friend class spawner;
+  friend class job_holder;
+
   generator_state state_;
   generator_config config_;
 
@@ -97,14 +111,10 @@ class generator {
   fps_progress fps_progress_;
 
 public:
-  explicit generator(std::shared_ptr<metrics> metrics,
-                     std::shared_ptr<v8_wrapper> context,
+  explicit generator(std::shared_ptr<metrics>& metrics,
+                     std::shared_ptr<v8_wrapper>& context,
                      const generator_options& opts);
   ~generator() = default;
-
-  static std::shared_ptr<generator> create(std::shared_ptr<metrics> metrics,
-                                           std::shared_ptr<v8_wrapper> context,
-                                           const generator_options& opts);
 
   void init(const std::string& filename,
             std::optional<double> rand_seed,

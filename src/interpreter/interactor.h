@@ -67,7 +67,7 @@ private:
                       double constrain_dist_min,
                       double constrain_dist_max) const;
 
-  std::shared_ptr<generator_context> genctx;
+  std::shared_ptr<generator_context>& genctx;
   generator_state& state_;
   scenes& scenes_;
   frame_stepper& stepper_;

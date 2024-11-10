@@ -376,7 +376,7 @@ void scenes::create_object_instances() {
   // This function is called whenever a scene is set. (once per scene)
   context->enter_object("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     // enter_objects creates a new isolate, using the old gives issues, so we'll recreate
-    genctx->init(val, current());
+    genctx = std::make_shared<generator_context>(val, current());
     genctx->set_scene(current());
 
     switch_scene();

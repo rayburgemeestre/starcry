@@ -213,7 +213,7 @@ image starcry::render_job(size_t thread_num,
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   if (!gen) {
     context->recreate_isolate_in_this_thread();
-    gen = interpreter::generator::create(metrics_, context, options().generator_opts);
+    gen = std::make_shared<interpreter::generator>(metrics_, context, options().generator_opts);
   }
 
   if (const auto& instruction = std::dynamic_pointer_cast<reload_instruction>(cmd_def)) {

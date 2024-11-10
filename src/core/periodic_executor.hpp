@@ -6,8 +6,6 @@
 
 #pragma once
 
-#include <sw/redis++/command.h>
-
 #include <chrono>
 #include <condition_variable>
 #include <functional>

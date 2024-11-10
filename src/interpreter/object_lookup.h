@@ -38,7 +38,7 @@ public:
   v8::Local<v8::Object> get_object(int64_t object_unique_id);
 
 private:
-  std::shared_ptr<generator_context> genctx;
+  std::shared_ptr<generator_context>& genctx;
   scenes& scenes_;
 
   map_type next_instance_map;
