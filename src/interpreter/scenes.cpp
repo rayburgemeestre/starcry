@@ -14,7 +14,7 @@
 
 namespace interpreter {
 
-scenes::scenes(std::shared_ptr<v8_wrapper>& context,
+scenes::scenes(std::shared_ptr<v8_wrapper> context,
                std::shared_ptr<generator_context>& genctx,
                instantiator& instantiator,
                frame_stepper& stepper,

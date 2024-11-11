@@ -30,7 +30,7 @@ class job_holder;
 
 class scenes : public transaction {
   // TODO: refs to shared ptrs
-  std::shared_ptr<v8_wrapper>& context;
+  std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<generator_context>& genctx;
   instantiator& instantiator_;
   frame_stepper& stepper;
@@ -48,7 +48,7 @@ public:  // temporary
   std::unordered_map<int64_t, scene_settings> scenesettings_objs;
 
 public:
-  explicit scenes(std::shared_ptr<v8_wrapper>& context,
+  explicit scenes(std::shared_ptr<v8_wrapper> context,
                   std::shared_ptr<generator_context>& genctx,
                   instantiator& instantiator,
                   frame_stepper& stepper,

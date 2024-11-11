@@ -111,10 +111,13 @@ class generator {
   fps_progress fps_progress_;
 
 public:
-  explicit generator(std::shared_ptr<metrics>& metrics,
-                     std::shared_ptr<v8_wrapper>& context,
+  explicit generator(std::shared_ptr<metrics> metrics,
+                     std::shared_ptr<v8_wrapper> context,
                      const generator_options& opts);
   ~generator() = default;
+  static std::shared_ptr<generator> create(std::shared_ptr<metrics> metrics,
+                                           std::shared_ptr<v8_wrapper> context,
+                                           generator_options& opts);
 
   void init(const std::string& filename,
             std::optional<double> rand_seed,

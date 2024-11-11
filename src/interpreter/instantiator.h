@@ -28,7 +28,7 @@ class positioner;
 class instantiator {
 private:
 public:
-  explicit instantiator(std::shared_ptr<v8_wrapper>& context,
+  explicit instantiator(std::shared_ptr<v8_wrapper> context,
                         std::shared_ptr<generator_context>& genctx,
                         scenes& scenes,
                         bridges& bridges,
@@ -66,7 +66,7 @@ private:
   template <typename T>
   void write_back_copy(T& copy);
 
-  std::shared_ptr<v8_wrapper>& context;
+  std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<generator_context>& genctx;
   scenes& scenes_;
   bridges& bridges_;

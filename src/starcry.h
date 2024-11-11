@@ -131,7 +131,7 @@ private:
   std::set<int> checkpoints_;
 
 public:
-  starcry(starcry_options& options, std::shared_ptr<v8_wrapper>& context);
+  starcry(starcry_options& options, std::shared_ptr<v8_wrapper> context);
   ~starcry();
 
   starcry_options& options();

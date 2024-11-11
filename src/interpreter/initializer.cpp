@@ -23,7 +23,7 @@
 
 namespace interpreter {
 
-v8::Local<v8::Context> current_context_native(std::shared_ptr<v8_wrapper>& wrapper_context) {
+v8::Local<v8::Context> current_context_native(std::shared_ptr<v8_wrapper> wrapper_context) {
   return wrapper_context->context->isolate()->GetCurrentContext();
 }
 

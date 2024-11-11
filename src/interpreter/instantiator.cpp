@@ -95,7 +95,7 @@ void recursively_build_stack_for_object(auto& new_stack,
   });
 }
 
-instantiator::instantiator(std::shared_ptr<v8_wrapper>& context,
+instantiator::instantiator(std::shared_ptr<v8_wrapper> context,
                            std::shared_ptr<generator_context>& genctx,
                            interpreter::scenes& scenes,
                            interpreter::bridges& bridges,

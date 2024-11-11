@@ -5,11 +5,12 @@
  */
 #include "generator.h"
 
-#include <fmt/core.h>
 #include <linux/prctl.h>
 #include <sys/prctl.h>
 #include <cmath>
 #include <memory>
+
+#include "boost/di.hpp"
 
 #include "v8pp/module.hpp"
 
@@ -18,7 +19,6 @@
 #include "interpreter/abort_exception.hpp"
 #include "interpreter/debug_printer.h"
 #include "interpreter/fast_forwarder.hpp"
-#include "scripting.h"
 #include "starcry/metrics.h"
 #include "util/logger.h"
 #include "util/math.h"
@@ -27,8 +27,8 @@
 #include "util/vector_logic.hpp"
 
 namespace interpreter {
-generator::generator(std::shared_ptr<metrics>& metrics,
-                     std::shared_ptr<v8_wrapper>& context,
+generator::generator(std::shared_ptr<metrics> metrics,
+                     std::shared_ptr<v8_wrapper> context,
                      const generator_options& opts)
     : context(context),
       metrics_(metrics),
@@ -71,6 +71,16 @@ generator::generator(std::shared_ptr<metrics>& metrics,
       // checkpoints_(*this),
       debug_printer_(scenes_),
       generator_opts(opts) {}
+
+std::shared_ptr<generator> generator::create(std::shared_ptr<metrics> metrics__,
+                                             std::shared_ptr<v8_wrapper> context__,
+                                             generator_options& opts__) {
+  namespace di = boost::di;
+  auto injector = di::make_injector(di::bind<metrics>().to(metrics__),
+                                    di::bind<v8_wrapper>().to(context__),
+                                    di::bind<generator_options>().to(opts__));
+  return injector.create<std::unique_ptr<generator>>();
+}
 
 void generator::init(const std::string& filename,
                      std::optional<double> rand_seed,
