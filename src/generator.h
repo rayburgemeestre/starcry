@@ -54,20 +54,6 @@ class vector2d;
 namespace interpreter {
 
 class generator {
-  friend class initializer;
-  friend class bridges;
-  friend class scenes;
-  friend class frame_sampler;
-  friend class positioner;
-  friend class interactor;
-  friend class instantiator;
-  friend class job_to_shape_mapper;
-  friend class object_lookup;
-  friend class checkpoints;
-  friend class debug_printer;
-  friend class spawner;
-  friend class job_holder;
-
   generator_state state_;
   generator_config config_;
 
