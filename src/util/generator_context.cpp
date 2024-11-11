@@ -1,6 +1,20 @@
 #include "util/generator_context.h"
 #include "util/logger.h"
 
+generator_context_wrapper::generator_context_wrapper() {}
+
+void generator_context_wrapper::init(v8::Local<v8::Value> script_value, size_t current_scene_idx) {
+  ptr = std::make_shared<generator_context>(script_value, current_scene_idx);
+}
+
+std::shared_ptr<generator_context> generator_context_wrapper::get() {
+  return ptr;
+}
+
+v8_interact& generator_context_wrapper::i() const {
+  return ptr->i();
+}
+
 generator_context::generator_context() : v8_interact_instance() {}
 
 generator_context::generator_context(v8::Local<v8::Value> script_value, size_t current_scene_idx)

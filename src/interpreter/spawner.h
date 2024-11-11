@@ -6,10 +6,9 @@
 #pragma once
 
 #include "data_staging/shape.hpp"
-#include "util/random.hpp"
 #include "util/v8_interact.hpp"
 
-class generator_context;
+class generator_context_wrapper;
 
 namespace interpreter {
 
@@ -20,7 +19,7 @@ class scenes;
 
 class spawner {
 public:
-  explicit spawner(std::shared_ptr<generator_context>& genctx,
+  explicit spawner(generator_context_wrapper& genctx,
                    object_definitions& definitions,
                    instantiator& instantiator,
                    object_lookup& object_lookup,
@@ -33,8 +32,7 @@ public:
   static int64_t destroy(data_staging::shape_t& spawner);
 
 private:
-  // TODO: this is strange to have a reference to a shared ptr
-  std::shared_ptr<generator_context>& genctx;
+  generator_context_wrapper& genctx;
   object_definitions& definitions_;
   instantiator& instantiator_;
   object_lookup& object_lookup_;

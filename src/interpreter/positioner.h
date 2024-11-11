@@ -12,6 +12,7 @@
 class frame_stepper;
 class generator_context;
 class scene_settings;
+class generator_context_wrapper;
 
 namespace interpreter {
 class scenes;
@@ -21,7 +22,7 @@ class bridges;
 
 class positioner {
 private:
-  std::shared_ptr<generator_context>& genctx;
+  generator_context_wrapper& genctx;
   scenes& scenes_;
   frame_stepper& stepper_;
   object_definitions& definitions_;
@@ -30,7 +31,7 @@ private:
   std::vector<std::reference_wrapper<data_staging::shape_t>> stack;
 
 public:
-  explicit positioner(std::shared_ptr<generator_context>& genctx,
+  explicit positioner(generator_context_wrapper& genctx,
                       scenes& scenes,
                       frame_stepper& stepper,
                       object_definitions& definitions,

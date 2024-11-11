@@ -10,6 +10,7 @@
 #include <cmath>
 #include <memory>
 
+#define BOOST_DI_CFG_CTOR_LIMIT_SIZE 20
 #include "boost/di.hpp"
 
 #include "v8pp/module.hpp"
@@ -19,7 +20,11 @@
 #include "interpreter/abort_exception.hpp"
 #include "interpreter/debug_printer.h"
 #include "interpreter/fast_forwarder.hpp"
+#include "interpreter/gradient_manager.h"
+#include "interpreter/texture_manager.h"
+#include "interpreter/toroidal_manager.h"
 #include "starcry/metrics.h"
+#include "util/generator_context.h"
 #include "util/logger.h"
 #include "util/math.h"
 #include "util/memory_usage.hpp"
@@ -29,56 +34,71 @@
 namespace interpreter {
 generator::generator(std::shared_ptr<metrics> metrics,
                      std::shared_ptr<v8_wrapper> context,
-                     const generator_options& opts)
+                     generator_context_wrapper& genctx,
+                     const generator_options& opts,
+                     object_definitions& definitions,
+                     gradient_manager& gradient_manager,
+                     texture_manager& texture_manager,
+                     toroidal_manager& toroidal_manager,
+                     data_staging::attrs& global_attrs,
+                     util::random_generator& rand,
+                     data::settings& settings,
+                     scale_settings& scalesettings,
+                     frame_sampler& sampler)
     : context(context),
       metrics_(metrics),
-      initializer_(gradient_manager_,
-                   texture_manager_,
-                   toroidal_manager_,
+      genctx(genctx),
+      settings_(settings),
+      scalesettings_(scalesettings),
+      initializer_(gradient_manager,
+                   texture_manager,
+                   toroidal_manager,
                    context,
                    metrics,
-                   rand_,
-                   global_attrs_,
-                   settings_,
+                   rand,
+                   global_attrs,
+                   settings,
                    object_lookup_,
                    scenes_,
                    scalesettings,
                    bridges_,
-                   sampler_,
-                   definitions_,
+                   sampler,
+                   definitions,
                    opts,
                    state_,
                    config_),
-      spawner_(genctx, definitions_, instantiator_, object_lookup_, scenes_),
-      bridges_(definitions_, spawner_),
+      spawner_(genctx, definitions, instantiator_, object_lookup_, scenes_),
+      bridges_(definitions, spawner_),
       scenes_(context, genctx, instantiator_, stepper, job_holder_, state_, config_),
-      // sampler_(),
-      positioner_(genctx, scenes_, stepper, definitions_, object_lookup_, bridges_),
-      interactor_(
-          genctx, state_, scenes_, stepper, toroidal_manager_, definitions_, object_lookup_, spawner_, bridges_),
+      sampler_(sampler),
+      positioner_(genctx, scenes_, stepper, definitions, object_lookup_, bridges_),
+      interactor_(genctx, state_, scenes_, stepper, toroidal_manager, definitions, object_lookup_, spawner_, bridges_),
       instantiator_(context,
                     genctx,
                     scenes_,
                     bridges_,
-                    definitions_,
+                    definitions,
                     initializer_,
                     interactor_,
                     object_lookup_,
                     positioner_,
-                    global_attrs_),
-      job_shape_mapper_(gradient_manager_, texture_manager_, job_holder_, stepper, scenes_, scalesettings, state_),
+                    global_attrs),
+      job_shape_mapper_(gradient_manager, texture_manager, job_holder_, stepper, scenes_, scalesettings, state_),
       object_lookup_(genctx, scenes_),
       // checkpoints_(*this),
       debug_printer_(scenes_),
+      rand_(rand),
       generator_opts(opts) {}
 
 std::shared_ptr<generator> generator::create(std::shared_ptr<metrics> metrics__,
                                              std::shared_ptr<v8_wrapper> context__,
                                              generator_options& opts__) {
   namespace di = boost::di;
+  auto genctx = std::make_shared<generator_context>();
   auto injector = di::make_injector(di::bind<metrics>().to(metrics__),
                                     di::bind<v8_wrapper>().to(context__),
-                                    di::bind<generator_options>().to(opts__));
+                                    di::bind<generator_options>().to(opts__),
+                                    di::bind<generator_context>().to(genctx));
   return injector.create<std::unique_ptr<generator>>();
 }
 
@@ -96,7 +116,7 @@ void generator::init(const std::string& filename,
   initializer_.initialize_all(job_holder_.get(), config().filename, rand_seed, preview, width, height, scale);
 
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-    genctx = std::make_shared<generator_context>(val, 0);
+    genctx.init(val, 0);
   });
 
   scenes_.initialize();
@@ -170,8 +190,8 @@ bool generator::_generate_frame() {
         checkpoints_.insert(*job_holder_.get(), scenes_);
       }
 
-      genctx = std::make_shared<generator_context>(val, scenes_.scenesettings.current_scene_next);
-      auto& i = genctx->i();
+      genctx.init(val, scenes_.scenesettings.current_scene_next);
+      auto& i = genctx.get()->i();
 
       auto obj = val.As<v8::Object>();
       auto video = i.v8_obj(obj, "video");
@@ -181,7 +201,7 @@ bool generator::_generate_frame() {
       job_shape_mapper_.reset();
       int attempt = 0;
       double max_dist_found = std::numeric_limits<double>::max();
-      scalesettings.reset();
+      scalesettings_.reset();
 
       if (config().min_intermediates > 0.) {
         update_steps(config().min_intermediates);
@@ -230,7 +250,7 @@ bool generator::_generate_frame() {
 
           scenes_.commit_scene_shapes_intermediates();
 
-          scalesettings.update();
+          scalesettings_.update();
           scenes_.update();
 
           if (job_holder_.get()->shapes.size() != size_t(stepper.max_step)) {
@@ -270,7 +290,7 @@ bool generator::_generate_frame() {
 
       scenes_.commit_scene_shapes();
 
-      scalesettings.commit();
+      scalesettings_.commit();
       scenes_.commit();
       // scenes_.memory_dump();
       if (generator_opts.debug) {
@@ -315,7 +335,7 @@ void generator::revert_all_changes(v8_interact& i) {
   scenes_.reset_scene_shapes_next();
   scenes_.reset_scene_shapes_intermediates();
 
-  scalesettings.revert();
+  scalesettings_.revert();
   scenes_.revert();
 }
 
@@ -487,7 +507,7 @@ data::settings generator::settings() const {
 }
 
 v8::Local<v8::Value> generator::get_attr(data_staging::shape_t& spawner, v8::Local<v8::String> field) {
-  auto& i = genctx->i();
+  auto& i = genctx.get()->i();
   const std::string f = v8_str(i.get_isolate(), field);
   v8::Local<v8::Value> value = v8::Undefined(i.get_isolate());
   meta_callback(spawner, [&]<typename T>(const T& cc) {

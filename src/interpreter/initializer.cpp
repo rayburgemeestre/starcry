@@ -12,6 +12,7 @@
 #include "data/zernike_type.hpp"
 #include "generator.h"
 #include "gradient_factory.h"
+#include "gradient_manager.h"
 #include "job_mapper.h"
 #include "scripting.h"
 #include "texture_factory.h"

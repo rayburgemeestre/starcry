@@ -15,7 +15,7 @@
 namespace interpreter {
 
 scenes::scenes(std::shared_ptr<v8_wrapper> context,
-               std::shared_ptr<generator_context>& genctx,
+               generator_context_wrapper& genctx,
                instantiator& instantiator,
                frame_stepper& stepper,
                job_holder& holder,
@@ -376,12 +376,12 @@ void scenes::create_object_instances() {
   // This function is called whenever a scene is set. (once per scene)
   context->enter_object("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     // enter_objects creates a new isolate, using the old gives issues, so we'll recreate
-    genctx = std::make_shared<generator_context>(val, current());
-    genctx->set_scene(current());
+    genctx.init(val, current());
+    genctx.get()->set_scene(current());
 
     switch_scene();
 
-    instantiator_.instantiate_additional_objects_from_new_scene(genctx->scene_objects, 0);
+    instantiator_.instantiate_additional_objects_from_new_scene(genctx.get()->scene_objects, 0);
 
     // since this is invoked directly after a scene change, and in the very beginning, make sure this state is part of
     // the instances "current" frame, or reverting (e.g., due to motion blur requirements) will discard all of this.

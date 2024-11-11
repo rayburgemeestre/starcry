@@ -10,6 +10,7 @@
 #include "util/v8_interact.hpp"
 
 class generator_context;
+class generator_context_wrapper;
 
 namespace interpreter {
 
@@ -29,7 +30,7 @@ class instantiator {
 private:
 public:
   explicit instantiator(std::shared_ptr<v8_wrapper> context,
-                        std::shared_ptr<generator_context>& genctx,
+                        generator_context_wrapper& genctx,
                         scenes& scenes,
                         bridges& bridges,
                         object_definitions& definitions,
@@ -67,7 +68,7 @@ private:
   void write_back_copy(T& copy);
 
   std::shared_ptr<v8_wrapper> context;
-  std::shared_ptr<generator_context>& genctx;
+  generator_context_wrapper& genctx;
   scenes& scenes_;
   bridges& bridges_;
   object_definitions& definitions_;

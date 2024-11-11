@@ -15,7 +15,7 @@
 // #define DEBUG2
 
 namespace interpreter {
-spawner::spawner(std::shared_ptr<generator_context>& genctx,
+spawner::spawner(generator_context_wrapper& genctx,
                  object_definitions& definitions,
                  instantiator& instantiator,
                  object_lookup& object_lookup,
@@ -27,7 +27,7 @@ spawner::spawner(std::shared_ptr<generator_context>& genctx,
       scenes_(scenes) {}
 
 int64_t spawner::spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Object> obj) {
-  auto& i = genctx->i();
+  auto& i = genctx.get()->i();
 
   auto instantiated_object = instantiator_.instantiate_object_from_scene(i, obj, &spawner);
   if (!instantiated_object) {
@@ -40,7 +40,7 @@ int64_t spawner::spawn_object(data_staging::shape_t& spawner, v8::Local<v8::Obje
 }
 
 int64_t spawner::spawn_object2(data_staging::shape_t& spawner, v8::Local<v8::Object> line_obj, int64_t obj1) {
-  auto& i = genctx->i();
+  auto& i = genctx.get()->i();
   auto uid = i.integer_number(line_obj, "unique_id");
 
   // create __point__ object definition
@@ -48,7 +48,7 @@ int64_t spawner::spawn_object2(data_staging::shape_t& spawner, v8::Local<v8::Obj
     auto self_def = v8::Object::New(i.get_isolate());
     i.set_field(self_def, "x", v8::Number::New(i.get_isolate(), 0));
     i.set_field(self_def, "y", v8::Number::New(i.get_isolate(), 0));
-    i.set_field(genctx->objects.Get(i.get_isolate()), "__point__", self_def);
+    i.set_field(genctx.get()->objects.Get(i.get_isolate()), "__point__", self_def);
     definitions_.update("__point__", self_def);
   }
 
@@ -66,7 +66,7 @@ int64_t spawner::spawn_object3(data_staging::shape_t& spawner,
                                v8::Local<v8::Object> line_obj,
                                int64_t obj1,
                                int64_t obj2) {
-  auto& i = genctx->i();
+  auto& i = genctx.get()->i();
   auto instantiated_object = instantiator_.instantiate_object_from_scene(i, line_obj, &spawner);
   if (!instantiated_object) {
     return -1;
@@ -122,7 +122,7 @@ int64_t spawner::spawn_object3(data_staging::shape_t& spawner,
 }
 
 int64_t spawner::spawn_object_at_parent(data_staging::shape_t& spawner, v8::Local<v8::Object> obj) {
-  auto& i = genctx->i();
+  auto& i = genctx.get()->i();
   std::optional<std::reference_wrapper<data_staging::shape_t>> parent;
   meta_callback(spawner, [&]<typename T>(const T& cc) {
     if (cc.meta_cref().level() > 0) {

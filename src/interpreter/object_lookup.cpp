@@ -7,8 +7,7 @@
 #include "generator.h"
 
 namespace interpreter {
-object_lookup::object_lookup(std::shared_ptr<generator_context>& genctx, scenes& scenes)
-    : genctx(genctx), scenes_(scenes) {}
+object_lookup::object_lookup(generator_context_wrapper& genctx, scenes& scenes) : genctx(genctx), scenes_(scenes) {}
 
 void object_lookup::update() {
   next_instance_map.clear();
@@ -72,7 +71,7 @@ std::reference_wrapper<data_staging::shape_t>& object_lookup::at_intermediate(in
 }
 
 v8::Local<v8::Object> object_lookup::get_object(int64_t object_unique_id) {
-  auto& i = genctx->i();
+  auto& i = genctx.get()->i();
   // BEGIN: Temporary code (to try out something)
   data_staging::shape_t* obj1o = nullptr;
   auto find1 = find(object_unique_id);

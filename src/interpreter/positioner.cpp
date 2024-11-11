@@ -14,7 +14,7 @@
 
 namespace interpreter {
 
-positioner::positioner(std::shared_ptr<generator_context>& genctx,
+positioner::positioner(generator_context_wrapper& genctx,
                        scenes& scenes,
                        frame_stepper& stepper,
                        object_definitions& definitions,
@@ -106,7 +106,7 @@ void positioner::update_object_positions() {
 void positioner::update_time(data_staging::shape_t& instance,
                              const std::string& instance_id,
                              scene_settings& scenesettings) {
-  auto& i = genctx->i();
+  auto& i = genctx.get()->i();
   const auto time_settings = scenes_.get_time(scenesettings);
   const auto execute = [&](double scene_time) {
     if (const auto find = definitions_.get(instance_id, true); find) {

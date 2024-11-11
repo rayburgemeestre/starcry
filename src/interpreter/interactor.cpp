@@ -17,7 +17,7 @@
 
 namespace interpreter {
 
-interactor::interactor(std::shared_ptr<generator_context>& genctx,
+interactor::interactor(generator_context_wrapper& genctx,
                        generator_state& state,
                        scenes& scenes,
                        frame_stepper& stepper,
@@ -295,7 +295,7 @@ void interactor::handle_collision(data_staging::circle& instance,
                                   data_staging::circle& instance2,
                                   data_staging::shape_t& shape,
                                   data_staging::shape_t& shape2) {
-  auto& i = genctx->i();
+  auto& i = genctx.get()->i();
   auto unique_id = instance.meta_cref().unique_id();
   auto unique_id2 = instance2.meta_cref().unique_id();
   auto last_collide = instance.behavior_ref().last_collide();
@@ -395,8 +395,8 @@ void interactor::handle_gravity(data_staging::shape_t& shape) {
     auto radius = c.radius();
     auto radiussize = c.radius_size();
 
-    auto& video = genctx->video_obj;
-    auto& i = genctx->i();
+    auto& video = genctx.get()->video_obj;
+    auto& i = genctx.get()->i();
     auto G = i.double_number(video, "gravity_G", 1);
     auto range = i.double_number(video, "gravity_range", 1000);
     const auto constrain_dist_min = i.double_number(video, "gravity_constrain_dist_min", 5.);

@@ -11,6 +11,7 @@
 #include "job_holder.h"
 #include "scalesettings.h"
 #include "scenes.h"
+#include "texture_manager.h"
 
 namespace interpreter {
 job_to_shape_mapper::job_to_shape_mapper(gradient_manager& gm,

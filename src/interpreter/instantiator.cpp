@@ -96,7 +96,7 @@ void recursively_build_stack_for_object(auto& new_stack,
 }
 
 instantiator::instantiator(std::shared_ptr<v8_wrapper> context,
-                           std::shared_ptr<generator_context>& genctx,
+                           generator_context_wrapper& genctx,
                            interpreter::scenes& scenes,
                            interpreter::bridges& bridges,
                            object_definitions& definitions,
@@ -119,7 +119,7 @@ instantiator::instantiator(std::shared_ptr<v8_wrapper> context,
 void instantiator::instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
                                                                  int debug_level,
                                                                  const data_staging::shape_t* parent_object) {
-  auto& i = genctx->i();
+  auto& i = genctx.get()->i();
   std::string namespace_;
 
   if (parent_object)
@@ -175,7 +175,7 @@ instantiator::instantiate_object_from_scene(
   if (object_id != "__point__") {
     object_id = parent_object_ns + object_id;
   }
-  auto object_prototype = v8_index_object(i.get_context(), genctx->objects, object_id).template As<v8::Object>();
+  auto object_prototype = v8_index_object(i.get_context(), genctx.get()->objects, object_id).template As<v8::Object>();
 
   if (object_prototype->IsNullOrUndefined() || !object_prototype->IsObject()) {
     logger(WARNING) << "cannot instantiate object id: " << object_id << ", does not exist" << std::endl;
@@ -185,7 +185,7 @@ instantiator::instantiate_object_from_scene(
   // create a new javascript object
   v8::Local<v8::Object> instance = v8::Object::New(isolate);
 
-  // TODO: make sure this is the only source..., and get rid of genctx->objects usage
+  // TODO: make sure this is the only source..., and get rid of genctx.get()->objects usage
   if (!object_prototype->IsObject()) {
     object_prototype = *definitions_.get(object_id);
   }
@@ -568,7 +568,7 @@ void instantiator::write_back_copy(T& copy) {
 void instantiator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> created_instance,
                                                          const data_staging::shape_t& created_shape,
                                                          int debug_level) {
-  auto& i = genctx->i();
+  auto& i = genctx.get()->i();
 
   // only do extra work for script objects
   if (i.str(created_instance, "type") != "script") {
@@ -641,7 +641,7 @@ void instantiator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> c
   for (size_t k = 0; k < gradient_fields->Length(); k++) {
     auto gradient_src_id = i.get_index(gradient_fields, k);
     auto gradient_dst_id = namespace_ + i.str(gradient_fields, k);
-    i.set_field(genctx->gradients, gradient_dst_id, i.get(gradients, gradient_src_id));
+    i.set_field(genctx.get()->gradients, gradient_dst_id, i.get(gradients, gradient_src_id));
   }
   initializer_.init_gradients();
 
@@ -652,7 +652,7 @@ void instantiator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> c
     for (size_t k = 0; k < texture_fields->Length(); k++) {
       auto texture_src_id = i.get_index(texture_fields, k);
       auto texture_dst_id = namespace_ + i.str(texture_fields, k);
-      i.set_field(genctx->textures, texture_dst_id, i.get(textures, texture_src_id));
+      i.set_field(genctx.get()->textures, texture_dst_id, i.get(textures, texture_src_id));
     }
     initializer_.init_textures();
   }
@@ -689,7 +689,7 @@ void instantiator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> c
     double existing_recursive_scale = i.double_number(object_src_obj, "recursive_scale", 1.0);
     i.set_field(object_src_obj, "recursive_scale", v8::Number::New(i.get_isolate(), existing_recursive_scale * scale));
 
-    i.set_field(genctx->objects, object_dst_id, object_src);
+    i.set_field(genctx.get()->objects, object_dst_id, object_src);
     auto val = i.get(objects, object_src_id);
     definitions_.update(object_dst_id, val.As<v8::Object>());
   }

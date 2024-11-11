@@ -20,6 +20,7 @@ class frame_stepper;
 class generator_context;
 class scene_settings;
 struct generator_state;
+class generator_context_wrapper;
 
 namespace interpreter {
 class toroidal_manager;
@@ -35,7 +36,7 @@ class interactor {
   std::map<std::string, unique_group> unique_groups;
 
 public:
-  explicit interactor(std::shared_ptr<generator_context>& genctx,
+  explicit interactor(generator_context_wrapper& genctx,
                       generator_state& state,
                       scenes& scenes,
                       frame_stepper& stepper,
@@ -67,7 +68,7 @@ private:
                       double constrain_dist_min,
                       double constrain_dist_max) const;
 
-  std::shared_ptr<generator_context>& genctx;
+  generator_context_wrapper& genctx;
   generator_state& state_;
   scenes& scenes_;
   frame_stepper& stepper_;

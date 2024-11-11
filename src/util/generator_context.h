@@ -8,6 +8,20 @@ namespace v8 {
 class Isolate;
 }
 
+class generator_context;
+
+class generator_context_wrapper {
+  std::shared_ptr<generator_context> ptr = nullptr;
+
+public:
+  generator_context_wrapper();
+
+  void init(v8::Local<v8::Value> script_value, size_t current_scene_idx);
+
+  std::shared_ptr<generator_context> get();
+  v8_interact& i() const;
+};
+
 class generator_context {
 private:
   std::unique_ptr<v8_interact> v8_interact_instance;

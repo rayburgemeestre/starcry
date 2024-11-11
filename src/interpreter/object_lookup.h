@@ -11,6 +11,7 @@
 #include "data_staging/shape.hpp"
 
 class generator_context;
+class generator_context_wrapper;
 
 namespace interpreter {
 class scenes;
@@ -19,7 +20,7 @@ class object_lookup {
 public:
   using map_type = std::unordered_map<int64_t, std::reference_wrapper<data_staging::shape_t>>;
 
-  explicit object_lookup(std::shared_ptr<generator_context>& genctx, scenes& scenes);
+  explicit object_lookup(generator_context_wrapper& genctx, scenes& scenes);
 
   void update();
   void reset();
@@ -38,7 +39,7 @@ public:
   v8::Local<v8::Object> get_object(int64_t object_unique_id);
 
 private:
-  std::shared_ptr<generator_context>& genctx;
+  generator_context_wrapper& genctx;
   scenes& scenes_;
 
   map_type next_instance_map;

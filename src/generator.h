@@ -20,19 +20,15 @@
 #include "interpreter/debug_printer.h"
 #include "interpreter/frame_sampler.h"
 #include "interpreter/generator_options.hpp"
-#include "interpreter/gradient_manager.h"
 #include "interpreter/initializer.h"
 #include "interpreter/instantiator.h"
 #include "interpreter/interactor.h"
 #include "interpreter/job_holder.h"
 #include "interpreter/job_to_shape_mapper.h"
-#include "interpreter/object_definitions.h"
 #include "interpreter/object_lookup.h"
 #include "interpreter/positioner.h"
 #include "interpreter/scenes.h"
 #include "interpreter/spawner.h"
-#include "interpreter/texture_manager.h"
-#include "interpreter/toroidal_manager.h"
 
 #include "core/fps_progress.hpp"
 
@@ -42,7 +38,6 @@
 
 #include "util/frame_stepper.hpp"
 #include "util/generator_context.h"
-#include "util/random.hpp"
 #include "util/v8_interact.hpp"
 #include "util/v8_wrapper.hpp"
 
@@ -50,8 +45,18 @@ class v8_wrapper;
 class step_calculator;
 class metrics;
 class vector2d;
+class generator_context_wrapper;
+
+namespace util {
+class random_generator;
+}
 
 namespace interpreter {
+
+class object_definitions;
+class gradient_manager;
+class texture_manager;
+class toroidal_manager;
 
 class generator {
   generator_state state_;
@@ -59,26 +64,19 @@ class generator {
 
   std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
+  generator_context_wrapper& genctx;
   job_holder job_holder_;
 
   frame_stepper stepper;
 
-  object_definitions definitions_;
-  data::settings settings_;
-
-  scale_settings scalesettings;
-
-  std::shared_ptr<generator_context> genctx;
-
-  gradient_manager gradient_manager_;
-  texture_manager texture_manager_;
-  toroidal_manager toroidal_manager_;
+  data::settings& settings_;
+  scale_settings& scalesettings_;
 
   initializer initializer_;
   spawner spawner_;
   bridges bridges_;
   scenes scenes_;
-  frame_sampler sampler_;
+  frame_sampler& sampler_;
   positioner positioner_;
   interactor interactor_;
   instantiator instantiator_;
@@ -87,19 +85,26 @@ class generator {
   checkpoints checkpoints_;
 
   debug_printer debug_printer_;
-
-  util::random_generator rand_;
-  data_staging::attrs global_attrs_;
-  std::vector<int64_t> selected_ids_;
+  util::random_generator& rand_;
+  std::vector<int64_t> selected_ids_;  // TODO: not found???
 
   const generator_options& generator_opts;
-
   fps_progress fps_progress_;
 
 public:
   explicit generator(std::shared_ptr<metrics> metrics,
                      std::shared_ptr<v8_wrapper> context,
-                     const generator_options& opts);
+                     generator_context_wrapper& genctx,
+                     const generator_options& opts,
+                     object_definitions& definitions,
+                     gradient_manager& gradient_manager,
+                     texture_manager& texture_manager,
+                     toroidal_manager& toroidal_manager,
+                     data_staging::attrs& global_attrs_,
+                     util::random_generator& rand,
+                     data::settings& settings,
+                     scale_settings& scalesettings,
+                     frame_sampler& sampler);
   ~generator() = default;
   static std::shared_ptr<generator> create(std::shared_ptr<metrics> metrics,
                                            std::shared_ptr<v8_wrapper> context,
