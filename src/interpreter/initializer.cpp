@@ -54,7 +54,6 @@ initializer::initializer(gradient_manager& gm,
       global_attrs_(global_attrs),
       settings_(settings),
       object_lookup_(lookup),
-      scenes_(scenes_),
       scalesettings_(scalesettings),
       bridges_(bridges),
       sampler_(sampler),
@@ -306,6 +305,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         if (i.has_field(video, "grain_for_opacity"))
           settings_.grain_for_opacity = i.boolean(video, "grain_for_opacity");
         if (i.has_field(video, "extra_grain")) settings_.extra_grain = i.double_number(video, "extra_grain");
+        settings_.update_positions = true;
         if (i.has_field(video, "update_positions")) settings_.update_positions = i.boolean(video, "update_positions");
         if (i.has_field(video, "dithering")) settings_.dithering = i.boolean(video, "dithering");
         if (i.has_field(video, "gamma")) settings_.gamma = i.double_number(video, "gamma");

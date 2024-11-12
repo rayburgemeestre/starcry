@@ -102,7 +102,6 @@ private:
   data_staging::attrs& global_attrs_;
   data::settings& settings_;
   object_lookup& object_lookup_;
-  scenes& scenes_;
   scale_settings& scalesettings_;
   bridges& bridges_;
   frame_sampler& sampler_;
