@@ -35,10 +35,11 @@ public:
                         bridges& bridges,
                         object_definitions& definitions,
                         initializer& initializer,
-                        interactor& interactor,
                         object_lookup& object_lookup,
                         positioner& positioner,
                         data_staging::attrs& attrs);
+
+  void init(interactor& interactor_);
 
   void instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
                                                      int debug_level = 0,
@@ -73,7 +74,7 @@ private:
   bridges& bridges_;
   object_definitions& definitions_;
   initializer& initializer_;
-  interactor& interactor_;
+  interactor* interactor_ = nullptr;
   object_lookup& object_lookup_;
   positioner& positioner_;
   data_staging::attrs& global_attrs_;

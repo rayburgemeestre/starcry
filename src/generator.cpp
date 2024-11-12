@@ -10,7 +10,7 @@
 #include <cmath>
 #include <memory>
 
-#define BOOST_DI_CFG_CTOR_LIMIT_SIZE 20
+#define BOOST_DI_CFG_CTOR_LIMIT_SIZE 30
 #include "boost/di.hpp"
 
 #include "v8pp/module.hpp"
@@ -35,60 +35,50 @@ namespace interpreter {
 generator::generator(std::shared_ptr<metrics> metrics,
                      std::shared_ptr<v8_wrapper> context,
                      generator_context_wrapper& genctx,
+                     generator_state& state,
+                     generator_config& config,
                      const generator_options& opts,
-                     object_definitions& definitions,
-                     gradient_manager& gradient_manager,
-                     texture_manager& texture_manager,
-                     toroidal_manager& toroidal_manager,
-                     data_staging::attrs& global_attrs,
+                     job_holder& job_holder,
+                     frame_stepper& stepper,
                      util::random_generator& rand,
                      data::settings& settings,
                      scale_settings& scalesettings,
-                     frame_sampler& sampler)
+                     frame_sampler& sampler,
+                     initializer& initializer,
+                     spawner& spawner,
+                     bridges& bridges,
+                     scenes& scenes,
+                     positioner& positioner,
+                     interactor& interactor,
+                     instantiator& instantiator,
+                     job_to_shape_mapper& job_shape_mapper,
+                     object_lookup& objectlookup,
+                     debug_printer& debug_printer)
     : context(context),
       metrics_(metrics),
+      state_(state),
       genctx(genctx),
+      config_(config),
+      job_holder_(job_holder),
+      stepper(stepper),
       settings_(settings),
       scalesettings_(scalesettings),
-      initializer_(gradient_manager,
-                   texture_manager,
-                   toroidal_manager,
-                   context,
-                   metrics,
-                   rand,
-                   global_attrs,
-                   settings,
-                   object_lookup_,
-                   scenes_,
-                   scalesettings,
-                   bridges_,
-                   sampler,
-                   definitions,
-                   opts,
-                   state_,
-                   config_),
-      spawner_(genctx, definitions, instantiator_, object_lookup_, scenes_),
-      bridges_(definitions, spawner_),
-      scenes_(context, genctx, instantiator_, stepper, job_holder_, state_, config_),
+      initializer_(initializer),
+      spawner_(spawner),
+      bridges_(bridges),
+      scenes_(scenes),
       sampler_(sampler),
-      positioner_(genctx, scenes_, stepper, definitions, object_lookup_, bridges_),
-      interactor_(genctx, state_, scenes_, stepper, toroidal_manager, definitions, object_lookup_, spawner_, bridges_),
-      instantiator_(context,
-                    genctx,
-                    scenes_,
-                    bridges_,
-                    definitions,
-                    initializer_,
-                    interactor_,
-                    object_lookup_,
-                    positioner_,
-                    global_attrs),
-      job_shape_mapper_(gradient_manager, texture_manager, job_holder_, stepper, scenes_, scalesettings, state_),
-      object_lookup_(genctx, scenes_),
+      positioner_(positioner),
+      interactor_(interactor),
+      instantiator_(instantiator),
+      job_shape_mapper_(job_shape_mapper),
+      object_lookup_(objectlookup),
       // checkpoints_(*this),
-      debug_printer_(scenes_),
+      debug_printer_(debug_printer),
       rand_(rand),
-      generator_opts(opts) {}
+      generator_opts(opts) {
+  instantiator.init(interactor_);
+}
 
 std::shared_ptr<generator> generator::create(std::shared_ptr<metrics> metrics__,
                                              std::shared_ptr<v8_wrapper> context__,
@@ -113,7 +103,8 @@ void generator::init(const std::string& filename,
   config().filename = filename;
   job_holder_.init();
 
-  initializer_.initialize_all(job_holder_.get(), config().filename, rand_seed, preview, width, height, scale);
+  initializer_.initialize_all(
+      job_holder_.get(), config().filename, rand_seed, preview, width, height, scale, scenes_, spawner_);
 
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     genctx.init(val, 0);
@@ -125,7 +116,7 @@ void generator::init(const std::string& filename,
   rand_.set_seed(state().seed);
 
   // set_scene requires generator_context to be set
-  scenes_.set_scene(0);
+  scenes_.set_scene(0, instantiator_);
 
   // all objects added at this point can be blindly appended
   scenes_.append_instantiated_objects();
@@ -231,7 +222,7 @@ bool generator::_generate_frame() {
 
           interactor_.reset();
 
-          scenes_.prepare_scene();
+          scenes_.prepare_scene(instantiator_);
 
           object_lookup_.update();  // object uid -> object ref
 

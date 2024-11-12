@@ -16,18 +16,11 @@ namespace interpreter {
 
 scenes::scenes(std::shared_ptr<v8_wrapper> context,
                generator_context_wrapper& genctx,
-               instantiator& instantiator,
                frame_stepper& stepper,
                job_holder& holder,
                generator_state& state,
                generator_config& config)
-    : context(context),
-      genctx(genctx),
-      instantiator_(instantiator),
-      stepper(stepper),
-      job_holder_(holder),
-      state_(state),
-      config_(config) {}
+    : context(context), genctx(genctx), stepper(stepper), job_holder_(holder), state_(state), config_(config) {}
 
 scenes scenes::clone() {
   return scenes{*this};
@@ -68,7 +61,7 @@ void scenes::refresh_scenesettings() {
   for (auto& scene_shapes_vec : scene_shapes_next) scene_shapes_vec.clear();
 }
 
-void scenes::set_scene(size_t scene) {
+void scenes::set_scene(size_t scene, instantiator& instantiator) {
   if (scenesettings.current_scene_next == std::numeric_limits<size_t>::max())
     scenesettings.current_scene_next = scene;
   else
@@ -77,7 +70,7 @@ void scenes::set_scene(size_t scene) {
       scenesettings.current_scene_next > scenesettings.scene_initialized) {
     scenesettings.scene_initialized_previous = scenesettings.scene_initialized;  // in case we need to revert
     scenesettings.scene_initialized = scenesettings.current_scene_next;
-    create_object_instances();
+    create_object_instances(instantiator);
   }
 #ifdef DEBUG2
   logger(DEBUG) << "##[ scenes::set_scene() ]##" << std::endl;
@@ -110,9 +103,9 @@ void scenes::append_instantiated_objects() {
   instantiated_objects[scenesettings.current_scene_next].clear();
 }
 
-void scenes::prepare_scene() {
+void scenes::prepare_scene(instantiator& instantiator) {
   if (scenesettings.update(get_time(scenesettings).time)) {
-    set_scene(scenesettings.current_scene_next + 1);
+    set_scene(scenesettings.current_scene_next + 1, instantiator);
     // all objects added at this point can be blindly appended
     scene_shapes_next[scenesettings.current_scene_next].insert(
         std::end(scene_shapes_next[scenesettings.current_scene_next]),
@@ -372,7 +365,7 @@ void scenes::_set_scene_sub_object(scene_settings& scenesettings, size_t scene) 
   }
 }
 
-void scenes::create_object_instances() {
+void scenes::create_object_instances(instantiator& instantiator) {
   // This function is called whenever a scene is set. (once per scene)
   context->enter_object("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     // enter_objects creates a new isolate, using the old gives issues, so we'll recreate
@@ -381,7 +374,7 @@ void scenes::create_object_instances() {
 
     switch_scene();
 
-    instantiator_.instantiate_additional_objects_from_new_scene(genctx.get()->scene_objects, 0);
+    instantiator.instantiate_additional_objects_from_new_scene(genctx.get()->scene_objects, 0);
 
     // since this is invoked directly after a scene change, and in the very beginning, make sure this state is part of
     // the instances "current" frame, or reverting (e.g., due to motion blur requirements) will discard all of this.

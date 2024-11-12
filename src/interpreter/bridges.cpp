@@ -9,9 +9,9 @@
 
 namespace interpreter {
 
-bridges::bridges(object_definitions& definitions, spawner& spawner) : definitions_(definitions), spawner_(spawner) {}
+bridges::bridges(object_definitions& definitions) : definitions_(definitions) {}
 
-void bridges::init() {
+void bridges::init(spawner& spawner_) {
   object_bridge_circle = std::make_shared<object_bridge<data_staging::circle>>(definitions_, spawner_);
   object_bridge_ellipse = std::make_shared<object_bridge<data_staging::ellipse>>(definitions_, spawner_);
   object_bridge_line = std::make_shared<object_bridge<data_staging::line>>(definitions_, spawner_);

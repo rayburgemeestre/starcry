@@ -37,7 +37,6 @@ initializer::initializer(gradient_manager& gm,
                          data_staging::attrs& global_attrs,
                          data::settings& settings,
                          object_lookup& lookup,
-                         scenes& scenes_,
                          scale_settings& scalesettings,
                          bridges& bridges,
                          frame_sampler& sampler,
@@ -70,11 +69,13 @@ void initializer::initialize_all(std::shared_ptr<data::job> job,
                                  bool preview,
                                  std::optional<int> width,
                                  std::optional<int> height,
-                                 std::optional<double> scale) {
+                                 std::optional<double> scale,
+                                 scenes& scenes_,
+                                 spawner& spawner_) {
   job_mapper_ = std::make_shared<job_mapper>(job);
   init_context(filename);
-  init_user_script();
-  init_video_meta_info(rand_seed, preview, width, height, scale);
+  init_user_script(spawner_);
+  init_video_meta_info(rand_seed, preview, width, height, scale, scenes_);
   init_gradients();
   init_textures();
   init_toroidals();
@@ -202,7 +203,7 @@ void initializer::reset_context() {
   context_->context->module("texture_effect", consts_4);
 }
 
-void initializer::init_user_script() {
+void initializer::init_user_script(spawner& spawner_) {
   std::ifstream stream(config_.filename.c_str());
   if (!stream && config_.filename != "-") {
     throw std::runtime_error("could not locate file " + config_.filename);
@@ -222,17 +223,19 @@ void initializer::init_user_script() {
     logger(WARNING) << "Exception occurred loading user script:\n" << ex.what() << std::endl;
   }
   v8::HandleScope hs(context_->context->isolate());
-  bridges_.init();
+  bridges_.init(spawner_);
 }
 
 void initializer::init_video_meta_info(std::optional<double> rand_seed,
                                        bool preview,
                                        std::optional<int> width,
                                        std::optional<int> height,
-                                       std::optional<double> scale) {
+                                       std::optional<double> scale,
+                                       scenes& scenes_) {
   // "run_array" is a bit of a misnomer, this only invokes the callback once
   context_->run_array(
-      "script", [this, &preview, &rand_seed, &width, &height, &scale](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+      "script",
+      [this, &preview, &rand_seed, &width, &height, &scale, &scenes_](v8::Isolate* isolate, v8::Local<v8::Value> val) {
         v8_interact i;
         auto video_value = v8_index_object(current_context_native(context_), val, "video");
         auto video = video_value->IsObject() ? video_value.As<v8::Object>() : v8::Object::New(isolate);

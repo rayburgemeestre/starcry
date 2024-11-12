@@ -15,6 +15,7 @@ struct generator_options {
   double custom_scale = 0;
   std::optional<bool> custom_grain;
   int custom_granularity = 0;
+  generator_options() = default;
 };
 
 // TODO: separate out to different file
@@ -25,6 +26,7 @@ struct generator_state {
   int32_t canvas_w = 0;
   int32_t canvas_h = 0;
   double seed = 1;
+  generator_state() = default;
 };
 
 // configuration
@@ -38,4 +40,5 @@ struct generator_config {
   bool fast_ff = false;
   bool debug;
   bool caching = false;
+  generator_config() = default;
 };

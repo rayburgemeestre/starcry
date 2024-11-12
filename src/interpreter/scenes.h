@@ -32,7 +32,6 @@ class scenes : public transaction {
   // TODO: refs to shared ptrs
   std::shared_ptr<v8_wrapper> context;
   generator_context_wrapper& genctx;
-  instantiator& instantiator_;
   frame_stepper& stepper;
   job_holder& job_holder_;
   generator_state& state_;
@@ -50,7 +49,6 @@ public:  // temporary
 public:
   explicit scenes(std::shared_ptr<v8_wrapper> context,
                   generator_context_wrapper& genctx,
-                  instantiator& instantiator,
                   frame_stepper& stepper,
                   job_holder& job_holder,
                   generator_state& state,
@@ -65,9 +63,9 @@ public:
   void initialize();
   void add_scene();
   void append_instantiated_objects();
-  void set_scene(size_t scene);
+  void set_scene(size_t scene, instantiator& instantiator);
   void switch_scene();
-  void prepare_scene();
+  void prepare_scene(instantiator& instantiator);
 
   // for scene settings
   void update();
@@ -99,7 +97,7 @@ public:
 private:
   void _set_scene_sub_object(scene_settings& scenesettings, size_t scene);
   void refresh_scenesettings();
-  void create_object_instances();
+  void create_object_instances(instantiator& instantiator);
 };
 
 }  // namespace interpreter

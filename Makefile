@@ -22,7 +22,7 @@ docker_run = $(docker_exe_tmp) $(docker_params) run -i $(docker_tty) --rm \
 	                                            $(docker_device_card0) \
 	                                            --entrypoint /bin/bash \
 	                                            -w $$PWD docker.io/rayburgemeestre/build-starcry-ubuntu:22.04
-inside_docker_container = [[ "$$container" == "podman" ]] || [[ -f /.dockerenv ]]
+inside_docker_container = [[ "$$container" == "podman" ]] || [[ -f /.dockerenv ]]  # broken
 run_in_container = ($(docker_run) -c "if $(ccache_enabled); then $(ccache_env) $1; else $1; fi")
 run_locally = (if $(ccache_enabled); then $(ccache_env) $1; else $1; fi)
 run_in_container_clang = ($(docker_run) -c "sudo switch-to-latest-clang; if $(ccache_enabled); then $(ccache_env) $1; else $1; fi")

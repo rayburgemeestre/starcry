@@ -21,8 +21,8 @@ class bridges {
   std::shared_ptr<object_bridge<data_staging::text>> object_bridge_text = nullptr;
 
 public:
-  explicit bridges(object_definitions& definitions, spawner& spawner);
-  void init();
+  explicit bridges(object_definitions& definitions);
+  void init(spawner& spawner);
 
   template <typename T>
   auto& get() {
@@ -48,7 +48,6 @@ public:
 
 private:
   object_definitions& definitions_;
-  spawner& spawner_;
 };
 
 }  // namespace interpreter

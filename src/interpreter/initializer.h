@@ -45,6 +45,7 @@ class scenes;
 class bridges;
 class frame_sampler;
 class object_definitions;
+class spawner;
 
 class initializer {
 public:
@@ -57,7 +58,6 @@ public:
                        data_staging::attrs& attrs,
                        data::settings& settings,
                        object_lookup& lookup,
-                       scenes& scenes,
                        scale_settings& scalesettings,
                        bridges& bridges,
                        frame_sampler& sampler,
@@ -72,15 +72,18 @@ public:
                       bool preview,
                       std::optional<int> width,
                       std::optional<int> height,
-                      std::optional<double> scale);
+                      std::optional<double> scale,
+                      scenes& scenes_,
+                      spawner& spawner_);
 
   void init_context(const std::string& filename);
-  void init_user_script();
+  void init_user_script(spawner& spawner_);
   void init_video_meta_info(std::optional<double> rand_seed,
                             bool preview,
                             std::optional<int> width,
                             std::optional<int> height,
-                            std::optional<double> scale);
+                            std::optional<double> scale,
+                            scenes& scenes_);
   void init_gradients();
   void init_textures();
   void init_toroidals();

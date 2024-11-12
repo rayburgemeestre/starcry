@@ -101,7 +101,6 @@ instantiator::instantiator(std::shared_ptr<v8_wrapper> context,
                            interpreter::bridges& bridges,
                            object_definitions& definitions,
                            initializer& initializer,
-                           interactor& interactor,
                            object_lookup& object_lookup,
                            positioner& positioner,
                            data_staging::attrs& attrs)
@@ -111,10 +110,14 @@ instantiator::instantiator(std::shared_ptr<v8_wrapper> context,
       bridges_(bridges),
       definitions_(definitions),
       initializer_(initializer),
-      interactor_(interactor),
       object_lookup_(object_lookup),
       positioner_(positioner),
       global_attrs_(attrs) {}
+
+// TODO: this is a workaround for a circular dependency
+void instantiator::init(interactor& interactor_) {
+  this->interactor_ = &interactor_;
+}
 
 void instantiator::instantiate_additional_objects_from_new_scene(v8::Persistent<v8::Array>& scene_objects,
                                                                  int debug_level,
@@ -464,7 +467,7 @@ instantiator::instantiate_object_from_scene(
 
     positioner_.handle_rotations(shape_ref.get(), new_stack);
 
-    bool destroyed = interactor_.destroy_if_duplicate(unique_group, shape_ref.get());
+    bool destroyed = interactor_->destroy_if_duplicate(unique_group, shape_ref.get());
 
     if (destroyed) {
       return std::nullopt;

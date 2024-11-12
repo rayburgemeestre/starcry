@@ -59,32 +59,33 @@ class texture_manager;
 class toroidal_manager;
 
 class generator {
-  generator_state state_;
-  generator_config config_;
+  generator_state& state_;
+  generator_config& config_;
 
   std::shared_ptr<v8_wrapper> context;
   std::shared_ptr<metrics> metrics_;
   generator_context_wrapper& genctx;
-  job_holder job_holder_;
 
-  frame_stepper stepper;
+  job_holder& job_holder_;
+
+  frame_stepper& stepper;
 
   data::settings& settings_;
   scale_settings& scalesettings_;
 
-  initializer initializer_;
-  spawner spawner_;
-  bridges bridges_;
-  scenes scenes_;
+  initializer& initializer_;
+  spawner& spawner_;
+  bridges& bridges_;
+  scenes& scenes_;
   frame_sampler& sampler_;
-  positioner positioner_;
-  interactor interactor_;
-  instantiator instantiator_;
-  job_to_shape_mapper job_shape_mapper_;
-  object_lookup object_lookup_;
+  positioner& positioner_;
+  interactor& interactor_;
+  instantiator& instantiator_;
+  job_to_shape_mapper& job_shape_mapper_;
+  object_lookup& object_lookup_;
   checkpoints checkpoints_;
 
-  debug_printer debug_printer_;
+  debug_printer& debug_printer_;
   util::random_generator& rand_;
   std::vector<int64_t> selected_ids_;  // TODO: not found???
 
@@ -95,16 +96,25 @@ public:
   explicit generator(std::shared_ptr<metrics> metrics,
                      std::shared_ptr<v8_wrapper> context,
                      generator_context_wrapper& genctx,
+                     generator_state& state,
+                     generator_config& config,
                      const generator_options& opts,
-                     object_definitions& definitions,
-                     gradient_manager& gradient_manager,
-                     texture_manager& texture_manager,
-                     toroidal_manager& toroidal_manager,
-                     data_staging::attrs& global_attrs_,
+                     job_holder& job_holder,
+                     frame_stepper& stepper,
                      util::random_generator& rand,
                      data::settings& settings,
                      scale_settings& scalesettings,
-                     frame_sampler& sampler);
+                     frame_sampler& sampler,
+                     initializer& initializer,
+                     spawner& spawner,
+                     bridges& bridges,
+                     scenes& scenes,
+                     positioner& positioner,
+                     interactor& interactor,
+                     instantiator& instantiator,
+                     job_to_shape_mapper& job_shape_mapper,
+                     object_lookup& objectlookup,
+                     debug_printer& debug_printer);
   ~generator() = default;
   static std::shared_ptr<generator> create(std::shared_ptr<metrics> metrics,
                                            std::shared_ptr<v8_wrapper> context,
