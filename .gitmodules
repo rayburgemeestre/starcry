@@ -1,6 +1,6 @@
 [submodule "libs/cereal"]
 	path = libs/cereal
-	url = https://github.com/USCiLab/cereal
+	url = https://github.com/rayburgemeestre/cereal
 [submodule "libs/framer"]
 	path = libs/framer
 	url = https://github.com/rayburgemeestre/framer
