@@ -3,18 +3,25 @@
 set -ex
 set -o pipefail
 
-sudo apt-get update
-sudo apt install -y lsb-release software-properties-common ca-certificates
+echo TEST
 
-sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5CE16B7B
-sudo add-apt-repository "deb [arch=amd64] https://cppse.nl/repo/ $(lsb_release -cs) main"
+sudo apt-get update
+sudo apt install -y lsb-release software-properties-common ca-certificates curl
+
+#sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0xF64DD44383345E54
+#sudo add-apt-repository "deb [arch=amd64] https://cppse.nl/repo/ $(lsb_release -cs) main"
+
+curl -qs https://cppse.nl/public.pgp > etc/apt/keyrings/public.pgp
+echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/public.pgp] https://cppse.nl/repo/ $(lsb_release -cs) main" | sudo tee -a /etc/apt/sources.list
+sudo apt update
+
 sudo apt-get install -y cppseffmpeg=1.1.1 v8pp=1.1.1 allegro5=1.1.1 allegro5sdl=1.1.1 fastpfor=1.1.1 boost=1.1.1 sfml=1.1.1 seasocks=1.1.1 pngpp=1.1.1 fmt=1.1.1 cppseopenexr=1.1.1 cppseimagemagick=1.1.1 cppse-tvision=1.1.1 inotify-cpp=1.1.1 redis-plus-plus vivid=1.1.1
 sudo apt-get install -y coz-profiler
 sudo apt-get install -y ccache
 
 # removed for ubuntu 22.04: python-dev
 sudo apt-get install -y cmake git wget bzip2 libbz2-dev \
-            pkg-config curl \
+            pkg-config \
             liblzma-dev libomp5
 
 # ubuntu 18.04: sudo apt-get install -y libssl1.0-dev

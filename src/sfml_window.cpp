@@ -9,8 +9,8 @@
 #include "rendering_engine.h"
 #include "util/logger.h"
 
-const int window_width = 100;
-const int window_height = 100;
+const int window_width = 640;
+const int window_height = 480;
 
 sfml_window::sfml_window() : window(sf::VideoMode(window_width, window_height, bpp), "Preview") {
   cached_canvas_w = window_width;

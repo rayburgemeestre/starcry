@@ -41,11 +41,11 @@ RUN apt install -y libnss3 libnspr4 libatk-bridge2.0-0 libatspi2.0-0
 RUN apt install -y openjdk-21-jre
 
 # IDE requires a browser
-RUN apt install apt-transport-https curl && \
-    curl -s https://brave-browser-apt-beta.s3.brave.com/brave-core-nightly.asc | apt-key --keyring /etc/apt/trusted.gpg.d/brave-browser-prerelease.gpg add - && \
-    echo "deb [arch=amd64] https://brave-browser-apt-beta.s3.brave.com/ stable main" | tee /etc/apt/sources.list.d/brave-browser-beta.list && \
-    apt update && \
-    apt install brave-browser-beta
+#RUN apt install apt-transport-https curl && \
+#    curl -s https://brave-browser-apt-beta.s3.brave.com/brave-core-nightly.asc | apt-key --keyring /etc/apt/trusted.gpg.d/brave-browser-prerelease.gpg add - && \
+#    echo "deb [arch=amd64] https://brave-browser-apt-beta.s3.brave.com/ stable main" | tee /etc/apt/sources.list.d/brave-browser-beta.list && \
+#    apt update && \
+#    apt install brave-browser-beta
 
 # Integration tests dependencies
 RUN apt install -y imagemagick-6.q16 ffmpeg
