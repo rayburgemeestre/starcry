@@ -55,8 +55,8 @@ generator::generator(std::shared_ptr<metrics> metrics,
                      object_lookup& objectlookup,
                      debug_printer& debug_printer)
     : state_(state),
-      context(context),
       config_(config),
+      context(context),
       metrics_(metrics),
       genctx(genctx),
       job_holder_(job_holder),
@@ -82,13 +82,17 @@ generator::generator(std::shared_ptr<metrics> metrics,
 
 std::shared_ptr<generator> generator::create(std::shared_ptr<metrics> metrics__,
                                              std::shared_ptr<v8_wrapper> context__,
-                                             generator_options& opts__) {
+                                             generator_options& opts__,
+                                             generator_state& state__,
+                                             generator_config& config__) {
   namespace di = boost::di;
   auto genctx = std::make_shared<generator_context>();
   auto injector = di::make_injector(di::bind<metrics>().to(metrics__),
                                     di::bind<v8_wrapper>().to(context__),
                                     di::bind<generator_options>().to(opts__),
-                                    di::bind<generator_context>().to(genctx));
+                                    di::bind<generator_context>().to(genctx),
+                                    di::bind<generator_state>().to(state__),
+                                    di::bind<generator_config>().to(config__));
   return injector.create<std::unique_ptr<generator>>();
 }
 
@@ -100,11 +104,11 @@ void generator::init(const std::string& filename,
                      std::optional<int> height,
                      std::optional<double> scale) {
   prctl(PR_SET_NAME, "native generator thread");
-  config().filename = filename;
+  config_.filename = filename;
   job_holder_.init();
 
   initializer_.initialize_all(
-      job_holder_.get(), config().filename, rand_seed, preview, width, height, scale, scenes_, spawner_);
+      job_holder_.get(), config_.filename, rand_seed, preview, width, height, scale, scenes_, spawner_);
 
   context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     genctx.init(val, 0);
@@ -113,7 +117,7 @@ void generator::init(const std::string& filename,
   scenes_.initialize();
 
   // reset random number generator
-  rand_.set_seed(state().seed);
+  rand_.set_seed(state_.seed);
 
   // set_scene requires generator_context to be set
   scenes_.set_scene(0, instantiator_);
@@ -121,7 +125,7 @@ void generator::init(const std::string& filename,
   // all objects added at this point can be blindly appended
   scenes_.append_instantiated_objects();
 
-  config().caching = caching;
+  config_.caching = caching;
 }
 
 void generator::reset_seeds() {
@@ -130,10 +134,10 @@ void generator::reset_seeds() {
 
 void generator::fast_forward(int frame_of_interest) {
   fast_forwarder(
-      config().fast_ff,
+      config_.fast_ff,
       frame_of_interest,
-      config().min_intermediates,
-      config().max_intermediates,
+      config_.min_intermediates,
+      config_.max_intermediates,
       [&]() {
         generate_frame();
         metrics_->skip_job(job_holder_.get()->job_number);
@@ -158,7 +162,7 @@ void generator::fast_forward(int frame_of_interest) {
 }
 
 bool generator::generate_frame() {
-  return sampler_.sample(config().fps, [&](bool skip) {
+  return sampler_.sample(config_.fps, [&](bool skip) {
     auto ret = _generate_frame();
     if (skip) job_holder_.get()->job_number--;
     return ret;
@@ -177,7 +181,7 @@ bool generator::_generate_frame() {
                            job_holder_.get()->num_chunks);
 
     context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
-      if (config().caching) {
+      if (config_.caching) {
         checkpoints_.insert(*job_holder_.get(), scenes_);
       }
 
@@ -194,12 +198,12 @@ bool generator::_generate_frame() {
       double max_dist_found = std::numeric_limits<double>::max();
       scalesettings_.reset();
 
-      if (config().min_intermediates > 0.) {
-        update_steps(config().min_intermediates);
+      if (config_.min_intermediates > 0.) {
+        update_steps(config_.min_intermediates);
       }
 
       static const auto max_attempts = 2;
-      while (max_dist_found > config().tolerated_granularity && !stepper.frozen) {
+      while (max_dist_found > config_.tolerated_granularity && !stepper.frozen) {
         if (++attempt >= max_attempts) {
           stepper.freeze();
         }
@@ -251,13 +255,13 @@ bool generator::_generate_frame() {
         }
         if (!detected_too_many_steps) {
           // didn't bail out with break above
-          if (stepper.max_step == config().max_intermediates) {
+          if (stepper.max_step == config_.max_intermediates) {
             // config doesn't allow finer granularity any way, break.
             break;
           }
-          if (stepper.max_step > config().max_intermediates) {
+          if (stepper.max_step > config_.max_intermediates) {
             logger(DEBUG) << "stepper.max_step > max_intermediates -> " << stepper.max_step << " > "
-                          << config().max_intermediates << std::endl;
+                          << config_.max_intermediates << std::endl;
             throw abort_exception("stepper max exceeds max. intermediates");
           }
         }
@@ -314,8 +318,8 @@ bool generator::_generate_frame() {
   } catch (std::exception& ex) {
     std::cout << "[caught] " << ex.what() << std::endl;
   }
-  job_holder_.get()->last_frame = job_holder_.get()->frame_number == state().max_frames;
-  return job_holder_.get()->frame_number != state().max_frames;
+  job_holder_.get()->last_frame = job_holder_.get()->frame_number == state_.max_frames;
+  return job_holder_.get()->frame_number != state_.max_frames;
 }
 
 void generator::revert_all_changes(v8_interact& i) {
@@ -435,9 +439,9 @@ void generator::update_object_distances(int* attempt, double* max_dist_found) {
 }
 
 int generator::update_steps(double dist) {
-  auto steps = round(std::max(1.0, fabs(dist) / config().tolerated_granularity));
-  if (steps > config().max_intermediates) {
-    steps = config().max_intermediates;
+  auto steps = round(std::max(1.0, fabs(dist) / config_.tolerated_granularity));
+  if (steps > config_.max_intermediates) {
+    steps = config_.max_intermediates;
   }
   stepper.update(steps);
   return steps;
@@ -536,14 +540,6 @@ std::vector<int64_t> generator::get_transitive_ids(const std::vector<int64_t>& u
 
 void generator::set_checkpoints(std::set<int>& checkpoints) {
   checkpoints_.set_checkpoints(checkpoints);
-}
-
-generator_state& generator::state() {
-  return state_;
-}
-
-generator_config& generator::config() {
-  return config_;
 }
 
 }  // namespace interpreter

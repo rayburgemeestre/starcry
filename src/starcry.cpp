@@ -21,7 +21,6 @@
 #include "framer.hpp"
 #include "generator.h"
 #include "rendering_engine.h"
-#include "sfml_window.h"
 #include "util/image_splitter.hpp"
 #include "util/image_utils.h"
 #include "util/logger.h"
@@ -50,7 +49,12 @@
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
 
-starcry::starcry(starcry_options& options, std::shared_ptr<v8_wrapper> context)
+#include "gui_window.h"  // make sure to include after SeaSocks, BadRequest macro conflicts
+
+starcry::starcry(starcry_options& options,
+                 std::shared_ptr<v8_wrapper> context,
+                 generator_state& state,
+                 generator_config& config)
     : context(context),
       options_(options),
       gen(nullptr),
@@ -63,12 +67,14 @@ starcry::starcry(starcry_options& options, std::shared_ptr<v8_wrapper> context)
       metrics_(std::make_shared<metrics>(options.notty || options.stdout_,
                                          [this]() {
                                            if (!gui)
-                                             gui = std::make_unique<sfml_window>();
+                                             gui = std::make_unique<gui_window>();
                                            else
                                              gui->toggle_window();
                                          })),
       script_(options.script_file),
-      notifier(nullptr) {
+      notifier(nullptr),
+      state_(state),
+      config_(config) {
   if (options.stdout_) {
     _stdout = true;
   }
@@ -213,7 +219,7 @@ image starcry::render_job(size_t thread_num,
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   if (!gen) {
     context->recreate_isolate_in_this_thread();
-    gen = interpreter::generator::create(metrics_, context, options().generator_opts);
+    gen = interpreter::generator::create(metrics_, context, options().generator_opts, state_, config_);
   }
 
   if (const auto& instruction = std::dynamic_pointer_cast<reload_instruction>(cmd_def)) {
@@ -238,7 +244,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     if (v.offset_frames() > 0) {
       current_frame = v.offset_frames();
     }
-    double use_fps = gen->config().fps;
+    double use_fps = config_.fps;
     if (!framer && options().output && instruction->video().output_file() != "/dev/null") {
       auto stream_mode = frame_streamer::stream_mode::FILE;
       auto output_file = v.output_file();
@@ -248,11 +254,8 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       }
       if (v.output_file().empty()) {
         auto scriptname = fs::path(script_).stem().string();
-        v.set_output_file(fmt::format("output_seed_{}_{}x{}-{}.h264",
-                                      gen->state().seed,
-                                      (int)gen->state().canvas_w,
-                                      (int)gen->state().canvas_h,
-                                      scriptname));
+        v.set_output_file(fmt::format(
+            "output_seed_{}_{}x{}-{}.h264", state_.seed, (int)state_.canvas_w, (int)state_.canvas_h, scriptname));
       }
       framer = std::make_unique<frame_streamer>(v.output_file(), stream_mode);
       framer->set_num_threads(options().num_ffmpeg_threads);
@@ -261,7 +264,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       });
     }
     size_t bitrate = (500 * 1024 * 8);  // TODO: make configurable
-    if (framer) framer->initialize(bitrate, gen->state().canvas_w, gen->state().canvas_h, use_fps);
+    if (framer) framer->initialize(bitrate, state_.canvas_w, state_.canvas_h, use_fps);
     while (true) {
       auto ret = gen->generate_frame();
       auto job_copy = std::make_shared<data::job>(*gen->get_job());
@@ -681,9 +684,9 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
 
           finished = process(width, height, pixels, pixels_raw, last_frame);
 
-          save_images(gen->config().filename,
+          save_images(config_.filename,
                       rand_,
-                      gen->state().seed,
+                      state_.seed,
                       gen->settings().dithering,
                       pixels_raw,
                       width,
@@ -741,7 +744,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
 }
 
 void starcry::setup_server(const std::string& host) {
-  if (options_.gui) gui = std::make_unique<sfml_window>();
+  if (options_.gui) gui = std::make_unique<gui_window>();
 
   system->spawn_consumer<instruction>(
       "generator", std::bind(&starcry::command_to_jobs, this, std::placeholders::_1), cmds);

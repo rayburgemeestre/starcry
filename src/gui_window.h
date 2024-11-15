@@ -5,18 +5,23 @@
  */
 #pragma once
 
-#include <SFML/Graphics.hpp>
+#include <X11/Xlib.h>
+
 #include <atomic>
 #include <mutex>
 #include <thread>
 #include <vector>
 
-#include "data/color.hpp"
+enum class ScaleMode {
+  NONE,          // Original size, no scaling
+  STRETCH,       // Stretch to fill window completely
+  STRETCH_RATIO  // Stretch maintaining aspect ratio, black bars
+};
 
-class sfml_window {
+class gui_window {
 public:
-  sfml_window();
-  ~sfml_window();
+  gui_window();
+  ~gui_window();
 
   void add_frame(uint32_t canvas_w, uint32_t canvas_h, std::vector<uint32_t> &pixels);
   void finalize();
@@ -24,10 +29,13 @@ public:
 
 private:
   void update_window();
+  void stop();
+
+  bool running = true;
 
   int bpp = 32;
-  bool vsync = false;
-  sf::RenderWindow window;
+  bool vsync = true;
+
   std::thread runner;
   std::atomic<bool> runner_flag = false;
   std::mutex mut;
@@ -35,4 +43,21 @@ private:
   uint32_t cached_canvas_w = 0;
   uint32_t cached_canvas_h = 0;
   std::vector<uint32_t> cached_pixels;
+
+  int window_width_ = 0;
+  int window_height_ = 0;
+
+  int current_width = 0;
+  int current_height = 0;
+
+  ScaleMode scale_mode = ScaleMode::STRETCH_RATIO;
+
+  // X11 related
+  Display *display = nullptr;
+  int screen = -1;
+  Window root;
+  Window window;
+  GC gc;
+  XImage *image = nullptr;
+  Atom wmDeleteWindow;
 };

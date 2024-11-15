@@ -3,8 +3,6 @@
 set -ex
 set -o pipefail
 
-echo TEST
-
 sudo apt-get update
 sudo apt install -y lsb-release software-properties-common ca-certificates curl
 

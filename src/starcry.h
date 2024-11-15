@@ -21,7 +21,7 @@
 #include "util/random.hpp"
 
 class v8_wrapper;
-class sfml_window;
+class gui_window;
 class rendering_engine;
 class webserver;
 class frame_streamer;
@@ -111,7 +111,7 @@ private:
   std::shared_ptr<queue> jobs;
   std::shared_ptr<queue> frames;
   std::shared_ptr<redis_server> redisserver;
-  std::shared_ptr<sfml_window> gui = nullptr;
+  std::shared_ptr<gui_window> gui = nullptr;
   std::shared_ptr<frame_streamer> framer = nullptr;
   std::shared_ptr<webserver> webserv = nullptr;
   int64_t num_queue_per_worker = 1;
@@ -130,8 +130,14 @@ private:
   util::random_generator rand_;
   std::set<int> checkpoints_;
 
+  generator_state& state_;
+  generator_config& config_;
+
 public:
-  starcry(starcry_options& options, std::shared_ptr<v8_wrapper> context);
+  starcry(starcry_options& options,
+          std::shared_ptr<v8_wrapper> context,
+          generator_state& state,
+          generator_config& config);
   ~starcry();
 
   starcry_options& options();

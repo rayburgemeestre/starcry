@@ -13,11 +13,11 @@ function(configure_links target)
 
   # SFML (seems broken for some reason now)
   #target_link_libraries(${target} PRIVATE ${SFML_LIBRARIES})
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/sfml/lib/libsfml-graphics-s.a)
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/sfml/lib/libsfml-window-s.a)
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/sfml/lib/libsfml-system-s.a)
+  # target_link_libraries(${target} PRIVATE /opt/cppse/build/sfml/lib/libsfml-graphics-s.a)
+  # target_link_libraries(${target} PRIVATE /opt/cppse/build/sfml/lib/libsfml-window-s.a)
+  # target_link_libraries(${target} PRIVATE /opt/cppse/build/sfml/lib/libsfml-system-s.a)
   # below can be made obsolete if we can get rid of some Joystick related stuff in libsfml-window-s.a
-  target_link_libraries(${target} PRIVATE /lib/x86_64-linux-gnu/libudev.so)
+  # target_link_libraries(${target} PRIVATE /lib/x86_64-linux-gnu/libudev.so)
 
   # redis
   target_link_libraries(${target} PRIVATE /opt/cppse/build/redis-plus-plus/lib/libredis++.a)
@@ -33,6 +33,7 @@ function(configure_links target)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/ffmpeg/lib/libavcodec.a)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/ffmpeg/lib/libavutil.a)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/ffmpeg/lib/libavfilter.a)
+  target_link_libraries(${target} PRIVATE /opt/cppse/build/ffmpeg/lib/libswresample.a)
 
   # X11 (statically linking causes SFML to segfault)
   # We could retry with SDL at some point, but for now let's use dynamic linking
@@ -61,7 +62,8 @@ function(configure_links target)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/v8pp/lib/libv8_monolith.a)
   #target_link_libraries(${target} PRIVATE /usr/lib/gcc/x86_64-linux-gnu/7/libstdc++fs.a) # ubuntu 18.04
   #target_link_libraries(${target} PRIVATE /usr/lib/gcc/x86_64-linux-gnu/9/libstdc++fs.a)  # ubuntu 20.04
-  target_link_libraries(${target} PRIVATE /usr/lib/gcc/x86_64-linux-gnu/11/libstdc++fs.a)  # ubuntu 20.04
+  #target_link_libraries(${target} PRIVATE /usr/lib/gcc/x86_64-linux-gnu/11/libstdc++fs.a)  # ubuntu 22.04
+  target_link_libraries(${target} PRIVATE /usr/lib/gcc/x86_64-linux-gnu/13/libstdc++fs.a)  # ubuntu 24.04
 
   # generic
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libssl.a)
@@ -72,14 +74,14 @@ function(configure_links target)
 
   # openexr
   # no longer exists ? target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIexMath-2_5.a)
-  #target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIlmImf-3_1.a)
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libOpenEXR-3_1.a)
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libOpenEXRCore-3_1.a)
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libOpenEXRUtil-3_1.a)
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIlmThread-3_1.a)
+  #target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIlmImf-3_3.a)
+  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libOpenEXR-3_3.a)
+  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libOpenEXRCore-3_3.a)
+  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libOpenEXRUtil-3_3.a)
+  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIlmThread-3_3.a)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libImath-3_1.a)
-  #target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libHalf-3_1.a)
-  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIex-3_1.a)
+  #target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libHalf-3_3.a)
+  target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIex-3_3.a)
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libz.a)
 
   # curses

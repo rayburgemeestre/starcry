@@ -10,6 +10,9 @@
 #include "util/v8_wrapper.hpp"
 #include "data/frame_request.hpp"
 #include "data/video_request.hpp"
+#include "boost/di.hpp"
+
+namespace di = boost::di;
 
 std::shared_ptr<v8_wrapper> context_wrapper;
 
@@ -48,14 +51,15 @@ double sut::test_create_image(const std::string& image_name, const std::vector<i
     std::filesystem::create_directories("test/integration/reference");
     options.output_file = fmt::format("test/integration/last-run/{}", image_name);
     std::remove(image_name.c_str());
-    starcry sc(options, context_wrapper);
+    auto injector = di::make_injector(di::bind<starcry_options>().to(options), di::bind<v8_wrapper>().to(context_wrapper));
+    auto sc = injector.create<std::unique_ptr<starcry>>();
     set_metrics(nullptr);  // suppress cluttering output
-    auto vp = sc.get_viewpoint();
+    auto vp = sc->get_viewpoint();
     vp.canvas_w = 320;
     vp.canvas_h = 240;
     vp.scale = 1.0;
-    sc.set_viewpoint(vp);
-    sc.setup_server();
+    sc->set_viewpoint(vp);
+    sc->setup_server();
     auto req = std::make_shared<data::frame_request>(options.script_file, options.frame_of_interest, options.num_chunks);
     // req->enable_compressed_image(); // compressed image is currently only for Web UI
     if (!selected_ids.empty()) {
@@ -65,8 +69,8 @@ double sut::test_create_image(const std::string& image_name, const std::vector<i
     req->enable_raw_image();
     req->enable_raw_bitmap();
     req->set_last_frame();
-    sc.add_image_command(req);
-  sc.run();
+    sc->add_image_command(req);
+    sc->run();
     const auto output_file = fmt::format("test/integration/last-run/{}.png", image_name);
     const auto reference_file = fmt::format("test/integration/reference/{}.png", image_name);
     if (!std::filesystem::exists(reference_file)) {
@@ -88,18 +92,19 @@ double sut::test_create_video(const std::string& video_name, int frames, int fps
     options.output_file = fmt::format("test/integration/last-run/{}", video_name);
     context_wrapper->set_filename(options.script_file);
     std::remove(video_name.c_str());
-    starcry sc(options, context_wrapper);
+    auto injector = di::make_injector(di::bind<starcry_options>().to(options), di::bind<v8_wrapper>().to(context_wrapper));
+    auto sc = injector.create<std::unique_ptr<starcry>>();
     set_metrics(nullptr);  // suppress cluttering output
-    auto vp = sc.get_viewpoint();
+    auto vp = sc->get_viewpoint();
     vp.canvas_w = 320;
     vp.canvas_h = 240;
     vp.scale = 1.0;
-    sc.set_viewpoint(vp);
-    sc.setup_server();
+    sc->set_viewpoint(vp);
+    sc->setup_server();
     const auto req = std::make_shared<data::video_request>(
             options.script_file, options.output_file, options.num_chunks, options.frame_offset, vp.canvas_w, vp.canvas_h);
-    sc.add_video_command(req);
-  sc.run();
+    sc->add_video_command(req);
+    sc->run();
 
     // convert video to seekable video
     const auto video_stem = fs::path(video_name).stem().string();

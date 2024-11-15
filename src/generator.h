@@ -118,7 +118,9 @@ public:
   ~generator() = default;
   static std::shared_ptr<generator> create(std::shared_ptr<metrics> metrics,
                                            std::shared_ptr<v8_wrapper> context,
-                                           generator_options& opts);
+                                           generator_options& opts,
+                                           generator_state& state__,
+                                           generator_config& config__);
 
   void init(const std::string& filename,
             std::optional<double> rand_seed,
@@ -148,9 +150,6 @@ public:
 
   std::vector<int64_t> get_transitive_ids(const std::vector<int64_t>& in);
   void set_checkpoints(std::set<int>& checkpoints);
-
-  generator_state& state();
-  generator_config& config();
 
 private:
   bool _generate_frame();
