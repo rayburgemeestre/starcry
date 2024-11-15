@@ -6,7 +6,7 @@ include_directories(
         "/opt/cppse/build/boost/include/"
         "/opt/cppse/build/ffmpeg/include/"
         "/opt/cppse/build/fastpfor/include/"
-        "/opt/cppse/build/sfml/include/"
+        # "/opt/cppse/build/sfml/include/"
         "/opt/cppse/build/seasocks/include/"
         "/opt/cppse/build/fmt/include/"
         "/opt/cppse/build/png++/"

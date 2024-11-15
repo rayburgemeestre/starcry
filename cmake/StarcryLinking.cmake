@@ -35,23 +35,23 @@ function(configure_links target)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/ffmpeg/lib/libavfilter.a)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/ffmpeg/lib/libswresample.a)
 
-  # X11 (statically linking causes SFML to segfault)
-  # We could retry with SDL at some point, but for now let's use dynamic linking
-  target_link_libraries(${target} PRIVATE -lXrandr)
-  target_link_libraries(${target} PRIVATE -lXext)
-  target_link_libraries(${target} PRIVATE -lXrender)
-  target_link_libraries(${target} PRIVATE -lX11)
-  target_link_libraries(${target} PRIVATE -lxcb)
-  target_link_libraries(${target} PRIVATE -lXau)
-  target_link_libraries(${target} PRIVATE -lXdmcp)
-  target_link_libraries(${target} PRIVATE -lGL)
+  # X11 (statically linking causes SFML to segfault, no longer using SFML though)
+  # target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libXrandr.a)
+  # target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libXext.a)
+  # target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libXrender.a)
+  target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libX11.a)
+  target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libxcb.a)
+  target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libXau.a)
+  target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libXdmcp.a)
+  # target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libGL.a)
 
   # x264
   target_link_libraries(${target} PRIVATE /opt/cppse/build/x264/lib/libx264.a)
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libbz2.a)
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/liblzma.a)
 
-  target_link_libraries(${target} PRIVATE -ldl)
+  # target_link_libraries(${target} PRIVATE -ldl)
+  target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libdl.a)
 
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libpng16.a)
 
