@@ -30,7 +30,7 @@ class object_bridge {
   std::shared_ptr<v8::Persistent<v8::Object>> instance_ = nullptr;
 
 public:
-  explicit object_bridge(interpreter::object_definitions& definitions, interpreter::spawner& spawner);
+  explicit object_bridge(interpreter::object_definitions& definitions, interpreter::spawner& spawner_);
 
   void push_object(shape_class& c);
   void pop_object();
