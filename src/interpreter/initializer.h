@@ -96,18 +96,18 @@ private:
   texture_manager& texture_manager_;
   toroidal_manager& toroidal_manager_;
   std::shared_ptr<v8_wrapper> context_;
-  std::shared_ptr<job_mapper> job_mapper_;
+  std::shared_ptr<job_mapper> job_mapper_ = nullptr;
   std::shared_ptr<metrics> metrics_;
   util::random_generator& rand_gen_;
   data_staging::attrs& global_attrs_;
   data::settings& settings_;
   object_lookup& object_lookup_;
-  scale_settings& scalesettings_;
+  scale_settings& scale_settings_;
   bridges& bridges_;
-  frame_sampler& sampler_;
-  object_definitions& definitions_;
-  const generator_options& options_;
-  generator_state& state_;
-  generator_config& config_;
+  frame_sampler& frame_sampler_;
+  object_definitions& object_definitions_;
+  const generator_options& generator_options_;
+  generator_state& generator_state_;
+  generator_config& generator_config_;
 };
 }  // namespace interpreter

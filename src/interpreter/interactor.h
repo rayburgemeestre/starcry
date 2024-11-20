@@ -69,11 +69,11 @@ private:
                       double constrain_dist_max) const;
 
   generator_context_wrapper& genctx;
-  generator_state& state_;
+  generator_state& generator_state_;
   scenes& scenes_;
-  frame_stepper& stepper_;
+  frame_stepper& frame_stepper_;
   toroidal_manager& toroidal_manager_;
-  object_definitions& definitions_;
+  object_definitions& object_definitions_;
   object_lookup& object_lookup_;
   spawner& spawner_;
   bridges& bridges_;

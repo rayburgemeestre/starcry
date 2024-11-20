@@ -33,7 +33,7 @@ public:
 
 private:
   generator_context_wrapper& genctx;
-  object_definitions& definitions_;
+  object_definitions& object_definitions_;
   instantiator& instantiator_;
   object_lookup& object_lookup_;
   scenes& scenes_;

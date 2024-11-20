@@ -221,7 +221,8 @@ bool generator::_generate_frame() {
         stepper.rewind();
         bool detected_too_many_steps = false;
         while (stepper.has_next_step() && !detected_too_many_steps) {
-          // logger(DEBUG) << "Stepper at step " << stepper.current_step << " out of " << stepper.max_step << std::endl;
+          // logger(DEBUG) << "Stepper at step " << frame_stepper_.current_step << " out of " << frame_stepper_.max_step
+          // << std::endl;
           stepper.advance_step();
 
           interactor_.reset();
@@ -260,9 +261,9 @@ bool generator::_generate_frame() {
             break;
           }
           if (stepper.max_step > config_.max_intermediates) {
-            logger(DEBUG) << "stepper.max_step > max_intermediates -> " << stepper.max_step << " > "
+            logger(DEBUG) << "frame_stepper_.max_step > max_intermediates -> " << stepper.max_step << " > "
                           << config_.max_intermediates << std::endl;
-            throw abort_exception("stepper max exceeds max. intermediates");
+            throw abort_exception("frame_stepper_ max exceeds max. intermediates");
           }
         }
       }

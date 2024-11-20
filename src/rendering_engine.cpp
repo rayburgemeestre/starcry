@@ -108,7 +108,7 @@ void rendering_engine::_render(
 
 #ifndef EMSCRIPTEN
 #ifndef SC_CLIENT
-  params.metrics->resize_job_objects(
+  params.metrics_->resize_job_objects(
       params.thread_num, params.job_num, params.chunk_num, params.shapes[params.shapes.size() - 1].size());
 #endif
 #endif
@@ -122,7 +122,7 @@ void rendering_engine::_render(
 #ifndef EMSCRIPTEN
 #ifndef SC_CLIENT
       double index = 0;
-      params.metrics->set_render_job_object_state(
+      params.metrics_->set_render_job_object_state(
           params.thread_num, params.job_num, params.chunk_num, index, metrics::job_state::rendering);
 #endif
 #endif
@@ -166,7 +166,7 @@ void rendering_engine::_render(
       }
 #ifndef EMSCRIPTEN
 #ifndef SC_CLIENT
-      params.metrics->set_render_job_object_state(
+      params.metrics_->set_render_job_object_state(
           params.thread_num, params.job_num, params.chunk_num, index, metrics::job_state::rendered);
       index++;
 #endif

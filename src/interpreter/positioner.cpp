@@ -22,8 +22,8 @@ positioner::positioner(generator_context_wrapper& genctx,
                        bridges& bridges)
     : genctx(genctx),
       scenes_(scenes),
-      stepper_(stepper),
-      definitions_(definitions),
+      frame_stepper_(stepper),
+      object_definitions_(definitions),
       object_lookup_(lookup),
       bridges_(bridges) {}
 
@@ -84,7 +84,7 @@ void positioner::update_object_positions() {
         vel_y = shape.movement_cref().velocity().y;
       }
 
-      velocity /= static_cast<double>(stepper_.max_step);
+      velocity /= static_cast<double>(frame_stepper_.max_step);
       x += (vel_x * velocity);
       y += (vel_y * velocity);
       x2 += (vel_x2 * velocity);
@@ -109,7 +109,7 @@ void positioner::update_time(data_staging::shape_t& instance,
   auto& i = genctx.get()->i();
   const auto time_settings = scenes_.get_time(scenesettings);
   const auto execute = [&](double scene_time) {
-    if (const auto find = definitions_.get(instance_id, true); find) {
+    if (const auto find = object_definitions_.get(instance_id, true); find) {
       const auto object_definition = *find;
       const auto handle_time_for_shape = [&](auto& c, auto& object_bridge) {
         // TODO: check if the object has an "time" function, or we can just skip this entire thing

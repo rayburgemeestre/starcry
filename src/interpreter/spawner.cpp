@@ -21,7 +21,7 @@ spawner::spawner(generator_context_wrapper& genctx,
                  object_lookup& object_lookup,
                  scenes& scenes)
     : genctx(genctx),
-      definitions_(definitions),
+      object_definitions_(definitions),
       instantiator_(instantiator),
       object_lookup_(object_lookup),
       scenes_(scenes) {}
@@ -44,12 +44,12 @@ int64_t spawner::spawn_object2(data_staging::shape_t& spawner, v8::Local<v8::Obj
   auto uid = i.integer_number(line_obj, "unique_id");
 
   // create __point__ object definition
-  if (!definitions_.contains("__point__")) {
+  if (!object_definitions_.contains("__point__")) {
     auto self_def = v8::Object::New(i.get_isolate());
     i.set_field(self_def, "x", v8::Number::New(i.get_isolate(), 0));
     i.set_field(self_def, "y", v8::Number::New(i.get_isolate(), 0));
     i.set_field(genctx.get()->objects.Get(i.get_isolate()), "__point__", self_def);
-    definitions_.update("__point__", self_def);
+    object_definitions_.update("__point__", self_def);
   }
 
   // spawn one, we do this so we can get full transitive x and y for the line start

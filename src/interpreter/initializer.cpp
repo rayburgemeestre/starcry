@@ -48,19 +48,18 @@ initializer::initializer(gradient_manager& gm,
       texture_manager_(tm),
       toroidal_manager_(toroidalman),
       context_(std::move(context)),
-      job_mapper_(nullptr),
       metrics_(std::move(metrics)),
       rand_gen_(rand_gen),
       global_attrs_(global_attrs),
       settings_(settings),
       object_lookup_(lookup),
-      scalesettings_(scalesettings),
+      scale_settings_(scalesettings),
       bridges_(bridges),
-      sampler_(sampler),
-      definitions_(definitions),
-      options_(options),
-      state_(state),
-      config_(config) {}
+      frame_sampler_(sampler),
+      object_definitions_(definitions),
+      generator_options_(options),
+      generator_state_(state),
+      generator_config_(config) {}
 
 void initializer::initialize_all(std::shared_ptr<data::job> job,
                                  const std::string& filename,
@@ -203,11 +202,12 @@ void initializer::reset_context() {
 }
 
 void initializer::init_user_script(spawner& spawner_) {
-  std::ifstream stream(config_.filename.c_str());
-  if (!stream && config_.filename != "-") {
-    throw std::runtime_error("could not locate file " + config_.filename);
+  std::ifstream stream(generator_config_.filename.c_str());
+  if (!stream && generator_config_.filename != "-") {
+    logger(ERROR) << "could not locate file " + generator_config_.filename << std::endl;
+    std::terminate();
   }
-  std::istreambuf_iterator<char> begin(config_.filename == "-" ? std::cin : stream), end;
+  std::istreambuf_iterator<char> begin(generator_config_.filename == "-" ? std::cin : stream), end;
   // remove "_ =" part from script (which is a workaround to silence 'not in use' linting)
   if (*begin == '_') {
     while (*begin != '=') begin++;
@@ -263,7 +263,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         auto obj = val.As<v8::Object>();
         auto scenes = i.v8_array(obj, "scenes");
         scenes_.reset();
-        definitions_.clear();
+        object_definitions_.clear();
         // TODO: put this in a meaningful function?
         object_lookup_.reset();
         for (size_t I = 0; I < scenes->Length(); I++) {
@@ -278,12 +278,12 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
           n /= duration;
         });
 
-        config_.fps = i.double_number(video, "fps", 25);
-        state_.canvas_w = i.double_number(video, "width", 1920);
-        state_.canvas_h = i.double_number(video, "height", 1080);
+        generator_config_.fps = i.double_number(video, "fps", 25);
+        generator_state_.canvas_w = i.double_number(video, "width", 1920);
+        generator_state_.canvas_h = i.double_number(video, "height", 1080);
         if (width && height) {
-          state_.canvas_w = *width;
-          state_.canvas_h = *height;
+          generator_state_.canvas_w = *width;
+          generator_state_.canvas_h = *height;
         }
 
         double use_scale = i.double_number(video, "scale", 1.);
@@ -291,15 +291,16 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
           use_scale = *scale;
         }
 
-        if (options_.custom_scale) use_scale = options_.custom_scale;
-        if (options_.custom_width) state_.canvas_w = options_.custom_width;
-        if (options_.custom_height) state_.canvas_h = options_.custom_height;
-        if (options_.custom_granularity) config_.tolerated_granularity = options_.custom_granularity;
-        if (options_.custom_grain) settings_.grain_for_opacity = *options_.custom_grain;
+        if (generator_options_.custom_scale) use_scale = generator_options_.custom_scale;
+        if (generator_options_.custom_width) generator_state_.canvas_w = generator_options_.custom_width;
+        if (generator_options_.custom_height) generator_state_.canvas_h = generator_options_.custom_height;
+        if (generator_options_.custom_granularity)
+          generator_config_.tolerated_granularity = generator_options_.custom_granularity;
+        if (generator_options_.custom_grain) settings_.grain_for_opacity = *generator_options_.custom_grain;
 
-        state_.seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
-        config_.tolerated_granularity = i.double_number(video, "granularity", 1);
-        config_.minimize_steps_per_object = i.boolean(video, "minimize_steps_per_object", false);
+        generator_state_.seed = rand_seed ? *rand_seed : i.double_number(video, "rand_seed");
+        generator_config_.tolerated_granularity = i.double_number(video, "granularity", 1);
+        generator_config_.minimize_steps_per_object = i.boolean(video, "minimize_steps_per_object", false);
         if (i.has_field(video, "perlin_noise")) settings_.perlin_noise = i.boolean(video, "perlin_noise");
         if (i.has_field(video, "motion_blur")) settings_.motion_blur = i.boolean(video, "motion_blur");
         if (i.has_field(video, "grain_for_opacity"))
@@ -311,30 +312,30 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         if (i.has_field(video, "gamma")) settings_.gamma = i.double_number(video, "gamma");
         if (i.has_field(video, "scale_ratio")) settings_.scale_ratio = i.boolean(video, "scale_ratio");
         if (i.has_field(video, "min_intermediates"))
-          config_.min_intermediates = i.integer_number(video, "min_intermediates");
+          generator_config_.min_intermediates = i.integer_number(video, "min_intermediates");
         if (i.has_field(video, "max_intermediates"))
-          config_.max_intermediates = i.integer_number(video, "max_intermediates");
-        if (i.has_field(video, "fast_ff")) config_.fast_ff = i.boolean(video, "fast_ff");
+          generator_config_.max_intermediates = i.integer_number(video, "max_intermediates");
+        if (i.has_field(video, "fast_ff")) generator_config_.fast_ff = i.boolean(video, "fast_ff");
         if (i.has_field(video, "bg_color")) {
           auto bg = i.v8_obj(video, "bg_color");
           job_mapper_->map_background_color(i, bg);
         }
         if (i.has_field(video, "sample")) {
           auto sample = i.get(video, "sample").As<v8::Object>();
-          sampler_.set_sample_include(i.double_number(sample, "include"), config_.fps);  // seconds
-          sampler_.set_sample_exclude(i.double_number(sample, "exclude"), config_.fps);  // seconds
+          frame_sampler_.set_sample_include(i.double_number(sample, "include"), generator_config_.fps);  // seconds
+          frame_sampler_.set_sample_exclude(i.double_number(sample, "exclude"), generator_config_.fps);  // seconds
         }
-        rand_gen_.set_seed(state_.seed);
+        rand_gen_.set_seed(generator_state_.seed);
 
-        state_.max_frames = duration * config_.fps;
-        metrics_->set_total_frames(state_.max_frames);
+        generator_state_.max_frames = duration * generator_config_.fps;
+        metrics_->set_total_frames(generator_state_.max_frames);
 
-        job_mapper_->map_canvas(state_.canvas_w, state_.canvas_h);
+        job_mapper_->map_canvas(generator_state_.canvas_w, generator_state_.canvas_h);
 
         job_mapper_->map_scale(use_scale);
-        scalesettings_.video_scale = use_scale;
-        scalesettings_.video_scale_next = use_scale;
-        scalesettings_.video_scale_intermediate = use_scale;
+        scale_settings_.video_scale = use_scale;
+        scale_settings_.video_scale_next = use_scale;
+        scale_settings_.video_scale_intermediate = use_scale;
       });
 }
 
@@ -423,7 +424,7 @@ void initializer::init_object_definitions() {
         i.set_field(defs_storage, object_id, object_definition);
         auto obj_from_storage = i.get(defs_storage, object_id).As<v8::Object>();
         auto id = v8_str(isolate, object_id.As<v8::String>());
-        definitions_.update(id, obj_from_storage);
+        object_definitions_.update(id, obj_from_storage);
       }
     });
   });

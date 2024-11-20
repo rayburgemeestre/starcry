@@ -27,11 +27,11 @@ interactor::interactor(generator_context_wrapper& genctx,
                        spawner& spawner,
                        bridges& bridges)
     : genctx(genctx),
-      state_(state),
+      generator_state_(state),
       scenes_(scenes),
-      stepper_(stepper),
+      frame_stepper_(stepper),
       toroidal_manager_(tm),
-      definitions_(definitions),
+      object_definitions_(definitions),
       object_lookup_(object_lookup),
       spawner_(spawner),
       bridges_(bridges) {}
@@ -59,16 +59,19 @@ void interactor::update_interactions() {
       const auto unique_group = shape.behavior_cref().unique_group();
 
       if (!collision_group.empty()) {
-        qts.try_emplace(
-            collision_group,
-            quadtree(rectangle(position(-state_.canvas_w / 2, -state_.canvas_h / 2), state_.canvas_w, state_.canvas_h),
-                     32));
+        qts.try_emplace(collision_group,
+                        quadtree(rectangle(position(-generator_state_.canvas_w / 2, -generator_state_.canvas_h / 2),
+                                           generator_state_.canvas_w,
+                                           generator_state_.canvas_h),
+                                 32));
         qts[collision_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
       }
       if (!gravity_group.empty()) {
         qts_gravity.try_emplace(
             gravity_group,
-            quadtree(rectangle(position(-state_.canvas_w / 2, -state_.canvas_h / 2), state_.canvas_w, state_.canvas_h),
+            quadtree(rectangle(position(-generator_state_.canvas_w / 2, -generator_state_.canvas_h / 2),
+                               generator_state_.canvas_w,
+                               generator_state_.canvas_h),
                      32));
         qts_gravity[gravity_group].insert(point_type(position(x, y), shape.meta_cref().unique_id()));
       }
@@ -346,7 +349,7 @@ void interactor::handle_collision(data_staging::circle& instance,
   // collide callback
   // NOTE: the old code was doing a creation of a new instance, pass true as 2nd param to get() below to get back that
   // behavior
-  auto find = definitions_.get(instance.meta_cref().id());
+  auto find = object_definitions_.get(instance.meta_cref().id());
   if (find) {
     auto object_definition = *find;
     auto handle_collide_for_shape = [&](auto& c, auto& object_bridge, auto other_unique_id) {
@@ -473,7 +476,7 @@ void interactor::handle_gravity(T& instance,
   const auto strength = (G * mass * mass2) / (constrained_distance * constrained_distance);
   auto force = subtract_vector(vec_b, vec_a);
   force = unit_vector(force);
-  force = multiply_vector(force, strength / static_cast<double>(stepper_.max_step));
+  force = multiply_vector(force, strength / static_cast<double>(frame_stepper_.max_step));
   force = divide_vector(force, mass);
 
   acceleration.x += force.x;

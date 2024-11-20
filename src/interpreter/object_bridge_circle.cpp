@@ -229,7 +229,7 @@ void object_bridge<data_staging::circle>::set_unique_group(const std::string& ug
 template <>
 object_bridge<data_staging::circle>::object_bridge(interpreter::object_definitions& definitions,
                                                    interpreter::spawner& spawner)
-    : definitions_(definitions), spawner_(spawner) {
+    : object_definitions_(definitions), spawner_(spawner) {
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
   // @add_field@
   object_bridge_class  // .template ctor<int>()

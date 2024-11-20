@@ -23,7 +23,7 @@ template <typename shape_class>
 class object_bridge {
   std::vector<shape_class*> shape_stack;
 
-  interpreter::object_definitions& definitions_;
+  interpreter::object_definitions& object_definitions_;
   interpreter::spawner& spawner_;
   mutable bool properties_accessed_ = false;
   mutable bool gradients_accessed_ = false;

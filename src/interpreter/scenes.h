@@ -32,10 +32,10 @@ class scenes : public transaction {
   // TODO: refs to shared ptrs
   std::shared_ptr<v8_wrapper> context;
   generator_context_wrapper& genctx;
-  frame_stepper& stepper;
+  frame_stepper& frame_stepper_;
   job_holder& job_holder_;
-  generator_state& state_;
-  generator_config& config_;
+  generator_state& generator_state_;
+  generator_config& generator_config_;
 
   std::vector<std::vector<data_staging::shape_t>> scene_shapes;
   std::vector<std::vector<data_staging::shape_t>> scene_shapes_next;

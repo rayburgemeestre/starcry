@@ -20,7 +20,12 @@ scenes::scenes(std::shared_ptr<v8_wrapper> context,
                job_holder& holder,
                generator_state& state,
                generator_config& config)
-    : context(context), genctx(genctx), stepper(stepper), job_holder_(holder), state_(state), config_(config) {}
+    : context(context),
+      genctx(genctx),
+      frame_stepper_(stepper),
+      job_holder_(holder),
+      generator_state_(state),
+      generator_config_(config) {}
 
 scenes scenes::clone() {
   return scenes{*this};
@@ -123,14 +128,14 @@ void scenes::prepare_scene(instantiator& instantiator) {
 }
 
 /* inline */ interpreter::time_settings scenes::get_time(scene_settings& scenesettings) const {
-  auto& stepper = this->stepper;
+  auto& stepper = this->frame_stepper_;
   auto& job = job_holder_.get_ref();
   // TODO: move state, config, options etc. into some kind of aggregate
-  auto& max_frames = state_.max_frames;
-  auto& use_fps = config_.fps;
+  auto& max_frames = generator_state_.max_frames;
+  auto& use_fps = generator_config_.fps;
   // Intermediate frames between 0 and 1, for two: [0.5, 1.0]
   // This will make vibrations look really vibrating, as back and forth will be rendered differently
-  // auto extra = (static_cast<double>(stepper.next_step) / static_cast<double>(stepper.max_step));
+  // auto extra = (static_cast<double>(frame_stepper_.next_step) / static_cast<double>(frame_stepper_.max_step));
   // Intermediate frames between 0 and 1, for two: [0.33, 0.66]
   // This will make vibrations invisible, as back and forth will be rendered the same way
   // NOTE: The only change is a +1 for max_step count.

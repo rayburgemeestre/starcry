@@ -276,8 +276,8 @@ void gui_window::update_window() {
   image->data = (char*)malloc(cached_canvas_w * cached_canvas_h * 4);
   size_t index = 0;
   char bytes[4] = {0x00};
-  for (int y = 0; y < cached_canvas_h; y++) {
-    for (int x = 0; x < cached_canvas_w; x++) {
+  for (int y = 0; y < int(cached_canvas_h); y++) {
+    for (int x = 0; x < int(cached_canvas_w); x++) {
       char* byte_ptr = (char*)&(cached_pixels[index++]);
       bytes[0] = *byte_ptr++;
       bytes[1] = *byte_ptr++;

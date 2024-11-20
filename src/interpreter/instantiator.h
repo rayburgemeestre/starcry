@@ -72,7 +72,7 @@ private:
   generator_context_wrapper& genctx;
   scenes& scenes_;
   bridges& bridges_;
-  object_definitions& definitions_;
+  object_definitions& object_definitions_;
   initializer& initializer_;
   interactor* interactor_ = nullptr;
   object_lookup& object_lookup_;

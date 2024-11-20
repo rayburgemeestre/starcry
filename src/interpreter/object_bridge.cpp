@@ -31,8 +31,8 @@ void object_bridge<T>::pop_object() {
     if (gradients_accessed_) {
       // shape_stack.back()->styling_ref().set_gradients_dirty();
       auto obj_id = shape_stack.back()->meta_cref().id();
-      if (definitions_.contains(obj_id)) {
-        auto& def = definitions_.get_persistent(obj_id);
+      if (object_definitions_.contains(obj_id)) {
+        auto& def = object_definitions_.get_persistent(obj_id);
         shape_stack.back()->styling_ref().commit(def);
       }
     }

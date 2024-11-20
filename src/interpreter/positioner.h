@@ -24,8 +24,8 @@ class positioner {
 private:
   generator_context_wrapper& genctx;
   scenes& scenes_;
-  frame_stepper& stepper_;
-  object_definitions& definitions_;
+  frame_stepper& frame_stepper_;
+  object_definitions& object_definitions_;
   object_lookup& object_lookup_;
   bridges& bridges_;
   std::vector<std::reference_wrapper<data_staging::shape_t>> stack;

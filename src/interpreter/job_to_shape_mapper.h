@@ -52,8 +52,8 @@ private:
   job_holder& job_holder_;
   frame_stepper& frame_stepper_;
   scenes& scenes_;
-  scale_settings& scalesettings_;
-  generator_state& state_;
+  scale_settings& scale_settings_;
+  generator_state& generator_state_;
 
   std::unordered_map<size_t, std::map<int, size_t>> indexes;
 };

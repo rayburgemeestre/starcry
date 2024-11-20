@@ -18,7 +18,7 @@ struct settings;
 
 struct render_params {
   size_t thread_num, job_num, chunk_num, num_chunks;
-  std::shared_ptr<metrics> metrics;
+  std::shared_ptr<metrics> metrics_;
   const data::color &bg_color;
   const std::vector<std::vector<data::shape>> &shapes;
   double view_x, view_y;

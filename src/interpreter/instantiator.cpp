@@ -108,7 +108,7 @@ instantiator::instantiator(std::shared_ptr<v8_wrapper> context,
       genctx(genctx),
       scenes_(scenes),
       bridges_(bridges),
-      definitions_(definitions),
+      object_definitions_(definitions),
       initializer_(initializer),
       object_lookup_(object_lookup),
       positioner_(positioner),
@@ -190,7 +190,7 @@ instantiator::instantiate_object_from_scene(
 
   // TODO: make sure this is the only source..., and get rid of genctx.get()->objects usage
   if (!object_prototype->IsObject()) {
-    object_prototype = *definitions_.get(object_id);
+    object_prototype = *object_definitions_.get(object_id);
   }
 
   // instantiate the prototype into newly allocated javascript object
@@ -221,7 +221,7 @@ instantiator::instantiate_object_from_scene(
     return scenes_.instantiated_objects_current_scene().back();
   };
 
-  auto& obj = definitions_.get_persistent(object_id);
+  auto& obj = object_definitions_.get_persistent(object_id);
   const auto type = i.str(obj, "type", "");
   bool check_uniqueness = false;
   std::string unique_group = "";
@@ -326,11 +326,11 @@ instantiator::instantiate_object_from_scene(
       bridge->push_object(copy);
 
       // TODO: had an issue with removing this check for debug builds
-      if (!definitions_.contains(object_id)) {
+      if (!object_definitions_.contains(object_id)) {
         throw abort_exception(fmt::format("object_id ({}) not found in definitions map", object_id));
       }
 
-      auto obj = *definitions_.get(object_id);
+      auto obj = *object_definitions_.get(object_id);
       i.call_fun(obj,                 // object definition
                  bridge->instance(),  // bridged object is "this"
                  "init");
@@ -694,7 +694,7 @@ void instantiator::create_bookkeeping_for_script_objects(v8::Local<v8::Object> c
 
     i.set_field(genctx.get()->objects, object_dst_id, object_src);
     auto val = i.get(objects, object_src_id);
-    definitions_.update(object_dst_id, val.As<v8::Object>());
+    object_definitions_.update(object_dst_id, val.As<v8::Object>());
   }
 
   // make sure we start from the current 'global' time as an offset

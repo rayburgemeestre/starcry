@@ -26,8 +26,8 @@ job_to_shape_mapper::job_to_shape_mapper(gradient_manager& gm,
       job_holder_(holder),
       frame_stepper_(stepper),
       scenes_(scenes),
-      scalesettings_(scalesettings),
-      state_(state) {}
+      scale_settings_(scalesettings),
+      generator_state_(state) {}
 
 void job_to_shape_mapper::reset() {
   indexes.clear();
@@ -62,7 +62,7 @@ void job_to_shape_mapper::convert_object_to_render_job(data_staging::shape_t& sh
     auto level = shape.meta_cref().level();
     // See if we require this step for this object
     // auto steps = i.integer_number(instance, "steps");
-    // if (minimize_steps_per_object && !sc.do_step(steps, stepper.next_step)) {
+    // if (minimize_steps_per_object && !sc.do_step(steps, frame_stepper_.next_step)) {
     // TODO: make this a property also for objects, if they are vibrating they need this
     //  return;
     //}
@@ -72,7 +72,7 @@ void job_to_shape_mapper::convert_object_to_render_job(data_staging::shape_t& sh
 
     // auto radius = shape.radius();           // i.double_number(instance, "radius");
     // auto radiussize = shape.radius_size();  // i.double_number(instance, "radiussize");
-    auto seed = state_.seed;
+    auto seed = generator_state_.seed;
     if constexpr (std::is_same_v<T, data_staging::circle> || std::is_same_v<T, data_staging::line>) {
       seed = shape.styling_cref().seed();
     }
@@ -183,8 +183,8 @@ void job_to_shape_mapper::convert_object_to_render_job(data_staging::shape_t& sh
     } else {
       throw abort_exception("current step exceeds shapes size");
     }
-    job_holder_.get()->scale = scalesettings_.video_scale;
-    job_holder_.get()->scales = scalesettings_.video_scales;
+    job_holder_.get()->scale = scale_settings_.video_scale;
+    job_holder_.get()->scales = scale_settings_.video_scales;
   };
 
   // Update level for all objects
