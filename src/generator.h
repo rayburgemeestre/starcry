@@ -46,6 +46,7 @@ class step_calculator;
 class metrics;
 class vector2d;
 class generator_context_wrapper;
+class Benchmark;
 
 namespace util {
 class random_generator;
@@ -91,6 +92,7 @@ class generator {
 
   const generator_options& generator_opts;
   fps_progress fps_progress_;
+  std::shared_ptr<Benchmark> benchmark_ = nullptr;
 
 public:
   explicit generator(std::shared_ptr<metrics> metrics,
@@ -114,13 +116,15 @@ public:
                      instantiator& instantiator,
                      job_to_shape_mapper& job_shape_mapper,
                      object_lookup& objectlookup,
-                     debug_printer& debug_printer);
+                     debug_printer& debug_printer,
+                     std::shared_ptr<Benchmark> benchmark);
   ~generator() = default;
   static std::shared_ptr<generator> create(std::shared_ptr<metrics> metrics,
                                            std::shared_ptr<v8_wrapper> context,
                                            generator_options& opts,
                                            generator_state& state__,
-                                           generator_config& config__);
+                                           generator_config& config__,
+                                           std::shared_ptr<Benchmark> benchmark__);
 
   void init(const std::string& filename,
             std::optional<double> rand_seed,

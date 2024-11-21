@@ -28,6 +28,7 @@
 #include "data/video_request.hpp"
 #include "generator.h"
 #include "starcry.h"
+#include "util/benchmark.h"
 #include "util/logger.h"
 #include "util/standard_output_to_logger.hpp"
 #include "util/v8_wrapper.hpp"
@@ -88,6 +89,7 @@ public:
       ("stdout", "print logger output to stdout (disables ncurses ui, EDIT: obsolete)")
       ("tui", "enable ncurses ui (disabled by default)")
       ("debug", "enable renderer visual debug")
+      ("benchmark", "save benchmarking information (disabled by default)")
       ("single", "change all settings to enforce single-threaded processing")
       ("concurrent-commands", po::value<int>(&options.concurrent_commands), "max. concurrent commands in queue (default: 10)")
       ("concurrent-jobs", po::value<int>(&options.concurrent_jobs), "max. concurrent jobs in queue (default: 10)")
@@ -152,9 +154,16 @@ public:
 
     if (vm.count("stream")) configure_streaming();
 
+    std::shared_ptr<Benchmark> benchmark = nullptr;
+    if (vm.count("benchmark")) {
+      benchmark = std::make_shared<MeasureInterval>(TimerFactory::Type::BoostChronoTimerImpl);
+    }
+
     context = std::make_shared<v8_wrapper>(options.script_file);
     namespace di = boost::di;
-    auto injector = di::make_injector(di::bind<starcry_options>().to(options), di::bind<v8_wrapper>().to(context));
+    auto injector = di::make_injector(di::bind<starcry_options>().to(options),
+                                      di::bind<v8_wrapper>().to(context),
+                                      di::bind<Benchmark>().to(benchmark));
     auto sc = injector.create<std::unique_ptr<starcry>>();
     if (vm.count("caching")) {
       sc->features().caching = true;

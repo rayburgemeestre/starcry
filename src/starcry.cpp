@@ -30,6 +30,7 @@
 #include "starcry/metrics.h"
 #include "starcry/redis_client.h"
 #include "starcry/redis_server.h"
+#include "util/benchmark.h"
 #include "util/threadname.hpp"
 
 // TODO: re-organize this somehow
@@ -54,7 +55,8 @@ using json = nlohmann::json;
 starcry::starcry(starcry_options& options,
                  std::shared_ptr<v8_wrapper> context,
                  generator_state& state,
-                 generator_config& config)
+                 generator_config& config,
+                 std::shared_ptr<Benchmark> benchmark)
     : context(context),
       options_(options),
       gen(nullptr),
@@ -74,7 +76,8 @@ starcry::starcry(starcry_options& options,
       script_(options.script_file),
       notifier(nullptr),
       state_(state),
-      config_(config) {
+      config_(config),
+      benchmark_(benchmark) {
   if (options.stdout_) {
     _stdout = true;
   }
@@ -219,7 +222,7 @@ image starcry::render_job(size_t thread_num,
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   if (!gen) {
     context->recreate_isolate_in_this_thread();
-    gen = interpreter::generator::create(metrics_, context, options().generator_opts, state_, config_);
+    gen = interpreter::generator::create(metrics_, context, options().generator_opts, state_, config_, benchmark_);
   }
 
   if (const auto& instruction = std::dynamic_pointer_cast<reload_instruction>(cmd_def)) {
@@ -780,6 +783,10 @@ void starcry::run() {
   system->explicit_join();
   if (gui) gui->finalize();
   if (framer) framer->finalize();
+  if (benchmark_) {
+    benchmark_->measure();
+    benchmark_->writeResults();
+  }
   std::cout << std::endl;
 }
 

@@ -24,6 +24,7 @@
 #include "interpreter/texture_manager.h"
 #include "interpreter/toroidal_manager.h"
 #include "starcry/metrics.h"
+#include "util/benchmark.h"
 #include "util/generator_context.h"
 #include "util/logger.h"
 #include "util/math.h"
@@ -53,7 +54,8 @@ generator::generator(std::shared_ptr<metrics> metrics,
                      instantiator& instantiator,
                      job_to_shape_mapper& job_shape_mapper,
                      object_lookup& objectlookup,
-                     debug_printer& debug_printer)
+                     debug_printer& debug_printer,
+                     std::shared_ptr<Benchmark> benchmark)
     : state_(state),
       config_(config),
       context(context),
@@ -76,7 +78,8 @@ generator::generator(std::shared_ptr<metrics> metrics,
       // checkpoints_(*this),
       debug_printer_(debug_printer),
       rand_(rand),
-      generator_opts(opts) {
+      generator_opts(opts),
+      benchmark_(benchmark) {
   instantiator.init(interactor_);
 }
 
@@ -84,7 +87,8 @@ std::shared_ptr<generator> generator::create(std::shared_ptr<metrics> metrics__,
                                              std::shared_ptr<v8_wrapper> context__,
                                              generator_options& opts__,
                                              generator_state& state__,
-                                             generator_config& config__) {
+                                             generator_config& config__,
+                                             std::shared_ptr<Benchmark> benchmark__) {
   namespace di = boost::di;
   auto genctx = std::make_shared<generator_context>();
   auto injector = di::make_injector(di::bind<metrics>().to(metrics__),
@@ -92,7 +96,8 @@ std::shared_ptr<generator> generator::create(std::shared_ptr<metrics> metrics__,
                                     di::bind<generator_options>().to(opts__),
                                     di::bind<generator_context>().to(genctx),
                                     di::bind<generator_state>().to(state__),
-                                    di::bind<generator_config>().to(config__));
+                                    di::bind<generator_config>().to(config__),
+                                    di::bind<Benchmark>().to(benchmark__));
   return injector.create<std::unique_ptr<generator>>();
 }
 
@@ -171,6 +176,7 @@ bool generator::generate_frame() {
 
 bool generator::_generate_frame() {
   delayed_exit de(10);
+  if (benchmark_) benchmark_->measure();
   try {
     job_holder_.get()->shapes.clear();
 

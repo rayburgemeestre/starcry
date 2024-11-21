@@ -26,6 +26,7 @@ class rendering_engine;
 class webserver;
 class frame_streamer;
 class redis_server;
+class Benchmark;
 
 namespace interpreter {
 class generator;
@@ -132,12 +133,14 @@ private:
 
   generator_state& state_;
   generator_config& config_;
+  std::shared_ptr<Benchmark> benchmark_ = nullptr;
 
 public:
   starcry(starcry_options& options,
           std::shared_ptr<v8_wrapper> context,
           generator_state& state,
-          generator_config& config);
+          generator_config& config,
+          std::shared_ptr<Benchmark> benchmark);
   ~starcry();
 
   starcry_options& options();
