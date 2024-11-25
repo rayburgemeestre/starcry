@@ -197,6 +197,8 @@ image starcry::render_job(size_t thread_num,
                           const std::vector<int64_t>& selected_ids) {
   prctl(PR_SET_NAME, fmt::format("sc {} {}/{}", job.frame_number, job.chunk, job.num_chunks).c_str(), NULL, NULL, NULL);
 
+  // TODO: also not going to work well with multithreaded!! you need to just collect durations separately somehow
+  const auto start = benchmark_->measure("frame rendering");
   render_params params{thread_num,
                        job.job_number == std::numeric_limits<uint32_t>::max() ? job.frame_number : job.job_number,
                        job.chunk,
@@ -214,6 +216,8 @@ image starcry::render_job(size_t thread_num,
                        settings,
                        options_.debug || get_viewpoint().debug,
                        selected_ids};
+
+  benchmark_->store("frame rendering", start);
 
   return engine.render(params, job.offset_x, job.offset_y, job.width, job.height);
 }
@@ -784,7 +788,6 @@ void starcry::run() {
   if (gui) gui->finalize();
   if (framer) framer->finalize();
   if (benchmark_) {
-    benchmark_->measure();
     benchmark_->writeResults();
   }
   std::cout << std::endl;

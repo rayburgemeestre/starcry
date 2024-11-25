@@ -176,7 +176,9 @@ bool generator::generate_frame() {
 
 bool generator::_generate_frame() {
   delayed_exit de(10);
-  if (benchmark_) benchmark_->measure();
+  // TODO: this measures the generation of the frame only
+  // TODO: add support for multiple rendering things
+  const auto start = benchmark_->measure("frame generation");
   try {
     job_holder_.get()->shapes.clear();
 
@@ -306,7 +308,7 @@ bool generator::_generate_frame() {
     });
 
     metrics_->complete_job(job_holder_.get()->job_number);
-
+    benchmark_->store("frame generation", start);
     job_holder_.get()->job_number++;
     job_holder_.get()->frame_number++;
 

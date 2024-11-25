@@ -157,7 +157,7 @@ deps: ## install dependencies required for running and building starcry
 
 .PHONY: shell
 shell:  ## start a shell in the starcry build image
-	xhost +
+	xhost +local:
 	@$(call make, bash)
 
 .PHONY: starcry

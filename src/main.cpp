@@ -155,9 +155,11 @@ public:
     if (vm.count("stream")) configure_streaming();
 
     std::shared_ptr<Benchmark> benchmark = nullptr;
-    if (vm.count("benchmark")) {
-      benchmark = std::make_shared<MeasureInterval>(TimerFactory::Type::BoostChronoTimerImpl);
-    }
+    // Temporarily always add benchmark instance
+    // if (vm.count("benchmark")) {
+    benchmark = std::make_shared<Benchmark>();
+    benchmark->includeRawMeasures(true);
+    // }
 
     context = std::make_shared<v8_wrapper>(options.script_file);
     namespace di = boost::di;
