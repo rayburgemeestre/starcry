@@ -41,6 +41,7 @@
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-builtins"
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 #include <inotify-cpp/NotifierBuilder.h>
 #ifdef __clang__

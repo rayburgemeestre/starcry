@@ -14,6 +14,7 @@
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-builtins"
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 #include <boost/program_options/options_description.hpp>
 #ifdef __clang__

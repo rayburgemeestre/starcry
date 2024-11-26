@@ -11,10 +11,7 @@ const double end_time(std::chrono::high_resolution_clock::time_point start__) {
 }
 
 Benchmark::Benchmark()
-    : output_("DEFAULT"),
-      description_("unknown"),
-      includeRawMeasures_(false),
-      startHistogramAtZero_(false) {}
+    : output_("DEFAULT"), description_("unknown"), includeRawMeasures_(false), startHistogramAtZero_(false) {}
 
 Benchmark::~Benchmark() {}
 
@@ -70,7 +67,7 @@ void Benchmark::store(const std::string& label, std::chrono::high_resolution_clo
 }
 
 void Benchmark::finalize() {
-  for (auto &timer : beginTimer_) {
+  for (auto& timer : beginTimer_) {
     measure(timer.first);
   }
 }
@@ -94,7 +91,7 @@ void Benchmark::writeResults() {
   resultsFile.close();
 }
 
-void Benchmark::writeBenchmark(const std::string& label, std::ofstream &resultsFile) {
+void Benchmark::writeBenchmark(const std::string& label, std::ofstream& resultsFile) {
   resultsFile << "@@@ BENCHMARK @@@" << std::endl << std::endl;
 
   resultsFile << "label \"" << label << "\"." << std::endl << std::endl;
@@ -105,7 +102,7 @@ void Benchmark::writeBenchmark(const std::string& label, std::ofstream &resultsF
 
   // resultsFile << "measure interval = " << batchGroupSize_ << " ms." << std::endl << std::endl << std::endl;
 }
-void Benchmark::writeStatistics(const std::string& label, std::ofstream &resultsFile) {
+void Benchmark::writeStatistics(const std::string& label, std::ofstream& resultsFile) {
   resultsFile << "@@@ STATISTICS @@@" << std::endl << std::endl;
 
   const int N = this->N(label);
@@ -159,7 +156,7 @@ const double Benchmark::stderr_(const std::string& label) const {
   return stddev(label) / sqrt(N(label));
 }
 
-void Benchmark::writeFrequencies(const std::string& label, std::ofstream &resultsFile) {
+void Benchmark::writeFrequencies(const std::string& label, std::ofstream& resultsFile) {
   resultsFile << std::endl << std::endl << "@@@ HISTOGRAM @@@" << std::endl << std::endl;
 
   double useMinValue = minValue_[label];
@@ -210,7 +207,7 @@ void Benchmark::writeFrequencies(const std::string& label, std::ofstream &result
   }
 }
 
-void Benchmark::writeRawMeasures(const std::string& label, std::ofstream &resultsFile) {
+void Benchmark::writeRawMeasures(const std::string& label, std::ofstream& resultsFile) {
   if (!includeRawMeasures_) return;
 
   resultsFile << std::endl << std::endl << "@@@ RAW VALUES @@@" << std::endl << std::endl;
