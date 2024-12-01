@@ -47,20 +47,24 @@ The architecture is only partially documented <a href="docs/tech_doc.md">here</a
 
 - `libs/piper` - a pipeline architecture is used for the main architecture.
 - `libs/framer` - ffmpeg wrapper to generate video output.
+- `libs/perlin_noise` - wrapped collection of noise functions
 - `libffmpeg` + `h264` - dependencies used by framer.
 - `V8` + `v8pp` - used for scripting, starcry is tightly coupled with it.
 - `Quasar` - web UI framework (vue3, pinia, typescript)
 - `Seasocks` - internal web server with websockets support
 - `png++` - used for writing PNG files
 - `fmt` - used for string formatting
-- `SFML` - used for preview window
 - `OpenEXR` - used for writing exr files
 - `tvision` - used for the console UI (TUI)
 - `inotify-cpp` - used for monitoring changes to loaded js file on disk.
-- `Redis` - used for pub/sub between starcry and remote rendering workers
+- `redis-plus-plus` - used for pub/sub between starcry and remote rendering workers
 - `vivid` - color library used for hue etc.
+- `boost-ext::di` - used for dependency injection
+- `cereal` - used for serialization
+- `nlohmann:json` - used for json
+- `stb` - used for truetype
 
-Almost everything is statically linked, resulting in a relatively portable binary.
+Everything is statically linked, resulting in a relatively portable binary.
 
 ## TODO
 
