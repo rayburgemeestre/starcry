@@ -16,7 +16,7 @@ The interface to the user is either the Javascript file or the VueJS based UI.
 
 Create `starcry` alias that uses docker (see <a href="docs/docker.md">docker.md</a> for other versions, including with podman)
 
-    alias starcry='xhost + && docker run --rm --name starcry -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --device /dev/dri/card0:/dev/dri/card0 --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v8'
+    alias starcry='xhost + && docker run --rm --name starcry -i -t -v `pwd`:`pwd` -w `pwd` -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --device /dev/dri/card0:/dev/dri/card0 --entrypoint=/starcry docker.io/rayburgemeestre/starcry:v9'
 
 Get a test project file and render it (use `ctrl`+`t` to toggle a preview window, or provide `--gui` as an additional parameter):
 
