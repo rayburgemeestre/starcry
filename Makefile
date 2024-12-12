@@ -172,6 +172,11 @@ clean:  ## clean build artifacts
 	sudo rm -rf docs/output/*
 	sudo rm -rf cmake-build-debug
 
+.PHONEY: clean2
+clean2:
+	sudo rm -rfv .ccache/*
+	make clean
+
 .PHONY: dockerize
 dockerize:  ## dockerize starcry executable in stripped down docker image
 	make build
