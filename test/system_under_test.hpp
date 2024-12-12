@@ -11,6 +11,7 @@
 #include "data/frame_request.hpp"
 #include "data/video_request.hpp"
 #include "boost/di.hpp"
+#include "util/benchmark.h"
 
 namespace di = boost::di;
 
@@ -51,7 +52,9 @@ double sut::test_create_image(const std::string& image_name, const std::vector<i
     std::filesystem::create_directories("test/integration/reference");
     options.output_file = fmt::format("test/integration/last-run/{}", image_name);
     std::remove(image_name.c_str());
-    auto injector = di::make_injector(di::bind<starcry_options>().to(options), di::bind<v8_wrapper>().to(context_wrapper));
+
+    std::shared_ptr<Benchmark> benchmark = nullptr;
+    auto injector = di::make_injector(di::bind<starcry_options>().to(options), di::bind<v8_wrapper>().to(context_wrapper), di::bind<Benchmark>().to(benchmark));
     auto sc = injector.create<std::unique_ptr<starcry>>();
     set_metrics(nullptr);  // suppress cluttering output
     auto vp = sc->get_viewpoint();
