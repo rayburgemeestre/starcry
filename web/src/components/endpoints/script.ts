@@ -27,7 +27,6 @@ export function create_script_endpoint() {
         script_store.render_requested_by_user++;
       } else if (buffer[0] === '2') {
         script_store.script = buffer.slice(1);
-        script_store.script = buffer.substr(buffer.indexOf('{'));
 
         const p = new JsonWithObjectsParser(script_store.script);
         // this.$data.input_source = buffer;

@@ -5,6 +5,7 @@ export class JsonWithObjectsParser {
 
   constructor(json_str: string) {
     this.json_str = json_str;
+    this.json_str = this.json_str.substr(this.json_str.indexOf('{'));
     this.obj = undefined;
     this.functions = [];
     this._parse();
