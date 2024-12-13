@@ -1,4 +1,4 @@
-{
+script = {
   'gradients': {
     'red': [
       {'position': 0, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
@@ -107,4 +107,4 @@
     {'name': 'scene2', 'duration': 1.0, 'objects': []},
     {'name': 'scene3', 'duration': 1.0, 'objects': []},
   ]
-};
+}

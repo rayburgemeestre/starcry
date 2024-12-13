@@ -219,11 +219,14 @@ attach:
 release:  # alias for make build..
 	make build
 
-publish:  ## build from scratch starcry, web, client, docker image, push dockerhub, deploy k8s
-	make clean
+all:
 	make build
 	make build-web
 	make client
+
+publish:  ## build from scratch starcry, web, client, docker image, push dockerhub, deploy k8s
+	make clean
+	make all
 	make docs || true  # first time tends to fail for some reason
 	make docs || true  # second time hopefully better...
 	make dockerize
