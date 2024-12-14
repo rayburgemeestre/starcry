@@ -31,13 +31,20 @@ spec:
       containers:
       - name: starcrycontainer
         # image: docker.io/rayburgemeestre/build-starcry-ubuntu:22.04
-        image: docker.io/rayburgemeestre/starcry:v8
-        command: ["/workdir/build/starcry"]
-        args: ["-i", "--no-gui", "-t", "0", "-c", "8", "--stdout", "--server", "tcp://redis:6379", "input/test.js"]
+        image: docker.io/rayburgemeestre/starcry:v9
+        command: ["/workdir/docs/starcry-dev-wrapper.sh"]
+        args: ["--dev", "-i", "-t", "0", "-c", "8", "--stdout", "--server", "tcp://redis:6379", "input/test.js"]
+        #args: ["-i", "-t", "4", "-c", "16", "--stdout", "input/test.js"]
         workingDir: /workdir
         volumeMounts:
-        - mountPath: /workdir
-          name: workdir-volume
+        - mountPath: /workdir/docs
+          name: docs-volume
+        - mountPath: /workdir/input
+          name: input-volume
+        - mountPath: /workdir/build
+          name: build-volume
+        - mountPath: /workdir/web
+          name: web-volume
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 18080
@@ -45,9 +52,71 @@ spec:
         - containerPort: 10000
           name: internal
       volumes:
-      - name: workdir-volume
+      - name: docs-volume
         hostPath:
-          path: /home/trigen/projects/starcry
+          path: /home/trigen/projects/starcry/docs
+      - name: input-volume
+        hostPath:
+          path: /home/trigen/projects/starcry/input
+      - name: build-volume
+        hostPath:
+          path: /home/trigen/projects/starcry/build
+      - name: web-volume
+        hostPath:
+          path: /home/trigen/projects/starcry/web
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starcry-web
+  namespace: starcry
+spec:
+  selector:
+    matchLabels:
+      app: starcry-web
+      tier: starcry
+  replicas: 1
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        app: starcry-web
+        tier: starcry
+    spec:
+      containers:
+      - name: starcrycontainer
+        image: rayburgemeestre/quasar-dev
+        command: ["/usr/local/bin/quasar"]
+        args: ["dev"]
+        workingDir: /workdir/web
+        volumeMounts:
+        - mountPath: /workdir/web
+          name: web-volume
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9000
+          name: http
+      volumes:
+      - name: web-volume
+        hostPath:
+          path: /home/trigen/projects/starcry/web
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: starcry-web
+  namespace: starcry
+  labels:
+    app: starcry-web
+    tier: starcry
+spec:
+  type: NodePort
+  ports:
+  - port: 9000
+    name: http
+  selector:
+    app: starcry-web
+    tier: starcry
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -79,18 +148,36 @@ spec:
       containers:
       - name: starcrycontainer
         # image: docker.io/rayburgemeestre/build-starcry-ubuntu:22.04
-        image: docker.io/rayburgemeestre/starcry:v8
-        command: ["/workdir/build/starcry"]
+        image: docker.io/rayburgemeestre/starcry:v9
+          #command: ["/workdir/build/starcry"]
+        command: ["/workdir/docs/starcry-dev-wrapper.sh"]
+          #command: ["/bin/bash"]
         args: ["--client", "tcp://redis:6379"]
+          #args: ["-c", "sleep infinity"]
         workingDir: /workdir
         imagePullPolicy: IfNotPresent
         volumeMounts:
-        - mountPath: /workdir
-          name: workdir-volume
+        - mountPath: /workdir/docs
+          name: docs-volume
+        - mountPath: /workdir/input
+          name: input-volume
+        - mountPath: /workdir/build
+          name: build-volume
+        - mountPath: /workdir/web
+          name: web-volume
       volumes:
-      - name: workdir-volume
+      - name: docs-volume
         hostPath:
-          path: /home/trigen/projects/starcry
+          path: /home/trigen/projects/starcry/docs
+      - name: input-volume
+        hostPath:
+          path: /home/trigen/projects/starcry/input
+      - name: build-volume
+        hostPath:
+          path: /home/trigen/projects/starcry/build
+      - name: web-volume
+        hostPath:
+          path: /home/trigen/projects/starcry/web
 ---
 apiVersion: v1
 kind: Service
