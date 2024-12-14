@@ -61,7 +61,8 @@ RUN python3 -m pip install --break-system-packages sphinx breathe sphinx_rtd_the
 RUN apt clean
 
 # fix weird IDs (podman doesn't seem to like it much)
-RUN chown root.root /emsdk -R
+# EDIT: seems no longer required, actually breaks stuff now
+# RUN chown root:root /emsdk -R
 
 COPY docs/entrypoint.sh /entrypoint.sh
 
