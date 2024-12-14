@@ -134,8 +134,6 @@ public:
             std::optional<int> height = std::nullopt,
             std::optional<double> scale = std::nullopt);
 
-  void create_object_instances();
-
   void reset_seeds();
   void fast_forward(int frame_of_interest);
   bool generate_frame();
