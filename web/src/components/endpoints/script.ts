@@ -54,6 +54,9 @@ export function create_script_endpoint() {
         files_store.simple = tree;
       } else if (buffer[0] === '5') {
         console.log('server terminated.');
+      } else if (buffer[0] === '6') {
+        window.sc_constants = buffer.slice(1);
+        eval(window.sc_constants);
       }
     },
     (_) => {

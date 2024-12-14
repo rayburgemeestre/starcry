@@ -70,7 +70,9 @@ export class JsonWithObjectsParser {
 
     const flags: FlagsDictionary = { blending_type: false, zernike_type: false, texture_effect: false };
 
-    for (let i = 0; i < this.json_str.length; i++) {
+    let stop = false;
+    let remainder = '';
+    for (let i = 0; i < this.json_str.length && !stop; i++) {
       const s: string = this.json_str[i];
 
       if (s === '*' && this.json_str.substr(i, '*/'.length) === '*/') {
@@ -140,6 +142,10 @@ export class JsonWithObjectsParser {
           functions.push(function_str);
           continue;
         }
+        if (brace == 0) {
+          stop = true;
+          remainder = this.json_str.substr(i + 1);
+        }
       }
       //
       if (!(in_function as boolean) && s === 'f' && this.json_str.substr(i, 'function'.length) === 'function') {
@@ -188,14 +194,15 @@ export class JsonWithObjectsParser {
       }
     }
 
-    // console.log(this.json_str);
-    // console.log(trail);
-    // console.log(functions);
     this.functions = functions;
     //
     // let obj = eval('(function() { return ' + this.json_str + '; })()');
     try {
-      this.obj = eval('(function() { return ' + trail + '; })()');
+      // if remainder starts with ;, strip it off
+      if (remainder[0] === ';') {
+        remainder = remainder.substr(1);
+      }
+      this.obj = eval('true; ' + remainder + '; (function() { return ' + trail + '; })()');
     } catch (e) {
       console.log(trail);
       console.log(e);
