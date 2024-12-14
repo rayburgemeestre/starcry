@@ -1,7 +1,8 @@
 allow_k8s_contexts('default')
 
 # Redis ConfigMap and other k8s resources
-k8s_yaml('kube/starcry-dev.yaml')
+# k8s_yaml('kube/starcry-dev.yaml')
+k8s_yaml(kustomize('kube/dev'))
 
 # Compile the binary
 local_resource(
@@ -16,10 +17,9 @@ docker_build(
     'docker.io/rayburgemeestre/starcry',
     context='.',
     live_update=[
-        # sync('./starcry', '/binary/starcry'),  # Sync the binary directly to the mounted path
         sync('./build', '/workdir/build'),
         sync('./input', '/workdir/input'),
-        # sync('./web', '/workdir/web'),
+        sync('./docs', '/workdir/docs'),
     ]
 )
 
@@ -58,15 +58,15 @@ docker_build(
     FROM node:18-alpine
     WORKDIR /app
     COPY package*.json ./
-    RUN npm install
+    RUN npm install -g
     COPY . .
     RUN npm install -g @quasar/cli
     EXPOSE 9000
+    RUN ls -al
     CMD ["quasar", "dev"]
     ''',
     live_update=[
-        sync('./web/src', '/app/src'),
-        sync('./web/public', '/app/public'),
+        sync('./web', '/app'),
     ]
 )
 

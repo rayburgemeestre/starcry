@@ -36,34 +36,34 @@ spec:
         args: ["--dev", "-i", "-t", "0", "-c", "8", "--stdout", "--server", "tcp://redis:6379", "input/test.js"]
         #args: ["-i", "-t", "4", "-c", "16", "--stdout", "input/test.js"]
         workingDir: /workdir
-        volumeMounts:
-        - mountPath: /workdir/docs
-          name: docs-volume
-        - mountPath: /workdir/input
-          name: input-volume
-        - mountPath: /workdir/build
-          name: build-volume
-        - mountPath: /workdir/web
-          name: web-volume
+#        volumeMounts:
+#        - mountPath: /workdir/docs
+#          name: docs-volume
+#        - mountPath: /workdir/input
+#          name: input-volume
+#        - mountPath: /workdir/build
+#          name: build-volume
+##        - mountPath: /workdir/web
+##          name: web-volume
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 18080
           name: http
         - containerPort: 10000
           name: internal
-      volumes:
-      - name: docs-volume
-        hostPath:
-          path: /home/trigen/projects/starcry/docs
-      - name: input-volume
-        hostPath:
-          path: /home/trigen/projects/starcry/input
-      - name: build-volume
-        hostPath:
-          path: /home/trigen/projects/starcry/build
-      - name: web-volume
-        hostPath:
-          path: /home/trigen/projects/starcry/web
+#      volumes:
+#      - name: docs-volume
+#        hostPath:
+#          path: /home/trigen/projects/starcry/docs
+#      - name: input-volume
+#        hostPath:
+#          path: /home/trigen/projects/starcry/input
+#      - name: build-volume
+#        hostPath:
+#          path: /home/trigen/projects/starcry/build
+##      - name: web-volume
+##        hostPath:
+##          path: /home/trigen/projects/starcry/web
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -86,20 +86,13 @@ spec:
       containers:
       - name: starcrycontainer
         image: rayburgemeestre/quasar-dev
-        command: ["/usr/local/bin/quasar"]
-        args: ["dev"]
-        workingDir: /workdir/web
-        volumeMounts:
-        - mountPath: /workdir/web
-          name: web-volume
+        command: ["/bin/sh"]
+        args: ["-c", "ls -al ./; /usr/local/bin/quasar dev"]
+        workingDir: /app
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9000
           name: http
-      volumes:
-      - name: web-volume
-        hostPath:
-          path: /home/trigen/projects/starcry/web
 ---
 apiVersion: v1
 kind: Service
@@ -156,28 +149,28 @@ spec:
           #args: ["-c", "sleep infinity"]
         workingDir: /workdir
         imagePullPolicy: IfNotPresent
-        volumeMounts:
-        - mountPath: /workdir/docs
-          name: docs-volume
-        - mountPath: /workdir/input
-          name: input-volume
-        - mountPath: /workdir/build
-          name: build-volume
-        - mountPath: /workdir/web
-          name: web-volume
-      volumes:
-      - name: docs-volume
-        hostPath:
-          path: /home/trigen/projects/starcry/docs
-      - name: input-volume
-        hostPath:
-          path: /home/trigen/projects/starcry/input
-      - name: build-volume
-        hostPath:
-          path: /home/trigen/projects/starcry/build
-      - name: web-volume
-        hostPath:
-          path: /home/trigen/projects/starcry/web
+#        volumeMounts:
+#        - mountPath: /workdir/docs
+#          name: docs-volume
+#        - mountPath: /workdir/input
+#          name: input-volume
+#        - mountPath: /workdir/build
+#          name: build-volume
+##        - mountPath: /workdir/web
+##          name: web-volume
+#      volumes:
+#      - name: docs-volume
+#        hostPath:
+#          path: /home/trigen/projects/starcry/docs
+#      - name: input-volume
+#        hostPath:
+#          path: /home/trigen/projects/starcry/input
+#      - name: build-volume
+#        hostPath:
+#          path: /home/trigen/projects/starcry/build
+##      - name: web-volume
+##        hostPath:
+##          path: /home/trigen/projects/starcry/web
 ---
 apiVersion: v1
 kind: Service

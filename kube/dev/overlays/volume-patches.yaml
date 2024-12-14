@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starcry
+  namespace: starcry
+spec:
+  template:
+    spec:
+      containers:
+      - name: starcrycontainer
+        volumeMounts:
+        - mountPath: /workdir/docs
+          name: docs-volume
+        - mountPath: /workdir/input
+          name: input-volume
+        - mountPath: /workdir/build
+          name: build-volume
+      volumes:
+      - name: docs-volume
+        hostPath:
+          path: /home/trigen/starcry_2/starcry/docs
+      - name: input-volume
+        hostPath:
+          path: /home/trigen/starcry_2/starcry/input
+      - name: build-volume
+        hostPath:
+          path: /home/trigen/starcry_2/starcry/build
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starcry-workers
+  namespace: starcry
+spec:
+  template:
+    spec:
+      containers:
+      - name: starcrycontainer
+        volumeMounts:
+        - mountPath: /workdir/docs
+          name: docs-volume
+        - mountPath: /workdir/input
+          name: input-volume
+        - mountPath: /workdir/build
+          name: build-volume
+      volumes:
+      - name: docs-volume
+        hostPath:
+          path: /home/trigen/starcry_2/starcry/docs
+      - name: input-volume
+        hostPath:
+          path: /home/trigen/starcry_2/starcry/input
+      - name: build-volume
+        hostPath:
+          path: /home/trigen/starcry_2/starcry/build
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starcry-web
+  namespace: starcry
+spec:
+  template:
+    spec:
+      containers:
+      - name: starcrycontainer
+        volumeMounts:
+        - mountPath: /workdir/web
+          name: web-volume
+      volumes:
+      - name: web-volume
+        hostPath:
+          path: /home/trigen/starcry_2/starcry/web
