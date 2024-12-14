@@ -28,8 +28,8 @@
 #include "util/generator_context.h"
 #include "util/logger.h"
 #include "util/math.h"
-#include "util/memory_usage.hpp"
 #include "util/memory_analyzer.hpp"
+#include "util/memory_usage.hpp"
 #include "util/step_calculator.hpp"
 #include "util/vector_logic.hpp"
 

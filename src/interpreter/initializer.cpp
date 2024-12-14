@@ -20,8 +20,8 @@
 #include "util/v8_interact.hpp"
 #include "v8pp/module.hpp"
 
-#include <utility>
 #include <sstream>
+#include <utility>
 
 namespace interpreter {
 
@@ -212,16 +212,14 @@ void initializer::reset_context() {
 }
 
 std::string initializer::serialize(const std::string& enum_type) {
-  v8::Local<v8::String> script = v8::String::NewFromUtf8(
-      context_->isolate,
-      fmt::format("JSON.stringify(Object.fromEntries(Object.entries({})))", enum_type).c_str()
-  ).ToLocalChecked();
+  v8::Local<v8::String> script =
+      v8::String::NewFromUtf8(context_->isolate,
+                              fmt::format("JSON.stringify(Object.fromEntries(Object.entries({})))", enum_type).c_str())
+          .ToLocalChecked();
 
-  v8::Local<v8::Script> compiled_script =
-      v8::Script::Compile(context_->context->impl(), script).ToLocalChecked();
+  v8::Local<v8::Script> compiled_script = v8::Script::Compile(context_->context->impl(), script).ToLocalChecked();
 
-  v8::Local<v8::Value> result =
-      compiled_script->Run(context_->context->impl()).ToLocalChecked();
+  v8::Local<v8::Value> result = compiled_script->Run(context_->context->impl()).ToLocalChecked();
 
   v8::String::Utf8Value json(context_->isolate, result);
   std::string js_code = *json;
