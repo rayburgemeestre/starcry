@@ -50,7 +50,7 @@ void metrics::init() {
     set_thread_name("metrics::thread");
     if (notty) {
       initialized = true;
-      std::unique_lock<std::mutex> lock(cv_mut);
+      std::unique_lock lock(cv_mut);
       cv.wait(lock, [&] {
         return ready;
       });
@@ -97,7 +97,7 @@ void metrics::notify() {
 std::string metrics::to_json() {
   json result = {};
   if (!initialized) return result.dump();
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock lock(mut);
 
   json threads = {};
   for (const auto &thread : threads_) {
@@ -231,7 +231,8 @@ metrics::~metrics() {
 
 void metrics::register_thread(int number, std::string desc) {
   if (!initialized) return;
-  std::unique_lock<std::mutex> lock(mut);
+  logger(DEBUG) << "metrics::register_thread: " << number << " " << desc << std::endl;
+  std::unique_lock lock(mut);
   threads_[number] = metrics::thread_data{number,
                                           std::move(desc),
                                           metrics::thread_state::idle,
@@ -241,7 +242,7 @@ void metrics::register_thread(int number, std::string desc) {
 
 void metrics::register_job(int number, int frame, int chunk, int num_chunks) {
   if (!initialized) return;
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock lock(mut);
   jobs_[number] = metrics::job{number,
                                frame,
                                chunk,
@@ -259,7 +260,7 @@ void metrics::register_job(int number, int frame, int chunk, int num_chunks) {
 }
 void metrics::complete_job(int number) {
   if (!initialized) return;
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock lock(mut);
   if (jobs_.find(number) != jobs_.end()) {
     jobs_[number].generate_end = std::chrono::high_resolution_clock::now();
   }
@@ -267,7 +268,7 @@ void metrics::complete_job(int number) {
 
 void metrics::skip_job(int number) {
   if (!initialized) return;
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock lock(mut);
   if (jobs_.find(number) != jobs_.end()) {
     jobs_[number].skipped = true;
   }
@@ -275,7 +276,7 @@ void metrics::skip_job(int number) {
 
 void metrics::render_job(int thread_number, int job_number, int chunk) {
   if (!initialized) return;
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock lock(mut);
   if (threads_.find(thread_number) != threads_.end()) {
     threads_[thread_number].idle_end = std::chrono::high_resolution_clock::now();
     threads_[thread_number].state = metrics::thread_state::busy;
@@ -294,7 +295,7 @@ void metrics::render_job(int thread_number, int job_number, int chunk) {
 
 void metrics::resize_job(int number, int num_chunks) {
   if (!initialized) return;
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock lock(mut);
   if (jobs_.find(number) != jobs_.end()) {
     for (int i = 0; i < num_chunks; i++) {
       if (i == 0) {
@@ -313,7 +314,7 @@ void metrics::resize_job(int number, int num_chunks) {
 void metrics::resize_job_objects(int number, int job_number, int chunk, int num_objects) {
   if (!record_objects) return;
   if (!initialized) return;
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock lock(mut);
   // TODO: Possibly do not need thread number ????
   if (jobs_.find(job_number) != jobs_.end()) {
     if (chunk > 0) chunk--;
@@ -331,7 +332,7 @@ void metrics::set_render_job_object_state(
     int thread_num, int job_number, int chunk, int index, metrics::job_state state) {
   if (!record_objects) return;
   if (!initialized) return;
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock lock(mut);
   // TODO: Possibly do not need thread number ????
   if (jobs_.find(job_number) != jobs_.end()) {
     if (chunk > 0) chunk--;
@@ -348,7 +349,7 @@ void metrics::set_render_job_object_state(
 
 void metrics::set_steps(int job_number, int attempt, int max_steps) {
   if (!initialized) return;
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock lock(mut);
   if (jobs_.find(job_number) != jobs_.end()) {
     generate_step_stats stats;
     stats.status = generate_step_stats::status_type::started;
@@ -361,7 +362,7 @@ void metrics::set_steps(int job_number, int attempt, int max_steps) {
 
 void metrics::update_steps(int job_number, int attempt, int next_step) {
   if (!initialized) return;
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock lock(mut);
   if (jobs_.find(job_number) != jobs_.end()) {
     auto found_attempt = jobs_[job_number].generate_steps.stats_per_attempt.find(attempt);
     if (found_attempt == jobs_[job_number].generate_steps.stats_per_attempt.end()) {
@@ -378,7 +379,7 @@ void metrics::update_steps(int job_number, int attempt, int next_step) {
 
 void metrics::complete_render_job(int thread_number, int job_number, int chunk) {
   if (!initialized) return;
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock lock(mut);
   if (threads_.find(thread_number) != threads_.end()) {
     threads_[thread_number].idle_begin = std::chrono::high_resolution_clock::now();
     threads_[thread_number].state = metrics::thread_state::idle;
@@ -410,7 +411,7 @@ void metrics::display(std::function<void(const std::string &)> f1,
   };
 
   if (!initialized) return;
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock lock(mut);
 
   // TODO: make this stuff use the JSON data perhaps?
   for (const auto &thread : threads_) {
@@ -556,7 +557,7 @@ void metrics::set_total_frames(size_t frames) {
 
 void metrics::log_callback(int level, const std::string &line) {
   if (!initialized) return;
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock lock(mut);
   _output.emplace_back(std::make_pair(level, line));
 }
 

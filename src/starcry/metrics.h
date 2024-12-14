@@ -118,7 +118,7 @@ public:
 private:
   std::map<int, metrics::thread_data> threads_;
   std::map<int, metrics::job> jobs_;
-  std::mutex mut;
+  std::recursive_mutex mut;
 
   int max_keep_jobs = 100;
 
