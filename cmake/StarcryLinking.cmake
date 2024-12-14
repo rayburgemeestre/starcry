@@ -1,8 +1,6 @@
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  # set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold")  # WARNING:
-  # mold gave issues with linking stdlib stuff, with clang-14 and clang-15.
-  # I've put an assertion in main() to actively prevent from using mold when it's still broken.
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold")
+  # set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold")
 else()
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,notext -Wno-unknown-pragmas")
 endif()
@@ -10,14 +8,6 @@ endif()
 function(configure_links target)
   # boost
   target_link_libraries(${target} PRIVATE ${Boost_LIBRARIES})
-
-  # SFML (seems broken for some reason now)
-  #target_link_libraries(${target} PRIVATE ${SFML_LIBRARIES})
-  # target_link_libraries(${target} PRIVATE /opt/cppse/build/sfml/lib/libsfml-graphics-s.a)
-  # target_link_libraries(${target} PRIVATE /opt/cppse/build/sfml/lib/libsfml-window-s.a)
-  # target_link_libraries(${target} PRIVATE /opt/cppse/build/sfml/lib/libsfml-system-s.a)
-  # below can be made obsolete if we can get rid of some Joystick related stuff in libsfml-window-s.a
-  # target_link_libraries(${target} PRIVATE /lib/x86_64-linux-gnu/libudev.so)
 
   # redis
   target_link_libraries(${target} PRIVATE /opt/cppse/build/redis-plus-plus/lib/libredis++.a)
@@ -36,14 +26,10 @@ function(configure_links target)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/ffmpeg/lib/libswresample.a)
 
   # X11 (statically linking causes SFML to segfault, no longer using SFML though)
-  # target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libXrandr.a)
-  # target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libXext.a)
-  # target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libXrender.a)
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libX11.a)
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libxcb.a)
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libXau.a)
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libXdmcp.a)
-  # target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libGL.a)
 
   # x264
   target_link_libraries(${target} PRIVATE /opt/cppse/build/x264/lib/libx264.a)
@@ -73,14 +59,11 @@ function(configure_links target)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/seasocks/lib/libseasocks.a)
 
   # openexr
-  # no longer exists ? target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIexMath-2_5.a)
-  #target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIlmImf-3_3.a)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libOpenEXR-3_3.a)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libOpenEXRCore-3_3.a)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libOpenEXRUtil-3_3.a)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIlmThread-3_3.a)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libImath-3_1.a)
-  #target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libHalf-3_3.a)
   target_link_libraries(${target} PRIVATE /opt/cppse/build/openexr/lib/libIex-3_3.a)
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libz.a)
 
@@ -99,5 +82,6 @@ function(configure_links target)
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libncursesw.a)
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libtermcap.a)
 
+  # inotify
   target_link_libraries(${target} PRIVATE /opt/cppse/build/inotify-cpp/lib/libinotify-cpp.a)
 endfunction()
