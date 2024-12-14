@@ -68,8 +68,11 @@ COPY docs/entrypoint.sh /entrypoint.sh
 
 RUN chmod a+rx /entrypoint.sh
 
-FROM scratch
+COPY docs/starcry-dev-wrapper.sh /workdir/docs/starcry-dev-wrapper.sh
 
-COPY --from=build1 / /
-
-ENTRYPOINT ["/entrypoint.sh"]
+# This saves diskspace, but is also very inconvenient in combination with Tilt (reuploading 6 GB all the time)
+#FROM scratch
+#
+#COPY --from=build1 / /
+#
+#ENTRYPOINT ["/entrypoint.sh"]
