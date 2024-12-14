@@ -15,6 +15,7 @@
 #include "starcry.h"
 #include "util/image_utils.h"
 #include "util/logger.h"
+#include "util/simple_split.hpp"
 
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
@@ -41,7 +42,7 @@ redis_client::redis_client(const std::string& host, starcry& sc) : host(host), s
   std::mt19937 gen(rd());
   std::uniform_int_distribution<> dis(100000, 200000);
   auto random_num = dis(gen);
-  my_id_ = fmt::format("{}_{}", hostname, random_num);
+  my_id_ = fmt::format("{}|{}", hostname, random_num);
 }
 
 redis_client::~redis_client() {}
@@ -50,26 +51,36 @@ void redis_client::run(bitmap_wrapper& bitmap, rendering_engine& engine) {
   try {
     // Create a Redis object, which is movable but NOT copyable.
     auto redis = Redis(host);
-    redis.publish("REGISTER", my_id_);
 
     auto sub = redis.subscriber();
     sub.on_message([&](const std::string& channel, const std::string& msg) {
-      logger(DEBUG) << "msg on channel " << channel << std::endl;
+      logger(DEBUG) << "redis_client - msg on channel " << channel << std::endl;
       // split msg into two parts: msg_type and data
       auto pos = msg.find(' ');
       auto msg_type = msg.substr(0, pos);
       auto payload = msg.substr(pos + 1);
 
       if (msg_type == "RECONNECT") {
-        redis.publish("REGISTER", my_id_);
+        redis.publish("REGISTER", fmt::format("{}|{}", my_id_, known_server_id_));
       } else if (msg_type == "REGISTERED") {
-        logger(DEBUG) << "REGISTERED CLIENT RESPONSE DATA: " << payload << std::endl;
+        auto [num_queue_per_worker, server_id] = split<2>(payload);
+        if (known_server_id_.empty()) {
+          known_server_id_ = server_id;
+        }
+        if (known_server_id_ != server_id) {
+          logger(ERROR) << "redis_client - Server ID mismatch: " << known_server_id_ << " != " << server_id
+                        << std::endl;
+          std::exit(1);
+        }
         // if (len == sizeof(sc.num_queue_per_worker)) {
         //   memcpy(&sc.num_queue_per_worker, data.c_str(), sizeof(sc.num_queue_per_worker));
         // }
         redis.publish("PULL_JOB", my_id_);
+      } else if (msg_type == "DECLINED") {
+        logger(DEBUG) << "redis_client - DECLINED CLIENT RESPONSE DATA: " << payload << std::endl;
+        std::exit(1);
       } else if (msg_type == "JOB") {
-        logger(DEBUG) << "GOT A JOB RESPONSE DATA: " << payload.size() << std::endl;
+        logger(DEBUG) << "redis_client - GOT A JOB RESPONSE DATA: " << payload.size() << std::endl;
 
         std::istringstream is(payload);
         cereal::BinaryInputArchive archive(is);
@@ -87,7 +98,10 @@ void redis_client::run(bitmap_wrapper& bitmap, rendering_engine& engine) {
           num_shapes += shapez.size();
         }
 
-        std::cout << "render client " << getpid() << " rendering job " << job.job_number << " chunk = " << job.chunk
+        // first acknowledge
+        redis.publish("ACK_JOB", std::format("{}|{}|{}", my_id_, job.job_number, job.chunk));
+
+        std::cout << "redis_client - " << getpid() << " rendering job " << job.job_number << " chunk = " << job.chunk
                   << " of " << job.num_chunks << ", shapes=" << num_shapes << ", dimensions=" << job.width << "x"
                   << job.height << std::endl;
 
@@ -135,17 +149,23 @@ void redis_client::run(bitmap_wrapper& bitmap, rendering_engine& engine) {
         redis.publish("PULL_JOB", my_id_);
       }
     });
+    logger(INFO) << "redis_client - Registering with ID: " << my_id_ << std::endl;
     sub.subscribe(my_id_);
     sub.subscribe("RECONNECT");
+    sub.subscribe("DECLINED");
+
+    redis.publish("REGISTER", fmt::format("{}|{}", my_id_, known_server_id_));
 
     while (true) {
       try {
         sub.consume();
       } catch (const Error& err) {
         std::cout << "Error: " << err.what() << std::endl;
+        std::exit(1);
       }
     }
   } catch (const Error& e) {
     std::cerr << "Error: " << e.what() << std::endl;
+    std::exit(2);
   }
 }

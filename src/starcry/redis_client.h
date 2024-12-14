@@ -22,6 +22,7 @@ private:
   std::unique_ptr<sw::redis::Redis> redis;
   std::string my_id_;
   std::string host;
+  std::string known_server_id_;
   starcry& sc;
 
 public:
