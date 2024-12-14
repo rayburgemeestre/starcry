@@ -88,9 +88,11 @@ public:
   void init_textures();
   void init_toroidals();
   void init_object_definitions();
+  std::string get_js_api();
 
 private:
   void reset_context();
+  std::string serialize(const std::string& enum_type);
 
   gradient_manager& gradient_manager_;
   texture_manager& texture_manager_;
@@ -109,5 +111,7 @@ private:
   const generator_options& generator_options_;
   generator_state& generator_state_;
   generator_config& generator_config_;
+
+  std::string js_api_;
 };
 }  // namespace interpreter

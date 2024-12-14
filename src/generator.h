@@ -154,6 +154,7 @@ public:
 
   std::vector<int64_t> get_transitive_ids(const std::vector<int64_t>& in);
   void set_checkpoints(std::set<int>& checkpoints);
+  std::string get_js_api();
 
 private:
   bool _generate_frame();

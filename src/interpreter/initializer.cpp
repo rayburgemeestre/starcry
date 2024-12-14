@@ -6,8 +6,6 @@
 
 #include "initializer.h"
 
-#include <utility>
-
 #include "data/texture_effect.hpp"
 #include "data/zernike_type.hpp"
 #include "generator.h"
@@ -21,6 +19,9 @@
 #include "toroidal_manager.h"
 #include "util/v8_interact.hpp"
 #include "v8pp/module.hpp"
+
+#include <utility>
+#include <sstream>
 
 namespace interpreter {
 
@@ -182,6 +183,7 @@ void initializer::reset_context() {
       .const_("color", data::blending_type::color)
       .const_("luminosity", data::blending_type::luminosity);
   context_->context->module("blending_type", consts);
+
   v8pp::module consts_2(context_->isolate);
   consts_2.const_("raw", data::texture_3d::raw)
       .const_("radial_displacement", data::texture_3d::radial_displacement)
@@ -199,6 +201,32 @@ void initializer::reset_context() {
   v8pp::module consts_4(context_->isolate);
   consts_4.const_("opacity", data::texture_effect::opacity).const_("color", data::texture_effect::color);
   context_->context->module("texture_effect", consts_4);
+
+  std::stringstream ss;
+  ss << serialize("blending_type");
+  ss << serialize("texture_3d");
+  ss << serialize("zernike_type");
+  ss << serialize("texture_effect");
+  logger(DEBUG) << ss.str() << std::endl;
+  js_api_ = ss.str();
+}
+
+std::string initializer::serialize(const std::string& enum_type) {
+  v8::Local<v8::String> script = v8::String::NewFromUtf8(
+      context_->isolate,
+      fmt::format("JSON.stringify(Object.fromEntries(Object.entries({})))", enum_type).c_str()
+  ).ToLocalChecked();
+
+  v8::Local<v8::Script> compiled_script =
+      v8::Script::Compile(context_->context->impl(), script).ToLocalChecked();
+
+  v8::Local<v8::Value> result =
+      compiled_script->Run(context_->context->impl()).ToLocalChecked();
+
+  v8::String::Utf8Value json(context_->isolate, result);
+  std::string js_code = *json;
+  // const doesn't make eval put it in the surrounding scope
+  return fmt::format("var {} = {};\n", enum_type, js_code);
 }
 
 void initializer::init_user_script(spawner& spawner_) {
@@ -428,6 +456,13 @@ void initializer::init_object_definitions() {
       }
     });
   });
+}
+
+std::string initializer::get_js_api() {
+  if (js_api_.empty()) {
+    reset_context();
+  }
+  return js_api_;
 }
 
 }  // namespace interpreter

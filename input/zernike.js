@@ -103,6 +103,8 @@ script = {
   ]
 };
 
+// this stuff gets evaluated as well in the browser
+// (as are the constants zernike_type, texture_effect, etc.)
 function get_textures() {
   let nmPairs = [];
   let totalPairs = 21 + 11 + 1;
@@ -130,5 +132,3 @@ function get_textures() {
   }
   return ret;
 }
-
-script;

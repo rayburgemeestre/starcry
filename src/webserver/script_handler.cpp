@@ -53,6 +53,10 @@ void ScriptHandler::onData(seasocks::WebSocket* con, const char* data) {
       std::ostringstream ss;
       ss << "2" << ifs.rdbuf();
       con->send(ss.str());
+      ss.str("");
+      ss.clear();
+      ss << "6" << sc->get_js_api();
+      con->send(ss.str());
     } else if (cmd == "set") {
       logger(DEBUG) << "ScriptHandler::onData - " << input << std::endl;
       sc->update_script_contents(file);

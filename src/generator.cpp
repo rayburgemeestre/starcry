@@ -553,4 +553,8 @@ void generator::set_checkpoints(std::set<int>& checkpoints) {
   checkpoints_.set_checkpoints(checkpoints);
 }
 
+std::string generator::get_js_api() {
+  return initializer_.get_js_api();
+}
+
 }  // namespace interpreter

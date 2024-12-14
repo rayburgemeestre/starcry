@@ -885,3 +885,12 @@ std::vector<int64_t> starcry::selected_ids_transitive(std::shared_ptr<job_messag
 void starcry::set_checkpoint(int frame) {
   checkpoints_.insert(frame);
 }
+
+std::string starcry::get_js_api() {
+  if (!gen) {
+    // this is rather expensive, but it's fine
+    auto gen = interpreter::generator::create(metrics_, context, options().generator_opts, state_, config_, benchmark_);
+    return gen->get_js_api();
+  }
+  return gen->get_js_api();
+}

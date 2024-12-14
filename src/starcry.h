@@ -163,6 +163,7 @@ public:
   void set_viewpoint(data::viewpoint& vp);
 
   void set_checkpoint(int frame_number);
+  std::string get_js_api();
 
 private:
   void configure_inotify();
