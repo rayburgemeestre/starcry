@@ -48,8 +48,8 @@ build-fastmath:  ## build starcry binary using docker (with clang)
 	                    cmake --build build --target starcry-fastmath -j $$(nproc) && \
 	                    strip --strip-debug build/starcry-fastmath)
 
-.PHONY: all
-all:  ## build all binaries in cmake
+.PHONY: all-binaries
+all-binaries:  ## build all binaries in cmake
 	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
 	                    cmake --build build)
 
@@ -229,6 +229,12 @@ publish:  ## build from scratch starcry, web, client, docker image, push dockerh
 	make all
 	make docs || true  # first time tends to fail for some reason
 	make docs || true  # second time hopefully better...
+	make dockerize
+	make push
+	make kube
+	echo done
+
+publish-fast:  ## publish but assume builds are done manually
 	make dockerize
 	make push
 	make kube
