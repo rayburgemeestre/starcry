@@ -100,7 +100,9 @@ public:
       ("scale", po::value<double>(&options.generator_opts.custom_scale), "custom canvas scale")
       ("grain", po::value<bool>(&grain), "custom canvas enable grain")
       ("no-grain", po::value<bool>(&nograin), "custom canvas disable grain")
-      ("granularity", po::value<int>(&options.generator_opts.custom_granularity), "custom canvas granularity");
+      ("granularity", po::value<int>(&options.generator_opts.custom_granularity), "custom canvas granularity")
+      ("dev", "enable dev mode (used when running in debug mode in k3s using Tilt)")
+    ;
     // clang-format on
 
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
@@ -208,7 +210,24 @@ public:
         }
       }
 
-      sc->run();
+      if (vm.count("dev")) {
+        bool stop = false;
+        std::thread dev([&stop]() {
+          // loop that checks if /workdir/build/starcry.stop exists
+          while (!stop) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            if (std::filesystem::exists("/workdir/build/starcry.stop")) {
+              std::cerr << "starcry.stop file detected, exiting.." << std::endl;
+              std::exit(0);
+            }
+          }
+        });
+        sc->run();
+        stop = true;
+        dev.join();
+      } else {
+        sc->run();
+      }
     }
   }
 
