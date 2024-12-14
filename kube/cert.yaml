@@ -1,9 +1,9 @@
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    cert-manager.io/issuer: letsencrypt-prod
+    cert-manager.io/cluster-issuer: letsencrypt-prod
     kubernetes.io/ingress.provider: nginx
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
@@ -17,31 +17,13 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: starcry
-          servicePort: 18080
+          service:
+            name: starcry
+            port:
+              number: 18080
         path: /
+        pathType: Prefix
   tls:
   - hosts:
     - sc.cppse.nl
     secretName: starcry-tls
----
-apiVersion: cert-manager.io/v1alpha2
-kind: Certificate
-metadata:
-  name: starcry
-  namespace: starcry
-spec:
-  acme:
-    config:
-    - domains:
-      - sc.cppse.nl
-      http01:
-        ingress: ""
-        ingressClass: nginx
-  commonName: ""
-  dnsNames:
-  - sc.cppse.nl
-  issuerRef:
-    kind: ClusterIssuer
-    name: letsencrypt-prod
-  secretName: starcry-tls
