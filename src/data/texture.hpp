@@ -176,7 +176,23 @@ struct texture {
 
   template <class Archive>
   void serialize(Archive &ar) {
-    ar(type, effect, size, octaves, persistence, percentage, scale, fromX, begin, end, toX, strength, speed, m, n, rho, theta);
+    ar(type,
+       effect,
+       size,
+       octaves,
+       persistence,
+       percentage,
+       scale,
+       fromX,
+       begin,
+       end,
+       toX,
+       strength,
+       speed,
+       m,
+       n,
+       rho,
+       theta);
   }
 };
 
