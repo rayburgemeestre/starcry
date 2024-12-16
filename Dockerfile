@@ -62,7 +62,8 @@ RUN apt clean
 
 # fix weird IDs (podman doesn't seem to like it much)
 # EDIT: seems no longer required, actually breaks stuff now
-# RUN chown root:root /emsdk -R
+# EDIT 2 : see below, got issues with lchown again..
+RUN chown root:root /emsdk -R
 
 COPY docs/entrypoint.sh /entrypoint.sh
 
@@ -74,9 +75,10 @@ COPY docs/starcry-dev-wrapper.sh /workdir/docs/starcry-dev-wrapper.sh
 # Keeping it: will try to configure Tilt to not rebuild all the time instead. Having some issues with pulling
 # non-squashed docker image:
 # failed to register layer: failed to Lchown "/emsdk/upstream/emscripten/cache/ports/harfbuzz/harfbuzz-3.2.0" for UID 172486, GID 89939 (try increasing the number of subordinate IDs in /etc/subuid and /etc/subgid): lchown /emsdk/upstream/emscripten/cache/ports/harfbuzz/harfbuzz-3.2.0: invalid argument
+# EDIT: this is reason to re-enable that chown on /emsdk
 
-FROM scratch
-
-COPY --from=build1 / /
-
-ENTRYPOINT ["/entrypoint.sh"]
+#FROM scratch
+#
+#COPY --from=build1 / /
+#
+#ENTRYPOINT ["/entrypoint.sh"]
