@@ -77,8 +77,8 @@ COPY docs/starcry-dev-wrapper.sh /workdir/docs/starcry-dev-wrapper.sh
 # failed to register layer: failed to Lchown "/emsdk/upstream/emscripten/cache/ports/harfbuzz/harfbuzz-3.2.0" for UID 172486, GID 89939 (try increasing the number of subordinate IDs in /etc/subuid and /etc/subgid): lchown /emsdk/upstream/emscripten/cache/ports/harfbuzz/harfbuzz-3.2.0: invalid argument
 # EDIT: this is reason to re-enable that chown on /emsdk
 
-#FROM scratch
-#
-#COPY --from=build1 / /
-#
-#ENTRYPOINT ["/entrypoint.sh"]
+FROM scratch
+
+COPY --from=build1 / /
+
+ENTRYPOINT ["/entrypoint.sh"]
