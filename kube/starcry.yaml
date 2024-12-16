@@ -31,7 +31,7 @@ spec:
       containers:
       - name: starcrycontainer
         image: docker.io/rayburgemeestre/starcry:v9
-        command: ["/starcry"]
+        command: ["/workdir/docs/starcry-dev-wrapper.sh"]
         #args: ["-i", "--notty"]
         # remote workers, seems broken right now.
         # let's try again...
@@ -76,7 +76,7 @@ spec:
       containers:
       - name: starcrycontainer
         image: docker.io/rayburgemeestre/starcry:v9
-        command: ["/starcry"]
+        command: ["/workdir/docs/starcry-dev-wrapper.sh"]
         args: ["--client", "tcp://redis:6379"]
         workingDir: /workdir
         imagePullPolicy: Always
