@@ -114,7 +114,9 @@ void redis_client::run(bitmap_wrapper& bitmap, rendering_engine& engine) {
         std::string shapes_json_buffer;
 
         {
-          delayed_exit de(10);
+          delayed_exit de(5, [&]() {
+            redis.publish("TIMEOUT", std::format("{}|{}|{}", my_id_, job.job_number, job.chunk));
+          });
           bmp = sc.render_job(getpid(), engine, job, settings, selected_ids_transitive);
           // We could, instead of sending the JSON string, also choose to let
           // the redis_server handle this serialization, and save some network
@@ -165,7 +167,7 @@ void redis_client::run(bitmap_wrapper& bitmap, rendering_engine& engine) {
       }
     }
   } catch (const Error& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
+    std::cerr << "Error 2: " << e.what() << std::endl;
     std::exit(2);
   }
 }

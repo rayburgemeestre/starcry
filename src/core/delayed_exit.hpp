@@ -14,7 +14,8 @@
 
 class delayed_exit {
 public:
-  delayed_exit(int timeout_seconds) : timeout_seconds(timeout_seconds), job_done(false) {
+  delayed_exit(int timeout_seconds, std::function<void()> pre_exit_fun = nullptr)
+      : timeout_seconds(timeout_seconds), job_done(false), pre_exit_fun_(pre_exit_fun) {
     exit_thread = std::thread(&delayed_exit::wait_and_exit, this);
   }
 
@@ -35,7 +36,8 @@ public:
     if (!cv.wait_for(lock, std::chrono::seconds(timeout_seconds), [this]() {
           return job_done;
         })) {
-      std::exit(2);
+      if (pre_exit_fun_) pre_exit_fun_();
+      std::exit(3);
     }
   }
 
@@ -45,4 +47,5 @@ private:
   std::condition_variable cv;
   int timeout_seconds;
   bool job_done;
+  std::function<void()> pre_exit_fun_;
 };

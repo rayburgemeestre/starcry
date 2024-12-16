@@ -203,12 +203,15 @@ void redis_server::run() {
             } catch (cereal::Exception& ex) {
               logger(ERROR) << "Cereal exception: " << ex.what() << std::endl;
             }
+          } else if (channel == "TIMEOUT") {
+            logger(ERROR) << "Client timed out: " << msg_in << std::endl;
           }
         });
         sub.subscribe("REGISTER");
         sub.subscribe("PULL_JOB");
         sub.subscribe("ACK_JOB");
         sub.subscribe("FRAME");
+        sub.subscribe("TIMEOUT");
 
         redis->publish("RECONNECT", "RECONNECT");
 
