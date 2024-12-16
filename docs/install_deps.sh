@@ -9,7 +9,7 @@ sudo apt install -y lsb-release software-properties-common ca-certificates curl
 #sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0xF64DD44383345E54
 #sudo add-apt-repository "deb [arch=amd64] https://cppse.nl/repo/ $(lsb_release -cs) main"
 
-curl -qs https://cppse.nl/public.pgp > etc/apt/keyrings/public.pgp
+curl -qs https://cppse.nl/public.pgp > /etc/apt/keyrings/public.pgp
 echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/public.pgp] https://cppse.nl/repo/ $(lsb_release -cs) main" | sudo tee -a /etc/apt/sources.list
 sudo apt update
 
