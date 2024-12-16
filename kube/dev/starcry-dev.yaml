@@ -145,7 +145,7 @@ spec:
           #command: ["/workdir/build/starcry"]
         command: ["/workdir/docs/starcry-dev-wrapper.sh"]
           #command: ["/bin/bash"]
-        args: ["--client", "tcp://redis:6379"]
+        args: ["--dev", "--client", "tcp://redis:6379"]
           #args: ["-c", "sleep infinity"]
         workingDir: /workdir
         imagePullPolicy: IfNotPresent
