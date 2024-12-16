@@ -173,8 +173,32 @@ public:
       sc->features().caching = true;
     }
 
+    const auto run_with_dev = [&](const auto fun) {
+      if (vm.count("dev")) {
+        bool stop = false;
+        std::thread dev([&stop]() {
+          // loop that checks if /workdir/build/starcry.stop exists
+          while (!stop) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            if (std::filesystem::exists("/workdir/build/starcry.stop")) {
+              std::cerr << "starcry.stop file detected, exiting.." << std::endl;
+              std::exit(0);
+            }
+          }
+        });
+        fun();
+        sc->run_client(options.host);
+        stop = true;
+        dev.join();
+      } else {
+        fun();
+      }
+    };
+
     if (vm.count("client")) {
-      sc->run_client(options.host);
+      run_with_dev([&sc, this]() {
+        sc->run_client(options.host);
+      });
     } else {
       sc->setup_server(options.host);
 
@@ -210,24 +234,9 @@ public:
         }
       }
 
-      if (vm.count("dev")) {
-        bool stop = false;
-        std::thread dev([&stop]() {
-          // loop that checks if /workdir/build/starcry.stop exists
-          while (!stop) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            if (std::filesystem::exists("/workdir/build/starcry.stop")) {
-              std::cerr << "starcry.stop file detected, exiting.." << std::endl;
-              std::exit(0);
-            }
-          }
-        });
+      run_with_dev([&sc]() {
         sc->run();
-        stop = true;
-        dev.join();
-      } else {
-        sc->run();
-      }
+      });
     }
   }
 
