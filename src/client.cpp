@@ -57,7 +57,11 @@ void mainloop(void *arg) {
   SDL_RenderClear(renderer);
 
   SDL_Rect r, r2;
+  // turns out there is an issue in emscripten newer versions
+  // that screws up onkeydown events etc., this ifndef didn't help
+#ifndef EMSCRIPTEN
   SDL_PumpEvents();
+#endif
   SDL_GetMouseState(&x, &y);
   r.x = 0;
   r.y = y;
