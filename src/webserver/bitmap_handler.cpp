@@ -8,6 +8,7 @@
 
 #include "data/frame_request.hpp"
 #include "data/video_request.hpp"
+// #include "data/reload_request.hpp"
 #include "nlohmann/json.hpp"
 #include "util/logger.h"
 
@@ -39,6 +40,9 @@ void BitmapHandler::onData(seasocks::WebSocket* con, const char* data) {
   }
   if (json["filename"].is_string() && json["frame"].is_number_integer()) {
     if (!json["video"].is_boolean() || !bool(json["video"])) {
+      // auto reload_req = std::make_shared<data::reload_request>(json["filename"]);
+      // sc->add_reload_command(reload_req);
+
       auto req = std::make_shared<data::frame_request>(json["filename"], json["frame"], num_chunks);
       req->set_websocket(con);
       req->enable_raw_bitmap();
