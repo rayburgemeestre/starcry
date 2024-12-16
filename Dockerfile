@@ -71,8 +71,12 @@ RUN chmod a+rx /entrypoint.sh
 COPY docs/starcry-dev-wrapper.sh /workdir/docs/starcry-dev-wrapper.sh
 
 # This saves diskspace, but is also very inconvenient in combination with Tilt (reuploading 6 GB all the time)
-#FROM scratch
-#
-#COPY --from=build1 / /
-#
-#ENTRYPOINT ["/entrypoint.sh"]
+# Keeping it: will try to configure Tilt to not rebuild all the time instead. Having some issues with pulling
+# non-squashed docker image:
+# failed to register layer: failed to Lchown "/emsdk/upstream/emscripten/cache/ports/harfbuzz/harfbuzz-3.2.0" for UID 172486, GID 89939 (try increasing the number of subordinate IDs in /etc/subuid and /etc/subgid): lchown /emsdk/upstream/emscripten/cache/ports/harfbuzz/harfbuzz-3.2.0: invalid argument
+
+FROM scratch
+
+COPY --from=build1 / /
+
+ENTRYPOINT ["/entrypoint.sh"]
