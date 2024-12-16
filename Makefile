@@ -254,6 +254,7 @@ push:
 
 clion:
 	xhost +
+	# doesn't seem to work well with latest Linux mainline kernel (6.12.3 at time of writing)
 	sudo sysctl kernel.unprivileged_userns_clone=0
 	mkdir -p /tmp/ccache-root
 	$(docker_exe) stop starcry_clion || true
