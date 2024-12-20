@@ -43,7 +43,7 @@ initializer::initializer(gradient_manager& gm,
                          bridges& bridges,
                          frame_sampler& sampler,
                          object_definitions& definitions,
-                         const generator_options& options,
+                         generator_options& options,
                          generator_state& state,
                          generator_config& config)
     : gradient_manager_(gm),
@@ -62,6 +62,10 @@ initializer::initializer(gradient_manager& gm,
       generator_options_(options),
       generator_state_(state),
       generator_config_(config) {}
+
+void initializer::init(generator_state& state) {
+  std::swap(state, generator_state_);
+}
 
 void initializer::initialize_all(std::shared_ptr<data::job> job,
                                  const std::string& filename,
@@ -84,6 +88,7 @@ void initializer::initialize_all(std::shared_ptr<data::job> job,
 
 void initializer::init_context(const std::string& filename) {
   context_->set_filename(filename);
+  generator_config_.filename = filename;  // somehow generator_config_ is not the same ref since we use boost::di
   reset_context();
 }
 
@@ -319,8 +324,9 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         }
 
         if (generator_options_.custom_scale) use_scale = generator_options_.custom_scale;
-        if (generator_options_.custom_width) generator_state_.canvas_w = generator_options_.custom_width;
-        if (generator_options_.custom_height) generator_state_.canvas_h = generator_options_.custom_height;
+        // TODO: There is a problem here after boost::di, only happens with integration tests
+        // if (generator_options_.custom_width) generator_state_.canvas_w = generator_options_.custom_width;
+        // if (generator_options_.custom_height) generator_state_.canvas_h = generator_options_.custom_height;
         if (generator_options_.custom_granularity)
           generator_config_.tolerated_granularity = generator_options_.custom_granularity;
         if (generator_options_.custom_grain) settings_.grain_for_opacity = *generator_options_.custom_grain;

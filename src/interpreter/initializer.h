@@ -62,9 +62,11 @@ public:
                        bridges& bridges,
                        frame_sampler& sampler,
                        object_definitions& definitions,
-                       const generator_options& options,
+                       generator_options& options,
                        generator_state& state,
                        generator_config& config);
+
+  void init(generator_state& state);
 
   void initialize_all(std::shared_ptr<data::job> job,
                       const std::string& filename,
@@ -108,7 +110,7 @@ private:
   bridges& bridges_;
   frame_sampler& frame_sampler_;
   object_definitions& object_definitions_;
-  const generator_options& generator_options_;
+  /* was const */ generator_options& generator_options_;
   generator_state& generator_state_;
   generator_config& generator_config_;
 

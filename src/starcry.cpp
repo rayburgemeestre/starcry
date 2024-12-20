@@ -272,7 +272,14 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       });
     }
     size_t bitrate = (500 * 1024 * 8);  // TODO: make configurable
-    if (framer) framer->initialize(bitrate, state_.canvas_w, state_.canvas_h, use_fps);
+    if (framer) {
+      // use canvas dimensions from state or otherwise from instruction
+      // state_.canvas_w or instruction->video().width()
+      // TODO: more side effects after boost::di that need investigation
+      const auto use_width = state_.canvas_w ? state_.canvas_w : instruction->video().width();
+      const auto use_height = state_.canvas_h ? state_.canvas_h : instruction->video().height();
+      framer->initialize(bitrate, use_width, use_height, use_fps);
+    }
     while (true) {
       auto ret = gen->generate_frame();
       auto job_copy = std::make_shared<data::job>(*gen->get_job());

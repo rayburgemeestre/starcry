@@ -292,7 +292,7 @@ bool redis_server::dispatch_job(std::shared_ptr<job_message> job) {
     archive(*(job->job));
     const auto settings = sc.gen->settings();
     archive(settings);
-    bool include_objects_json = (f->metadata_objects() || sc.get_viewpoint().labels);
+    bool include_objects_json = f && (f->metadata_objects() || sc.get_viewpoint().labels);
     archive(include_objects_json);
     const auto selected_ids_transitive = sc.selected_ids_transitive(job);
     archive(selected_ids_transitive);

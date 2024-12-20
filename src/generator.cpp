@@ -82,6 +82,10 @@ generator::generator(std::shared_ptr<metrics> metrics,
       rand_(rand),
       generator_opts(opts),
       benchmark_(benchmark) {
+  // boost::di "workarounds"
+  // ... initializer seems to somehow get a different instance of generator_state (at least during integration tests)
+  initializer_.init(state_);
+  // ... workaround for circular dependency
   instantiator.init(interactor_);
 }
 

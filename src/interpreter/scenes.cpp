@@ -323,6 +323,11 @@ std::vector<data_staging::shape_t>& scenes::intermediate_shapes_current_scene() 
 }
 
 std::vector<data_staging::shape_t>& scenes::instantiated_objects_current_scene() {
+  if (scenesettings.current_scene_next >= instantiated_objects.size()) {
+    logger(ERROR) << "scene not found: " << scenesettings.current_scene_next << std::endl;
+    static std::vector<data_staging::shape_t> empty;
+    return empty;
+  }
   return instantiated_objects[scenesettings.current_scene_next];
 }
 
