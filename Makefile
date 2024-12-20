@@ -67,17 +67,17 @@ test:  ## execute starcry unit tests using docker (with clang)
 
 .PHONY: integration-test
 integration-test:  ## execute starcry unit tests using docker (with clang)
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
 	                    cmake --build build --target integration_tests -j $$(nproc) && \
 	                    ./build/integration_tests -s -d yes --rng-seed 0)
 
 .PHONY: integration-test-sanitizer
 integration-test-sanitizer:
 	@$(call make-clang, ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
-	                    CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) \
+	                    CMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold CXX=$$(which c++) \
 	                        cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on -B build && \
 	                    ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
-	                        cmake --build build --target integration_tests && \
+	                        cmake --build build --target integration_tests -j $$(nproc) && \
 	                    ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
 	                        ./build/integration_tests -s -d yes --rng-seed 0)
 
@@ -255,7 +255,7 @@ push:
 clion:
 	xhost +
 	# doesn't seem to work well with latest Linux mainline kernel (6.12.3 at time of writing)
-	sudo sysctl kernel.unprivileged_userns_clone=0
+	sudo sysctl kernel.unprivileged_userns_clone=0 || true
 	mkdir -p /tmp/ccache-root
 	$(docker_exe) stop starcry_clion || true
 	$(docker_exe) rm starcry_clion || true
@@ -287,9 +287,11 @@ webstorm:
 
 profile:  ## run starcry with valgrind's callgrind for profiling
 	#valgrind --tool=callgrind ./build/starcry -c 1 input/broken/wave.js -f 1 --stdout --debug --verbose
-	valgrind --tool=callgrind ./build/starcry --tui input/spiral2.js -f 1 --single --no-output
+	#valgrind --tool=callgrind ./build/starcry --tui input/spiral2.js -f 1 --single --no-output
+	valgrind --tool=callgrind ./build/starcry input/blank.js --benchmark --no-output
 	# valgrind --tool=callgrind ./build/starcry --no-render --stdout input/test.js
 	ls -althrst | tail -n 1
+	echo invoke kcachegrind on this file
 
 valgrind:
 	#valgrind --leak-check=full ./build/starcry input/motion.js  --no-output

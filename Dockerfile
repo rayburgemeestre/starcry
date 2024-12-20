@@ -76,6 +76,7 @@ COPY docs/starcry-dev-wrapper.sh /workdir/docs/starcry-dev-wrapper.sh
 # non-squashed docker image:
 # failed to register layer: failed to Lchown "/emsdk/upstream/emscripten/cache/ports/harfbuzz/harfbuzz-3.2.0" for UID 172486, GID 89939 (try increasing the number of subordinate IDs in /etc/subuid and /etc/subgid): lchown /emsdk/upstream/emscripten/cache/ports/harfbuzz/harfbuzz-3.2.0: invalid argument
 # EDIT: this is reason to re-enable that chown on /emsdk
+# EDIT: didn't help, had to just fix my /etc/subuid and /etc/subgid: the START ID had to be lowered, it was 500000, and 172486 is less than that.
 
 FROM scratch
 
