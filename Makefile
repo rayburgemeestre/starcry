@@ -71,6 +71,12 @@ integration-test:  ## execute starcry unit tests using docker (with clang)
 	                    cmake --build build --target integration_tests -j $$(nproc) && \
 	                    ./build/integration_tests -s -d yes --rng-seed 0)
 
+.PHONY: integration-test-gcc
+integration-test-gcc:  ## execute starcry unit tests using docker (with gcc)
+	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
+	              cmake --build build --target integration_tests -j $$(nproc) && \
+	              ./build/integration_tests -s -d yes --rng-seed 0)
+
 .PHONY: integration-test-sanitizer
 integration-test-sanitizer:
 	@$(call make-clang, ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
