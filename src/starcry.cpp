@@ -31,6 +31,7 @@
 #include "starcry/redis_client.h"
 #include "starcry/redis_server.h"
 #include "util/benchmark.h"
+#include "util/scope_exit.hpp"
 #include "util/threadname.hpp"
 
 // TODO: re-organize this somehow
@@ -225,6 +226,10 @@ image starcry::render_job(size_t thread_num,
 
 // MARK1 transform instruction into job (using generator)
 void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
+  const auto start = benchmark_ ? benchmark_->measure("command_to_jobs") : std::chrono::high_resolution_clock::now();
+  scope_exit se([this, start]() {
+    if (benchmark_) benchmark_->store("command_to_jobs", start);
+  });
   if (!gen) {
     context->recreate_isolate_in_this_thread();
     gen = interpreter::generator::create(metrics_, context, options().generator_opts, state_, config_, benchmark_);
@@ -370,6 +375,10 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
 
 // MARK1 render job using renderer and transform into render_msg
 std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_message> job_msg) {
+  const auto start = benchmark_ ? benchmark_->measure("job_to_frame") : std::chrono::high_resolution_clock::now();
+  scope_exit se([this, start]() {
+    if (benchmark_) benchmark_->store("job_to_frame", start);
+  });
   auto& job = *job_msg->job;
 
   if (!options_.render) {
@@ -473,6 +482,10 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 
 // MARK1 handle the render msg, create into video or whatever
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
+  const auto start = benchmark_ ? benchmark_->measure("handle_frame") : std::chrono::high_resolution_clock::now();
+  scope_exit se([this, start]() {
+    if (benchmark_) benchmark_->store("handle_frame", start);
+  });
   auto instr = job_msg->original_job_message->original_instruction;
   std::shared_ptr<data::frame_request> f = nullptr;
   std::shared_ptr<data::video_request> v = nullptr;

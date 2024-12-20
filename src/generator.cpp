@@ -16,7 +16,6 @@
 #include "v8pp/module.hpp"
 
 #include "core/delayed_exit.hpp"
-#include "image.hpp"
 #include "interpreter/abort_exception.hpp"
 #include "interpreter/constants.h"
 #include "interpreter/debug_printer.h"
@@ -325,7 +324,7 @@ bool generator::_generate_frame() {
     logger(INFO) << "Memory usage: " << total_usage << " GB. "
                  << "V8 Heap: " << v8_usage << " GB. "
                  << "Other: " << (total_usage - v8_usage) << " GB." << std::endl;
-    image_repository::instance().print();
+    // image_repository::instance().print();
     // memory_analyzer::print_report();
     fps_progress_.inc();
   } catch (abort_exception& ex) {

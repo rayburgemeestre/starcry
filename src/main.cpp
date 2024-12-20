@@ -160,7 +160,7 @@ public:
     std::shared_ptr<Benchmark> benchmark = nullptr;
     if (vm.count("benchmark")) {
       benchmark = std::make_shared<Benchmark>();
-      benchmark->includeRawMeasures(true);
+      benchmark->includeRawMeasures(false);
     }
 
     context = std::make_shared<v8_wrapper>(options.script_file);
