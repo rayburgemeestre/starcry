@@ -24,7 +24,7 @@ jobs:
     - name: make download-integration-test-reference
       run: make download-integration-test-reference
     - name: make integration-test-gcc
-      run: make integration-test-gcc
+      run: make clean && make integration-test-gcc
     - name: upload integration test artifacts
       if: always()
       uses: actions/upload-artifact@v3
