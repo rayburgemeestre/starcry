@@ -123,6 +123,8 @@ configure_links(integration_tests)
 set(all_sources ${starcry_SOURCES})
 list(APPEND all_sources ${sc_client_SOURCES})
 list(APPEND all_sources ${integration_tests_SOURCES})
+file(GLOB_RECURSE extra_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/test/*.hpp")
+list(APPEND all_sources ${extra_SOURCES})
 list(REMOVE_ITEM all_sources /opt/cppse/build/v8pp/include/v8pp/context.cpp)  # causes crash since owned by root
 list(REMOVE_DUPLICATES all_sources)
 clangformat_setup(${all_sources})
