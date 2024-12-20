@@ -46,6 +46,7 @@ void Benchmark::setDescription(std::string description) {
 }
 
 void Benchmark::store(const std::string& label, std::chrono::high_resolution_clock::time_point start) {
+  std::scoped_lock lock(mut_);
   const auto measure = end_time(currentTimer_[label]);
 
   if (measure < minValue_[label]) minValue_[label] = measure;
@@ -73,6 +74,7 @@ void Benchmark::finalize() {
 }
 
 void Benchmark::writeResults() {
+  std::scoped_lock lock(mut_);
   if (measures_.empty()) return;
 
   std::ofstream resultsFile;
@@ -170,8 +172,11 @@ void Benchmark::writeFrequencies(const std::string& label, std::ofstream& result
   int maxMeasure = 0;
   // std::for_each(std::begin(measures_), std::end(measures_), [&](double measure) {
   std::for_each(measures_[label].begin(), measures_[label].end(), [&](double measure) {
+    if (bucketWidth == 0) {
+      bucketWidth = 1;
+    }
     int bucket = static_cast<int>((measure - useMinValue) / bucketWidth);
-
+    if (bucket >= buckets) bucket = static_cast<int>(buckets - 1);
     histogram[bucket]++;
 
     if (histogram[bucket] > maxMeasure) maxMeasure = histogram[bucket];
