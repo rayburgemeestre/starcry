@@ -1,4 +1,4 @@
-_ = {
+script = {
   'gradients': {},
   'objects': {
     'test': {
