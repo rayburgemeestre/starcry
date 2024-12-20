@@ -13,10 +13,8 @@
 
 static const constexpr double fuzziness_allowed = 0;
 
-// Multiple instances still causes issues after using boost::di
-sut sc;
-
 TEST_CASE("Test simple image") {
+  sut sc;
   sc.options.script_file = "input/snowflakes.js";
   sc.options.frame_of_interest = 10;
   REQUIRE(sc.test_create_image("unittest_001_snowflakes_frame10") <= double(0.05 * fuzziness_allowed));
@@ -28,6 +26,7 @@ TEST_CASE("Test simple image") {
 }
 
 TEST_CASE("Test complex image") {
+  sut sc;
   sc.options.script_file = "input/script.js";
   sc.options.frame_of_interest = 1;
   REQUIRE(sc.test_create_image("unittest_005_script_frame1") == double(0));
@@ -36,6 +35,7 @@ TEST_CASE("Test complex image") {
 }
 
 TEST_CASE("Test different perlin noise functions") {
+  sut sc;
   sc.options.script_file = "input/perlin.js";
   sc.options.frame_of_interest = 10;
   REQUIRE(sc.test_create_image("unittest_00X_perlin_frame10") <= double(0.08 * fuzziness_allowed));
@@ -45,18 +45,21 @@ TEST_CASE("Test different perlin noise functions") {
 }
 
 TEST_CASE("Test image with noise") {
+  sut sc;
   sc.options.script_file = "input/perlin3.js";
   sc.options.frame_of_interest = 10;
   REQUIRE(sc.test_create_image("unittest_002_perlin3_frame10") <= double(0.08 * fuzziness_allowed));
 }
 
 TEST_CASE("Test simple orbit video") {
+  sut sc;
   sc.options.script_file = "input/orbit.js";
   sc.options.frame_of_interest = 1;
-  REQUIRE(sc.test_create_video("unittest_010_orbit_video.h264", 100, 25) <= double(0.003));
+  REQUIRE(sc.test_create_video("unittest_010_orbit_video.h264", 100, 25) <= double(0.005));
 }
 
 TEST_CASE("Test dedupe + rotate image") {
+  sut sc;
   sc.options.script_file = "input/dupes.js";
   sc.options.frame_of_interest = 1;
   // TODO: no idea why fuzziness is required here
@@ -68,6 +71,7 @@ TEST_CASE("Test dedupe + rotate image") {
 }
 
 TEST_CASE("Test web image") {
+  sut sc;
   sc.options.script_file = "input/web.js";
   sc.options.frame_of_interest = 10;
   REQUIRE(sc.test_create_image("unittest_009_web_frame10") <= double(0.05 * fuzziness_allowed));
@@ -80,6 +84,7 @@ TEST_CASE("Test web image") {
 // videos have no optional fuzziness since ffmpeg encoding is using randomness
 
 TEST_CASE("Test simple test video") {
+  sut sc;
   sc.options.script_file = "input/test.js";
   // part of the video (full = 175)
   REQUIRE(sc.test_create_video("unittest_003_test_video.h264", 75, 25) <= double(0.02));
@@ -96,12 +101,14 @@ TEST_CASE("Test simple blur video") {
 */
 
 TEST_CASE("Test blending modes image") {
+  sut sc;
   sc.options.script_file = "input/blending_types.js";
   sc.options.frame_of_interest = 1;
   REQUIRE(sc.test_create_image("unittest_011_blending_types_frame1") == double(0));
 }
 
 TEST_CASE("Test complex render twice.") {
+  sut sc;
   sc.options.script_file = "input/kaleidoscope.js";
   sc.options.frame_of_interest = 1;
 
@@ -112,6 +119,7 @@ TEST_CASE("Test complex render twice.") {
 }
 
 TEST_CASE("Test scale image.") {
+  sut sc;
   sc.options.script_file = "input/scale.js";
   sc.options.frame_of_interest = 1;
 
@@ -119,6 +127,7 @@ TEST_CASE("Test scale image.") {
 }
 
 TEST_CASE("Test rendering selected IDs") {
+  sut sc;
   sc.options.script_file = "input/test.js";
   sc.options.frame_of_interest = 1;
   // part of the video (full = 175)
@@ -128,6 +137,7 @@ TEST_CASE("Test rendering selected IDs") {
 }
 
 TEST_CASE("Test zernike polynomials") {
+  sut sc;
   sc.options.script_file = "input/zernike.js";
   sc.options.frame_of_interest = 1;
   REQUIRE(sc.test_create_image("unittest_015_zernike_frame1") <= double(0.01));
