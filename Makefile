@@ -77,6 +77,12 @@ integration-test-gcc:  ## execute starcry unit tests using docker (with gcc)
 	              cmake --build build --target integration_tests -j $$(nproc) && \
 	              ./build/integration_tests -s -d yes --rng-seed 0)
 
+.PHONY: integration-test-gcc-debug
+integration-test-gcc-debug:  ## execute starcry unit tests using docker (with gcc + debug)
+	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on -B build && \
+	              cmake --build build --target integration_tests -j $$(nproc) && \
+	              gdb --args ./build/integration_tests -s -d yes --rng-seed 0)
+
 .PHONY: integration-test-sanitizer
 integration-test-sanitizer:
 	@$(call make-clang, ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
@@ -194,6 +200,7 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 	                    strip --strip-debug $$PWD/build/starcry && \
 						cp -prv $$PWD/build/starcry ./out/ && \
 						cp -prv $$PWD/docs/Dockerfile ./out/ && \
+						cp -prv $$PWD/docs/starcry-dev-wrapper.sh ./out/workdir/ && \
 						cp -prv $$PWD/docs/fonts/monaco.ttf ./out/workdir/ && \
 						cp -prv $$PWD/docs/fonts/monogram.ttf ./out/workdir/ && \
 						cp -prv $$PWD/docs/output ./out/workdir/web/webroot/docs)
