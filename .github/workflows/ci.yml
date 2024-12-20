@@ -32,6 +32,13 @@ jobs:
         name: integration-test-artifacts
         path: /home/runner/work/starcry/starcry/test/integration/last-run
         retention-days: 1
+    - name: upload sc.log artifact
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: starcry-log
+        path: /home/runner/work/starcry/starcry/sc.log
+        retention-days: 1
     - name: update apt
       run: sudo apt update
     - name: install npm
