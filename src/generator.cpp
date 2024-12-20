@@ -18,6 +18,7 @@
 #include "core/delayed_exit.hpp"
 #include "image.hpp"
 #include "interpreter/abort_exception.hpp"
+#include "interpreter/constants.h"
 #include "interpreter/debug_printer.h"
 #include "interpreter/fast_forwarder.hpp"
 #include "interpreter/gradient_manager.h"
@@ -116,7 +117,7 @@ void generator::init(const std::string& filename,
   initializer_.initialize_all(
       job_holder_.get(), config_.filename, rand_seed, preview, width, height, scale, scenes_, spawner_);
 
-  context->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  context->run_array(SCRIPT_NAME, [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     genctx.init(val, 0);
   });
 
@@ -189,7 +190,7 @@ bool generator::_generate_frame() {
                            job_holder_.get()->chunk,
                            job_holder_.get()->num_chunks);
 
-    context->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+    context->run_array(SCRIPT_NAME, [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
       if (config_.caching) {
         checkpoints_.insert(*job_holder_.get(), scenes_);
       }

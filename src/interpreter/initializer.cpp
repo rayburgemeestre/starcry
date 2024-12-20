@@ -11,6 +11,7 @@
 #include "generator.h"
 #include "gradient_factory.h"
 #include "gradient_manager.h"
+#include "interpreter/constants.h"
 #include "job_mapper.h"
 #include "scripting.h"
 #include "texture_factory.h"
@@ -239,9 +240,9 @@ void initializer::init_user_script(spawner& spawner_) {
     while (*begin != '=') begin++;
     begin++;
   }
-  const auto source = std::string("script = ") + std::string(begin, end);
+  const auto source = SCRIPT_NAME + " = " + std::string(begin, end);
   context_->run("cache = typeof cache == 'undefined' ? {} : cache;");
-  context_->run("script = {\"video\": {}};");
+  context_->run(SCRIPT_NAME + " = {\"video\": {}};");
   try {
     context_->run(source);
   } catch (std::runtime_error& ex) {
@@ -259,7 +260,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
                                        scenes& scenes_) {
   // "run_array" is a bit of a misnomer, this only invokes the callback once
   context_->run_array(
-      "script",
+      SCRIPT_NAME,
       [this, &preview, &rand_seed, &width, &height, &scale, &scenes_](v8::Isolate* isolate, v8::Local<v8::Value> val) {
         v8_interact i;
         auto video_value = v8_index_object(current_context_native(context_), val, "video");
@@ -367,7 +368,7 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
 
 void initializer::init_gradients() {
   gradient_manager_.clear();
-  context_->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  context_->run_array(SCRIPT_NAME, [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i;
     auto obj = val.As<v8::Object>();
     auto gradient_objects = i.v8_obj(obj, "gradients");
@@ -394,7 +395,7 @@ void initializer::init_gradients() {
 
 void initializer::init_textures() {
   texture_manager_.clear();
-  context_->run_array("script", [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  context_->run_array(SCRIPT_NAME, [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i;
     auto obj = val.As<v8::Object>();
     if (!i.has_field(obj, "textures")) {
@@ -414,7 +415,7 @@ void initializer::init_textures() {
 
 void initializer::init_toroidals() {
   // toroidal_manager_.clear();
-  context_->run_array("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  context_->run_array(SCRIPT_NAME, [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i;
     auto obj = val.As<v8::Object>();
     if (!i.has_field(obj, "toroidal")) return;
@@ -436,7 +437,7 @@ void initializer::init_object_definitions() {
     // we keep stuff here to avoid overwrites, we might be able to get rid of this in the future
     // but it's a one-time overhead, so doesn't matter too much.
     auto defs_storage = object_definitions.As<v8::Object>();
-    context_->enter_object("script", [&, this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+    context_->enter_object(SCRIPT_NAME, [&, this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
       v8_interact i;
       auto obj = val.As<v8::Object>();
       auto object_definitions = i.v8_obj(obj, "objects");

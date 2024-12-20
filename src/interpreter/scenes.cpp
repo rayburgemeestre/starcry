@@ -7,6 +7,7 @@
 #include "scenes.h"
 
 #include "generator.h"
+#include "interpreter/constants.h"
 #include "job_holder.h"
 #include "util/generator_context.h"
 
@@ -372,7 +373,7 @@ void scenes::_set_scene_sub_object(scene_settings& scenesettings, size_t scene) 
 
 void scenes::create_object_instances(instantiator& instantiator) {
   // This function is called whenever a scene is set. (once per scene)
-  context->enter_object("script", [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+  context->enter_object(SCRIPT_NAME, [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     // enter_objects creates a new isolate, using the old gives issues, so we'll recreate
     genctx.init(val, current());
     genctx.get()->set_scene(current());
