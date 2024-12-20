@@ -9,6 +9,9 @@ while true; do
         cp -prv /workdir/build/starcry /starcry
         /starcry "$@"
         echo return code was: $?
+    elif [[ -f /starcry ]]; then
+        /starcry "$@"
+        echo return code was: $?
     else
         echo no binary found yet...
     fi
