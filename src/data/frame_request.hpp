@@ -22,6 +22,7 @@ private:
 
   int frame_num_ = 0;
   int num_chunks_ = 0;
+  int timeout_ = 0;
 
   seasocks::WebSocket* client_ = nullptr;
 
@@ -36,8 +37,8 @@ private:
   std::vector<int64_t> selected_ids_;
 
 public:
-  frame_request(std::string script, int frame_num, int num_chunks)
-      : script_(std::move(script)), frame_num_(frame_num), num_chunks_(num_chunks) {}
+  frame_request(std::string script, int frame_num, int num_chunks, int timeout)
+      : script_(std::move(script)), frame_num_(frame_num), num_chunks_(num_chunks), timeout_(timeout) {}
 
   void set_websocket(seasocks::WebSocket* client) {
     client_ = client;
@@ -81,6 +82,9 @@ public:
   }
   int num_chunks() const {
     return num_chunks_;
+  }
+  int timeout() const {
+    return timeout_;
   }
   seasocks::WebSocket* client() const {
     return client_;

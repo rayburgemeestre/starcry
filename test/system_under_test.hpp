@@ -72,7 +72,8 @@ double sut::test_create_image(const std::string& image_name, const std::vector<i
   vp.scale = 1.0;
   sc->set_viewpoint(vp);
   sc->setup_server();
-  auto req = std::make_shared<data::frame_request>(options.script_file, options.frame_of_interest, options.num_chunks);
+  auto req =
+      std::make_shared<data::frame_request>(options.script_file, options.frame_of_interest, options.num_chunks, 5);
   // req->enable_compressed_image(); // compressed image is currently only for Web UI
   if (!selected_ids.empty()) {
     req->set_selected_ids(selected_ids);

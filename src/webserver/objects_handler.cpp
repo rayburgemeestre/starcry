@@ -22,12 +22,17 @@ void ObjectsHandler::onDisconnect(seasocks::WebSocket* con) {
 void ObjectsHandler::onData(seasocks::WebSocket* con, const char* data) {
   std::string input(data);
   if (link(input, con)) return;
-  const auto find = input.find(" ");
-  if (find != std::string::npos) {
+
+  const auto first_space = input.find(" ");
+  if (first_space != std::string::npos) {
     logger(DEBUG) << "ObjectsHandler::onData - " << input << std::endl;
-    const auto script = input.substr(0, find);
-    const auto frame_num = std::atoi(input.substr(find + 1).c_str());
-    auto req = std::make_shared<data::frame_request>(script, frame_num, 1);
+    const auto script = input.substr(0, first_space);
+
+    const auto second_space = input.find(" ", first_space + 1);
+    const auto frame_num = std::atoi(input.substr(first_space + 1, second_space - first_space - 1).c_str());
+    const auto timeout = std::atoi(input.substr(second_space + 1).c_str());
+
+    auto req = std::make_shared<data::frame_request>(script, frame_num, 1, timeout);
     req->set_websocket(con);
     req->enable_metadata_objects();
     sc->add_image_command(req);

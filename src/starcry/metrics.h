@@ -49,6 +49,7 @@ public:
     rendering,
     rendered,
     skipped,
+    timeout,
   };
   std::string str(job_state in) {
     switch (in) {
@@ -60,6 +61,8 @@ public:
         return "RENDERED";
       case job_state::skipped:
         return "SKIPPED";
+      case job_state::timeout:
+        return "TIMEOUT";
     }
     return "";
   }
@@ -145,7 +148,7 @@ public:
   void set_render_job_object_state(int thread_num, int job_num, int chunk_num, int index, metrics::job_state state);
   void set_steps(int job_number, int attempt, int max_steps);
   void update_steps(int job_number, int attempt, int max_steps);
-  void complete_render_job(int thread_number, int job_number, int chunk);
+  void complete_render_job(int thread_number, int job_number, int chunk, job_state state = job_state::rendered);
   void complete_job(int number);
   void skip_job(int number);
   void display(std::function<void(const std::string&)> f1,

@@ -39,6 +39,7 @@ struct job {
   bool save_image = false;
   bool is_raw = false;
   std::string output_file;
+  uint32_t timeout = 5;
 
   inline bool operator<(const job &other) const {
     return job_number < other.job_number;  // there can be no ties
@@ -69,6 +70,8 @@ struct job {
        save_image,
        is_raw,
        output_file);
+       output_file,
+       timeout);
   }
 
   inline void resize_for_num_steps(int steps) {

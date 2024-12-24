@@ -142,12 +142,14 @@ std::string metrics::to_json() {
       size_t queued = 0;
       // size_t rendering = 0;
       size_t rendered = 0;
+      size_t timeouts = 0;
       std::chrono::time_point<std::chrono::high_resolution_clock> render_begin = job.chunks[0].render_begin;
       std::chrono::time_point<std::chrono::high_resolution_clock> render_end = job.chunks[0].render_begin;
       for (const auto &chunk : job.chunks) {
         if (chunk.state == job_state::queued) queued++;
         // if (chunk.state == job_state::rendering) rendering++;
         if (chunk.state == job_state::rendered) rendered++;
+        if (chunk.state == job_state::timeout) timeouts++;
         render_begin = std::min(render_begin, chunk.render_begin);
         render_end = std::max(render_end, chunk.render_end);
       }
@@ -160,6 +162,9 @@ std::string metrics::to_json() {
       }
       if (job.skipped) {
         s = job_state::skipped;
+      }
+      if (timeouts > 0) {
+        s = job_state::timeout;
       }
       json json_job;
       switch (s) {
@@ -175,6 +180,7 @@ std::string metrics::to_json() {
           json_job["gen_time"] = time_diff(job.generate_begin, job.generate_end);
           json_job["render_time"] = time_diff(render_begin, std::chrono::high_resolution_clock::now());
           break;
+        case job_state::timeout:
         case job_state::rendered:
           json_job["number"] = job.number;
           json_job["state"] = str(s);
@@ -202,6 +208,7 @@ std::string metrics::to_json() {
               case job_state::rendering:
                 json_chunk["rendering_time"] = time_diff(chunk.render_begin, std::chrono::high_resolution_clock::now());
                 break;
+              case job_state::timeout:
               case job_state::rendered:
                 json_chunk["rendering_time"] = time_diff(chunk.render_begin, chunk.render_end);
                 break;
@@ -377,7 +384,7 @@ void metrics::update_steps(int job_number, int attempt, int next_step) {
   }
 }
 
-void metrics::complete_render_job(int thread_number, int job_number, int chunk) {
+void metrics::complete_render_job(int thread_number, int job_number, int chunk, job_state state) {
   if (!initialized) return;
   std::unique_lock lock(mut);
   if (threads_.find(thread_number) != threads_.end()) {
@@ -390,7 +397,7 @@ void metrics::complete_render_job(int thread_number, int job_number, int chunk) 
     }
     if (size_t(chunk) >= jobs_[job_number].chunks.size()) return;
     jobs_[job_number].chunks[chunk].render_end = std::chrono::high_resolution_clock::now();
-    jobs_[job_number].chunks[chunk].state = metrics::job_state::rendered;
+    jobs_[job_number].chunks[chunk].state = state;
     for (const auto &chunk : jobs_[job_number].chunks) {
       if (chunk.state != metrics::job_state::rendered) return;
     }
@@ -489,6 +496,7 @@ void metrics::display(std::function<void(const std::string &)> f1,
            << "Gen.Time: " << time_diff(job.generate_begin, job.generate_end) << " "
            << "Render Time: " << time_diff(render_begin, std::chrono::high_resolution_clock::now()) << " ";
         break;
+      case job_state::timeout:
       case job_state::rendered:
         ss << "Job: " << job.number << " " << str(s) << " "
            << "Gen.Time: " << time_diff(job.generate_begin, job.generate_end) << " "
@@ -516,6 +524,9 @@ void metrics::display(std::function<void(const std::string &)> f1,
               break;
             case job_state::rendered:
               ss << " Rendered T: " << time_diff(chunk.render_begin, chunk.render_end) << " ";
+              break;
+            case job_state::timeout:
+              ss << " Timed-out T: " << time_diff(chunk.render_begin, chunk.render_end) << " ";
               break;
           }
           for (const auto &obj : chunk.objects) {

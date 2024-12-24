@@ -342,8 +342,8 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     auto the_job = gen->get_job();
     interpreter::job_mapper jm(the_job);
     jm.map_viewpoint(viewpoint);
-
     jm.map_output_file(f.output_file());
+    the_job->timeout = f.timeout();
 
     if (f.num_chunks() == 1) {
       jm.map_last_frame(f.last_frame());

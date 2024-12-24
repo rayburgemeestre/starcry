@@ -36,6 +36,7 @@
     <q-input v-model.number="viewpoint_store_raw.offset_x" label="offset x" />
     <q-input v-model.number="viewpoint_store_raw.offset_y" label="offset y" />
     <q-input v-model.number="script_store.num_chunks" label="num chunks" />
+    <q-input v-model.number="script_store.timeout" label="timeout" />
     <q-input v-model.number="viewpoint_store_raw.scale" label="scale" />
     <br />
     <q-checkbox dark v-model="viewpoint_store_raw.labels" label="Labels" color="#990000" />
@@ -187,6 +188,7 @@ export default defineComponent({
           frame: parseInt(script_store.frame),
           // viewpoint_settings: viewpoint_settings,
           num_chunks: parseInt(script_store.num_chunks),
+          timeout: parseInt(script_store.timeout),
           selected: script_store.selected,
         });
       },
@@ -196,6 +198,7 @@ export default defineComponent({
           filename: script_store.filename,
           frame: 0,
           num_chunks: parseInt(script_store.num_chunks),
+          timeout: parseInt(script_store.timeout),
           video: true,
           width: video_width,
           height: video_height,

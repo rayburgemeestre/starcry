@@ -114,7 +114,7 @@ void redis_client::run(bitmap_wrapper& bitmap, rendering_engine& engine) {
         std::string shapes_json_buffer;
 
         {
-          delayed_exit de(5, [&]() {
+          delayed_exit de(job.timeout, [&]() {
             redis.publish("TIMEOUT", std::format("{}|{}|{}", my_id_, job.job_number, job.chunk));
           });
           bmp = sc.render_job(getpid(), engine, job, settings, selected_ids_transitive);

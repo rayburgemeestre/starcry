@@ -25,6 +25,7 @@ export function create_stats_endpoint() {
         let rendering = -1;
         let rendered = -1;
         let queued = -1;
+        let timedout = -1;
         const jobs = buffer.data.jobs || [];
         let last_job = null;
         for (const job of jobs) {
@@ -37,6 +38,11 @@ export function create_stats_endpoint() {
             rendered = Math.max(rendered, job.number);
           } else if (job.state == 'QUEUED') {
             queued = Math.max(queued, job.number);
+          } else if (job.state == 'TIMEOUT') {
+            timedout = Math.max(timedout, job.number);
+            // since there is no bitmap going to be arriving in the case of a timeout
+            const bitmap_store = useBitmapStore();
+            bitmap_store.loading = false;
           }
         }
         if (last_job) {
@@ -48,6 +54,7 @@ export function create_stats_endpoint() {
         script_store.job_rendering = rendering;
         script_store.job_rendered = rendered;
         script_store.job_queued = queued;
+        script_store.job_timedout = timedout;
       } else if (buffer.type === 'stats') {
         stats_store.rows_piper.value = [];
         const components = buffer.data || [];

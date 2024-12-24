@@ -205,8 +205,8 @@ public:
       if (!options.interactive) {
         bool is_raw = vm.count("raw");
         if (options.frame_of_interest != std::numeric_limits<size_t>::max()) {
-          auto req =
-              std::make_shared<data::frame_request>(options.script_file, options.frame_of_interest, options.num_chunks);
+          auto req = std::make_shared<data::frame_request>(
+              options.script_file, options.frame_of_interest, options.num_chunks, 10);
           req->enable_raw_image();
           req->enable_raw_bitmap();
           req->enable_compressed_image();

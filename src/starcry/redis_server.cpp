@@ -205,6 +205,14 @@ void redis_server::run() {
             }
           } else if (channel == "TIMEOUT") {
             logger(ERROR) << "Client timed out: " << msg_in << std::endl;
+            const auto& [worker_id, server_id, job_num, job_chunk] = split<4>(msg_in, '|');
+            // Update status in metrics object
+            if (std::stoul(job_num) == std::numeric_limits<uint32_t>::max()) {
+              sc.metrics_->complete_render_job(0, -1, std::stoi(job_chunk), metrics::job_state::timeout);
+            } else {
+              sc.metrics_->complete_render_job(
+                  0, std::stoi(job_num), std::stoi(job_chunk), metrics::job_state::timeout);
+            }
           }
         });
         sub.subscribe("REGISTER");

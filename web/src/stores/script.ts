@@ -19,6 +19,7 @@ export const useScriptStore = defineStore('script', {
 
     auto_render: true,
     num_chunks: 1,
+    timeout: 20,
 
     texture_w: ref(0),
     texture_h: ref(0),
@@ -27,6 +28,7 @@ export const useScriptStore = defineStore('script', {
     job_rendering: ref(0),
     job_rendered: ref(0),
     job_queued: ref(0),
+    job_timedout: ref(0),
 
     // used as event handlers
     value_updated_by_user: ref(0),

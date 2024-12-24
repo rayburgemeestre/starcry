@@ -31,9 +31,13 @@ void BitmapHandler::onData(seasocks::WebSocket* con, const char* data) {
   logger(DEBUG) << "BitmapHandler::onData - " << input << std::endl;
   auto json = nlohmann::json::parse(input);
   auto num_chunks = 32;
+  auto timeout = 5;
   std::vector<int64_t> selected_ids;
   if (json["num_chunks"].is_number_integer()) {
     num_chunks = json["num_chunks"];
+  }
+  if (json["timeout"].is_number_integer()) {
+    timeout = json["timeout"];
   }
   if (json["selected"].is_array()) {
     selected_ids = json["selected"].get<std::vector<int64_t>>();
@@ -43,7 +47,7 @@ void BitmapHandler::onData(seasocks::WebSocket* con, const char* data) {
       // auto reload_req = std::make_shared<data::reload_request>(json["filename"]);
       // sc->add_reload_command(reload_req);
 
-      auto req = std::make_shared<data::frame_request>(json["filename"], json["frame"], num_chunks);
+      auto req = std::make_shared<data::frame_request>(json["filename"], json["frame"], num_chunks, timeout);
       req->set_websocket(con);
       req->enable_raw_bitmap();
       req->set_selected_ids(selected_ids);
