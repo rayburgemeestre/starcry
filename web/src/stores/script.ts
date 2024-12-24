@@ -18,7 +18,7 @@ export const useScriptStore = defineStore('script', {
     highlighted: [] as number[],
 
     auto_render: true,
-    num_chunks: 1,
+    num_chunks: 64,
     timeout: 20,
 
     texture_w: ref(0),

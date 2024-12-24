@@ -559,55 +559,16 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
     std::swap(job_msg->pixels_raw, pixels_raw);
 
     if (job_client != nullptr && f && (f->raw_bitmap() || f->raw_image())) {
-      auto fun = [&](std::shared_ptr<BitmapHandler> bmp_handler,
-                     std::shared_ptr<render_msg> job_msg,
-                     seasocks::WebSocket* job_client,
-                     uint32_t width,
-                     uint32_t height) {
-        std::string buffer;
-        if (job_msg->pixels.size())
-          for (const auto& i : job_msg->pixels) {
-            buffer.append((char*)&i, sizeof(i));
-          }
-        else
-          for (const auto& i : job_msg->pixels_raw) {
-            uint32_t pixel = 0;
-            pixel |= (int(i.a * 255) << 24);
-            pixel |= (int(i.b * 255) << 16);
-            pixel |= (int(i.g * 255) << 8);
-            pixel |= (int(i.r * 255) << 0);
-            buffer.append((char*)&pixel, sizeof(pixel));
-          }
-        bmp_handler->callback(job_client, buffer, width, height);
-      };
-      if (webserv) {
+      if (webserv && !options().interactive) {
         // This code is a little verbose, but somehow I had issues with job_client and other values such as job_client,
         // not being (properly?) captured. I'm now passing stuff explicitly as parameters. My guess is that for reasons
         // beyond my understanding I was hitting some undefined behavior issue. And the compiler was optimizing stuff,
         // that resulted in inconsistent memory. I'm happy after hours of debugging that this more verbose versions
         // seems to be doing the right thing consistently.
         webserv->execute_bitmap(
-            [&fun, job_client, width, height](std::shared_ptr<BitmapHandler> bmp_handler,
-                                              std::shared_ptr<render_msg> job_msg) {
-              fun(bmp_handler, job_msg, job_client, width, height);
-            },
-            job_msg);
-      }
-    }
-
-    if (job_client != nullptr && f && f->compressed_image()) {
-      auto fun = [&](std::shared_ptr<ImageHandler> image_handler,
-                     std::shared_ptr<render_msg> job_msg,
-                     seasocks::WebSocket* job_client,
-                     uint32_t width,
-                     uint32_t height) {
-        image_handler->callback(job_client, job_msg->buffer);
-      };
-      if (webserv) {
-        webserv->execute_image(
-            [&fun, job_client, width, height](std::shared_ptr<ImageHandler> image_handler,
-                                              std::shared_ptr<render_msg> job_msg) {
-              fun(image_handler, job_msg, job_client, width, height);
+            [job_client, width, height](std::shared_ptr<BitmapHandler> bmp_handler,
+                                        std::shared_ptr<render_msg> job_msg) {
+              callback_to_bmp_handler(bmp_handler, job_msg, job_client, width, height, 1, 1);
             },
             job_msg);
       }
@@ -615,39 +576,11 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
 
     if (job_client != nullptr && f && f->metadata_objects()) {
       job_msg->ID = webserv->get_client_id(job_client);
-      auto fun = [&](std::shared_ptr<ObjectsHandler> objects_handler,
-                     std::shared_ptr<render_msg> job_msg,
-                     seasocks::WebSocket* job_client,
-                     uint32_t width,
-                     uint32_t height) {
-        if (objects_handler->_links.contains(job_msg->ID)) {
-          auto con = objects_handler->_links[job_msg->ID];  // find con that matches ID this msg is from
-          objects_handler->callback(con, job_msg->buffer);
-        }
-      };
       if (webserv) {
         webserv->execute_objects(
-            [&fun, job_client, width, height](std::shared_ptr<ObjectsHandler> objects_handler,
-                                              std::shared_ptr<render_msg> job_msg) {
-              fun(objects_handler, job_msg, job_client, width, height);
-            },
-            job_msg);
-      }
-    }
-
-    if (job_client != nullptr && f && f->renderable_shapes()) {
-      auto fun = [&](std::shared_ptr<ShapesHandler> shapes_handler,
-                     std::shared_ptr<render_msg> job_msg,
-                     seasocks::WebSocket* job_client,
-                     uint32_t width,
-                     uint32_t height) {
-        shapes_handler->callback(job_client, job_msg->buffer);
-      };
-      if (webserv) {
-        webserv->execute_shapes(
-            [&fun, job_client, width, height](std::shared_ptr<ShapesHandler> shapes_handler,
-                                              std::shared_ptr<render_msg> job_msg) {
-              fun(shapes_handler, job_msg, job_client, width, height);
+            [job_client, width, height](std::shared_ptr<ObjectsHandler> objects_handler,
+                                        std::shared_ptr<render_msg> job_msg) {
+              callback_to_objects_handler(objects_handler, job_msg, job_client, width, height);
             },
             job_msg);
       }
@@ -755,15 +688,16 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
   if (finished && webserv) {
     if (!options().interactive) {
       webserv->stop();
-    } else if (v && job_client) {
-      auto fun = [&](std::shared_ptr<BitmapHandler> bmp_handler, seasocks::WebSocket* job_client) {
-        // notifies client we're done w/o any data
-        bmp_handler->callback(job_client);
-      };
+    } else if (f && job_client) {
       if (webserv) {
+        const auto width = job_msg->original_job_message->job->width;
+        const auto height = job_msg->original_job_message->job->height;
+        const auto chunk = job_msg->original_job_message->job->chunk;
+        const auto num_chunks = job_msg->original_job_message->job->num_chunks;
         webserv->execute_bitmap(
-            [&fun, job_client](std::shared_ptr<BitmapHandler> bmp_handler, std::shared_ptr<render_msg> job_msg) {
-              fun(bmp_handler, job_client);
+            [job_client, width, height, chunk, num_chunks](std::shared_ptr<BitmapHandler> bmp_handler,
+                                                           std::shared_ptr<render_msg> job_msg) {
+              callback_to_bmp_handler(bmp_handler, job_msg, job_client, width, height, chunk, num_chunks);
             },
             job_msg);
       }

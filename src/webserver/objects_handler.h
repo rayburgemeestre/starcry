@@ -19,3 +19,9 @@ struct ObjectsHandler : seasocks::WebSocket::Handler, public starcry_handler {
 
   void callback(seasocks::WebSocket *recipient, std::string s);
 };
+
+void callback_to_objects_handler(std::shared_ptr<ObjectsHandler> objects_handler,
+                                 std::shared_ptr<render_msg> job_msg,
+                                 seasocks::WebSocket *job_client,
+                                 uint32_t width,
+                                 uint32_t height);

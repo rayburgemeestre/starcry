@@ -24,6 +24,9 @@ std::vector<uint32_t> transfer_pixels;
 SDL_Texture *texture = nullptr;
 int texture_w = 0;
 int texture_h = 0;
+int chunk = 1;
+int num_chunks = 1;
+int last_num_chunks = 1;
 SDL_Renderer *renderer = nullptr;
 int x = 0, y = 0;
 bool pointer_state = true;
@@ -322,12 +325,15 @@ void set_texture(std::string data) {
     texture = nullptr;
   }
   wake_main_loop();
-  size_t n = data.size() - 8;
+  size_t n = data.size() - 16;
   char *ptr = &(data[0]);
   memcpy(&texture_w, ptr + n, sizeof(uint32_t));
   memcpy(&texture_h, ptr + n + sizeof(uint32_t), sizeof(uint32_t));
   texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, texture_w, texture_h);
   SDL_UpdateTexture(texture, NULL, (void *)&(data[0]), texture_w * sizeof(Uint32));
+  memcpy(&chunk, ptr + n + sizeof(uint32_t) * 2, sizeof(uint32_t));
+  memcpy(&num_chunks, ptr + n + sizeof(uint32_t) * 3, sizeof(uint32_t));
+
 }
 
 int get_mouse_x() {

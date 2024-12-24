@@ -85,14 +85,21 @@ void BitmapHandler::onData(seasocks::WebSocket* con, const char* data) {
   }
 }
 
-void BitmapHandler::callback(seasocks::WebSocket* recipient, std::string s, uint32_t width, uint32_t height) {
+void BitmapHandler::callback(seasocks::WebSocket* recipient,
+                             std::string s,
+                             uint32_t width,
+                             uint32_t height,
+                             uint32_t chunk,
+                             uint32_t num_chunks) {
   if (_cons.find(recipient) != _cons.end()) {
     size_t n = s.size();
-    // append 8 chars (room for 2 32-bit ints)
-    s.append("        ");
+    // append 16 chars (room for 4 32-bit ints)
+    s.append("                ");
     char* ptr = s.data() + n;
     memcpy(ptr, &width, sizeof(width));
     memcpy(ptr + sizeof(uint32_t), &height, sizeof(height));
+    memcpy(ptr + sizeof(uint32_t) * 2, &chunk, sizeof(chunk));
+    memcpy(ptr + sizeof(uint32_t) * 3, &num_chunks, sizeof(num_chunks));
     recipient->send((const uint8_t*)s.c_str(), s.size() * sizeof(uint8_t));
   }
 }
@@ -101,4 +108,28 @@ void BitmapHandler::callback(seasocks::WebSocket* recipient) {
   if (_cons.find(recipient) != _cons.end()) {
     recipient->send(nullptr, 0);
   }
+}
+
+void callback_to_bmp_handler(std::shared_ptr<BitmapHandler> bmp_handler,
+                             std::shared_ptr<render_msg> job_msg,
+                             seasocks::WebSocket* job_client,
+                             uint32_t width,
+                             uint32_t height,
+                             uint32_t chunk,
+                             uint32_t num_chunks) {
+  std::string buffer;
+  if (job_msg->pixels.size())
+    for (const auto& i : job_msg->pixels) {
+      buffer.append((char*)&i, sizeof(i));
+    }
+  else
+    for (const auto& i : job_msg->pixels_raw) {
+      uint32_t pixel = 0;
+      pixel |= (int(i.a * 255) << 24);
+      pixel |= (int(i.b * 255) << 16);
+      pixel |= (int(i.g * 255) << 8);
+      pixel |= (int(i.r * 255) << 0);
+      buffer.append((char*)&pixel, sizeof(pixel));
+    }
+  bmp_handler->callback(job_client, buffer, width, height, chunk, num_chunks);
 }

@@ -18,10 +18,8 @@
 class starcry;
 
 #include "webserver/bitmap_handler.h"
-#include "webserver/image_handler.h"
 #include "webserver/objects_handler.h"
 #include "webserver/script_handler.h"
-#include "webserver/shapes_handler.h"
 #include "webserver/stats_handler.h"
 #include "webserver/viewpoint_handler.h"
 
@@ -35,8 +33,6 @@ class stats;
 class webserver {
 private:
   std::shared_ptr<seasocks::Server> server;
-  std::shared_ptr<ImageHandler> image_handler;
-  std::shared_ptr<ShapesHandler> shapes_handler;
   std::shared_ptr<BitmapHandler> bitmap_handler;
   std::shared_ptr<ScriptHandler> script_handler;
   std::shared_ptr<StatsHandler> stats_handler;
@@ -50,18 +46,6 @@ public:
   void stop();
   void set_script(const std::string &script);
 
-  template <typename T>
-  void execute_image(T fun, std::shared_ptr<render_msg> job_msg) {
-    if (server) {
-      server->execute(std::bind(fun, image_handler, job_msg));
-    }
-  }
-  template <typename T>
-  void execute_shapes(T fun, std::shared_ptr<render_msg> job_msg) {
-    if (server) {
-      server->execute(std::bind(fun, shapes_handler, job_msg));
-    }
-  }
   template <typename T>
   void execute_bitmap(T fun, std::shared_ptr<render_msg> job_msg) {
     if (server) {

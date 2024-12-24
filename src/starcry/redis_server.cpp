@@ -117,8 +117,8 @@ void redis_server::run() {
             const auto& [hostname, id, job_num, job_chunk] = split<4>(msg, '|');
             const auto worker_id = std::format("{}|{}", hostname, id);
 
-            auto job_number = std::stoi(job_num);
-            auto job_chunk_num = std::stoi(job_chunk);
+            auto job_number = std::stoul(job_num);
+            auto job_chunk_num = std::stoul(job_chunk);
             auto find = outstanding_jobs2.find(std::make_pair(job_number, job_chunk_num));
             if (find == outstanding_jobs2.end()) {
               std::cerr << "redis_server - If you see this error, fire up the debugger! (2)" << std::endl;
@@ -146,10 +146,10 @@ void redis_server::run() {
               //   compress_vector<uint32_t> cv;
               //   cv.decompress(&dat.pixels, job.width * job.height);
               // }
-              auto find = outstanding_jobs2.find(std::make_pair(job.frame_number, job.chunk));
+              auto find = outstanding_jobs2.find(std::make_pair(job.job_number, job.chunk));
               std::shared_ptr<job_message> related_job;
               if (find == outstanding_jobs2.end()) {
-                auto find2 = outstanding_jobs3.find(std::make_pair(job.frame_number, job.chunk));
+                auto find2 = outstanding_jobs3.find(std::make_pair(job.job_number, job.chunk));
                 if (find2 == outstanding_jobs3.end()) {
                   std::cerr << "redis_server - If you see this error, fire up the debugger!" << std::endl;
                   std::exit(1);
@@ -168,7 +168,7 @@ void redis_server::run() {
               // remove the job from the outstanding_jobs2 and outstanding_jobs3 using std::erase
               {
                 std::scoped_lock lock(dispatch_job_mut_);
-                auto index = std::make_pair(job.frame_number, job.chunk);
+                auto index = std::make_pair(job.job_number, job.chunk);
                 if (outstanding_jobs2.contains(index)) {
                   outstanding_jobs2.erase(index);
                 }
@@ -305,7 +305,7 @@ bool redis_server::dispatch_job(std::shared_ptr<job_message> job) {
     const auto selected_ids_transitive = sc.selected_ids_transitive(job);
     archive(selected_ids_transitive);
 
-    outstanding_jobs2[std::make_pair(job->job->frame_number, job->job->chunk)] =
+    outstanding_jobs2[std::make_pair(job->job->job_number, job->job->chunk)] =
         std::make_pair(std::chrono::high_resolution_clock::now(), job);
     // sc.renderserver->send_msg(sockfd, starcry_msgs::pull_job_response, os.str().c_str(),
     // os.str().size());

@@ -44,3 +44,14 @@ void ObjectsHandler::callback(seasocks::WebSocket* recipient, std::string s) {
     recipient->send(s);
   }
 }
+
+void callback_to_objects_handler(std::shared_ptr<ObjectsHandler> objects_handler,
+                                 std::shared_ptr<render_msg> job_msg,
+                                 seasocks::WebSocket* job_client,
+                                 uint32_t width,
+                                 uint32_t height) {
+  if (objects_handler->_links.contains(job_msg->ID)) {
+    auto con = objects_handler->_links[job_msg->ID];  // find con that matches ID this msg is from
+    objects_handler->callback(con, job_msg->buffer);
+  }
+};

@@ -53,8 +53,6 @@ public:
 
 webserver::webserver(starcry *sc)
     : server(std::make_shared<seasocks::Server>(std::make_shared<MyLogger>(MyLogger::Level::Info))),
-      image_handler(std::make_shared<ImageHandler>(sc)),
-      shapes_handler(std::make_shared<ShapesHandler>(sc)),
       bitmap_handler(std::make_shared<BitmapHandler>(sc)),
       script_handler(std::make_shared<ScriptHandler>(sc)),
       stats_handler(std::make_shared<StatsHandler>(sc)),
@@ -64,8 +62,6 @@ webserver::webserver(starcry *sc)
   root->add(std::make_shared<seasocks::PathHandler>("data", std::make_shared<DataHandler>()));
   server->addPageHandler(root);
   server->setClientBufferSize(6653847300);
-  server->addWebSocketHandler("/image", image_handler);
-  server->addWebSocketHandler("/shapes", shapes_handler);
   server->addWebSocketHandler("/bitmap", bitmap_handler);
   server->addWebSocketHandler("/script", script_handler);
   server->addWebSocketHandler("/stats", stats_handler);

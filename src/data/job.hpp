@@ -27,7 +27,7 @@ struct job {
   uint32_t frame_number = 0;
   bool rendered = false;
   bool last_frame = false;
-  uint32_t chunk = 0;
+  uint32_t chunk = 1;
   uint32_t num_chunks = 1;
   data::color background_color;
   // for each rendering pass the list of shapes
@@ -69,7 +69,6 @@ struct job {
        compress,
        save_image,
        is_raw,
-       output_file);
        output_file,
        timeout);
   }

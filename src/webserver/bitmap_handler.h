@@ -17,6 +17,18 @@ struct BitmapHandler : seasocks::WebSocket::Handler, public starcry_handler {
   void onDisconnect(seasocks::WebSocket *con) override;
   void onData(seasocks::WebSocket *con, const char *data) override;
 
-  void callback(seasocks::WebSocket *recipient, std::string s, uint32_t width, uint32_t height);
+  void callback(seasocks::WebSocket *recipient,
+                std::string s,
+                uint32_t width,
+                uint32_t height,
+                uint32_t chunk,
+                uint32_t num_chunks);
   void callback(seasocks::WebSocket *recipient);
 };
+void callback_to_bmp_handler(std::shared_ptr<BitmapHandler> bmp_handler,
+                             std::shared_ptr<render_msg> job_msg,
+                             seasocks::WebSocket *job_client,
+                             uint32_t width,
+                             uint32_t height,
+                             uint32_t chunk,
+                             uint32_t num_chunks);
