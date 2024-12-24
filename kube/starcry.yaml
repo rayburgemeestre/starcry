@@ -56,7 +56,7 @@ spec:
     matchLabels:
       app: starcry-workers
       tier: starcry
-  replicas: 2
+  replicas: 8
   revisionHistoryLimit: 2
   template:
     metadata:
@@ -175,3 +175,32 @@ spec:
   selector:
     app: redis
     tier: starcry
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    kubernetes.io/ingress.provider: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+  name: starcry
+  namespace: starcry
+spec:
+  rules:
+  - host: sc.cppse.nl
+    http:
+      paths:
+      - backend:
+          service:
+            name: starcry
+            port:
+              number: 18080
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - sc.cppse.nl
+    secretName: starcry-tls
