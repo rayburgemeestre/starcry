@@ -1,6 +1,7 @@
 import { StarcryAPI } from 'components/api';
 import { useStatsStore } from 'stores/stats';
 import { useScriptStore } from 'stores/script';
+import { useBitmapStore } from 'stores/bitmap';
 
 export function create_stats_endpoint() {
   const stats_store = useStatsStore();

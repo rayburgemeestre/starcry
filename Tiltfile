@@ -7,7 +7,7 @@ k8s_yaml(kustomize('kube/dev'))
 # Compile the binary
 local_resource(
     'starcry-binary',
-    cmd='make build',
+    cmd='make debug',
     deps=['src/'],
     labels=['build']
 )

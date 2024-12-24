@@ -39,34 +39,72 @@
           <q-input v-if="selected == key" v-model="object_names[key]" label="name" />
           <q-table
             v-if="selected == key"
-            dense
             :rows="rows[key]"
             :columns="columns"
             row-key="name"
             @row-click="on_row_click"
+            dense
             :filter="filter"
             hide-header
             hide-pagination
             :rows-per-page-options="[100]"
           >
+            <template v-slot:body-cell="props">
+              <q-td :props="props" dense>
+                <q-input
+                  v-if="
+                    props.col.name === 'value' &&
+                    props.row[0] != 'init' &&
+                    props.row[0] != 'time' &&
+                    editing_cell === props.row[0]
+                  "
+                  v-model="props.row[1]"
+                  dense
+                  borderless
+                  @blur="on_cell_change(props.row)"
+                  @keyup.enter="on_cell_change(props.row)"
+                />
+                <div
+                  v-if="
+                    props.col.name === 'value' &&
+                    props.row[0] != 'init' &&
+                    props.row[0] != 'time' &&
+                    editing_cell !== props.row[0]
+                  "
+                  @click="start_editing($event.target, props.row)"
+                >
+                  {{ props.value }}
+                </div>
+                <span v-if="props.col.name !== 'value' || props.row[0] == 'init' || props.row[0] == 'time'">
+                  {{ props.value }}
+                </span>
+              </q-td>
+            </template>
           </q-table>
         </q-item-section>
+      </q-item>
+      <q-separator spaced />
+      <q-item>
+        <q-btn color="primary" label="Update" @click="save_changes"></q-btn>
       </q-item>
     </q-list>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, onMounted, ref, watch } from 'vue';
+import { defineComponent, nextTick, onMounted, ref, watch } from 'vue';
 import { JsonWithObjectsParser } from 'components/json_parser';
 import { useScriptStore } from 'stores/script';
+import { useProjectStore } from 'stores/project';
+
 export default defineComponent({
   name: 'EditorPage',
   components: {},
   setup() {
     let script_store = useScriptStore();
-    let p = new JsonWithObjectsParser(script_store.script);
-    let parsed = p.parsed();
+    let project_store = useProjectStore();
+
+    let parsed = project_store.parser.parsed();
     let gradients = ref(parsed ? parsed['gradients'] : {});
     let objects = ref(parsed ? parsed['objects'] : {});
     let selected = ref('');
@@ -80,8 +118,10 @@ export default defineComponent({
       }
 
       // get as new
-      let p = new JsonWithObjectsParser(script_store.script);
-      let parsed = p.parsed();
+      if (!project_store.parser) {
+        project_store.parser = new JsonWithObjectsParser(script_store.script);
+      }
+      let parsed = project_store.parser.parsed();
       let gradients = parsed ? parsed['gradients'] : {};
 
       for (let node of document.querySelectorAll('canvas.gradient_preview')) {
@@ -174,13 +214,14 @@ export default defineComponent({
           current_evt_element.classList.remove('bg-amber-5');
         }
         if (script_store.current_function !== row[1]) {
-          script_store.set_snippet(p.fun(row[1]), true);
+          script_store.set_snippet(project_store.parser.fun(row[1]), true);
           script_store.current_function = row[1];
           evt.target.parentNode.classList.add('bg-amber-5');
           current_evt_element = evt.target.parentNode;
         } else {
           evt.target.parentNode.classList.remove('bg-amber-5');
           script_store.set_snippet('', true);
+          script_store.current_function = '';
         }
       }
     }
@@ -194,6 +235,51 @@ export default defineComponent({
       script_store.current_function = '';
     }
 
+    const editing_cell = ref(null);
+    const originalValue = ref(null);
+
+    const start_editing = async (el, row) => {
+      let prop = row[0];
+      let value = row[1];
+      editing_cell.value = prop;
+      originalValue.value = value;
+      let par = el.parentNode;
+
+      // Wait for the DOM to update
+      await nextTick();
+      // Focus the input
+      setTimeout(function () {
+        par.querySelector('input').focus();
+      }, 100);
+      setTimeout(function () {
+        par.querySelector('input').focus();
+      }, 1000);
+    };
+
+    const on_cell_change = (row) => {
+      let prop = row[0];
+      let value = row[1];
+
+      // Return early if value hasn't changed
+      if (value === originalValue.value) {
+        editing_cell.value = null;
+        originalValue.value = null;
+        return;
+      }
+
+      objects.value[selected.value][prop] = value;
+      // result is on the debug page
+      // script_store.set_result(project_store.parser.to_string(), false);
+      save_changes();
+    };
+
+    const save_changes = () => {
+      let script = project_store.parser.to_string();
+      script_store.set_value(script, true);
+      editing_cell.value = null;
+      originalValue.value = null;
+    };
+
     return {
       parsed,
       gradients,
@@ -204,6 +290,10 @@ export default defineComponent({
       object_names,
       on_row_click,
       clear_fun_select,
+      editing_cell,
+      start_editing,
+      on_cell_change,
+      save_changes,
     };
   },
 });

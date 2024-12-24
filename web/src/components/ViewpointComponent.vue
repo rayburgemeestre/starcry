@@ -22,16 +22,6 @@
     <q-btn color="secondary" style="width: 50%">Previous</q-btn>
     <q-btn color="secondary" style="width: 50%">Next</q-btn>
 
-    <q-table
-      dense
-      :rows="rows"
-      :columns="columns"
-      row-key="name"
-      hide-header
-      hide-pagination
-      :rows-per-page-options="[100]"
-    >
-    </q-table>
     <br />
     <q-input v-model.number="viewpoint_store_raw.offset_x" label="offset x" />
     <q-input v-model.number="viewpoint_store_raw.offset_y" label="offset y" />
@@ -61,6 +51,17 @@
     <q-btn :loading="bitmap_store.loading" color="secondary" @click="render_current_video" style="width: 100%"
       >Render video</q-btn
     >
+    <br />
+    <q-table
+      dense
+      :rows="rows"
+      :columns="columns"
+      row-key="name"
+      hide-header
+      hide-pagination
+      :rows-per-page-options="[100]"
+    >
+    </q-table>
   </div>
 </template>
 
@@ -178,6 +179,7 @@ export default defineComponent({
       },
       restart_server: function () {
         script_store.restart_server_requested_by_user++;
+        bitmap_store.loading = false;
       },
       render_current_frame: function () {
         bitmap_store.loading = true;

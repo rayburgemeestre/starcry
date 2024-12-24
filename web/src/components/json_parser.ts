@@ -1,6 +1,7 @@
 export class JsonWithObjectsParser {
   private json_str: string;
   private obj: undefined;
+  private remainder: string;
   private functions: any[];
 
   constructor(json_str: string) {
@@ -8,6 +9,7 @@ export class JsonWithObjectsParser {
     this.json_str = this.json_str.substr(this.json_str.indexOf('{'));
     this.obj = undefined;
     this.functions = [];
+    this.remainder = '';
     this._parse();
   }
   parsed() {
@@ -31,7 +33,7 @@ export class JsonWithObjectsParser {
       str = str.replace('"FUNCTION ' + num + '"', fun);
       num++;
     }
-    return '_ = ' + str;
+    return '_ = ' + str + '\n;\n' + this.remainder;
   }
 
   fun(lookup) {
@@ -202,6 +204,7 @@ export class JsonWithObjectsParser {
       if (remainder[0] === ';') {
         remainder = remainder.substr(1);
       }
+      this.remainder = remainder;
       this.obj = eval('true; ' + remainder + '; (function() { return ' + trail + '; })()');
     } catch (e) {
       console.log(trail);

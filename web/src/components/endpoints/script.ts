@@ -4,6 +4,7 @@ import { create_tree, sort_tree } from 'components/filetree';
 import { useScriptStore } from 'stores/script';
 import { useFilesStore } from 'stores/files';
 import { useViewpointStore } from 'stores/viewpoint';
+import { useProjectStore } from 'stores/project';
 import { watch } from 'vue';
 import { hash } from 'components/hash';
 
@@ -11,6 +12,7 @@ let timeout_script_updates: NodeJS.Timeout | null = null;
 
 export function create_script_endpoint() {
   const script_store = useScriptStore();
+  const project_store = useProjectStore();
   const files_store = useFilesStore();
   const viewpoint_store = useViewpointStore();
 
@@ -28,14 +30,14 @@ export function create_script_endpoint() {
       } else if (buffer[0] === '2') {
         script_store.script = buffer.slice(1);
 
-        const p = new JsonWithObjectsParser(script_store.script);
+        project_store.parser = new JsonWithObjectsParser(script_store.script);
         // this.$data.input_source = buffer;
-        script_store.video = p.parsed()['video'] || {};
-        script_store.preview = p.parsed()['preview'] || {};
+        script_store.video = project_store.parser.parsed()['video'] || {};
+        script_store.preview = project_store.parser.parsed()['preview'] || {};
         viewpoint_store.scale = script_store.video['scale'] || 1;
         let total_duration = 0;
         script_store.frames_per_scene = [];
-        for (const scene of p.parsed()['scenes']) {
+        for (const scene of project_store.parser.parsed()['scenes']) {
           if (scene.duration) {
             total_duration += scene.duration;
           }

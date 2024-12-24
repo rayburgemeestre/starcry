@@ -24,7 +24,7 @@ import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 import { initVimMode } from 'monaco-vim/lib';
 import { EmacsExtension } from 'monaco-emacs';
-import { JsonWithObjectsParser } from 'components/json_parser';
+import { useProjectStore } from 'stores/project';
 
 window.MonacoEnvironment = {
   getWorker(_, label) {
@@ -47,6 +47,7 @@ window.MonacoEnvironment = {
 let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 
 let script_store = useScriptStore();
+let project_store = useProjectStore();
 
 export default defineComponent({
   name: 'MonacoEditor',
@@ -100,9 +101,8 @@ export default defineComponent({
         script_store.set_value(value, false);
       } else if (this.target === 'snippet') {
         script_store.set_snippet(value, false);
-        let parser = new JsonWithObjectsParser(script_store.script);
-        parser.update_function(script_store.current_function, script_store.snippet);
-        script_store.set_result(parser.to_string(), false);
+        project_store.parser.update_function(script_store.current_function, script_store.snippet);
+        script_store.set_result(project_store.parser.to_string(), false);
       } else if (this.target === 'result') {
         script_store.set_result(value, false);
       }
