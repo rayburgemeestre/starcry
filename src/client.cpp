@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
+#include <tuple>
 
 #include "cereal/archives/json.hpp"
 #include "nlohmann/json.hpp"
@@ -21,6 +22,7 @@ std::chrono::high_resolution_clock::time_point begin_time, end_time;
 rendering_engine engine;
 data::job job;
 std::vector<uint32_t> transfer_pixels;
+std::map<int, std::tuple<SDL_Rect, SDL_Rect, SDL_Texture *>> textures;  // by chunk
 SDL_Texture *texture = nullptr;
 int texture_w = 0;
 int texture_h = 0;
@@ -81,30 +83,22 @@ void mainloop(void *arg) {
   render_shapes_to_texture();
 #endif
 
-  SDL_Rect texture_rect;
-  texture_rect.x = 0;
-  texture_rect.y = 0;
-  texture_rect.w = job.canvas_w;
-  texture_rect.h = job.canvas_h;
-
-  SDL_Rect texture_source_rect;
-  texture_source_rect.x = 0;
-  texture_source_rect.y = 0;
-  texture_source_rect.w = texture_w;
-  texture_source_rect.h = texture_h;
-
   double ratio_w = double(job.canvas_w) / double(texture_w);
   // double ratio_h = double(job.canvas_h) / double(texture_h);
   double ratio = ratio_w;  // std::min(ratio_w, ratio_h);
 
-  texture_rect.w = texture_w * ratio;
-  texture_rect.h = texture_h * ratio;
-  texture_rect.x = (int(job.canvas_w) - texture_rect.w) / 2;
-  texture_rect.y = (int(job.canvas_h) - texture_rect.h) / 2;
-
   // SDL_RenderCopy(renderer, texture, &texture_source_rect, &texture_rect);
   // This will not resize, so if it's too big or small, just put it at 0,0
-  SDL_RenderCopy(renderer, texture, &texture_source_rect, &texture_rect);
+  // SDL_RenderCopy(renderer, texture, &texture_source_rect, &texture_rect);
+
+  for (const auto &tex : textures) {
+    SDL_RenderCopy(renderer, std::get<2>(tex.second), &std::get<0>(tex.second), &std::get<1>(tex.second));
+    // Draw box around the texture rectangles
+    // SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255);
+    // SDL_RenderDrawRect(renderer, &std::get<1>(tex.second));
+    // SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);
+    // SDL_RenderDrawRect(renderer, &std::get<1>(tex.second));
+  }
 
   if (pointer_state) {
     SDL_RenderFillRect(renderer, &r);
@@ -329,11 +323,54 @@ void set_texture(std::string data) {
   char *ptr = &(data[0]);
   memcpy(&texture_w, ptr + n, sizeof(uint32_t));
   memcpy(&texture_h, ptr + n + sizeof(uint32_t), sizeof(uint32_t));
-  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, texture_w, texture_h);
-  SDL_UpdateTexture(texture, NULL, (void *)&(data[0]), texture_w * sizeof(Uint32));
   memcpy(&chunk, ptr + n + sizeof(uint32_t) * 2, sizeof(uint32_t));
   memcpy(&num_chunks, ptr + n + sizeof(uint32_t) * 3, sizeof(uint32_t));
 
+  if (num_chunks != last_num_chunks) {
+    // clear all textures first
+    for (auto &tex : textures) {
+      SDL_DestroyTexture(std::get<2>(tex.second));
+    }
+    textures.clear();
+  }
+  last_num_chunks = num_chunks;
+
+  // printf("texture_w: %d, texture_h: %d, chunk: %d, num_chunks: %d\n", texture_w, texture_h, chunk, num_chunks);
+  // printf("data size: %d\n", (int)data.size());
+
+  // chunk texture
+  if (textures.find(chunk) != textures.end()) {
+    SDL_DestroyTexture(std::get<2>(textures[chunk]));
+    textures.erase(chunk);
+  }
+
+  std::get<0>(textures[chunk]) = {0, 0, texture_w, texture_h};
+  std::get<1>(textures[chunk]) = {0, (chunk - 1) * texture_h, texture_w, texture_h};
+  std::get<2>(textures[chunk]) =
+      SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, texture_w, texture_h);
+  SDL_UpdateTexture(std::get<2>(textures[chunk]), NULL, (void *)(ptr + 16), texture_w * sizeof(Uint32));
+
+  // we have the complicated issue that the last chunk can be more than the others in terms of height,
+  // e.g., with chunks 1, 2, 3, 4 (num_chunks 4), 10, 10, 10, 15 (if there are 5 remaining pixels)
+  // then the last texture will be positioned at (3 * 15 =) 45, which is 5 pixels too far (should be 3 x 10)
+
+  // we will now update the last chunk with any of the other chunks (if there are any)
+  auto last_chunk = textures.find(num_chunks);
+  if (last_chunk != textures.end()) {
+    // first find any other chunk, that is not the last one
+    for (auto &tex : textures) {
+      if (tex.first == num_chunks) {
+        continue;
+      }
+      std::get<1>(last_chunk->second).y = (num_chunks - 1) * std::get<0>(tex.second).h;
+      break;  // success
+    }
+  }
+
+  // This intermediate texture is no longer used, and we cannot do resizes anymore
+  // might delete this logic completely at some point.
+  texture = SDL_CreateTexture(
+      renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, texture_w, texture_h * num_chunks);
 }
 
 int get_mouse_x() {
