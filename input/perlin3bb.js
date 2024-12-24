@@ -86,7 +86,6 @@ _ = {
           'angle': this.angle + 15
         });
         if (this.props.depth > 0) {
-          output('heel ');
           this.spawn({
             'id': 'rings',
             'x': 0,
@@ -125,7 +124,7 @@ _ = {
         this.scale = 1.0 + (logn(t, 100) * 2);
         this.rotate = 360 * (1.0 + (logn(t, 100) * 1)) * (this.level / 100);
         t = 1.0;  // test
-        script.video.scale = 1.0 + (logn(t, 100) * 1);
+        SCRIPT_MAIN.video.scale = 1.0 + (logn(t, 100) * 1);
         // this.scale = this.props.scale
         this.radiussize = 20 * this.props.scale;
         this.radiussize = 10 * this.props.scale;

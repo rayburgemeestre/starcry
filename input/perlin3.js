@@ -85,7 +85,6 @@ script = {
           'angle': this.angle + 15
         });
         if (this.props.depth > 0) {
-          output('heel ');
           this.spawn({
             'id': 'rings',
             'x': 0,
