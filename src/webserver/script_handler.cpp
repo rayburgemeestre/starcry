@@ -46,8 +46,9 @@ void ScriptHandler::onData(seasocks::WebSocket* con, const char* data) {
   const auto find = input.find(" ");
   if (find != std::string::npos) {
     const auto cmd = input.substr(0, find);
-    const auto file = input.substr(find + 1);
     if (cmd == "open") {
+      const auto file = input.substr(find + 1);
+      set_script(file);
       logger(DEBUG) << "ScriptHandler::onData - " << input << std::endl;
       std::ifstream ifs(file);
       std::ostringstream ss;
@@ -58,8 +59,9 @@ void ScriptHandler::onData(seasocks::WebSocket* con, const char* data) {
       ss << "6" << sc->get_js_api();
       con->send(ss.str());
     } else if (cmd == "set") {
+      const auto file_contents = input.substr(find + 1);
       logger(DEBUG) << "ScriptHandler::onData - " << input << std::endl;
-      sc->update_script_contents(file);
+      sc->update_script_contents(file_contents);
       std::ostringstream ss;
       // TODO: we can re-use 3 for this, and rename all the others... 1 and 3 are the same.
       ss << "3" << sc->script();
