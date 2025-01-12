@@ -58,7 +58,8 @@
                     props.row[0] != 'time' &&
                     editing_cell === props.row[0]
                   "
-                  v-model="props.row[1]"
+                  :model-value="format_cell_value(props.row[1])"
+                  @update:model-value="update_cell_value($event, props.row)"
                   dense
                   borderless
                   @blur="on_cell_change(props.row)"
@@ -73,7 +74,7 @@
                   "
                   @click="start_editing($event.target, props.row)"
                 >
-                  {{ props.value }}
+                  {{ typeof props.value === 'object' ? JSON.stringify(props.value) : props.value }}
                 </div>
                 <span v-if="props.col.name !== 'value' || props.row[0] == 'init' || props.row[0] == 'time'">
                   {{ props.value }}
@@ -96,6 +97,22 @@ import { defineComponent, nextTick, onMounted, ref, watch } from 'vue';
 import { JsonWithObjectsParser } from 'components/json_parser';
 import { useScriptStore } from 'stores/script';
 import { useProjectStore } from 'stores/project';
+
+const format_cell_value = (value) => {
+  return typeof value === 'object' ? JSON.stringify(value) : value;
+};
+
+const update_cell_value = (newValue, row) => {
+  try {
+    if (typeof row[1] === 'object' || newValue.trim().startsWith('{') || newValue.trim().startsWith('[')) {
+      row[1] = JSON.parse(newValue);
+    } else {
+      row[1] = newValue;
+    }
+  } catch (e) {
+    row[1] = newValue;
+  }
+};
 
 export default defineComponent({
   name: 'EditorPage',
@@ -202,7 +219,7 @@ export default defineComponent({
       rows.value[k] = [];
       for (let p in obj) {
         let v = obj[p];
-        rows.value[k].push([p, '' + v]);
+        rows.value[k].push([p, v]);
       }
     }
 
@@ -294,6 +311,8 @@ export default defineComponent({
       start_editing,
       on_cell_change,
       save_changes,
+      format_cell_value,
+      update_cell_value,
     };
   },
 });
