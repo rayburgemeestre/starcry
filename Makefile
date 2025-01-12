@@ -333,6 +333,7 @@ docs:  ## build starcry docs
 
 # Tilt helpers
 up:
+	# curl -fsSL https://raw.githubusercontent.com/tilt-dev/tilt/master/scripts/install.sh | bash
 	KUBECONFIG=/etc/rancher/k3s/k3s.yaml tilt up
 
 down:
