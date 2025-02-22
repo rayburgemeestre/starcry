@@ -50,6 +50,7 @@ private:
   TFileWindow *meta_viewer_win = nullptr;
   TFileWindow *stdout_viewer_win = nullptr;
   LoggerViewer *ffmpeg_viewer = nullptr;
+  LoggerViewer *memory_viewer = nullptr;
 
   void startFileViewer(TFileWindow **window, const std::string &filename);
   void startLoggerViewer(LoggerViewer **viewer, const std::string &title);

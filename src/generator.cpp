@@ -321,11 +321,15 @@ bool generator::_generate_frame() {
     context->isolate->GetHeapStatistics(&hs);
     const auto total_usage = (double(getValue()) / 1024. / 1024.);
     const auto v8_usage = (hs.total_heap_size() / 1024. / 1024. / 1024.);
-    logger(INFO) << "Memory usage: " << total_usage << " GB. "
-                 << "V8 Heap: " << v8_usage << " GB. "
-                 << "Other: " << (total_usage - v8_usage) << " GB." << std::endl;
+    std::stringstream ss;
+    ss << "Memory usage: " << total_usage << " GB. "
+       << "V8 Heap: " << v8_usage << " GB. "
+       << "Other: " << (total_usage - v8_usage) << " GB.";
+    logger(INFO) << ss.str() << std::endl;
     // image_repository::instance().print();
     // memory_analyzer::print_report();
+    ss << "\n";
+    metrics_->set_memory_usage_summary(ss.str());
     fps_progress_.inc();
   } catch (abort_exception& ex) {
     std::cout << "[caught] " << ex.what() << " (abort)" << std::endl;

@@ -133,6 +133,7 @@ private:
 
   std::string script_ = "input/test.js";
   std::function<void()> toggle_preview_callback_;
+  std::string memory_usage_summary_;
 
 public:
   explicit metrics(bool notty, std::function<void()> toggle_preview_callback);
@@ -153,7 +154,8 @@ public:
   void skip_job(int number);
   void display(std::function<void(const std::string&)> f1,
                std::function<void(const std::string&)> f2,
-               std::function<void(int, const std::string&)> f3);
+               std::function<void(int, const std::string&)> f3,
+               std::function<void(const std::string&)> f4);
   void clear();
 
   void set_frame_mode();
@@ -162,6 +164,7 @@ public:
   void log_callback(int level, const std::string& line);
   void notify();
   std::string to_json();
+  void set_memory_usage_summary(const std::string& memory_usage_summary);
 
 private:
   double time_diff(std::chrono::time_point<std::chrono::high_resolution_clock> begin,

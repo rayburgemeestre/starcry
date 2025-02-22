@@ -226,6 +226,10 @@ std::string metrics::to_json() {
   return json{{"type", "metrics"}, {"data", result}}.dump();
 }
 
+void metrics::set_memory_usage_summary(const std::string &memory_usage_summary) {
+  memory_usage_summary_ = memory_usage_summary;
+}
+
 metrics::~metrics() {
   notify();
   curses.join();
@@ -407,7 +411,8 @@ void metrics::complete_render_job(int thread_number, int job_number, int chunk, 
 
 void metrics::display(std::function<void(const std::string &)> f1,
                       std::function<void(const std::string &)> f2,
-                      std::function<void(int, const std::string &)> f3) {
+                      std::function<void(int, const std::string &)> f3,
+                      std::function<void(const std::string &)> f4) {
   const auto flush = [&](auto &fun, std::stringstream &ss) {
     std::string item;
     while (std::getline(ss, item, '\n')) {
@@ -421,6 +426,11 @@ void metrics::display(std::function<void(const std::string &)> f1,
   std::unique_lock lock(mut);
 
   // TODO: make this stuff use the JSON data perhaps?
+  {
+    std::stringstream ss;
+    ss << "Threads: " << threads_.size() << " Jobs: " << jobs_.size() << " Completed Frames: " << completed_frames;
+    f1(ss.str());
+  }
   for (const auto &thread : threads_) {
     std::stringstream ss;
     ss << "Thread: " << thread.first << " " << thread.second.name << " " << str(thread.second.state);
@@ -449,6 +459,7 @@ void metrics::display(std::function<void(const std::string &)> f1,
 
   first_key = jobs_.begin()->first;
 
+  int max_queued_items = 3;  // trying to save space here
   for (size_t i = first_key; i <= last_key; i++) {
     const auto &job = jobs_[i];
     size_t queued = 0;
@@ -469,6 +480,10 @@ void metrics::display(std::function<void(const std::string &)> f1,
     }
     if (queued == job.chunks.size()) {
       s = job_state::queued;
+      if (max_queued_items-- == 0) {
+        f2("...");
+        break;
+      }
     }
     if (job.skipped) {
       s = job_state::skipped;
@@ -545,8 +560,12 @@ void metrics::display(std::function<void(const std::string &)> f1,
   }
 
   for (const auto &[level, str] : _output) {
+    if (str.find("frame=") != std::string::npos) continue;
+    if (str.find("Memory usage:") != std::string::npos) continue;
     f3(level, str);
   }
+
+  f4(memory_usage_summary_);
   _output.clear();
 }
 

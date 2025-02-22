@@ -31,7 +31,8 @@
 const int hcFDosShell = 16, hcFExit = 17, hcFOFileOpenDBox = 31, hcFOpen = 14, hcFile = 13, hcWCascade = 22,
           hcWClose = 25, hcWNext = 23, hcWSizeMove = 19, hcWTile = 21, hcWZoom = 20, hcWindows = 18;
 
-const int cmOpenCmd = 105, cmMetaViewCmd = 112, cmStdoutViewCmd = 113, cmFFmpegViewCmd = 114, cmTogglePreview = 115;
+const int cmOpenCmd = 105, cmMetaViewCmd = 112, cmStdoutViewCmd = 113, cmFFmpegViewCmd = 114, cmTogglePreview = 115,
+          cmMemoryViewCmd = 116;
 
 TStarcry::TStarcry(metrics *metrics, std::function<void()> toggle_preview_callback)
     : TProgInit(&TStarcry::initStatusLine, &TStarcry::initMenuBar, &TStarcry::initDeskTop),
@@ -64,6 +65,7 @@ TStarcry::TStarcry(metrics *metrics, std::function<void()> toggle_preview_callba
   startFileViewer(&meta_viewer_win, ":meta");
   startFileViewer(&stdout_viewer_win, ":stdout");
   startLoggerViewer(&ffmpeg_viewer, "ffmpeg");
+  startLoggerViewer(&memory_viewer, "memory");
 
   void *p1 = 0;
   message(this, evCommand, cmTile, p1);
@@ -118,6 +120,9 @@ void TStarcry::handleEvent(TEvent &event) {
         break;
       case cmFFmpegViewCmd:
         startLoggerViewer(&ffmpeg_viewer, "ffmpeg");
+        break;
+      case cmMemoryViewCmd:
+        startLoggerViewer(&memory_viewer, "memory");
         break;
       case cmTogglePreview:
         toggle_preview_callback_();
@@ -198,6 +203,11 @@ void TStarcry::idle() {
         if (ffmpeg_viewer) {
           ffmpeg_viewer->print(line);
         }
+      },
+      [&](const std::string &line) {
+        if (memory_viewer) {
+          memory_viewer->print(line);
+        }
       });
 
   if (meta_viewer_win) {
@@ -238,6 +248,7 @@ TMenuBar *TStarcry::initMenuBar(TRect r) {
                    newLine() + *new TMenuItem("~M~eta Viewer", cmMetaViewCmd, kbAlt0, hcNoContext, "Alt-0") +
                    *new TMenuItem("~S~tdout Viewer", cmStdoutViewCmd, kbAlt1, hcNoContext, "Alt-1") +
                    *new TMenuItem("~F~Fmpeg Viewer", cmFFmpegViewCmd, kbAlt2, hcNoContext, "Alt-2") + newLine() +
+                   *new TMenuItem("~M~emory Viewer", cmMemoryViewCmd, kbAlt3, hcNoContext, "Alt-3") + newLine() +
                    *new TMenuItem("~D~OS Shell", cmDosShell, kbNoKey, hcFDosShell) +
                    *new TMenuItem("~T~oggle Preview window", cmTogglePreview, kbCtrlT, hcNoContext, "Ctrl+T") +
                    *new TMenuItem("E~x~it", cmQuit, kbAltX, hcFExit, "Alt-X");
