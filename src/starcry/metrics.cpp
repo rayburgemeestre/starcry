@@ -241,7 +241,6 @@ metrics::~metrics() {
 }
 
 void metrics::register_thread(int number, std::string desc) {
-  if (!initialized) return;
   logger(DEBUG) << "metrics::register_thread: " << number << " " << desc << std::endl;
   std::unique_lock lock(mut);
   threads_[number] = metrics::thread_data{number,
