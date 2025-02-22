@@ -7,6 +7,6 @@ script = {
     'height': 1080,
   },
   'scenes': [
-    {'name': 'scene1', 'duration': 60.0, 'objects': []},
+    {'name': 'scene1', 'duration': 2.0, 'objects': []},
   ]
 }

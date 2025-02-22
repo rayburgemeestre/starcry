@@ -15,8 +15,17 @@ script = {
         const points = generatePoints(canvas_size, radius);
 
         points.forEach(point => {
-          this.spawn(
-              {'id': 'point', 'x': point.x - canvas_size / 2, 'y': point.y - canvas_size / 2, 'z': 0, 'props': {}});
+          let [vel_x, vel_y] = random_velocity();
+          this.spawn({
+            'id': 'point',
+            'x': point.x - canvas_size / 2,
+            'y': point.y - canvas_size / 2,
+            'z': 0,
+            'vel_x': vel_x,
+            'vel_y': vel_y,
+            'velocity': 1,
+            'props': {}
+          });
         });
       },
       'time': function(t, e, scene) {},
