@@ -68,6 +68,7 @@ struct starcry_options {
   // new
   bool gui = false;
   bool render = true;
+  bool video = true;
   bool output = false;
   bool notty = false;
   bool stdout_ = false;

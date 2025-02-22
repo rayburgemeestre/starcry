@@ -128,6 +128,7 @@ std::vector<uint32_t> pixels_vec_to_pixel_data(const std::vector<data::color> &p
 }
 
 void pixels_vec_insert_checkers_background(std::vector<uint32_t> &pixels, int width, int height) {
+  if (width == 0 && height == 0) return;
   height = pixels.size() / width;
   uint8_t *p = (uint8_t *)&pixels[0];
   int x = 0, y = 0;
@@ -195,10 +196,18 @@ void save_images(const std::string &filename,
       png::image<png::rgba_pixel> image(width, height);
       copy_to_png(rand, pixels_raw, width, height, image, dithering);
       if (output_file.size()) {
-        image.write(fmt::format("{}.png", output_file));
+        const auto dirname_output_file = fs::path(output_file).parent_path().string();
+        const auto basename_output_file = fs::path(output_file).stem().string();
+        image.write(fmt::format("{}/{}-frame_{:05d}_seed_{}_{}x{}.png",
+                                dirname_output_file,
+                                basename_output_file,
+                                frame_number,
+                                seed,
+                                width,
+                                height));
       } else {
         image.write(
-            fmt::format("output_frame_{:05d}_seed_{}_{}x{}-{}.png", frame_number, seed, width, height, filename_use));
+            fmt::format("output/{}-frame_{:05d}_seed_{}_{}x{}.png", filename_use, frame_number, seed, width, height));
       }
     }
 
@@ -237,10 +246,18 @@ void save_images(const std::string &filename,
 
       std::string exr_filename;
       if (output_file.size()) {
-        exr_filename = fmt::format("{}.exr", output_file);
+        const auto dirname_output_file = fs::path(output_file).parent_path().string();
+        const auto basename_output_file = fs::path(output_file).stem().string();
+        exr_filename = fmt::format("{}/{}-frame_{:05d}_seed_{}_{}x{}.exr",
+                                   dirname_output_file,
+                                   basename_output_file,
+                                   frame_number,
+                                   seed,
+                                   width,
+                                   height);
       } else {
         exr_filename =
-            fmt::format("output_frame_{:05d}_seed_{}_{}x{}-{}.exr", frame_number, seed, width, height, filename_use);
+            fmt::format("output/{}-frame_{:05d}_seed_{}_{}x{}.exr", filename_use, frame_number, seed, width, height);
       }
       OutputFile file(exr_filename.c_str(), header);
       FrameBuffer frameBuffer;

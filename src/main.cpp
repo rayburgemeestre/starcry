@@ -73,8 +73,9 @@ public:
       ("server", po::value<std::string>(&options.host), "start server to allow dynamic renderers (default no)")
       ("client", po::value<std::string>(&options.host), "start client renderer, connect to host")
       ("gui", "enable render preview to graphical window")
-      ("no-output", "disable producing any output (video or stream)")
+      ("no-output", "disable producing any output (frames, video or stream)")
       ("no-render", "disable all rendering (e.g. for performance testing js)")
+      ("no-video", "disable creating video or stream.")
       ("preview", "enable preview settings for fast preview rendering")
       ("stream", "start embedded webserver and stream HLS to webroot")
       ("no-webserver", "do not start embedded webserver")
@@ -104,6 +105,11 @@ public:
       ("dev", "enable dev mode (used when running in debug mode in k3s using Tilt)")
     ;
     // clang-format on
+
+    std::filesystem::create_directories("output");
+    if (!options.output_file.empty() && options.output_file[0] != '/') {
+      options.output_file = "output/" + options.output_file;
+    }
 
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
 
@@ -142,6 +148,7 @@ public:
     options.gui = vm.count("gui");
     options.output = !vm.count("no-output");
     options.render = !vm.count("no-render");
+    options.video = !vm.count("no-video");
     options.notty = vm.count("notty");
     options.stdout_ = !vm.count("tui") || (vm.count("stdout") || vm.count("client"));
     options.compression = vm.count("compression");
@@ -160,7 +167,18 @@ public:
     std::shared_ptr<Benchmark> benchmark = nullptr;
     if (vm.count("benchmark")) {
       benchmark = std::make_shared<Benchmark>();
-      benchmark->includeRawMeasures(false);
+      benchmark->includeRawMeasures(true);
+      if (options.output_file.size()) {
+        const auto dirname_of_file = std::filesystem::path(options.output_file).parent_path().string();
+        const auto basename_of_file = std::filesystem::path(options.output_file).stem().string();
+        const auto benchmark_file = fmt::format("{}/RESULT_{}.TXT", dirname_of_file, basename_of_file);
+        benchmark->setOutput(benchmark_file);
+      } else {
+        const auto dirname_of_file = std::filesystem::path(options.script_file).parent_path().string();
+        const auto basename_of_file = std::filesystem::path(options.script_file).stem().string();
+        const auto benchmark_file = fmt::format("{}/RESULT_{}.TXT", dirname_of_file, basename_of_file);
+        benchmark->setOutput(benchmark_file);
+      }
     }
 
     context = std::make_shared<v8_wrapper>(options.script_file);

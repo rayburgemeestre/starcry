@@ -78,9 +78,13 @@ void Benchmark::writeResults() {
   if (measures_.empty()) return;
 
   std::ofstream resultsFile;
-  std::stringstream ss;
-  ss << "RESULT_" << output_ << ".TXT";
-  resultsFile.open(ss.str());
+  if (output_.empty()) {
+    std::stringstream ss;
+    ss << "output/RESULT_" << output_ << ".TXT";
+    resultsFile.open(ss.str());
+  } else {
+    resultsFile.open(output_);
+  }
 
   for (const auto& measure : measures_) {
     writeBenchmark(measure.first, resultsFile);

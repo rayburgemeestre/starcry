@@ -107,6 +107,7 @@ std::shared_ptr<generator> generator::create(std::shared_ptr<metrics> metrics__,
 }
 
 void generator::init(const std::string& filename,
+                     const std::string& output_file,
                      std::optional<double> rand_seed,
                      bool preview,
                      bool caching,
@@ -116,6 +117,7 @@ void generator::init(const std::string& filename,
   prctl(PR_SET_NAME, "native generator thread");
   config_.filename = filename;
   job_holder_.init();
+  job_holder_.get()->output_file = output_file;
 
   initializer_.initialize_all(
       job_holder_.get(), config_.filename, rand_seed, preview, width, height, scale, scenes_, spawner_);

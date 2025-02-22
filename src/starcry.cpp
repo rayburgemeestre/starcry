@@ -219,7 +219,9 @@ image starcry::render_job(size_t thread_num,
                        options_.debug || get_viewpoint().debug,
                        selected_ids};
 
-  if (benchmark_) benchmark_->store("frame rendering", start);
+  scope_exit se([this, start]() {
+    if (benchmark_) benchmark_->store("frame rendering", start);
+  });
 
   return engine.render(params, job.offset_x, job.offset_y, job.width, job.height);
 }
@@ -236,13 +238,15 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
   }
 
   if (const auto& instruction = std::dynamic_pointer_cast<reload_instruction>(cmd_def)) {
-    gen->init(instruction->req().script(), options_.rand_seed, options_.preview, features_.caching);
+    gen->init(
+        instruction->req().script(), options_.output_file, options_.rand_seed, options_.preview, features_.caching);
   }
 
   if (const auto& instruction = std::dynamic_pointer_cast<video_instruction>(cmd_def)) {
     auto& v = instruction->video_ref();
     if (viewpoint.canvas_w && viewpoint.canvas_h) {
       gen->init(v.script(),
+                v.output_file(),
                 options_.rand_seed,
                 v.preview(),
                 features_.caching,
@@ -250,7 +254,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
                 instruction->video().height(),
                 viewpoint.scale);
     } else {
-      gen->init(v.script(), options_.rand_seed, v.preview(), features_.caching);
+      gen->init(v.script(), v.output_file(), options_.rand_seed, v.preview(), features_.caching);
     }
 
     // Update current_frame if we fast-forward to a different offset frame.
@@ -268,13 +272,15 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
       if (v.output_file().empty()) {
         auto scriptname = fs::path(script_).stem().string();
         v.set_output_file(fmt::format(
-            "output_seed_{}_{}x{}-{}.h264", state_.seed, (int)state_.canvas_w, (int)state_.canvas_h, scriptname));
+            "output/{}-seed_{}_{}x{}.h264", scriptname, state_.seed, (int)state_.canvas_w, (int)state_.canvas_h));
       }
-      framer = std::make_unique<frame_streamer>(v.output_file(), stream_mode);
-      framer->set_num_threads(options().num_ffmpeg_threads);
-      framer->set_log_callback([&](int level, const std::string& line) {
-        metrics_->log_callback(level, line);
-      });
+      if (options().video) {
+        framer = std::make_unique<frame_streamer>(v.output_file(), stream_mode);
+        framer->set_num_threads(options().num_ffmpeg_threads);
+        framer->set_log_callback([&](int level, const std::string& line) {
+          metrics_->log_callback(level, line);
+        });
+      }
     }
     size_t bitrate = (500 * 1024 * 8);  // TODO: make configurable
     if (framer) {
@@ -321,6 +327,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
     try {
       if (viewpoint.canvas_w && viewpoint.canvas_h) {
         gen->init(f.script(),
+                  f.output_file(),
                   options_.rand_seed,
                   f.preview(),
                   features_.caching,
@@ -329,7 +336,7 @@ void starcry::command_to_jobs(std::shared_ptr<instruction> cmd_def) {
                   viewpoint.scale);
         gen->set_checkpoints(checkpoints_);
       } else {
-        gen->init(f.script(), options_.rand_seed, f.preview(), features_.caching);
+        gen->init(f.script(), f.output_file(), options_.rand_seed, f.preview(), features_.caching);
       }
     } catch (std::runtime_error& err) {
       logger(DEBUG) << "err = " << err.what() << std::endl;
@@ -422,11 +429,33 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 
     auto msg = std::make_shared<render_msg>(job_msg);
     msg->set_pixels(transfer_pixels);
-    if (v.raw_video()) {
-      msg->set_raw(bmp.pixels());
+    if (options().video) {
+      if (v.raw_video()) {
+        msg->set_raw(bmp.pixels());
+      }
+      msg->suspend();
+      return msg;
+    } else {
+      if (v.raw_video()) {
+        save_images(config_.filename,
+                    rand_,
+                    state_.seed,
+                    gen->settings().dithering,
+                    bmp.pixels(),
+                    msg->width,
+                    msg->height,
+                    msg->original_job_message->job->frame_number,
+                    false /* true */,
+                    true,
+                    job.output_file);
+      }
+      // interrupt the chain, pass along empty msg.
+      std::vector<uint32_t> transfer_pixels;
+      auto msg = std::make_shared<render_msg>(job_msg, transfer_pixels);
+      msg->set_height(0);
+      msg->set_width(0);
+      return msg;
     }
-    msg->suspend();
-    return msg;
   }
 
   // handle frames
@@ -523,7 +552,7 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
       if (gui) {
         gui->add_frame(width, height, pixels);
       }
-      if (framer) {
+      if (framer && pixels.size()) {
         framer->add_frame(pixels);
         if (last_frame) {
           for (int i = 0; i < 50; i++) {

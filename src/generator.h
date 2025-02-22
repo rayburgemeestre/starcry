@@ -127,6 +127,7 @@ public:
                                            std::shared_ptr<Benchmark> benchmark__);
 
   void init(const std::string& filename,
+            const std::string& output_file,
             std::optional<double> rand_seed,
             bool preview,
             bool caching,

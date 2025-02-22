@@ -73,6 +73,15 @@ Everything is statically linked, resulting in a relatively portable binary.
 * https://varun.ca/noise/#glossy-blobs
 * Move more properties to "base" class object_bridge, some are needless duplication.
 
+## Output / Benchmarking
+
+For benchmarking add `--benchmark`.
+
+* `starcry input/blank.js` - writes video h264 to disk (requires sequencing all frames in one thread)
+* `starcry input/blank.js --raw --no-video` - writes raw exr frames to disk (no sequencing, better parallelism)
+* `starcry input/blank.js --no-video` - doesn't produce any output (benchmarks generation + rendering)
+* `starcry input/blank.js --no-video --no-render` - doesn't render anything nor produces any output (benchmarks frame generation)
+
 ## Separate worker processes
 
 Starcry can run with redis as a pub/sub. First install redis, run it, then:
