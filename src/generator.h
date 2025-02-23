@@ -31,6 +31,7 @@
 #include "interpreter/spawner.h"
 
 #include "core/fps_progress.hpp"
+#include "core/limited_executor.hpp"
 
 #include "data/job.hpp"
 #include "data/settings.hpp"
@@ -93,6 +94,7 @@ class generator {
   const generator_options& generator_opts;
   fps_progress fps_progress_;
   std::shared_ptr<Benchmark> benchmark_ = nullptr;
+  limited_executor le_mem_usg_output;
 
 public:
   explicit generator(std::shared_ptr<metrics> metrics,

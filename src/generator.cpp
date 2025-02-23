@@ -80,7 +80,8 @@ generator::generator(std::shared_ptr<metrics> metrics,
       debug_printer_(debug_printer),
       rand_(rand),
       generator_opts(opts),
-      benchmark_(benchmark) {
+      benchmark_(benchmark),
+      le_mem_usg_output(std::chrono::milliseconds{1000}) {
   // boost::di "workarounds"
   // ... initializer seems to somehow get a different instance of generator_state (at least during integration tests)
   initializer_.init(state_);
@@ -327,7 +328,9 @@ bool generator::_generate_frame() {
     ss << "Memory usage: " << total_usage << " GB. "
        << "V8 Heap: " << v8_usage << " GB. "
        << "Other: " << (total_usage - v8_usage) << " GB.";
-    logger(INFO) << ss.str() << std::endl;
+    le_mem_usg_output.run([s = ss.str()]() {
+      logger(INFO) << s << std::endl;
+    });
     // image_repository::instance().print();
     // memory_analyzer::print_report();
     ss << "\n";
