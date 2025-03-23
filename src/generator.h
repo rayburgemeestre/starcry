@@ -77,7 +77,6 @@ class generator {
 
   initializer& initializer_;
   spawner& spawner_;
-  bridges& bridges_;
   scenes& scenes_;
   frame_sampler& sampler_;
   positioner& positioner_;
