@@ -85,6 +85,35 @@
         </q-item-section>
       </q-item>
       <q-separator spaced />
+
+      <q-item-label header>Video</q-item-label>
+
+      <q-item clickable v-ripple v-for="name in Object.keys(video)" :key="name" dense>
+        <template v-if="name === 'bg_color'">
+          <q-input
+            v-for="colorKey in ['r', 'g', 'b', 'a']"
+            :key="colorKey"
+            v-model.number="video[name][colorKey]"
+            :label="colorKey"
+            type="number"
+            min="0"
+            max="1"
+            step="0.1"
+          />
+        </template>
+        <template v-else-if="typeof video[name] === 'boolean'">
+          <q-checkbox v-model="video[name]" :label="name" />
+        </template>
+        <q-input
+          v-else
+          v-model="video[name]"
+          :label="name"
+          :type="typeof video[name] === 'number' ? 'number' : 'text'"
+        />
+      </q-item>
+
+      <q-separator spaced />
+
       <q-item>
         <q-btn color="primary" label="Update" @click="save_changes"></q-btn>
       </q-item>
@@ -121,9 +150,10 @@ export default defineComponent({
     let script_store = useScriptStore();
     let project_store = useProjectStore();
 
-    let parsed = project_store.parser.parsed();
+    let parsed = project_store.parser?.parsed();
     let gradients = ref(parsed ? parsed['gradients'] : {});
     let objects = ref(parsed ? parsed['objects'] : {});
+    let video = ref(parsed ? parsed['video'] : {});
     let selected = ref('');
 
     function resizeCanvas() {
@@ -289,9 +319,11 @@ export default defineComponent({
       // script_store.set_result(project_store.parser.to_string(), false);
       save_changes();
     };
-
     const save_changes = () => {
-      let script = project_store.parser.to_string();
+      let script = 'ERROR: parser is null';
+      if (project_store.parser) {
+        script = project_store.parser.to_string();
+      }
       script_store.set_value(script, true);
       editing_cell.value = null;
       originalValue.value = null;
@@ -301,6 +333,7 @@ export default defineComponent({
       parsed,
       gradients,
       objects,
+      video,
       columns,
       rows,
       selected,

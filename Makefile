@@ -161,6 +161,7 @@ runtime_deps:  ## install run-time dependencies
 	./docs/install_runtime_deps.sh
 
 build-web-deps:
+	pushd web && sudo apt install nodejs npm -y
 	pushd web && npm ci
 	pushd web && sudo npm i -g @quasar/cli
 

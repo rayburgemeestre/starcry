@@ -6,7 +6,7 @@ export class JsonWithObjectsParser {
 
   constructor(json_str: string) {
     this.json_str = json_str;
-    this.json_str = this.json_str.substr(this.json_str.indexOf('{'));
+    this.json_str = this.json_str.substring(this.json_str.indexOf('{'));
     this.obj = undefined;
     this.functions = [];
     this.remainder = '';
@@ -16,9 +16,9 @@ export class JsonWithObjectsParser {
     return this.obj;
   }
 
-  update_function(index, value) {
+  update_function(index: number, value: string) {
     for (let i = 0; i < this.functions.length; i++) {
-      if ('FUNCTION ' + i != index) {
+      if ('FUNCTION ' + i !== index.toString()) {
         continue;
       }
       this.functions[i] = value;
@@ -36,7 +36,7 @@ export class JsonWithObjectsParser {
     return '_ = ' + str + '\n;\n' + this.remainder;
   }
 
-  fun(lookup) {
+  fun(lookup: string) {
     const index = parseInt(lookup.split(' ')[1]);
     if (this.functions.length < index) {
       return 'OUT OF BOUNDS';
@@ -77,17 +77,17 @@ export class JsonWithObjectsParser {
     for (let i = 0; i < this.json_str.length && !stop; i++) {
       const s: string = this.json_str[i];
 
-      if (s === '*' && this.json_str.substr(i, '*/'.length) === '*/') {
+      if (s === '*' && this.json_str.substring(i, i + '*/'.length) === '*/') {
         in_c_comment = false;
       }
-      if (s === '/' && this.json_str.substr(i, '/*'.length) === '/*') {
+      if (s === '/' && this.json_str.substring(i, i + '/*'.length) === '/*') {
         in_c_comment = true;
       }
 
       if (in_cpp_comment && s === '\n') {
         in_cpp_comment = false;
       }
-      if (s === '/' && this.json_str.substr(i, '//'.length) === '//') {
+      if (s === '/' && this.json_str.substring(i, i + '//'.length) === '//') {
         in_cpp_comment = true;
       }
 
@@ -146,11 +146,11 @@ export class JsonWithObjectsParser {
         }
         if (brace == 0) {
           stop = true;
-          remainder = this.json_str.substr(i + 1);
+          remainder = this.json_str.substring(i + 1);
         }
       }
       //
-      if (!(in_function as boolean) && s === 'f' && this.json_str.substr(i, 'function'.length) === 'function') {
+      if (!(in_function as boolean) && s === 'f' && this.json_str.substring(i, i + 'function'.length) === 'function') {
         in_function = brace;
         trail += '"FUNCTION ' + function_num + '"';
         function_str = 'f';
@@ -168,7 +168,7 @@ export class JsonWithObjectsParser {
             !in_function &&
             !flags[flag] &&
             s === first_char &&
-            this.json_str.substr(i, key.length) === key &&
+            this.json_str.substring(i, i + key.length) === key &&
             previous_char !== '"'
           ) {
             flags[flag] = true;
@@ -202,7 +202,7 @@ export class JsonWithObjectsParser {
     try {
       // if remainder starts with ;, strip it off
       if (remainder[0] === ';') {
-        remainder = remainder.substr(1);
+        remainder = remainder.substring(1);
       }
       this.remainder = remainder;
       this.obj = eval('true; ' + remainder + '; (function() { return ' + trail + '; })()');
