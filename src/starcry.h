@@ -165,6 +165,7 @@ public:
 
   void set_checkpoint(int frame_number);
   std::string get_js_api();
+  std::string get_spec(const std::string& component);
 
 private:
   void configure_inotify();

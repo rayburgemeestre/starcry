@@ -13,7 +13,9 @@
 #include "gradient_manager.h"
 #include "interpreter/constants.h"
 #include "job_mapper.h"
+#include "project_specifications.h"
 #include "scripting.h"
+#include "specs/video.hpp"
 #include "texture_factory.h"
 #include "texture_manager.h"
 #include "toroidal_factory.h"
@@ -45,7 +47,8 @@ initializer::initializer(gradient_manager& gm,
                          object_definitions& definitions,
                          generator_options& options,
                          generator_state& state,
-                         generator_config& config)
+                         generator_config& config,
+                         project_specifications& specs)
     : gradient_manager_(gm),
       texture_manager_(tm),
       toroidal_manager_(toroidalman),
@@ -61,7 +64,8 @@ initializer::initializer(gradient_manager& gm,
       object_definitions_(definitions),
       generator_options_(options),
       generator_state_(state),
-      generator_config_(config) {}
+      generator_config_(config),
+      project_specifications_(specs) {}
 
 void initializer::init(generator_state& state) {
   std::swap(state, generator_state_);
@@ -250,9 +254,27 @@ void initializer::init_user_script(spawner& spawner_) {
   context_->run(SCRIPT_NAME + " = {\"video\": {}};");
   try {
     context_->run(source);
+    context_->enter_object(SCRIPT_NAME, [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
+      if (val->IsObject()) {
+        auto obj = val.As<v8::Object>();
+        auto video_obj = v8_index_object(current_context_native(context_), val, "video");
+        if (!video_obj->IsObject()) {
+          video_obj = v8::Object::New(isolate);
+          obj->Set(current_context_native(context_), v8_str(isolate, "video"), video_obj).Check();
+        }
+
+        v8_interact i;
+        auto video_object = video_obj.As<v8::Object>();
+        auto video_spec = create_video_spec(i);
+        validate_unknown_fields(i, video_object, "video", video_spec);
+        validate_field_types(i, video_object, "video", video_spec);
+        project_specifications_.set_spec("video", video_specification_to_json(i));
+      }
+    });
   } catch (std::runtime_error& ex) {
     logger(WARNING) << "Exception occurred loading user script:\n" << ex.what() << std::endl;
   }
+
   v8::HandleScope hs(context_->context->isolate());
   bridges_.init(spawner_);
 }
@@ -298,6 +320,21 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
         object_definitions_.clear();
         // TODO: put this in a meaningful function?
         object_lookup_.reset();
+
+        if (scenes->Length() == 0) {
+          logger(WARNING) << "No scenes defined in script, adding placeholder scene." << std::endl;
+          v8::Local<v8::Object> scene_obj = v8::Object::New(i.get_isolate());
+          i.set_field(scene_obj, "name", v8_str(i.get_context(), "default"));
+          i.set_field(scene_obj, "duration", v8::Number::New(i.get_isolate(), 1.0));
+          i.set_field(scene_obj, "objects", v8::Array::New(i.get_isolate()));
+          // Create a new array with the scene object
+          v8::Local<v8::Array> new_scenes = v8::Array::New(i.get_isolate(), 1);
+          new_scenes->Set(i.get_context(), 0, scene_obj).Check();
+
+          val.As<v8::Object>()->Set(i.get_context(), v8_str(i.get_context(), "scenes"), new_scenes).Check();
+          scenes = new_scenes;
+        }
+
         for (size_t I = 0; I < scenes->Length(); I++) {
           scenes_.add_scene();
           auto current_scene = i.get_index(scenes, I);
@@ -378,7 +415,11 @@ void initializer::init_gradients() {
     v8_interact i;
     auto obj = val.As<v8::Object>();
     auto gradient_objects = i.v8_obj(obj, "gradients");
-    if (gradient_objects->IsNullOrUndefined()) return;
+    if (gradient_objects->IsNullOrUndefined()) {
+      // Create an empty object if gradients is undefined
+      gradient_objects = v8::Object::New(isolate);
+      i.set_field(obj, "gradients", gradient_objects);
+    }
     auto gradient_fields = gradient_objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
     for (size_t k = 0; k < gradient_fields->Length(); k++) {
       auto gradient_id = i.get_index(gradient_fields, k);
@@ -424,7 +465,10 @@ void initializer::init_toroidals() {
   context_->run_array(SCRIPT_NAME, [&](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     v8_interact i;
     auto obj = val.As<v8::Object>();
-    if (!i.has_field(obj, "toroidal")) return;
+    if (!i.has_field(obj, "toroidal")) {
+      // Create an empty object if toroidal is undefined
+      i.set_field(obj, "toroidal", v8::Object::New(isolate));
+    }
     auto toroidal_objects = i.v8_obj(obj, "toroidal");
     auto toroidal_fields = toroidal_objects->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
     for (size_t k = 0; k < toroidal_fields->Length(); k++) {
@@ -447,7 +491,11 @@ void initializer::init_object_definitions() {
       v8_interact i;
       auto obj = val.As<v8::Object>();
       auto object_definitions = i.v8_obj(obj, "objects");
-      if (object_definitions->IsNullOrUndefined()) return;
+      if (object_definitions->IsNullOrUndefined()) {
+        // Create an empty object if objects is undefined
+        i.set_field(obj, "objects", v8::Object::New(isolate));
+        object_definitions = i.v8_obj(obj, "objects");
+      }
       auto object_definitions_fields = object_definitions->GetOwnPropertyNames(i.get_context()).ToLocalChecked();
       for (size_t k = 0; k < object_definitions_fields->Length(); k++) {
         auto object_id = i.get_index(object_definitions_fields, k);

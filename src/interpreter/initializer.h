@@ -45,6 +45,7 @@ class scenes;
 class bridges;
 class frame_sampler;
 class object_definitions;
+class project_specifications;
 class spawner;
 
 class initializer {
@@ -64,7 +65,8 @@ public:
                        object_definitions& definitions,
                        generator_options& options,
                        generator_state& state,
-                       generator_config& config);
+                       generator_config& config,
+                       project_specifications& specs);
 
   void init(generator_state& state);
 
@@ -113,6 +115,7 @@ private:
   /* was const */ generator_options& generator_options_;
   generator_state& generator_state_;
   generator_config& generator_config_;
+  project_specifications& project_specifications_;
 
   std::string js_api_;
 };

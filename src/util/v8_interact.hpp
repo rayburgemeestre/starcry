@@ -24,6 +24,10 @@ inline v8::Local<v8::String> v8_str(v8::Local<v8::Context> context, const std::s
   return v8::String::NewFromUtf8(context->GetIsolate(), str.c_str()).ToLocalChecked();
 }
 
+inline v8::Local<v8::String> v8_str(v8::Isolate* isolate, const std::string& str) {
+  return v8::String::NewFromUtf8(isolate, str.c_str()).ToLocalChecked();
+}
+
 inline std::string v8_str(v8::Isolate* isolate, const v8::Local<v8::String>& str) {
   v8::String::Utf8Value out(isolate, str);
   return std::string(*out);

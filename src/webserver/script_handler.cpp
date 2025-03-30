@@ -3,6 +3,7 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+#include "specs/video.hpp"
 #include "starcry.h"
 #include "util/logger.h"
 #include "webserver.h"
@@ -98,6 +99,11 @@ void ScriptHandler::onData(seasocks::WebSocket* con, const char* data) {
     logger(DEBUG) << "ScriptHandler::onData - " << input << std::endl;
     con->send("5");
     std::exit(1);
+  } else if (input == "get_video_spec") {
+    std::stringstream ss;
+    const auto video_spec = this->sc->get_spec("video");
+    ss << "7" << video_spec;
+    con->send(ss.str());
   }
 }
 

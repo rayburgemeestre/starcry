@@ -885,3 +885,8 @@ std::string starcry::get_js_api() {
   }
   return gen->get_js_api();
 }
+
+std::string starcry::get_spec(const std::string& component) {
+  if (!gen) return "*** GENERATOR NOT INITIALIZED ***";
+  return gen->get_spec(component);
+}

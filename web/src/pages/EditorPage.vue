@@ -1,7 +1,10 @@
 <template>
   <div class="q-pa-md">
     <q-list bordered padding>
-      <q-item-label header>Gradients</q-item-label>
+      <div class="row items-center">
+        <q-item-label header>Gradients</q-item-label>
+        <q-btn flat dense icon="add" @click="addGradient" style="margin-top: -10px" />
+      </div>
 
       <q-item clickable v-ripple v-for="name in Object.keys(gradients)" :key="name">
         <q-item-section>
@@ -21,7 +24,10 @@
       </q-item>
 
       <q-separator spaced />
-      <q-item-label header>Objects</q-item-label>
+      <div class="row items-center">
+        <q-item-label header>Objects</q-item-label>
+        <q-btn flat dense icon="add" @click="addObject" style="margin-top: -10px" />
+      </div>
 
       <q-item
         tag="label"
@@ -86,7 +92,10 @@
       </q-item>
       <q-separator spaced />
 
-      <q-item-label header>Video</q-item-label>
+      <div class="row items-center">
+        <q-item-label header>Video</q-item-label>
+        <q-btn flat dense icon="add" @click="addVideoProperty" style="margin-top: -10px" />
+      </div>
 
       <q-item clickable v-ripple v-for="name in Object.keys(video)" :key="name" dense>
         <template v-if="name === 'bg_color'">
@@ -151,9 +160,9 @@ export default defineComponent({
     let project_store = useProjectStore();
 
     let parsed = project_store.parser?.parsed();
-    let gradients = ref(parsed ? parsed['gradients'] : {});
-    let objects = ref(parsed ? parsed['objects'] : {});
-    let video = ref(parsed ? parsed['video'] : {});
+    let gradients = ref(parsed && 'gradients' in parsed ? parsed['gradients'] : {});
+    let objects = ref(parsed && 'objects' in parsed ? parsed['objects'] : {});
+    let video = ref(parsed && 'video' in parsed ? parsed['video'] : {});
     let selected = ref('');
 
     function resizeCanvas() {
@@ -329,6 +338,29 @@ export default defineComponent({
       originalValue.value = null;
     };
 
+    function addGradient() {
+      gradients.value['test'] = {};
+      console.log('Add gradient clicked');
+      // Add your gradient logic here
+    }
+
+    function addObject() {
+      console.log('Add object clicked');
+      // Add your object logic here
+    }
+
+    function addVideoProperty() {
+      console.log('Add video property clicked');
+      script_store.request_video_spec_by_user++;
+    }
+    watch(
+      () => script_store.request_video_spec_received,
+      () => {
+        // TODO: implement further
+        console.log('Video spec received', script_store.video_spec.value);
+      }
+    );
+
     return {
       parsed,
       gradients,
@@ -346,6 +378,9 @@ export default defineComponent({
       save_changes,
       format_cell_value,
       update_cell_value,
+      addGradient,
+      addObject,
+      addVideoProperty,
     };
   },
 });

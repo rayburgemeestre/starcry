@@ -59,6 +59,7 @@ class object_definitions;
 class gradient_manager;
 class texture_manager;
 class toroidal_manager;
+class project_specifications;
 
 class generator {
   generator_state& state_;
@@ -84,6 +85,7 @@ class generator {
   instantiator& instantiator_;
   job_to_shape_mapper& job_shape_mapper_;
   object_lookup& object_lookup_;
+  project_specifications& project_specifications_;
   checkpoints checkpoints_;
 
   debug_printer& debug_printer_;
@@ -117,6 +119,7 @@ public:
                      instantiator& instantiator,
                      job_to_shape_mapper& job_shape_mapper,
                      object_lookup& objectlookup,
+                     project_specifications& project_specifications,
                      debug_printer& debug_printer,
                      std::shared_ptr<Benchmark> benchmark);
   ~generator() = default;
@@ -155,6 +158,7 @@ public:
   std::vector<int64_t> get_transitive_ids(const std::vector<int64_t>& in);
   void set_checkpoints(std::set<int>& checkpoints);
   std::string get_js_api();
+  std::string get_spec(const std::string& component);
 
 private:
   bool _generate_frame();

@@ -21,6 +21,7 @@
 #include "interpreter/debug_printer.h"
 #include "interpreter/fast_forwarder.hpp"
 #include "interpreter/gradient_manager.h"
+#include "interpreter/project_specifications.h"
 #include "interpreter/texture_manager.h"
 #include "interpreter/toroidal_manager.h"
 #include "starcry/metrics.h"
@@ -55,6 +56,7 @@ generator::generator(std::shared_ptr<metrics> metrics,
                      instantiator& instantiator,
                      job_to_shape_mapper& job_shape_mapper,
                      object_lookup& objectlookup,
+                     project_specifications& project_specifications,
                      debug_printer& debug_printer,
                      std::shared_ptr<Benchmark> benchmark)
     : state_(state),
@@ -75,6 +77,7 @@ generator::generator(std::shared_ptr<metrics> metrics,
       instantiator_(instantiator),
       job_shape_mapper_(job_shape_mapper),
       object_lookup_(objectlookup),
+      project_specifications_(project_specifications),
       // checkpoints_(*this),
       debug_printer_(debug_printer),
       rand_(rand),
@@ -567,6 +570,10 @@ void generator::set_checkpoints(std::set<int>& checkpoints) {
 
 std::string generator::get_js_api() {
   return initializer_.get_js_api();
+}
+
+std::string generator::get_spec(const std::string& component) {
+  return project_specifications_.get_spec(component);
 }
 
 }  // namespace interpreter
