@@ -27,14 +27,14 @@ jobs:
       run: make integration-test
     - name: upload integration test artifacts
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: integration-test-artifacts
         path: /home/runner/work/starcry/starcry/test/integration/last-run
         retention-days: 1
     - name: upload sc.log artifact
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: starcry-log
         path: /home/runner/work/starcry/starcry/sc.log

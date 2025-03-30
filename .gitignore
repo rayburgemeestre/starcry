@@ -11,15 +11,18 @@ CMakeFiles
 boost_1_61_0
 build
 cmake-build-debug
+cmake-build-release
 codebrowser/**
 compile_commands.json
 docs/_build/**
 docs/build_instructions/**
+docs/output/**
 gmock
 gmock-1.7.0
 gtest
 gtest-1.7.0
 lsp
+output/**
 sc.log
 test/integration/*
 web/node_modules
@@ -31,3 +34,5 @@ web/webroot/client.wasm
 web/webroot/main.css
 web/webroot/main.js*
 web/webroot/stream/*
+web/public/client.js
+web/public/client.wasm
