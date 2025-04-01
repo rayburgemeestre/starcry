@@ -97,6 +97,13 @@
         <q-btn flat dense icon="add" @click="addVideoProperty" style="margin-top: -10px" />
       </div>
 
+      <q-item v-if="video_adding_property">
+        <q-select v-model="video_property" :options="video_properties" label="Video Property" class="full-width" />
+      </q-item>
+      <q-item v-if="video_adding_property">
+        <q-btn flat dense @click="addVideoProperty2" style="margin-top: -10px"> Add Video Property </q-btn>
+      </q-item>
+
       <q-item clickable v-ripple v-for="name in Object.keys(video)" :key="name" dense>
         <template v-if="name === 'bg_color'">
           <q-input
@@ -131,7 +138,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, nextTick, onMounted, ref, watch } from 'vue';
+import { defineComponent, nextTick, onMounted, ref, watch, computed } from 'vue';
 import { JsonWithObjectsParser } from 'components/json_parser';
 import { useScriptStore } from 'stores/script';
 import { useProjectStore } from 'stores/project';
@@ -331,9 +338,13 @@ export default defineComponent({
     const save_changes = () => {
       let script = 'ERROR: parser is null';
       if (project_store.parser) {
+        script = project_store.parser.parsed().video = video.value;
         script = project_store.parser.to_string();
       }
+      // for internal
       script_store.set_value(script, true);
+      // for debugger
+      script_store.set_result(script, true);
       editing_cell.value = null;
       originalValue.value = null;
     };
@@ -352,14 +363,33 @@ export default defineComponent({
     function addVideoProperty() {
       console.log('Add video property clicked');
       script_store.request_video_spec_by_user++;
+      video_adding_property.value = true;
     }
+
+    function addVideoProperty2() {
+      console.log('Add video property clicked');
+      video.value[video_property.value] = script_store.video_spec[video_property.value].default;
+      video_property.value = null;
+      video_adding_property.value = false;
+    }
+
     watch(
       () => script_store.request_video_spec_received,
       () => {
         // TODO: implement further
-        console.log('Video spec received', script_store.video_spec.value);
+        console.log('Video spec received', script_store.video_spec);
       }
     );
+
+    const video_properties = computed(() => {
+      let existing_properties = Object.keys(video.value);
+      return Object.keys(script_store.video_spec)
+        .filter((prop) => !existing_properties.includes(prop))
+        .sort();
+    });
+
+    const video_property = ref(null);
+    let video_adding_property = ref(false);
 
     return {
       parsed,
@@ -381,6 +411,10 @@ export default defineComponent({
       addGradient,
       addObject,
       addVideoProperty,
+      addVideoProperty2,
+      video_adding_property,
+      video_properties,
+      video_property,
     };
   },
 });

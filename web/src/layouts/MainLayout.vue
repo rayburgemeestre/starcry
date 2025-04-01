@@ -36,6 +36,7 @@
       <div style="position: relative; z-index: 2; /* background-color: #880000; */ height: 100%">
         <div style="position: absolute; z-index: 1000; top: 10px; left: 10px; color: blue">
           <!-- DEBUG: {{ debug_text }} -->
+          <!-- selected tab = {{  selected_tab }} -->
         </div>
         <canvas id="canvas2" style="z-index: 1; pointer-events: none; /* saved my day */"></canvas>
         <canvas
