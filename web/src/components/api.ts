@@ -82,7 +82,7 @@ export class StarcryAPI {
       this.on_disconnected();
       useGlobalStore().connected.delete(this.endpoint);
       useGlobalStore().disconnected.add(this.endpoint);
-      this.retry = setTimeout(this.connect.bind(this), 1000);
+      this.retry = setTimeout(this.connect.bind(this), 100);
     }.bind(this);
     this.ws.onmessage = function (message) {
       switch (this.type) {
