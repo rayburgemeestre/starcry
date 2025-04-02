@@ -6,7 +6,7 @@
         <q-btn flat dense icon="add" @click="addGradient" style="margin-top: -10px" />
       </div>
 
-      <q-item clickable v-ripple v-for="name in Object.keys(gradients)" :key="name" @click="toggleGradientDetails(name)">
+      <q-item clickable v-ripple v-for="name in gradients_one" :key="name" @click="toggleGradientDetails(name)">
         <q-item-section>
           <q-item-label class="extra-margin">{{ name }}</q-item-label>
           <q-item-label caption>
@@ -21,11 +21,119 @@
             </div>
           </q-item-label>
         </q-item-section>
-        
-        <!-- Gradient details section that appears when clicked -->
-        <q-item v-if="expandedGradient === name">
-          <pre>{{ JSON.stringify(gradients[name], null, 2) }}</pre>
-        </q-item>
+      </q-item>
+
+      <q-card>
+        <q-card-section>
+          <div class="row q-mb-md">
+            <q-btn color="primary" size="sm" icon="add" label="Add Stop" @click="addGradientStop(expandedGradient)" />
+          </div>
+
+          <div v-for="(stop, index) in gradients[expandedGradient]" :key="index" class="row q-mb-sm items-center">
+            <div class="col-2">
+              <q-input
+                v-model.number="stop.position"
+                type="number"
+                min="0"
+                max="1"
+                step="0.05"
+                dense
+                label="Position"
+                @change="updateGradient(expandedGradient)"
+              />
+            </div>
+
+            <div class="col-1 q-mr-md">
+              <div
+                class="color-preview"
+                :style="{
+                  backgroundColor: `rgba(${stop.r * 255},${stop.g * 255},${stop.b * 255},${stop.a})`,
+                  border: '1px solid #ccc',
+                }"
+              ></div>
+            </div>
+
+            <div class="col-2">
+              <q-input
+                v-model.number="stop.r"
+                type="number"
+                min="0"
+                max="1"
+                step="0.1"
+                dense
+                label="R"
+                @change="updateGradient(expandedGradient)"
+              />
+            </div>
+
+            <div class="col-2">
+              <q-input
+                v-model.number="stop.g"
+                type="number"
+                min="0"
+                max="1"
+                step="0.1"
+                dense
+                label="G"
+                @change="updateGradient(expandedGradient)"
+              />
+            </div>
+
+            <div class="col-2">
+              <q-input
+                v-model.number="stop.b"
+                type="number"
+                min="0"
+                max="1"
+                step="0.1"
+                dense
+                label="B"
+                @change="updateGradient(expandedGradient)"
+              />
+            </div>
+
+            <div class="col-1">
+              <q-input
+                v-model.number="stop.a"
+                type="number"
+                min="0"
+                max="1"
+                step="0.1"
+                dense
+                label="A"
+                @change="updateGradient(expandedGradient)"
+              />
+            </div>
+
+            <div class="col-1">
+              <q-btn
+                flat
+                round
+                color="negative"
+                icon="delete"
+                size="sm"
+                @click="removeGradientStop(expandedGradient, index)"
+              />
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+
+      <q-item clickable v-ripple v-for="name in gradients_two" :key="name" @click="toggleGradientDetails(name)">
+        <q-item-section>
+          <q-item-label class="extra-margin">{{ name }}</q-item-label>
+          <q-item-label caption>
+            <div class="canvas-container">
+              <canvas
+                class="gradient_preview"
+                :data-gradient="name"
+                height="27"
+                width="100"
+                style="background-color: red"
+              ></canvas>
+            </div>
+          </q-item-label>
+        </q-item-section>
       </q-item>
 
       <q-separator spaced />
@@ -343,7 +451,8 @@ export default defineComponent({
     const save_changes = () => {
       let script = 'ERROR: parser is null';
       if (project_store.parser) {
-        script = project_store.parser.parsed().video = video.value;
+        project_store.parser.parsed().gradients = gradients.value;
+        project_store.parser.parsed().video = video.value;
         script = project_store.parser.to_string();
       }
       // for internal
@@ -397,14 +506,93 @@ export default defineComponent({
     let video_adding_property = ref(false);
 
     const expandedGradient = ref(null);
-    
-    function toggleGradientDetails(name) {
-      if (expandedGradient.value === name) {
-        expandedGradient.value = null; // collapse if already expanded
-      } else {
-        expandedGradient.value = name; // expand the clicked gradient
+
+    const gradients_one = computed(() => {
+      let keys = [];
+      for (let key of Object.keys(gradients.value)) {
+        keys.push(key);
+        if (key == expandedGradient.value) {
+          break;
+        }
       }
-      console.log('Gradient details:', JSON.stringify(gradients.value[name]));
+      return keys;
+    });
+
+    const gradients_two = computed(() => {
+      let keys = [];
+      if (!expandedGradient.value) {
+        return [];
+      }
+      let flag = false;
+      for (let key of Object.keys(gradients.value)) {
+        if (flag) {
+          keys.push(key);
+        }
+        if (key == expandedGradient.value) {
+          flag = true;
+        }
+      }
+      return keys;
+    });
+
+    function toggleGradientDetails(name) {
+      expandedGradient.value = expandedGradient.value === name ? null : name;
+      setTimeout(resizeCanvas, 10);
+      setTimeout(resizeCanvas, 100);
+      setTimeout(resizeCanvas, 1000);
+    }
+
+    function addGradientStop(gradientName) {
+      // Add a new stop at the middle position relative to existing stops
+      const stops = gradients.value[gradientName];
+      const positions = stops.map((stop) => stop.position);
+      const minPos = Math.min(...positions);
+      const maxPos = Math.max(...positions);
+      const newPos = (minPos + maxPos) / 2;
+
+      // Default to red with 50% opacity
+      gradients.value[gradientName].push({
+        position: newPos,
+        r: 1,
+        g: 0,
+        b: 0,
+        a: 0.5,
+      });
+
+      // Sort by position
+      sortGradientStops(gradientName);
+      updateGradient(gradientName);
+    }
+
+    function removeGradientStop(gradientName, index) {
+      // Don't allow removing if there are only 2 stops
+      if (gradients.value[gradientName].length <= 2) {
+        return;
+      }
+
+      gradients.value[gradientName].splice(index, 1);
+      updateGradient(gradientName);
+    }
+
+    function sortGradientStops(gradientName) {
+      gradients.value[gradientName].sort((a, b) => a.position - b.position);
+    }
+
+    function updateGradient(gradientName) {
+      // Make sure all values are numbers
+      gradients.value[gradientName].forEach((stop) => {
+        stop.position = parseFloat(stop.position);
+        stop.r = parseFloat(stop.r);
+        stop.g = parseFloat(stop.g);
+        stop.b = parseFloat(stop.b);
+        stop.a = parseFloat(stop.a);
+      });
+
+      // Sort by position
+      sortGradientStops(gradientName);
+
+      // Trigger a re-render of the gradient preview
+      save_changes();
     }
 
     return {
@@ -433,6 +621,11 @@ export default defineComponent({
       video_property,
       expandedGradient,
       toggleGradientDetails,
+      addGradientStop,
+      removeGradientStop,
+      updateGradient,
+      gradients_one,
+      gradients_two,
     };
   },
 });
@@ -448,5 +641,10 @@ export default defineComponent({
 }
 .extra-margin {
   margin-top: 40px;
+}
+.color-preview {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
 }
 </style>
