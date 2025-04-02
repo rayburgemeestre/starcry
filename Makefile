@@ -106,6 +106,7 @@ client:  ## build webassembly javascript file using docker
 	                    -D_M_X64 \
 	                    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s SAFE_HEAP=0 -s ALLOW_MEMORY_GROWTH=0)
 	                    # -s TOTAL_MEMORY=2147483648 -s ASSERTIONS=1 -s SAFE_HEAP=1 -s ALLOW_MEMORY_GROWTH=1)
+	@$(call make-clang, sed -i.orig 's/"mouseup"/"no_mouseup"/g' web/public/client.js)
 
 client-desktop:  ## build webassembly client for desktop for testing purposes
 	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
