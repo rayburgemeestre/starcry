@@ -6,7 +6,7 @@
         <q-btn flat dense icon="add" @click="addGradient" style="margin-top: -10px" />
       </div>
 
-      <q-item clickable v-ripple v-for="name in Object.keys(gradients)" :key="name">
+      <q-item clickable v-ripple v-for="name in Object.keys(gradients)" :key="name" @click="toggleGradientDetails(name)">
         <q-item-section>
           <q-item-label class="extra-margin">{{ name }}</q-item-label>
           <q-item-label caption>
@@ -21,6 +21,11 @@
             </div>
           </q-item-label>
         </q-item-section>
+        
+        <!-- Gradient details section that appears when clicked -->
+        <q-item v-if="expandedGradient === name">
+          <pre>{{ JSON.stringify(gradients[name], null, 2) }}</pre>
+        </q-item>
       </q-item>
 
       <q-separator spaced />
@@ -391,6 +396,17 @@ export default defineComponent({
     const video_property = ref(null);
     let video_adding_property = ref(false);
 
+    const expandedGradient = ref(null);
+    
+    function toggleGradientDetails(name) {
+      if (expandedGradient.value === name) {
+        expandedGradient.value = null; // collapse if already expanded
+      } else {
+        expandedGradient.value = name; // expand the clicked gradient
+      }
+      console.log('Gradient details:', JSON.stringify(gradients.value[name]));
+    }
+
     return {
       parsed,
       gradients,
@@ -415,6 +431,8 @@ export default defineComponent({
       video_adding_property,
       video_properties,
       video_property,
+      expandedGradient,
+      toggleGradientDetails,
     };
   },
 });
