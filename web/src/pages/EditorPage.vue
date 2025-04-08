@@ -29,6 +29,16 @@
             <q-btn color="primary" size="sm" icon="add" label="Add Stop" @click="addGradientStop(expandedGradient)" />
           </div>
 
+          <div class="row q-mb-md">
+            <q-input
+              v-model.number="expandedGradientNewName"
+              type="text"
+              dense
+              label="Gradient name"
+              @change="updateGradientName()"
+            />
+          </div>
+
           <div v-for="(stop, index) in gradients[expandedGradient]" :key="index" class="row q-mb-sm items-center">
             <div class="col-2">
               <q-input
@@ -506,6 +516,7 @@ export default defineComponent({
     let video_adding_property = ref(false);
 
     const expandedGradient = ref(null);
+    const expandedGradientNewName = ref(null);
 
     const gradients_one = computed(() => {
       let keys = [];
@@ -537,6 +548,7 @@ export default defineComponent({
 
     function toggleGradientDetails(name) {
       expandedGradient.value = expandedGradient.value === name ? null : name;
+      expandedGradientNewName.value = expandedGradient.value;
       setTimeout(resizeCanvas, 10);
       setTimeout(resizeCanvas, 100);
       setTimeout(resizeCanvas, 1000);
@@ -595,6 +607,18 @@ export default defineComponent({
       save_changes();
     }
 
+    function updateGradientName() {
+      const oldName = expandedGradient.value;
+      const newName = expandedGradientNewName.value;
+
+      if (oldName && newName && oldName !== newName) {
+        gradients.value[newName] = gradients.value[oldName];
+        delete gradients.value[oldName];
+        expandedGradient.value = newName;
+        save_changes();
+      }
+    }
+
     return {
       parsed,
       gradients,
@@ -620,10 +644,12 @@ export default defineComponent({
       video_properties,
       video_property,
       expandedGradient,
+      expandedGradientNewName,
       toggleGradientDetails,
       addGradientStop,
       removeGradientStop,
       updateGradient,
+      updateGradientName,
       gradients_one,
       gradients_two,
     };
