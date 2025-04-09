@@ -1,0 +1,5 @@
+{
+        "name": "C++ Project",
+        "image": "docker.io/rayburgemeestre/build-starcry-ubuntu:24.04"
+}
+

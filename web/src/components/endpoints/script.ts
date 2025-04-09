@@ -30,7 +30,7 @@ export function create_script_endpoint() {
       } else if (buffer[0] === '2') {
         script_store.script = buffer.slice(1);
 
-        project_store.parser = new JsonWithObjectsParser(script_store.script);
+        project_store.parser = new JsonWithObjectsParser(script_store.script, window.sc_constants);
         // this.$data.input_source = buffer;
         script_store.video = project_store.parser.parsed()['video'] || {};
         script_store.preview = project_store.parser.parsed()['preview'] || {};

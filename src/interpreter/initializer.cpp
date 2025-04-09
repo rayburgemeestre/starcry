@@ -213,6 +213,8 @@ void initializer::reset_context() {
   context_->context->module("texture_effect", consts_4);
 
   std::stringstream ss;
+  ss << "var sc_constant_values = {};";
+  ss << "var sc_constant_values_reflect = {};";
   ss << serialize("blending_type");
   ss << serialize("texture_3d");
   ss << serialize("zernike_type");
@@ -227,14 +229,37 @@ std::string initializer::serialize(const std::string& enum_type) {
                               fmt::format("JSON.stringify(Object.fromEntries(Object.entries({})))", enum_type).c_str())
           .ToLocalChecked();
 
+  v8::Local<v8::String> script_reflect =
+      v8::String::NewFromUtf8(context_->isolate,
+                              // Note that => {{ return etc. }} has two {{ instead of {, this is necessary or otherwise
+                              // fmt::format will misinterpret the whole thing as a format specifier.
+                              fmt::format("JSON.stringify(Object.fromEntries(Object.entries({}).map(([key]) => {{ "
+                                          "return [key, '@@{}.' + key + '@@']; }})));",
+                                          enum_type,
+                                          enum_type)
+                                  .c_str())
+          .ToLocalChecked();
+
   v8::Local<v8::Script> compiled_script = v8::Script::Compile(context_->context->impl(), script).ToLocalChecked();
+  v8::Local<v8::Script> compiled_script2 =
+      v8::Script::Compile(context_->context->impl(), script_reflect).ToLocalChecked();
 
   v8::Local<v8::Value> result = compiled_script->Run(context_->context->impl()).ToLocalChecked();
+  v8::Local<v8::Value> result2 = compiled_script2->Run(context_->context->impl()).ToLocalChecked();
 
   v8::String::Utf8Value json(context_->isolate, result);
   std::string js_code = *json;
+  v8::String::Utf8Value json2(context_->isolate, result2);
+  std::string js_code_reflect = *json2;
+
   // const doesn't make eval put it in the surrounding scope
-  return fmt::format("var {} = {};\n", enum_type, js_code);
+  return fmt::format(
+      "sc_constant_values['{}'] = {};\n"
+      "sc_constant_values_reflect['{}'] = {};\n",
+      enum_type,
+      js_code,
+      enum_type,
+      js_code_reflect);
 }
 
 void initializer::init_user_script(spawner& spawner_) {

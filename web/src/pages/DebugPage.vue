@@ -5,7 +5,6 @@
       :rows="stats_store.rows"
       :columns="columns"
       row-key="name"
-      :filter="filter"
       hide-pagination
       :rows-per-page-options="[100]"
     >

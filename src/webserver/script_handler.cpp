@@ -53,11 +53,13 @@ void ScriptHandler::onData(seasocks::WebSocket* con, const char* data) {
       logger(DEBUG) << "ScriptHandler::onData - " << input << std::endl;
       std::ifstream ifs(file);
       std::ostringstream ss;
-      ss << "2" << ifs.rdbuf();
+      // send JS api first (for blending_type definitions, etc.)
+      ss << "6" << sc->get_js_api();
       con->send(ss.str());
       ss.str("");
       ss.clear();
-      ss << "6" << sc->get_js_api();
+      // send the script after that
+      ss << "2" << ifs.rdbuf();
       con->send(ss.str());
     } else if (cmd == "set") {
       const auto file_contents = input.substr(find + 1);

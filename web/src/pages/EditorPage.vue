@@ -23,7 +23,7 @@
         </q-item-section>
       </q-item>
 
-      <q-card>
+      <q-card v-if="expandedGradient">
         <q-card-section>
           <div class="row q-mb-md">
             <q-btn color="primary" size="sm" icon="add" label="Add Stop" @click="addGradientStop(expandedGradient)" />
@@ -173,7 +173,6 @@
             row-key="name"
             @row-click="on_row_click"
             dense
-            :filter="filter"
             hide-header
             hide-pagination
             :rows-per-page-options="[100]"
@@ -546,7 +545,7 @@ export default defineComponent({
       return keys;
     });
 
-    function toggleGradientDetails(name) {
+    function toggleGradientDetails(name: string) {
       expandedGradient.value = expandedGradient.value === name ? null : name;
       expandedGradientNewName.value = expandedGradient.value;
       setTimeout(resizeCanvas, 10);
@@ -554,10 +553,10 @@ export default defineComponent({
       setTimeout(resizeCanvas, 1000);
     }
 
-    function addGradientStop(gradientName) {
+    function addGradientStop(gradientName: string) {
       // Add a new stop at the middle position relative to existing stops
       const stops = gradients.value[gradientName];
-      const positions = stops.map((stop) => stop.position);
+      const positions = stops.map((stop: { position: number }) => stop.position);
       const minPos = Math.min(...positions);
       const maxPos = Math.max(...positions);
       const newPos = (minPos + maxPos) / 2;
@@ -576,7 +575,7 @@ export default defineComponent({
       updateGradient(gradientName);
     }
 
-    function removeGradientStop(gradientName, index) {
+    function removeGradientStop(gradientName: string, index: number) {
       // Don't allow removing if there are only 2 stops
       if (gradients.value[gradientName].length <= 2) {
         return;
@@ -586,19 +585,21 @@ export default defineComponent({
       updateGradient(gradientName);
     }
 
-    function sortGradientStops(gradientName) {
-      gradients.value[gradientName].sort((a, b) => a.position - b.position);
+    function sortGradientStops(gradientName: string) {
+      gradients.value[gradientName].sort((a: { position: number }, b: { position: number }) => a.position - b.position);
     }
 
-    function updateGradient(gradientName) {
+    function updateGradient(gradientName: string) {
       // Make sure all values are numbers
-      gradients.value[gradientName].forEach((stop) => {
-        stop.position = parseFloat(stop.position);
-        stop.r = parseFloat(stop.r);
-        stop.g = parseFloat(stop.g);
-        stop.b = parseFloat(stop.b);
-        stop.a = parseFloat(stop.a);
-      });
+      gradients.value[gradientName].forEach(
+        (stop: { position: number; r: number; g: number; b: number; a: number }) => {
+          stop.position = parseFloat(stop.position);
+          stop.r = parseFloat(stop.r);
+          stop.g = parseFloat(stop.g);
+          stop.b = parseFloat(stop.b);
+          stop.a = parseFloat(stop.a);
+        }
+      );
 
       // Sort by position
       sortGradientStops(gradientName);

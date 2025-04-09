@@ -3,16 +3,36 @@ export class JsonWithObjectsParser {
   private obj: undefined;
   private remainder: string;
   private functions: any[];
+  private constants: string;
 
-  constructor(json_str: string) {
+  constructor(json_str: string, constants: string) {
     this.json_str = json_str;
     this.json_str = this.json_str.substring(this.json_str.indexOf('{'));
     this.obj = undefined;
     this.functions = [];
     this.remainder = '';
+    this.constants = constants;
     this._parse();
   }
   parsed() {
+    if (!this.obj) {
+      this.obj = {};
+    }
+    if (!this.obj.video) {
+      this.obj['video'] = {};
+    }
+    if (!this.obj.preview) {
+      this.obj['preview'] = {};
+    }
+    if (!this.obj.scenes) {
+      this.obj['scenes'] = [];
+    }
+    if (!this.obj.gradients) {
+      this.obj['gradients'] = {};
+    }
+    if (!this.obj.textures) {
+      this.obj['textures'] = {};
+    }
     return this.obj;
   }
 
@@ -33,7 +53,12 @@ export class JsonWithObjectsParser {
       str = str.replace('"FUNCTION ' + num + '"', fun);
       num++;
     }
-    return '_ = ' + str + '\n;\n' + this.remainder;
+
+    // in str replace all strings with a regex like this:
+    // input: "@@foo.bar@@" should be replaced with foo.bar
+    str = str.replace(/"@@(.*?)@@"/g, '$1');
+
+    return 'script = ' + str + '\n;\n' + this.remainder;
   }
 
   fun(lookup: string) {
@@ -178,9 +203,10 @@ export class JsonWithObjectsParser {
           return false; // Indicating no need to "continue" in the calling code.
         }.bind(this);
 
-        if (handleType.call(this, 'blending_type', 'blending_type', 'b')) continue;
-        if (handleType.call(this, 'zernike_type', 'zernike_type', 'z')) continue;
-        if (handleType.call(this, 'texture_effect', 'texture_effect', 't')) continue;
+        // we will do a different approach
+        // if (handleType.call(this, 'blending_type', 'blending_type', 'b')) continue;
+        // if (handleType.call(this, 'zernike_type', 'zernike_type', 'z')) continue;
+        // if (handleType.call(this, 'texture_effect', 'texture_effect', 't')) continue;
       }
       if (in_function === false) {
         if (',;'.indexOf(s) !== -1 && previous_char === '.' && '0123456789'.indexOf(previous_char2) !== -1) {
@@ -205,7 +231,24 @@ export class JsonWithObjectsParser {
         remainder = remainder.substring(1);
       }
       this.remainder = remainder;
-      this.obj = eval('true; ' + remainder + '; (function() { return ' + trail + '; })()');
+      const eval_str =
+        'true; ' +
+        this.constants +
+        '; for (let prop in sc_constant_values) {\n' +
+        '  if (sc_constant_values.hasOwnProperty(prop)) {\n' +
+        '    window[prop] = sc_constant_values[prop];\n' +
+        '  }\n' +
+        '};\n' +
+        remainder +
+        '; for (let prop in sc_constant_values_reflect) {\n' +
+        '  if (sc_constant_values_reflect.hasOwnProperty(prop)) {\n' +
+        '    window[prop] = sc_constant_values_reflect[prop];\n' +
+        '  }\n' +
+        '}; (function() { return ' +
+        trail +
+        '; })()';
+      console.log(eval_str);
+      this.obj = eval(eval_str);
     } catch (e) {
       console.log(trail);
       console.log(e);
