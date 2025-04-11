@@ -166,6 +166,21 @@
           <q-item-label>{{ key }}</q-item-label>
           <q-item-label caption> {{ object.type }} </q-item-label>
           <q-input v-if="selected == key" v-model="object_names[key]" label="name" />
+          <div class="row items-center" v-if="selected == key">
+            <q-item-label header>Object Properties</q-item-label>
+            <q-btn flat dense icon="add" @click="addObjectProperty" style="margin-top: -10px" />
+          </div>
+          <q-item v-if="object_adding_property">
+            <q-select
+              v-model="object_property"
+              :options="object_properties"
+              label="Object Property"
+              class="full-width"
+            />
+          </q-item>
+          <q-item v-if="object_adding_property">
+            <q-btn flat dense @click="addObjectProperty2" style="margin-top: -10px"> Add Object Property </q-btn>
+          </q-item>
           <q-table
             v-if="selected == key"
             :rows="rows[key]"
@@ -496,11 +511,39 @@ export default defineComponent({
       video_adding_property.value = false;
     }
 
+    function addObjectProperty() {
+      console.log('Add object property clicked');
+      script_store.request_object_spec_by_user++;
+      object_adding_property.value = true;
+    }
+
+    function addObjectProperty2() {
+      console.log('Add object property clicked');
+      if (selected.value && object_property.value) {
+        // add to object directly
+        objects.value[selected.value][object_property.value] = script_store.object_spec[object_property.value].default;
+        // add to rows (further updates will happen through on_cell_change)
+        rows.value[selected.value].push([
+          object_property.value,
+          script_store.object_spec[object_property.value].default,
+        ]);
+
+        object_property.value = null;
+        object_adding_property.value = false;
+      }
+    }
+
     watch(
       () => script_store.request_video_spec_received,
       () => {
-        // TODO: implement further
         console.log('Video spec received', script_store.video_spec);
+      }
+    );
+
+    watch(
+      () => script_store.request_object_spec_received,
+      () => {
+        console.log('Object spec received', script_store.object_spec);
       }
     );
 
@@ -513,6 +556,16 @@ export default defineComponent({
 
     const video_property = ref(null);
     let video_adding_property = ref(false);
+
+    const object_properties = computed(() => {
+      let existing_properties = Object.keys(objects.value[selected.value] || {});
+      return Object.keys(script_store.object_spec)
+        .filter((prop) => !existing_properties.includes(prop))
+        .sort();
+    });
+
+    const object_property = ref(null);
+    let object_adding_property = ref(false);
 
     const expandedGradient = ref(null);
     const expandedGradientNewName = ref(null);
@@ -641,9 +694,14 @@ export default defineComponent({
       addObject,
       addVideoProperty,
       addVideoProperty2,
+      addObjectProperty,
+      addObjectProperty2,
       video_adding_property,
       video_properties,
       video_property,
+      object_adding_property,
+      object_properties,
+      object_property,
       expandedGradient,
       expandedGradientNewName,
       toggleGradientDetails,

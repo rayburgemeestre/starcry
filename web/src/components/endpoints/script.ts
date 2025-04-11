@@ -62,6 +62,9 @@ export function create_script_endpoint() {
       } else if (buffer[0] === '7') {
         script_store.video_spec = JSON.parse(buffer.slice(1));
         script_store.request_video_spec_received++;
+      } else if (buffer[0] === '8') {
+        script_store.object_spec = JSON.parse(buffer.slice(1));
+        script_store.request_object_spec_received++;
       }
     },
     (_) => {
@@ -107,6 +110,13 @@ export function create_script_endpoint() {
     () => script_store.request_video_spec_by_user,
     () => {
       self.send('get_video_spec');
+    }
+  );
+
+  watch(
+    () => script_store.request_object_spec_by_user,
+    () => {
+      self.send('get_object_spec');
     }
   );
 

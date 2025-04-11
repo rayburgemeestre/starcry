@@ -293,7 +293,8 @@ void initializer::init_user_script(spawner& spawner_) {
         auto video_spec = create_video_spec(i);
         validate_unknown_fields(i, video_object, "video", video_spec);
         validate_field_types(i, video_object, "video", video_spec);
-        project_specifications_.set_spec("video", video_specification_to_json(i));
+        project_specifications_.set_spec("video", specification_to_json(i, create_video_spec));
+        project_specifications_.set_spec("object", specification_to_json(i, create_object_spec));
       }
     });
   } catch (std::runtime_error& ex) {

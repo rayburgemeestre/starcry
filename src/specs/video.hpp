@@ -68,10 +68,21 @@ inline specification_fields create_video_spec(v8_interact& i) {
   return spec;
 }
 
-inline std::string video_specification_to_json(v8_interact& i) {
+inline specification_fields create_object_spec(v8_interact& i) {
+  specification_fields spec;
   auto isolate = i.get_isolate();
-  auto context = i.get_context();
-  auto spec = create_video_spec(i);
+
+  // TODO
+  spec["placeholder"] = {"int", v8::Number::New(isolate, 1000), "Place"};
+  spec["placeholder2"] = {"int", v8::Number::New(isolate, 1002), "Holder"};
+
+  return spec;
+}
+
+inline std::string specification_to_json(v8_interact& i,
+                                         std::function<specification_fields(v8_interact& i)> create_spec_fun) {
+  auto isolate = i.get_isolate();
+  auto spec = create_spec_fun(i);
 
   auto v8_spec = v8::Object::New(isolate);
   for (const auto& [key, field] : spec) {

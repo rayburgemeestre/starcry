@@ -106,6 +106,11 @@ void ScriptHandler::onData(seasocks::WebSocket* con, const char* data) {
     const auto video_spec = this->sc->get_spec("video");
     ss << "7" << video_spec;
     con->send(ss.str());
+  } else if (input == "get_object_spec") {
+    std::stringstream ss;
+    const auto object_spec = this->sc->get_spec("object");
+    ss << "8" << object_spec;
+    con->send(ss.str());
   }
 }
 

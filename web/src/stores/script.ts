@@ -12,6 +12,7 @@ export const useScriptStore = defineStore('script', {
 
     video: {},
     video_spec: {},
+    object_spec: {},
     preview: {},
     frames_per_scene: [] as number[],
     max_frames: 0,
@@ -44,6 +45,8 @@ export const useScriptStore = defineStore('script', {
     re_render_editor_sidepane: ref(0),
     request_video_spec_by_user: ref(0),
     request_video_spec_received: ref(0),
+    request_object_spec_by_user: ref(0),
+    request_object_spec_received: ref(0),
   }),
 
   getters: {},
