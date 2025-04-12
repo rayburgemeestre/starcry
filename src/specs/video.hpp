@@ -83,6 +83,7 @@ inline std::string specification_to_json(v8_interact& i,
                                          std::function<specification_fields(v8_interact& i)> create_spec_fun) {
   auto isolate = i.get_isolate();
   auto spec = create_spec_fun(i);
+  auto context = isolate->GetCurrentContext();
 
   auto v8_spec = v8::Object::New(isolate);
   for (const auto& [key, field] : spec) {
