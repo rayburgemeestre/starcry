@@ -39,6 +39,7 @@
           <!-- selected tab = {{  selected_tab }} -->
         </div>
         <canvas id="canvas2" style="z-index: 1; pointer-events: none; /* saved my day */"></canvas>
+        <!-- v-pinch="pinchHandler" -->
         <canvas
           id="canvas"
           ref="canvas_elem"
@@ -48,7 +49,6 @@
           v-on:touchstart="on_touchstart"
           v-on:touchmove="on_touchmove"
           v-on:touchend="on_touchend"
-          v-pinch="pinchHandler"
           style="z-index: 0"
         ></canvas>
         <monaco-editor
