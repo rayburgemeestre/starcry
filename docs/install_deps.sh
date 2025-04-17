@@ -13,7 +13,7 @@ curl -qs https://cppse.nl/public.pgp > /etc/apt/keyrings/public.pgp
 echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/public.pgp] https://cppse.nl/repo/ $(lsb_release -cs) main" | sudo tee -a /etc/apt/sources.list
 sudo apt update
 
-sudo apt-get install -y cppseffmpeg=1.1.1 v8pp=1.1.1 allegro5=1.1.1 allegro5sdl=1.1.1 fastpfor=1.1.1 boost=1.1.1 sfml=1.1.1 seasocks=1.1.1 pngpp=1.1.1 fmt=1.1.1 cppseopenexr=1.1.1 cppseimagemagick=1.1.1 cppse-tvision=1.1.1 inotify-cpp=1.1.1 redis-plus-plus vivid=1.1.1
+sudo apt-get install -y cppse-ffmpeg cppse-v8 cppse-allegro5 cppse-allegro5sdl cppse-fastpfor cppse-boost cppse-sfml cppse-seasocks cppse-pngpp cppse-fmt cppse-openexr cppse-imagemagick cppse-tvision cppse-inotify-cpp cppse-redis-plus-plus cppse-vivid
 sudo apt-get install -y coz-profiler
 sudo apt-get install -y ccache
 

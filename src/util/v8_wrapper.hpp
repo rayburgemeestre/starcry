@@ -394,7 +394,9 @@ inline void v8_wrapper::add_include_fun() {
       if (js_file.length() > 0) {
         v8::Handle<v8::String> source = v8::String::NewFromUtf8(context->isolate(), js_file.c_str()).ToLocalChecked();
         auto script_origin = v8::String::NewFromUtf8(context->isolate(), p.c_str()).ToLocalChecked();
-#if V8_MAJOR_VERSION > 9 || (V8_MAJOR_VERSION == 9 && V8_MINOR_VERSION >= 7)
+#if V8_MAJOR_VERSION >= 13
+        v8::ScriptOrigin so(script_origin);
+#elif V8_MAJOR_VERSION > 9 || (V8_MAJOR_VERSION == 9 && V8_MINOR_VERSION >= 7)
         v8::ScriptOrigin so(context->isolate(), script_origin);
 #else
                               v8::ScriptOrigin so(to_v8(context->isolate(), script_origin));
