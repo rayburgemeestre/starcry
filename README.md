@@ -1,4 +1,4 @@
-[![C/C++ CI](https://github.com/rayburgemeestre/starcry/actions/workflows/ci.yml/badge.svg)](https://github.com/rayburgemeestre/starcry/actions/workflows/ci.yml) [![MPL 2.0 License](https://img.shields.io/badge/license-MPL2.0-blue.svg)](http://veldstra.org/2016/12/09/you-should-choose-mpl2-for-your-opensource-project.html)
+[![MPL 2.0 License](https://img.shields.io/badge/license-MPL2.0-blue.svg)](http://veldstra.org/2016/12/09/you-should-choose-mpl2-for-your-opensource-project.html)
 
 <img src="https://cppse.nl/sc_logo3.png?V1" width="100%">
 
