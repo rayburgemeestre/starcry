@@ -16,3 +16,7 @@
 [submodule "libs/Catch2"]
 	path = libs/Catch2
 	url = https://github.com/catchorg/Catch2
+[submodule "libs/v8pp"]
+	path = libs/v8pp
+	url = https://github.com/pmed/v8pp
+	branch = 56511d3
