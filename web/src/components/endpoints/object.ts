@@ -11,8 +11,12 @@ export function create_object_endpoint() {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     (msg) => {},
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    (buffer) => {
-      objects_store.objects = buffer;
+    (json) => {
+      // temporary switched to binary, as the plan was to deserialize binary in wasm
+      // const decoder = new TextDecoder();
+      // const json = JSON.parse(decoder.decode(buffer));
+      console.log(json);
+      objects_store.objects = json['shapes'];
       objects_store.updateLookupTable();
     },
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

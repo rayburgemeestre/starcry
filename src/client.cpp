@@ -7,8 +7,12 @@
 #include <cstdlib>
 #include <iostream>
 #include <tuple>
+#include <vector>
 
+#include "cereal/archives/binary.hpp"
 #include "cereal/archives/json.hpp"
+#include "cereal/types/vector.hpp"
+
 #include "nlohmann/json.hpp"
 
 #include "data/job.hpp"
@@ -449,6 +453,28 @@ std::vector<int> get_gradient_colors(std::string gradient_definition, int width)
   return colors;
 }
 
+// NOTE: currently dead code.
+std::string shapes_binary_to_json(const std::string &binary) {
+  std::istringstream is(binary);
+  // tried binary first
+  cereal::JSONInputArchive archive(is);
+  std::vector<data::shape> shapes;
+  try {
+    archive(shapes); // crashes in wasm
+  } catch (std::exception &e) {
+    std::cout << "exception during archive: " << e.what() << std::endl;
+    throw e;
+  } catch (...) {
+    std::cout << "unexpected exception during archive" << std::endl;
+    throw;
+  }
+  std::string json_output;
+  if (!data::shapes_to_json(shapes, json_output)) {
+    std::cout << "failed to convert" << std::endl;
+  }
+  return json_output;
+}
+
 int main() {
 #ifndef EMSCRIPTEN
   start(1080, 1080, 1080, 1080);
@@ -472,5 +498,6 @@ EMSCRIPTEN_BINDINGS(my_module) {
   emscripten::function("get_gradient_colors", &get_gradient_colors);
   emscripten::function("get_scale", &get_scale);
   emscripten::function("toggle_pointer", &toggle_pointer);
+  emscripten::function("shapes_binary_to_json", &shapes_binary_to_json);
 }
 #endif

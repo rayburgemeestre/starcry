@@ -87,7 +87,15 @@ export class StarcryAPI {
     this.ws.onmessage = function (message) {
       switch (this.type) {
         case StarcryAPI.binary_type:
-          message.data.arrayBuffer().then(this.on_message);
+          message.data.arrayBuffer().then(
+            function (buffer) {
+              try {
+                this.on_message(buffer);
+              } catch (error) {
+                console.error('Error calling on_message:', error);
+              }
+            }.bind(this)
+          );
           break;
         case StarcryAPI.json_type:
           this.on_message(JSON.parse(message.data));

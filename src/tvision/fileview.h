@@ -28,7 +28,7 @@ public:
   Boolean isValid;
   TFileViewer(const TRect &bounds, TScrollBar *aHScrollBar, TScrollBar *aVScrollBar, const char *aFileName);
   ~TFileViewer();
-  TFileViewer(StreamableInit) : TScroller(streamableInit){};
+  TFileViewer(StreamableInit) : TScroller(streamableInit) {};
   void draw();
   void readFile(const char *fName);
   void setState(ushort aState, Boolean enable);

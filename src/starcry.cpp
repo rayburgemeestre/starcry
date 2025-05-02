@@ -13,6 +13,7 @@
 #include <fmt/core.h>
 
 #include "cereal/archives/json.hpp"
+#include "zpp_bits.h"
 
 #include "bitmap_wrapper.hpp"
 #include "data/frame_request.hpp"
@@ -800,6 +801,35 @@ const data::viewpoint& starcry::get_viewpoint() const {
 void starcry::set_viewpoint(data::viewpoint& vp) {
   viewpoint = vp;
 }
+std::string __copy__shapes_binary_to_json(const std::string& binary) {
+  std::cout << "shapes_binary_to_json begin: " << binary.size() << std::endl;
+  std::istringstream is(binary);
+  std::cout << "next = 1" << std::endl;
+  cereal::BinaryInputArchive archive(is);
+  std::cout << "next = 2" << std::endl;
+  std::vector<data::shape> shapes;
+  std::cout << "next = 3" << std::endl;
+  try {
+    std::cout << "next = 3A" << std::endl;
+    archive(shapes);  // this fucker crashes in webassembly...
+    std::cout << "next = 3B" << std::endl;
+  } catch (std::exception& e) {
+    std::cout << "exception during archive: " << e.what() << std::endl;
+    throw e;
+  } catch (...) {
+    std::cout << "unexpected exception during archive" << std::endl;
+    throw;
+  }
+  std::cout << "next = 4" << std::endl;
+  std::cout << "shapes_binary_to_json archived" << std::endl;
+  std::string json_output;
+  if (!data::shapes_to_json(shapes, json_output)) {
+    // logger(ERROR) << "Failed to convert shape to json" << std::endl;
+    std::cout << "failed to convert" << std::endl;
+  }
+  std::cout << "the end ??" << std::endl;
+  return json_output;
+}
 
 std::string starcry::serialize_shapes_to_json(std::vector<std::vector<data::shape>>& shapes) {
   json shapes_json = {};
@@ -814,43 +844,75 @@ std::string starcry::serialize_shapes_to_json(std::vector<std::vector<data::shap
       }
     }
 #endif
-    for (const auto& shape : shapes[shapes.size() - 1]) {
-      // convert shape_type enum to string
-      std::map<std::string, nlohmann::json> f = {
-          {"type", data::shape_type_to_string(shape.type)},
-          {"index", index},
-          {"unique_id", shape.unique_id},
-          {"id", shape.id},
-          {"label", shape.label.empty() ? shape.id : shape.label},
-          {"level", shape.level},
-          {"gradient", shape.gradient_id_str},
-          {"texture", shape.texture_id_str},
-          {"x", shape.x},
-          {"y", shape.y},
-          {"x2", shape.x2},
-          {"y2", shape.y2},
-          {"radius", shape.radius},
-          {"radius_size", shape.radius_size},
-          {"velocity", shape.velocity},
-          {"vel_x", shape.vel_x},
-          {"vel_y", shape.vel_y},
-          {"opacity", shape.opacity},
-          {"dist", shape.dist},
-          {"steps", shape.steps},
-#ifdef DEBUG_NUM_SHAPES
-          {"#", nums[shape.unique_id]},
-          {"random_hash", shape.random_hash},
-#else
-          {"#", -1},
-#endif
-          {"time", shape.time},
-      };
-      json shape_json(f);
-      shapes_json.push_back(shape_json);
-
-      // TODO: script type
-      index++;
+    std::string out_;
+    if (!data::shapes_to_json(shapes[shapes.size() - 1], out_)) {
+      logger(ERROR) << "Failed to convert shapes to JSON" << std::endl;
     }
+    if (false)
+      if (!data::shapes_to_binary(shapes[shapes.size() - 1], out_)) {
+        logger(ERROR) << "Failed to convert shapes to binary" << std::endl;
+      }
+    // immediate sanity check
+    // TODO: sent to the client in object handler first the LENGTH!!! of the vec
+    // so we can resize it accordingly.
+    //    __copy__shapes_binary_to_json(out);
+    std::cout << "outputting: " << std::endl << out_ << std::endl;
+
+    //    {
+    //      auto [data, in, out] = zpp::bits::data_in_out();
+    //
+    //      auto result = out(shapes[shapes.size() - 1]);
+    //      if (failure(result)) {
+    //        // `result` is implicitly convertible to `std::errc`.
+    //        // handle the error or return/throw exception.
+    //      }
+    //      // data is std::vector<byte> how can I dump it to stdout as if it is a string?
+    //      std::string data_string;
+    //      data_string.assign(reinterpret_cast<const char*>(data.data()), data.size());
+    //      std::cout << data_string << std::endl;
+    //    }
+
+    return out_;
+    //     for (const auto& shape : shapes[shapes.size() - 1]) {
+    //       std::string out;
+    //       // data::shape_to_json(shape, out);
+    //       // logger(DEBUG) << "XXX: " << out << std::endl;
+    //       // convert shape_type enum to string
+    //       std::map<std::string, nlohmann::json> f = {
+    //           {"type", data::shape_type_to_string(shape.type)},
+    //           {"index", index},
+    //           {"unique_id", shape.unique_id},
+    //           {"id", shape.id},
+    //           {"label", shape.label.empty() ? shape.id : shape.label},
+    //           {"level", shape.level},
+    //           {"gradient", shape.gradient_id_str},
+    //           {"texture", shape.texture_id_str},
+    //           {"x", shape.x},
+    //           {"y", shape.y},
+    //           {"x2", shape.x2},
+    //           {"y2", shape.y2},
+    //           {"radius", shape.radius},
+    //           {"radius_size", shape.radius_size},
+    //           {"velocity", shape.velocity},
+    //           {"vel_x", shape.vel_x},
+    //           {"vel_y", shape.vel_y},
+    //           {"opacity", shape.opacity},
+    //           {"dist", shape.dist},
+    //           {"steps", shape.steps},
+    // #ifdef DEBUG_NUM_SHAPES
+    //           {"#", nums[shape.unique_id]},
+    //           {"random_hash", shape.random_hash},
+    // #else
+    //           {"#", -1},
+    // #endif
+    //           {"time", shape.time},
+    //       };
+    //       json shape_json(f);
+    //       shapes_json.push_back(shape_json);
+
+    //       // TODO: script type
+    //       index++;
+    //     }
   }
   return shapes_json.dump();
 }

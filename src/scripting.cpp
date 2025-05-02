@@ -66,7 +66,7 @@ double expf_fun(double v, double factor) {
   auto max = factor;
   auto maxexp = log(max + 1.0) / log(2.0);
   auto linear = v;
-  auto expf = ((pow(2.0, (linear)*maxexp)) - 1.0) / max;
+  auto expf = ((pow(2.0, (linear)*maxexp))-1.0) / max;
   return expf;
 }
 

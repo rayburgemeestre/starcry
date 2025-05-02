@@ -8,6 +8,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <v8.h>
 #include <string>
+#include <unordered_map>
 
 struct specification_field {
   std::string type;

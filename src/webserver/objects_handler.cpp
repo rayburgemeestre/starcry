@@ -41,7 +41,10 @@ void ObjectsHandler::onData(seasocks::WebSocket* con, const char* data) {
 
 void ObjectsHandler::callback(seasocks::WebSocket* recipient, std::string s) {
   if (_cons.find(recipient) != _cons.end()) {
+    // text/json
     recipient->send(s);
+    // binary (we might need this soon if we attempt again)
+    // recipient->send((const uint8_t*)s.c_str(), s.size() * sizeof(uint8_t));
   }
 }
 
