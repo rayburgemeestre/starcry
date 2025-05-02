@@ -20,3 +20,6 @@
 	path = libs/v8pp
 	url = https://github.com/pmed/v8pp
 	branch = 56511d3
+[submodule "libs/zpp_bits"]
+	path = libs/zpp_bits
+	url = https://github.com/rayburgemeestre/zpp_bits.git

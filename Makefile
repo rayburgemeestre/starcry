@@ -94,30 +94,45 @@ integration-test-sanitizer:
 	                        ./build/integration_tests -s -d yes --rng-seed 0)
 
 client:  ## build webassembly javascript file using docker
+	# Note, requires you to do 'make build' first for v8pp config.hpp
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ --std=c++20 -s WASM=1 -s USE_SDL=2 -O3 --bind \
 	                    -o web/public/client.js src/client.cpp src/stb.cpp src/util/logger.cpp \
 	                    src/shapes/position.cpp src/shapes/circle.cpp src/shapes/rectangle.cpp \
 	                    src/util/noise_mappers.cpp src/rendering_engine/debug.cpp \
 	                    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
 	                    -I./libs/json/single_include/ \
-	                    -I/opt/cppse/build/v8pp/include/v8 -I/opt/cppse/build/v8pp/include/ \
+	                    -I/opt/cppse/build/v8/include/v8 -I/opt/cppse/build/v8/include/ \
+	                    -I./libs/v8pp/ -I./build/libs/v8pp/ \
 	                    -I/opt/cppse/build/vivid/include/ /opt/cppse/build/vivid/lib/libvivid-em.a \
 	                    -I/opt/cppse/build/fmt/include /opt/cppse/build/fmt/lib/libfmt-em.a \
 	                    -D_M_X64 \
-	                    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s SAFE_HEAP=0 -s ALLOW_MEMORY_GROWTH=0)
-	                    # -s TOTAL_MEMORY=2147483648 -s ASSERTIONS=1 -s SAFE_HEAP=1 -s ALLOW_MEMORY_GROWTH=1)
+	                    -s TOTAL_MEMORY=2147483648 -s ASSERTIONS=0 -s SAFE_HEAP=0 -s ALLOW_MEMORY_GROWTH=0)
+						#-s TOTAL_MEMORY=4294967296 -s MAXIMUM_MEMORY=4294967296 -s ASSERTIONS=2 -s SAFE_HEAP=0 -s ALLOW_MEMORY_GROWTH=1)
+	                    #-s TOTAL_MEMORY=2147483648 -s ASSERTIONS=1 -s SAFE_HEAP=1 -s ALLOW_MEMORY_GROWTH=1)
+	                    #-s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s SAFE_HEAP=0 -s ALLOW_MEMORY_GROWTH=0)
 	@$(call make-clang, sed -i.orig 's/"mouseup"/"no_mouseup"/g' web/public/client.js)
 
 client-desktop:  ## build webassembly client for desktop for testing purposes
 	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
 	                    cmake --build build --target sc_client)
 
-client_debug:  ## build webassembly javascript file using docker with debug
-	@$(call make-clang, /emsdk/upstream/emscripten/em++ --std=c++20 -s WASM=1 -s USE_SDL=2 -O3 -g --bind \
-	                    -o web/webroot/client.js src/client.cpp src/stb.cpp \
+client-debug:  ## build webassembly javascript file using docker with debug
+	@$(call make-clang, /emsdk/upstream/emscripten/em++ --std=c++20 -s WASM=1 -s USE_SDL=2 -O0 -g --bind \
+	                    -o web/public/client.js src/client.cpp src/stb.cpp src/util/logger.cpp \
+	                    src/shapes/position.cpp src/shapes/circle.cpp src/shapes/rectangle.cpp \
+	                    src/util/noise_mappers.cpp src/rendering_engine/debug.cpp \
 	                    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
 	                    -I./libs/json/single_include/ \
+	                    -I/opt/cppse/build/v8/include/v8 -I/opt/cppse/build/v8/include/ \
+	                    -I./libs/v8pp/ -I./build/libs/v8pp/ \
+	                    -I/opt/cppse/build/vivid/include/ /opt/cppse/build/vivid/lib/libvivid-em.a \
+	                    -I/opt/cppse/build/fmt/include /opt/cppse/build/fmt/lib/libfmt-em.a \
+	                    -D_M_X64 \
 	                    -s TOTAL_MEMORY=1073741824 -s ASSERTIONS=1 -s ALLOW_MEMORY_GROWTH=1)
+	                    #-s TOTAL_MEMORY=2147483648 -s ASSERTIONS=0 -s SAFE_HEAP=0 -s ALLOW_MEMORY_GROWTH=0)
+	                    #-s TOTAL_MEMORY=2147483648 -s ASSERTIONS=1 -s SAFE_HEAP=1 -s ALLOW_MEMORY_GROWTH=1)
+	                    #-s TOTAL_MEMORY=1073741824 -s ASSERTIONS=0 -s SAFE_HEAP=0 -s ALLOW_MEMORY_GROWTH=0)
+	@$(call make-clang, sed -i.orig 's/"mouseup"/"no_mouseup"/g' web/public/client.js)
 
 debug:  ## build starcry binary using docker with debug
 	make debug-clean
@@ -147,7 +162,7 @@ debug-clean:
 	rm -rf gdb.txt
 
 format:  ## format source code (build at least once first)
-	@$(call make-clang, find ./input -name '*.js' -type f | xargs -I{} -n 1 -P 8 clang-format-15 -i {} && \
+	@$(call make-clang, find ./input -name '*.js' -type f | xargs -I{} -n 1 -P 8 clang-format-19 -i {} && \
 	                    cmake --build build --target clangformat && \
 						pushd web && npm run format && popd)
 
@@ -157,6 +172,7 @@ pull:  ## pull the starcry docker build image
 build-image:  ## build the starcry build image using podman
 	$(docker_exe) pull docker.io/rayburgemeestre/build-ubuntu:24.04 && \
 	$(docker_exe) build --no-cache -t docker.io/rayburgemeestre/build-starcry-ubuntu:24.04 -f Dockerfile .
+	#$(docker_exe) build -t docker.io/rayburgemeestre/build-starcry-ubuntu:24.04 -f Dockerfile .
 
 runtime_deps:  ## install run-time dependencies
 	./docs/install_runtime_deps.sh

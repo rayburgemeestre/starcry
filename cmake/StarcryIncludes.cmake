@@ -1,8 +1,8 @@
 include_directories(
         "${CMAKE_CURRENT_SOURCE_DIR}/src/"
-        "/opt/cppse/build/v8pp/include/"  # for v8pp
-        "/opt/cppse/build/v8pp/include/v8"  # for v8
-        "/opt/cppse/build/v8pp/include/v8/include" # for v8
+        "/opt/cppse/build/v8/include/"
+        "/opt/cppse/build/v8/include/v8"
+        "/opt/cppse/build/v8/include/v8/include"
         "/opt/cppse/build/boost/include/"
         "/opt/cppse/build/ffmpeg/include/"
         "/opt/cppse/build/fastpfor/include/"
@@ -24,5 +24,7 @@ include_directories(
         "${CMAKE_CURRENT_SOURCE_DIR}/libs/perlin_noise/"
         "${CMAKE_CURRENT_SOURCE_DIR}/libs/stb/"
         "${CMAKE_CURRENT_SOURCE_DIR}/libs/boost/"
+        "${CMAKE_CURRENT_SOURCE_DIR}/libs/v8pp/"
+        "${CMAKE_CURRENT_SOURCE_DIR}/libs/zpp_bits/"
         "/usr/include/SDL2/"
 )
