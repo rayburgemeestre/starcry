@@ -153,6 +153,8 @@ list(APPEND integration_tests_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test/test_int
 list(REMOVE_ITEM integration_tests_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 
 add_executable(integration_tests ${integration_tests_SOURCES})
+set_target_properties(integration_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+target_compile_options(integration_tests PRIVATE ${COMMON_FLAGS})
 target_compile_features(integration_tests PRIVATE cxx_std_23)
 target_link_libraries(integration_tests PRIVATE
     Catch2::Catch2WithMain

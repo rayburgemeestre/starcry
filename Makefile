@@ -101,6 +101,7 @@ client:  ## build webassembly javascript file using docker
 	                    src/util/noise_mappers.cpp src/rendering_engine/debug.cpp \
 	                    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
 	                    -I./libs/json/single_include/ \
+	                    -I./libs/zpp_bits/ \
 	                    -I/opt/cppse/build/v8/include/v8 -I/opt/cppse/build/v8/include/ \
 	                    -I./libs/v8pp/ -I./build/libs/v8pp/ \
 	                    -I/opt/cppse/build/vivid/include/ /opt/cppse/build/vivid/lib/libvivid-em.a \
@@ -123,6 +124,7 @@ client-debug:  ## build webassembly javascript file using docker with debug
 	                    src/util/noise_mappers.cpp src/rendering_engine/debug.cpp \
 	                    -I./src -I./libs/cereal/include -I./libs/perlin_noise/ -Ilibs/stb/ \
 	                    -I./libs/json/single_include/ \
+	                    -I./libs/zpp_bits/ \
 	                    -I/opt/cppse/build/v8/include/v8 -I/opt/cppse/build/v8/include/ \
 	                    -I./libs/v8pp/ -I./build/libs/v8pp/ \
 	                    -I/opt/cppse/build/vivid/include/ /opt/cppse/build/vivid/lib/libvivid-em.a \

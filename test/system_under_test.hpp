@@ -84,8 +84,21 @@ double sut::test_create_image(const std::string& image_name, const std::vector<i
   req->set_last_frame();
   sc->add_image_command(req);
   sc->run();
-  const auto output_file = fmt::format("test/integration/last-run/{}.png", image_name);
-  const auto reference_file = fmt::format("test/integration/reference/{}.png", image_name);
+
+  const auto output_dir = "test/integration/last-run";
+  std::string output_file;
+  std::vector<std::string> output_files;
+  for (const auto& entry : std::filesystem::directory_iterator(output_dir)) {
+    const auto& path = entry.path();
+    if (path.extension() == ".png" && path.filename().string().find(image_name) == 0) {
+      output_file = path.string();
+      break;
+    }
+  }
+
+  const auto reference_file_file = fs::path(output_file).filename().string();
+  const auto reference_file = fmt::format("test/integration/reference/{}", reference_file_file);
+
   if (!std::filesystem::exists(reference_file)) {
     std::cout << "copying " << output_file << " to reference file: " << reference_file << std::endl;
     try {
