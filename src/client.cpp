@@ -460,7 +460,7 @@ std::string shapes_binary_to_json(const std::string &binary) {
   cereal::JSONInputArchive archive(is);
   std::vector<data::shape> shapes;
   try {
-    archive(shapes); // crashes in wasm
+    archive(shapes);  // crashes in wasm
   } catch (std::exception &e) {
     std::cout << "exception during archive: " << e.what() << std::endl;
     throw e;
