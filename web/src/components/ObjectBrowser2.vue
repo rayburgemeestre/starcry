@@ -14,7 +14,23 @@
     v-model:selected="selected"
     selection="multiple"
     @row-click="onRowClick"
-  ></q-table>
+  >
+    <template v-slot:body="props">
+      <q-tr :props="props" :style="`position: relative; left: ${props.row.level * 10}px;`">
+        <q-td auto-width>
+          <q-checkbox v-model="props.selected" />
+        </q-td>
+        <q-td v-for="col in props.cols" :key="col.name" :props="props">
+          <template v-if="col.name === 'actions'">
+            <q-btn color="primary" dense size="sm" label="isolate" @click.stop="onIsolateClick(props.row)" />
+          </template>
+          <template v-else>
+            {{ col.value }}
+          </template>
+        </q-td>
+      </q-tr>
+    </template>
+  </q-table>
 </template>
 
 <script lang="ts">
@@ -54,6 +70,7 @@ export default defineComponent({
       let filter_stacks = selected.value.map((item) => item.stack);
 
       for (let obj of objects_store.objects) {
+        obj.actions = '--insert button here--';
         obj.type2 = to_utf8_symbol(obj.type);
         while (stack.length > obj.level + 1) {
           stack.pop();
@@ -109,7 +126,7 @@ export default defineComponent({
       // reorder columns a little bit, make sure the first column is the object name
       // sort that 'level', key is first, then 'id', then 'type'
 
-      let ordering = ['unique_id', 'level', 'id', 'type', 'type2', 'stack'];
+      let ordering = ['unique_id', 'actions', 'level', 'id', 'type', 'type2', 'stack'];
       columns.sort((a, b) => {
         const aIndex = ordering.indexOf(a.name);
         const bIndex = ordering.indexOf(b.name);
@@ -140,6 +157,10 @@ export default defineComponent({
       rowsPerPage: 0,
     });
 
+    const onIsolateClick = (row: any) => {
+      console.log('TODO: isolate button clicked for row:', row);
+    };
+
     const onRowClick = (evt: any, row: any) => {
       console.log('Selected row:', row);
       // Toggle selection for the clicked row
@@ -162,6 +183,7 @@ export default defineComponent({
       selected,
       pagination,
       onRowClick,
+      onIsolateClick,
     };
   },
 });
@@ -235,5 +257,18 @@ export default defineComponent({
 
 :deep(.q-table__card) .q-table__row:hover {
   background: rgba(0, 0, 255, 0.05);
+}
+
+:deep(.test-button) {
+  padding: 2px 8px;
+  background-color: #4a4a4a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+:deep(.test-button:hover) {
+  background-color: #666666;
 }
 </style>
