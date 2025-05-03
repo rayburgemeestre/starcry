@@ -162,6 +162,7 @@ target_link_libraries(integration_tests PRIVATE
     Catch2::Catch2WithMain
     -static-libgcc
     -static-libstdc++
+    -isystem "${CMAKE_CURRENT_SOURCE_DIR}/libs/v8pp"
 )
 configure_links(integration_tests)
 
