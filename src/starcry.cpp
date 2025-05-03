@@ -833,7 +833,6 @@ std::string __copy__shapes_binary_to_json(const std::string& binary) {
 
 std::string starcry::serialize_shapes_to_json(std::vector<std::vector<data::shape>>& shapes) {
   json shapes_json = {};
-  size_t index = 0;
   if (!shapes.empty()) {
 #define DEBUG_NUM_SHAPES
 #ifdef DEBUG_NUM_SHAPES

@@ -42,11 +42,11 @@ public:
       }
     }
     if (!t.joinable()) {
-      t = std::thread([=]() {
+      t = std::thread([this]() {
         std::unique_lock<std::mutex> lock(mut);
         set_thread_name("limited_exec");
         fun();
-        cv.wait_until(lock, std::chrono::high_resolution_clock::now() + delay, [=]() {
+        cv.wait_until(lock, std::chrono::high_resolution_clock::now() + delay, [this]() {
           return stop;
         });
         fun = nullptr;
