@@ -102,7 +102,9 @@ target_compile_options(starcry PRIVATE
     ${COMMON_FLAGS}
     ${BUILD_TYPE_FLAGS}
     ${COMPILER_SPECIFIC_FLAGS}
+    -isystem "${CMAKE_CURRENT_SOURCE_DIR}/libs/v8pp"
 )
+
 
 if (SANITIZER)
     target_compile_options(starcry PRIVATE -fsanitize=address)
