@@ -14,5 +14,5 @@ flags="-t 1 -c 1 --no-webserver --tui"
 ./build/starcry $1 $flags --benchmark --no-video             $PWD/output/benchmark/output4_nothing_____________.h264
 ./build/starcry $1 $flags --benchmark --no-video --no-render $PWD/output/benchmark/output5_no_rendering________.h264
 
-docs/parse_benchmark_results_in_output.py | sed "s/frame rendering/\x1b[1;31m&\x1b[0m/g"
+docs/parse_benchmark_results_in_output.py | sed "s/.*frame rendering.*/\x1b[1;31m&\x1b[0m/g"
 
