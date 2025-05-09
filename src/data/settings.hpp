@@ -14,6 +14,7 @@ struct settings {
   double extra_grain;
   bool update_positions;
   bool dithering;
+  double brightness;
   double gamma;
   bool scale_ratio;
 
@@ -24,12 +25,21 @@ struct settings {
         extra_grain(0.1),
         update_positions(true),
         dithering(true),
-        gamma(0.0),
+        brightness(1.0),
+        gamma(1.0),
         scale_ratio(true) {}
 
   template <class Archive>
   void serialize(Archive &ar) {
-    ar(perlin_noise, motion_blur, grain_for_opacity, extra_grain, update_positions, dithering, gamma, scale_ratio);
+    ar(perlin_noise,
+       motion_blur,
+       grain_for_opacity,
+       extra_grain,
+       update_positions,
+       dithering,
+       brightness,
+       gamma,
+       scale_ratio);
   }
 };
 

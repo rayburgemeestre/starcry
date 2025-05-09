@@ -10,7 +10,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "cereal/archives/binary.hpp"
 #include "cereal/archives/json.hpp"
 #include "cereal/types/map.hpp"
 #include "cereal/types/string.hpp"

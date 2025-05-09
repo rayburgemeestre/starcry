@@ -37,6 +37,7 @@ inline specification_fields create_video_spec(v8_interact& i) {
   bg_color->Set(context, v8_str(isolate, "b"), v8::Number::New(isolate, 0.0)).Check();
   bg_color->Set(context, v8_str(isolate, "a"), v8::Number::New(isolate, 1.0)).Check();
   spec["bg_color"] = {"object", bg_color, "Background color in RGBA format"};
+  spec["brightness"] = {"float", v8::Number::New(isolate, 1.0), "Brightness correction factor"};
   spec["gamma"] = {"float", v8::Number::New(isolate, 1.0), "Gamma correction factor"};
 
   // Motion and animation

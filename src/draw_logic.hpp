@@ -902,13 +902,31 @@ public:
     // test
     // clr.a = 1.;
 
+    // ------------brightness boost------------
+    if (settings.brightness > 1.0f) {
+      // Option 1: Simple multiplication with clamping
+      clr.r = std::min(clr.r * settings.brightness, 1.0);
+      clr.g = std::min(clr.g * settings.brightness, 1.0);
+      clr.b = std::min(clr.b * settings.brightness, 1.0);
+      // Option 2: Or use a curve that's more perceptually uniform
+      // This approaches 1.0 as brightness increases but never exceeds it
+      // clr.r = 1.0f - std::pow(1.0f - clr.r, settings.brightness);
+      // clr.g = 1.0f - std::pow(1.0f - clr.g, settings.brightness);
+      // clr.b = 1.0f - std::pow(1.0f - clr.b, settings.brightness);
+    }
     // ------------gamma corr.------------
-    if (settings.gamma) {
+    if (settings.gamma != 1.0) {
       clr.r = std::pow(clr.r, settings.gamma);
       clr.g = std::pow(clr.g, settings.gamma);
       clr.b = std::pow(clr.b, settings.gamma);
     }
     // ------------gamma corr.------------
+
+    // ------------brightness boost------------
+    // apply brightness to alpha as well
+    if (settings.brightness > 1.0) {
+      clr.a = 1.0f - std::pow(1.0 - clr.a, settings.brightness);
+    }
 
     // was:
     //  bmp.set(absX, absY, bg.r, bg.g, bg.b, bg.a);
