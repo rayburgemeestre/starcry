@@ -134,6 +134,7 @@ file(GLOB_RECURSE sc_client_SOURCES
 add_executable(sc_client ${sc_client_SOURCES})
 target_compile_features(sc_client PRIVATE cxx_std_23)
 target_compile_definitions(sc_client PUBLIC SC_CLIENT)
+target_compile_options(sc_client PRIVATE -isystem "${CMAKE_CURRENT_SOURCE_DIR}/libs/v8pp")
 target_link_libraries(sc_client PRIVATE
     -lSDL2
     /opt/cppse/build/vivid/lib/libvivid.a
@@ -143,6 +144,7 @@ configure_links(sc_client)
 
 add_executable(tests test/test_unit.cpp)
 target_compile_features(tests PRIVATE cxx_std_23)
+target_compile_options(tests PRIVATE -isystem "${CMAKE_CURRENT_SOURCE_DIR}/libs/v8pp")
 target_link_libraries(tests PRIVATE
     /opt/cppse/build/v8/lib/libv8_monolith.a
     /opt/cppse/build/vivid/lib/libvivid.a
@@ -156,13 +158,12 @@ list(REMOVE_ITEM integration_tests_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main
 
 add_executable(integration_tests ${integration_tests_SOURCES})
 set_target_properties(integration_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-target_compile_options(integration_tests PRIVATE ${COMMON_FLAGS})
+target_compile_options(integration_tests PRIVATE ${COMMON_FLAGS} -isystem "${CMAKE_CURRENT_SOURCE_DIR}/libs/v8pp")
 target_compile_features(integration_tests PRIVATE cxx_std_23)
 target_link_libraries(integration_tests PRIVATE
     Catch2::Catch2WithMain
     -static-libgcc
     -static-libstdc++
-    -isystem "${CMAKE_CURRENT_SOURCE_DIR}/libs/v8pp"
 )
 configure_links(integration_tests)
 

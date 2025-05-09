@@ -17,12 +17,14 @@ compile_commands.json
 docs/_build/**
 docs/build_instructions/**
 docs/output/**
+docs/doxygen/**
 gmock
 gmock-1.7.0
 gtest
 gtest-1.7.0
 lsp
 output/**
+out/**
 sc.log
 test/integration/*
 web/node_modules
