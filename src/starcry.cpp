@@ -434,6 +434,7 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
       if (v.raw_video()) {
         msg->set_raw(bmp.pixels());
       }
+      // TODO: make this configurable for benchmarking
       msg->suspend();
       return msg;
     } else {
