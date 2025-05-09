@@ -87,9 +87,9 @@ struct starcry_options {
 
   log_level level = log_level::info;
 
-  int concurrent_commands = 24;
-  int concurrent_jobs = 24;
-  int concurrent_frames = 24;
+  int concurrent_commands = 1024;
+  int concurrent_jobs = 1024;
+  int concurrent_frames = 1024;
 
   int num_ffmpeg_threads = -1;
 
