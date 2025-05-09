@@ -42,6 +42,7 @@ def parse_benchmark_file(filepath):
 def print_summary(filepath, results):
     """Print summary of results in the requested format with aligned columns."""
     filename = os.path.basename(filepath)
+    print("BENCHMARK TYPE:                         LABEL:                 MEAN:  (+/- STDERR)  FPS MEAN: (+/- SE)")
     for result in results:
         # Calculate FPS (1000/x) for both mean and SE
         fps_mean = 1000.0 / result['mean'] if result['mean'] != 0 else float('inf')
