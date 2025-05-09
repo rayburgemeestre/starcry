@@ -42,34 +42,19 @@
     </template>
   </q-table>
 
-  <div v-if="selectedObject" class="isolated-object-container">
-    <q-card flat bordered class="isolated-object-card">
-      <q-card-section class="row items-center">
-        <div class="text-h6">Isolated Object Details</div>
-        <q-space />
-        <q-btn color="negative" dense size="sm" label="Close" @click="onCloseClick" />
-      </q-card-section>
-      <q-separator />
-      <q-card-section style="max-height: 300px" class="scroll">
-        <q-list dense>
-          <q-item v-for="(value, key) in objectProperties" :key="key">
-            <q-item-section style="max-width: 200px">
-              <q-item-label class="text-weight-bold">{{ key }}</q-item-label>
-            </q-item-section>
-            <q-item-section>
-              <q-input v-model="editedObject[key]" dense outlined @change="updateObjectProperty(key)" />
-            </q-item-section>
-          </q-item>
-        </q-list>
-      </q-card-section>
-    </q-card>
-  </div>
+  <IsolatedObject
+    v-if="selectedObject"
+    :selectedObject="selectedObject"
+    @close="onCloseClick"
+    @update:selectedObject="updateSelectedObject"
+  />
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, computed } from 'vue';
 import { useObjectsStore } from 'stores/objects';
 import { useScriptStore } from 'stores/script';
+import IsolatedObject from './IsolatedObject.vue';
 
 function to_utf8_symbol(type: string) {
   switch (type) {
@@ -92,6 +77,9 @@ function to_utf8_symbol(type: string) {
 
 export default defineComponent({
   name: 'ObjectBrowser2',
+  components: {
+    IsolatedObject,
+  },
   setup() {
     const objects_store = useObjectsStore();
     const script_store = useScriptStore();
@@ -106,7 +94,7 @@ export default defineComponent({
       actions?: string;
       type2?: string;
       stack?: Array<number | null>;
-      [key: string]: any; // For other properties
+      [key: string]: unknown; // For other properties
     }
 
     const expanded = ref<TableObject[]>([]);
@@ -120,7 +108,7 @@ export default defineComponent({
       let filtered_objects: Array<TableObject> = [];
 
       // Get all filter stacks from selected items
-      let filter_stacks = expanded.value.map((item) => item.stack);
+      let filter_stacks = expanded.value.map((item) => item.stack || []);
 
       for (let obj of objects_store.objects) {
         const objAny = obj as TableObject;
@@ -146,13 +134,15 @@ export default defineComponent({
           matches_any_filter = obj.level === 0;
         } else {
           for (let filter_stack of filter_stacks) {
-            let len_match = objAny.stack.length === filter_stack.length + 1;
-            let stack_starts_with_filter_stack = objAny.stack
-              .slice(0, filter_stack.length)
-              .every((value: number | null, index: number) => value === filter_stack[index]);
-            if ((len_match && stack_starts_with_filter_stack) || filter_stack.includes(obj.unique_id)) {
-              matches_any_filter = true;
-              break;
+            if (filter_stack) {
+              let len_match = objAny.stack.length === filter_stack.length + 1;
+              let stack_starts_with_filter_stack = objAny.stack
+                .slice(0, filter_stack.length)
+                .every((value: number | null, index: number) => value === filter_stack[index]);
+              if ((len_match && stack_starts_with_filter_stack) || filter_stack.includes(obj.unique_id)) {
+                matches_any_filter = true;
+                break;
+              }
             }
           }
         }
@@ -184,7 +174,7 @@ export default defineComponent({
             required: true,
             label: key,
             field: (row: TableObject) => row[key],
-            format: (val: any) => `${val}`,
+            format: (val: unknown) => `${val}`,
             sortable: false,
           });
         }
@@ -261,35 +251,6 @@ export default defineComponent({
       return cols;
     });
 
-    const editedObject = ref<Record<string, any>>({});
-
-    const objectProperties = computed(() => {
-      if (!selectedObject.value) return {};
-
-      // Filter out utility properties we don't want to show
-      const excludeProperties = ['tree', 'actions', 'stack'];
-      const result: Record<string, any> = {};
-
-      // Order important properties first
-      const orderingDetail = ['unique_id', 'id', 'type', 'level', 'x', 'y', 'z', 'r', 'g', 'b', 'a'];
-
-      // First add ordered properties
-      for (const prop of orderingDetail) {
-        if (prop in selectedObject.value && !excludeProperties.includes(prop)) {
-          result[prop] = selectedObject.value[prop];
-        }
-      }
-
-      // Then add remaining properties
-      for (const [key, value] of Object.entries(selectedObject.value)) {
-        if (!excludeProperties.includes(key) && !orderingDetail.includes(key)) {
-          result[key] = value;
-        }
-      }
-
-      return result;
-    });
-
     // Functions
     const isExpanded = (row: TableObject) => {
       return expanded.value.some((r) => r.unique_id === row.unique_id);
@@ -300,8 +261,6 @@ export default defineComponent({
       const cleanRow = { ...row };
       // Keep the original object for reference
       selectedObject.value = cleanRow;
-      // Initialize the edited object with current values
-      editedObject.value = { ...cleanRow };
       console.log('Isolated object:', cleanRow);
       script_store.clearSelectedObjects();
       script_store.addSelectedObject(cleanRow['unique_id']);
@@ -321,12 +280,8 @@ export default defineComponent({
       }
     };
 
-    const updateObjectProperty = (key: string) => {
-      if (selectedObject.value && key in selectedObject.value) {
-        // Update the original object with the edited value
-        selectedObject.value[key] = editedObject.value[key];
-        console.log(`Updated property ${key}:`, editedObject.value[key]);
-      }
+    const updateSelectedObject = (updatedObject: TableObject) => {
+      selectedObject.value = updatedObject;
     };
 
     const onExpandClick = (row: TableObject) => {
@@ -353,12 +308,10 @@ export default defineComponent({
       expanded,
       selectedObject,
       pagination,
-      editedObject,
 
       // Computed
       rows,
       columns,
-      objectProperties,
 
       // Methods
       isExpanded,
@@ -366,7 +319,7 @@ export default defineComponent({
       onCloseClick,
       onExpandClick,
       onRowClick,
-      updateObjectProperty,
+      updateSelectedObject,
       to_utf8_symbol,
     };
   },
@@ -454,15 +407,5 @@ export default defineComponent({
 
 :deep(.test-button:hover) {
   background-color: #666666;
-}
-
-.isolated-object-container {
-  margin-top: 20px;
-}
-.isolated-object-card {
-  width: 100%;
-}
-.scroll {
-  overflow-y: auto;
 }
 </style>
