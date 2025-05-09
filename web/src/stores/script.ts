@@ -3,7 +3,7 @@ import { ref } from 'vue';
 
 export const useScriptStore = defineStore('script', {
   state: () => ({
-    filename: 'input/test.js',
+    filename: '',
     script: '',
     current_function: '',
     snippet: '',

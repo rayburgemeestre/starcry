@@ -24,7 +24,11 @@ export function create_script_endpoint() {
     },
     (buffer: string) => {
       if (buffer[0] === '1') {
-        script_store.filename = buffer.slice(1);
+        if (script_store.filename !== '') {
+          console.log('not opening file ' + buffer.slice(1) + ' because ' + script_store.filename + ' is already open');
+        } else {
+          script_store.filename = buffer.slice(1);
+        }
         self.send('open ' + script_store.filename);
         script_store.render_requested_by_user++;
       } else if (buffer[0] === '2') {

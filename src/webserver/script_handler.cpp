@@ -49,7 +49,7 @@ void ScriptHandler::onData(seasocks::WebSocket* con, const char* data) {
     const auto cmd = input.substr(0, find);
     if (cmd == "open") {
       const auto file = input.substr(find + 1);
-      set_script(file);
+      sc->set_script(file);
       logger(DEBUG) << "ScriptHandler::onData - " << input << std::endl;
       std::ifstream ifs(file);
       std::ostringstream ss;
