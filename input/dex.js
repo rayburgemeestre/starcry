@@ -56,6 +56,8 @@ _ = {
     'minimize_steps_per_object': false,
     'bg_color': {'r': 0., 'g': 0., 'b': 0., 'a': 1},
     'grain_for_opacity': false,
+    // 'gamma': 1.0,
+    // 'brightness': 1.5,
   },
   'preview': {
     'width': 512,
