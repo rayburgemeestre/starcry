@@ -6,9 +6,8 @@ import subprocess
 import base64
 from io import BytesIO
 from pathlib import Path
-from PIL import Image, ImageChops, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import numpy as np
-import datetime
 import argparse
 
 def get_image_datetime(image_path):
@@ -16,7 +15,7 @@ def get_image_datetime(image_path):
     try:
         timestamp = os.path.getmtime(image_path)
         return datetime.datetime.fromtimestamp(timestamp)
-    except Exception as e:
+    except Exception:
         return "Unknown"
 
 def get_image_filesize(image_path):
@@ -52,7 +51,7 @@ def compare_images(img1_path, img2_path):
             rmse = float(match.group(1))
         else:
             rmse = 1.0  # Default value as in the C++ code
-    except Exception as e:
+    except Exception:
         rmse = 1.0
     
     return rmse

@@ -76,6 +76,7 @@ integration-test:  ## execute starcry unit tests using docker (with clang)
 	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
 	                    cmake --build build --target integration_tests -j $$(nproc) && \
 	                    ./build/integration_tests -s -d yes --rng-seed 0)
+	python3 test/report.py
 
 .PHONY: integration-test-gcc
 integration-test-gcc:  ## execute starcry unit tests using docker (with gcc)
