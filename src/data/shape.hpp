@@ -289,10 +289,17 @@ inline bool shape_to_json(const shape& input, nlohmann::json& j) {
 inline bool shapes_to_json(const std::vector<shape>& input, std::string& string_out) {
   nlohmann::json j;
   j["shapes"] = nlohmann::json::array();
+  size_t previous_shape_idx = 0;
   for (const auto& shape : input) {
     nlohmann::json shape_json;
     const auto _ = shape_to_json(shape, shape_json);
+    shape_json["has_children"] = false;
     j["shapes"].emplace_back(shape_json);
+    auto& previous_shape = j["shapes"][previous_shape_idx];
+    if (shape_json["level"].get<int>() == previous_shape["level"].get<int>() + 1) {
+      previous_shape["has_children"] = true;
+    }
+    previous_shape_idx = j["shapes"].size() - 1;
   }
   string_out = j.dump();
   return true;
