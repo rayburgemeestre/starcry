@@ -73,6 +73,11 @@ export const useObjectsStore = defineStore('objects', {
       }
       return [];
     },
+    getChildrenRecursive(value: number): number[] {
+      const children = this.getChildren(value);
+      const recursiveChildren: number[] = children.flatMap((child) => this.getChildrenRecursive(child));
+      return [...children, ...recursiveChildren];
+    },
     isSelectedArray(value: number[]) {
       for (const v of value) {
         if (this.isSelected(v) !== 1 && this.isSelected(v) !== 3) {
@@ -82,7 +87,7 @@ export const useObjectsStore = defineStore('objects', {
       return true;
     },
     updateLookupTable() {
-      const parentStack = []; // stack to keep track of parents at each level
+      const parentStack: number[] = []; // stack to keep track of parents at each level
       this.lookup = {};
       this.has_children = {};
       this.children = {};
