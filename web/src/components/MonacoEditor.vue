@@ -4,6 +4,8 @@
     <div class="tags">
       <q-checkbox dark v-model="vim_mode" label="vim" color="#990000" />
       <q-checkbox dark v-model="emacs_mode" label="emacs" color="#990000" />
+      &nbsp;
+      <q-btn color="primary" dense @click="save_file">Save</q-btn>
       <br />
       <span class="status" :id="`${name}_status`"></span>
     </div>
@@ -67,6 +69,12 @@ export default defineComponent({
     language: {
       type: String,
       required: false,
+    },
+  },
+  methods: {
+    save_file() {
+      console.log('save_file');
+      script_store.value_updated_by_user++;
     },
   },
   setup() {
