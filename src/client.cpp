@@ -84,6 +84,7 @@ void mainloop(void *arg) {
   SDL_SetRenderDrawColor(renderer, 255, 80, 80, 255);
 
 #ifndef EMSCRIPTEN
+  // TODO: this function, is not playing along very well with newer code!!
   render_shapes_to_texture();
 #endif
 
@@ -253,7 +254,8 @@ void start(uint32_t width, uint32_t height, uint32_t canvas_w, uint32_t canvas_h
     return;
   }
 
-  renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+  // renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+  renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
 
 #endif
 
@@ -265,6 +267,7 @@ void start(uint32_t width, uint32_t height, uint32_t canvas_w, uint32_t canvas_h
   emscripten_set_main_loop_arg(mainloop, &ctx, fps, simulate_infinite_loop);
   SDL_DestroyRenderer(renderer);
 #else
+  // TODO: why is this function here?
   render_shapes_to_texture();
   while (true) {
     SDL_Event event;
