@@ -543,8 +543,10 @@ void metrics::display(std::function<void(const std::string &)> f1,
               ss << " Timed-out T: " << time_diff(chunk.render_begin, chunk.render_end) << " ";
               break;
           }
+          size_t max_num = 20;
           for (const auto &obj : chunk.objects) {
             ss << obj.state;
+            if (!max_num--) break;
           }
           flush(f2, ss);
         }
