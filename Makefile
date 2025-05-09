@@ -7,6 +7,7 @@ ccache_enabled = [[ -f '/usr/bin/ccache' ]]
 ccache_env = CXX='ccache g++' CC='ccache gcc' CCACHE_SLOPPINESS=file_macro,locale,time_macros
 docker_tty = $$(/bin/sh -c 'if [ "$(interactive)" = "1" ]]; then echo "-t"; else echo ""; fi')
 docker_device_card0 = $$(/bin/sh -c 'if [ -e "/dev/dri/card0" ]]; then echo "--device /dev/dri/card0:/dev/dri/card0"; else echo ""; fi')
+docker_device_card1 = $$(/bin/sh -c 'if [ -e "/dev/dri/card1" ]]; then echo "--device /dev/dri/card1:/dev/dri/card1"; else echo ""; fi')
 docker_exe_tmp := $$(/bin/sh -c 'if [ $$(which podman) ]; then echo "podman"; else echo "docker"; fi')
 docker_exe:=$(shell if [ $$(which podman) ]; then echo "podman --log-level=debug"; else echo "docker"; fi)
 #docker_params = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo "--storage-opt ignore_chown_errors=true"; else echo ""; fi')
@@ -14,12 +15,17 @@ docker_params = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo ""; else echo
 docker_run = $(docker_exe_tmp) $(docker_params) run -i $(docker_tty) --rm \
 	                                            -e _UID=$(uid) -e _GID=$(gid) \
 	                                            -e container=podman \
+												-e XDG_RUNTIME_DIR=$$XDG_RUNTIME_DIR \
+												-v /run/dbus:/run/dbus \
+                                                -v /run/user/$(uid)/bus:/run/user/$(uid)/bus \
+                                                -e DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(uid)/bus" \
 	                                            -e DISPLAY=$$DISPLAY \
 	                                            -v /tmp/.X11-unix:/tmp/.X11-unix \
 	                                            -v $$PWD:$$PWD \
 	                                            -v $$PWD/.ccache:/root/.ccache \
 	                                            -v $$PWD/.emscripten_cache:/tmp/.emscripten_cache \
 	                                            $(docker_device_card0) \
+	                                            $(docker_device_card1) \
 	                                            --entrypoint /bin/bash \
 	                                            -w $$PWD docker.io/rayburgemeestre/build-starcry-ubuntu:24.04
 inside_docker_container = [[ "$$container" == "podman" ]] # || [[ -f /.dockerenv ]]  # broken
@@ -292,7 +298,7 @@ clion:
 	mkdir -p /tmp/ccache-root
 	$(docker_exe) stop starcry_clion || true
 	$(docker_exe) rm starcry_clion || true
-	$(docker_exe) run --rm --name starcry_clion $(docker_device_card0) --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:24.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/clion ${HOME}"
+	$(docker_exe) run --rm --name starcry_clion $(docker_device_card0) --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:24.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/clion ${HOME} /root/projects/starcry"
 
 clion-gcc:
 	xhost +
@@ -317,6 +323,10 @@ webstorm:
 	$(docker_exe) stop starcry_webstorm || true
 	$(docker_exe) rm starcry_webstorm || true
 	$(docker_exe) run --rm --name starcry_webstorm --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix docker.io/rayburgemeestre/build-starcry-ubuntu:24.04 -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/webstorm ${HOME}"
+
+
+benchmark:
+	bash docs/benchmark.sh input/blank.js
 
 profile:  ## run starcry with valgrind's callgrind for profiling
 	#valgrind --tool=callgrind ./build/starcry -c 1 input/broken/wave.js -f 1 --stdout --debug --verbose
