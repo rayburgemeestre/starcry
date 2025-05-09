@@ -6,8 +6,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstdio>
-#include <iostream>
-#include <regex>
 
 #include "system_under_test.hpp"
 
@@ -48,7 +46,7 @@ TEST_CASE("Test image with noise") {
   sut sc;
   sc.options.script_file = "input/perlin3.js";
   sc.options.frame_of_interest = 10;
-  REQUIRE(sc.test_create_image("unittest_002_perlin3_frame10") <= double(0.08 * fuzziness_allowed));
+  REQUIRE(sc.test_create_image("unittest_002_perlin3_frame10") <= double(0.08));
 }
 
 TEST_CASE("Test simple orbit video") {

@@ -142,10 +142,11 @@ target_link_libraries(sc_client PRIVATE
 )
 configure_links(sc_client)
 
-add_executable(tests test/test_unit.cpp)
-target_compile_features(tests PRIVATE cxx_std_23)
-target_compile_options(tests PRIVATE -isystem "${CMAKE_CURRENT_SOURCE_DIR}/libs/v8pp")
-target_link_libraries(tests PRIVATE
+add_executable(unit_tests test/test_unit.cpp)
+set_target_properties(unit_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+target_compile_features(unit_tests PRIVATE cxx_std_23)
+target_compile_options(unit_tests PRIVATE -isystem "${CMAKE_CURRENT_SOURCE_DIR}/libs/v8pp")
+target_link_libraries(unit_tests PRIVATE
     /opt/cppse/build/v8/lib/libv8_monolith.a
     /opt/cppse/build/vivid/lib/libvivid.a
     Catch2::Catch2WithMain

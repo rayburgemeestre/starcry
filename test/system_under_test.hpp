@@ -6,6 +6,9 @@
 
 #pragma once
 
+#include <iostream>
+#include <regex>
+
 #include "boost/di.hpp"
 #include "data/frame_request.hpp"
 #include "data/video_request.hpp"

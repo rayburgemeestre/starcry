@@ -68,8 +68,8 @@ build-gcc:  ## build starcry binary using docker (with gcc)
 .PHONY: test
 test:  ## execute starcry unit tests using docker (with clang)
 	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
-	                    cmake --build build --target tests && \
-	                    ./build/tests -s -d yes)
+	                    cmake --build build --target unit_tests && \
+	                    ./build/unit_tests -s -d yes)
 
 .PHONY: integration-test
 integration-test:  ## execute starcry unit tests using docker (with clang)
