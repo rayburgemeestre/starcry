@@ -13,6 +13,8 @@ export interface StarcryAPI {
   client_data: string;
 }
 
+let update_connection_status_timeout: NodeJS.Timeout | null = null;
+
 // TODO: further port everything to typescript, and do it in a better way
 export class StarcryAPI {
   static get binary_type() {
@@ -74,6 +76,21 @@ export class StarcryAPI {
       this.on_status_change('connected');
       useGlobalStore().connected.add(this.endpoint);
       useGlobalStore().disconnected.delete(this.endpoint);
+
+      if (!useGlobalStore().disconnected.length) {
+        if (update_connection_status_timeout) {
+          clearTimeout(update_connection_status_timeout);
+        }
+        update_connection_status_timeout = setTimeout(() => {
+          useGlobalStore().show_connection_status = false;
+        }, 5000);
+      } else {
+        if (update_connection_status_timeout) {
+          clearTimeout(update_connection_status_timeout);
+        }
+        useGlobalStore().show_connection_status = true;
+      }
+
       this.send('LINK ' + this.client_data['ID']);
       this.on_connected();
     }.bind(this);
@@ -82,6 +99,10 @@ export class StarcryAPI {
       this.on_disconnected();
       useGlobalStore().connected.delete(this.endpoint);
       useGlobalStore().disconnected.add(this.endpoint);
+      if (update_connection_status_timeout) {
+        clearTimeout(update_connection_status_timeout);
+      }
+      useGlobalStore().show_connection_status = true;
       this.retry = setTimeout(this.connect.bind(this), 100);
     }.bind(this);
     this.ws.onmessage = function (message) {
