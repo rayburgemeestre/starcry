@@ -6,11 +6,29 @@
         <q-toolbar-title>
           <img src="/sc2.png" style="position: relative; top: 5px; left: 10px; height: 40px" alt="logo" />
         </q-toolbar-title>
-        <q-btn v-if="global_store.connected.size" flat round dense icon="cloud_queue" class="q-mr-xs" />
-        <div v-if="global_store.connected.size">{{ global_store.connected.size }} connected</div>
-        <q-btn v-if="global_store.disconnected.size" flat round dense icon="cloud_off" class="q-mr-xs" />
-        <div v-if="global_store.disconnected.size">{{ global_store.disconnected.size }} disconnected</div>
         File: {{ script_store.filename ? script_store.filename : '[ empty ]' }} &nbsp;
+        <q-btn
+          v-if="global_store.show_connection_status && global_store.connected.size"
+          flat
+          round
+          dense
+          icon="cloud_queue"
+          class="q-mr-xs"
+        />
+        <div v-if="global_store.show_connection_status && global_store.connected.size">
+          {{ global_store.connected.size }} connected
+        </div>
+        <q-btn
+          v-if="global_store.show_connection_status && global_store.disconnected.size"
+          flat
+          round
+          dense
+          icon="cloud_off"
+          class="q-mr-xs"
+        />
+        <div v-if="global_store.show_connection_status && global_store.disconnected.size">
+          {{ global_store.disconnected.size }} disconnected
+        </div>
         <q-btn dense flat round icon="menu" @click="toggleRightDrawer" />
       </q-toolbar>
 

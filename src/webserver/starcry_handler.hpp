@@ -6,6 +6,10 @@
 
 #pragma once
 
+#include "seasocks/WebSocket.h"
+
+#include <unordered_map>
+
 class starcry_handler {
 public:
   std::unordered_map<std::string, seasocks::WebSocket *> _links;
