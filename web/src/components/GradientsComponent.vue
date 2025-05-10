@@ -29,7 +29,7 @@
 
       <div class="row q-mb-md">
         <q-input
-          v-model.number="expandedGradientNewName"
+          v-model="expandedGradientNewName"
           type="text"
           dense
           label="Gradient name"
@@ -37,7 +37,7 @@
         />
       </div>
 
-      <div v-for="(stop, index) in gradients[expandedGradient]" :key="index" class="row q-mb-sm items-center">
+      <div v-for="(stop, index) in editableGradient" :key="index" class="row q-mb-sm items-center">
         <div class="col-2">
           <q-input
             v-model.number="stop.position"
@@ -146,7 +146,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, onMounted, computed } from 'vue';
+import { defineComponent, ref, watch, onMounted, computed, nextTick } from 'vue';
 import { useScriptStore } from 'stores/script';
 import { useProjectStore } from 'stores/project';
 import { JsonWithObjectsParser } from 'components/json_parser';
@@ -157,10 +157,113 @@ export default defineComponent({
   emits: ['save-changes'],
 
   setup(props, { emit }) {
-    let script_store = useScriptStore();
-    let project_store = useProjectStore();
-    let parsed = project_store.parser?.parsed();
-    let gradients = ref(parsed && 'gradients' in parsed ? parsed['gradients'] : {});
+    const script_store = useScriptStore();
+    const project_store = useProjectStore();
+    const parsed = project_store.parser?.parsed();
+
+    const rawGradients = parsed && 'gradients' in parsed ? parsed['gradients'] : {};
+    const gradients = ref({ ...rawGradients });
+    const stringFormatGradients = ref({});
+    const expandedGradient = ref(null);
+    const expandedGradientNewName = ref('');
+    const editableGradient = ref([]);
+
+    // track which gradients are in string format
+    for (const [name, gradient] of Object.entries(rawGradients)) {
+      if (typeof gradient === 'string') {
+        stringFormatGradients.value[name] = true;
+      }
+    }
+
+    // ----------------------
+    // Gradient format utilities
+    // ----------------------
+
+    function isStringGradient(gradient) {
+      return typeof gradient === 'string';
+    }
+
+    // parse a hex color string into RGB components
+    function parseHexColor(hexColor) {
+      hexColor = hexColor.replace('#', '');
+      const r = parseInt(hexColor.substring(0, 2), 16) / 255;
+      const g = parseInt(hexColor.substring(2, 4), 16) / 255;
+      const b = parseInt(hexColor.substring(4, 6), 16) / 255;
+      return { r, g, b };
+    }
+
+    // convert a hex color string with optional alpha into gradient array format
+    function parseStringGradient(gradientStr) {
+      if (!gradientStr) {
+        return [
+          { position: 0, r: 1, g: 1, b: 1, a: 1 },
+          { position: 0.9, r: 1, g: 1, b: 1, a: 1 },
+          { position: 1, r: 1, g: 1, b: 1, a: 0 },
+        ];
+      }
+
+      // check if there's an alpha value specified with @
+      let alpha = 0.9; // default fade position
+      let hexColor = gradientStr;
+
+      if (gradientStr.includes('@')) {
+        const parts = gradientStr.split('@');
+        hexColor = parts[0];
+        alpha = parseFloat(parts[1]);
+      }
+
+      const { r, g, b } = parseHexColor(hexColor);
+
+      // convert to array format with 3 positions as per spec
+      return [
+        { position: 0, r, g, b, a: 1 },
+        { position: alpha, r, g, b, a: 1 },
+        { position: 1, r, g, b, a: 0 },
+      ];
+    }
+
+    // try to convert array gradient back to string format if possible
+    function convertToStringFormat(gradientArray) {
+      // check if it follows the pattern needed for string format
+      if (gradientArray.length === 3) {
+        const first = gradientArray[0];
+        const middle = gradientArray[1];
+        const last = gradientArray[2];
+
+        // check if it follows the pattern of 0, alpha, 1 positions
+        if (first.position === 0 && last.position === 1 && last.a === 0 && first.a === 1 && middle.a === 1) {
+          // check if all stops have the same color
+          if (
+            first.r === middle.r &&
+            first.g === middle.g &&
+            first.b === middle.b &&
+            middle.r === last.r &&
+            middle.g === last.g &&
+            middle.b === last.b
+          ) {
+            // convert RGB to hex
+            const hexR = Math.round(first.r * 255)
+              .toString(16)
+              .padStart(2, '0');
+            const hexG = Math.round(first.g * 255)
+              .toString(16)
+              .padStart(2, '0');
+            const hexB = Math.round(first.b * 255)
+              .toString(16)
+              .padStart(2, '0');
+            const hex = `#${hexR}${hexG}${hexB}`;
+
+            // if middle position is 0.9 (the default), return just the hex
+            if (Math.abs(middle.position - 0.9) < 0.001) {
+              return hex;
+            } else {
+              return `${hex}@${middle.position}`;
+            }
+          }
+        }
+      }
+      return null;
+    }
 
     function resizeCanvas() {
       let module_already_loaded = !!window.Module;
@@ -174,66 +277,96 @@ export default defineComponent({
       if (!project_store.parser) {
         project_store.parser = new JsonWithObjectsParser(script_store.script);
       }
+
+      // update script with current gradients if needed
+      const currentScript = project_store.parser.parsed();
+      if (currentScript && (!currentScript.gradients || Object.keys(currentScript.gradients).length === 0)) {
+        currentScript.gradients = { ...gradients.value };
+        //script_store.script = JSON.stringify(currentScript, null, 2);
+        script_store.script = project_store.parser.to_string();
+      }
+
       let parsed = project_store.parser.parsed();
-      let gradients = parsed ? parsed['gradients'] : {};
+      let parsedGradients = parsed && parsed['gradients'] ? parsed['gradients'] : {};
 
       for (let node of document.querySelectorAll('canvas.gradient_preview')) {
-        let canvas = node as HTMLCanvasElement;
-        canvas.width = node.parentNode.offsetWidth;
-        let ctx = canvas.getContext('2d');
-        if (ctx === null) continue;
-        ctx.fillStyle = 'blue';
-        // read gradient name from data-gradient attribute
-        let gradient_name = canvas.getAttribute('data-gradient');
-        if (!gradient_name) continue;
+        try {
+          let canvas = node as HTMLCanvasElement;
+          canvas.width = node.parentNode.offsetWidth || 100;
+          let ctx = canvas.getContext('2d');
+          if (ctx === null) continue;
 
-        let gradient_definition = JSON.stringify(gradients[gradient_name]);
-        let colors =
-          typeof gradient_definition !== 'undefined'
-            ? window.Module.get_gradient_colors(gradient_definition, canvas.width)
-            : undefined;
+          // read gradient name from data-gradient attribute
+          let gradient_name = canvas.getAttribute('data-gradient');
+          if (!gradient_name) continue;
 
-        function drawCheckerboard() {
-          if (!ctx) return;
-          const colors = ['#333333', '#000000'];
-          for (let y = 0; y < canvas.height; y++) {
-            for (let x = 0; x < canvas.width; x++) {
-              // Select the color based on the current pixel's position
-              const blocksize = 5;
-              const colorIndex = Math.floor(x / blocksize) % 2 === Math.floor(y / blocksize) % 2 ? 0 : 1;
-              ctx.fillStyle = colors[colorIndex];
-              ctx.fillRect(x, y, 1, 1);
+          let gradient = parsedGradients[gradient_name];
+          if (!gradient) continue;
+
+          let gradient_definition;
+
+          // handle both string and array formats for the preview
+          if (typeof gradient === 'string') {
+            gradient_definition = JSON.stringify(parseStringGradient(gradient));
+          } else {
+            gradient_definition = JSON.stringify(gradient);
+          }
+
+          drawCheckerboard(ctx, canvas);
+
+          let colors =
+            typeof gradient_definition !== 'undefined' && window.Module.get_gradient_colors
+              ? window.Module.get_gradient_colors(gradient_definition, canvas.width)
+              : undefined;
+
+          if (colors && colors.size) {
+            let x = 0;
+            for (let i = 0; i < colors.size(); ) {
+              let r = colors.get(i++);
+              let g = colors.get(i++);
+              let b = colors.get(i++);
+              let a = colors.get(i++) / 255;
+              ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+              ctx.fillRect(x, 0, 1, canvas.height);
+              x++;
             }
           }
-        }
-
-        drawCheckerboard();
-
-        let x = 0;
-        if (!colors) return;
-        for (let i = 0; i < colors.size(); ) {
-          let r = colors.get(i++);
-          let g = colors.get(i++);
-          let b = colors.get(i++);
-          let a = colors.get(i++) / 255;
-          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
-          ctx.fillRect(x, 0, 1, canvas.height);
-          x++;
+        } catch (e) {
+          console.error('Error rendering gradient preview:', e);
         }
       }
     }
 
-    // Resize the canvas to fill browser window dynamically
-    window.addEventListener('resize', resizeCanvas, false);
 
+    function drawCheckerboard(ctx, canvas) {
+      if (!ctx) return;
+      const colors = ['#333333', '#000000'];
+      const blocksize = 5;
+
+      for (let y = 0; y < canvas.height; y += blocksize) {
+        for (let x = 0; x < canvas.width; x += blocksize) {
+          const colorIndex = Math.floor(x / blocksize) % 2 === Math.floor(y / blocksize) % 2 ? 0 : 1;
+          ctx.fillStyle = colors[colorIndex];
+          ctx.fillRect(x, y, blocksize, blocksize);
+        }
+      }
+    }
+
+    // Set up canvas resize events
+    window.addEventListener('resize', resizeCanvas, false);
     watch(() => script_store.re_render_editor_sidepane, resizeCanvas);
     watch(() => script_store.value_updated_by_user, resizeCanvas);
     onMounted(() => {
       resizeCanvas();
     });
 
+    // ----------------------
+    // Gradient Actions
+    // ----------------------
+
     function addGradient() {
-      gradients.value['gradient-' + Math.random()] = [
+      const newName = 'gradient-' + Math.random();
+      gradients.value[newName] = [
         {
           position: 0.0,
           r: 1,
@@ -241,13 +374,177 @@ export default defineComponent({
           b: 0,
           a: 1,
         },
+        {
+          position: 1.0,
+          r: 1,
+          g: 0,
+          b: 0,
+          a: 0,
+        },
       ];
-      console.log('Add gradient clicked');
-      // Add your gradient logic here
-    }
-    const expandedGradient = ref(null);
-    const expandedGradientNewName = ref(null);
 
+      // update the script
+      const parsedScript = project_store.parser.parsed();
+      if (parsedScript) {
+        parsedScript.gradients = { ...gradients.value };
+        // script_store.script = JSON.stringify(parsedScript, null, 2);
+        script_store.script = project_store.parser.to_string();
+      }
+
+      emit('save-changes', gradients.value);
+
+      setTimeout(resizeCanvas, 100);
+      setTimeout(resizeCanvas, 500);
+      setTimeout(resizeCanvas, 1000);
+    }
+
+    function toggleGradientDetails(name) {
+      if (expandedGradient.value === name) {
+        expandedGradient.value = null;
+        editableGradient.value = [];
+      } else {
+        expandedGradient.value = name;
+        expandedGradientNewName.value = name;
+
+        if (isStringGradient(gradients.value[name])) {
+          editableGradient.value = parseStringGradient(gradients.value[name]);
+        } else {
+          // Make a deep copy to avoid direct mutation
+          editableGradient.value = JSON.parse(JSON.stringify(gradients.value[name]));
+        }
+      }
+
+      setTimeout(resizeCanvas, 10);
+      setTimeout(resizeCanvas, 100);
+      setTimeout(resizeCanvas, 1000);
+    }
+
+    function addGradientStop(gradientName) {
+      // Add a new stop at the middle position relative to existing stops
+      const stops = editableGradient.value;
+      const positions = stops.map((stop) => stop.position);
+      const minPos = Math.min(...positions);
+      const maxPos = Math.max(...positions);
+      const newPos = (minPos + maxPos) / 2;
+
+      // Default to red with 50% opacity
+      editableGradient.value.push({
+        position: newPos,
+        r: 1,
+        g: 0,
+        b: 0,
+        a: 0.5,
+      });
+
+      // Sort by position
+      sortGradientStops();
+      updateGradient(gradientName);
+    }
+
+    function removeGradientStop(gradientName, index) {
+      // Don't allow removing if there are only 2 stops
+      if (editableGradient.value.length <= 2) {
+        return;
+      }
+
+      editableGradient.value.splice(index, 1);
+      updateGradient(gradientName);
+    }
+
+    function sortGradientStops() {
+      editableGradient.value.sort((a, b) => a.position - b.position);
+    }
+
+    function updateGradient(gradientName) {
+      // Make sure all values are numbers
+      editableGradient.value.forEach((stop) => {
+        stop.position = parseFloat(stop.position);
+        stop.r = parseFloat(stop.r);
+        stop.g = parseFloat(stop.g);
+        stop.b = parseFloat(stop.b);
+        stop.a = parseFloat(stop.a);
+      });
+
+      // Sort by position
+      sortGradientStops();
+
+      // If this was originally a string gradient, try to convert back
+      if (stringFormatGradients.value[gradientName]) {
+        const stringVersion = convertToStringFormat(editableGradient.value);
+        if (stringVersion !== null) {
+          // We can convert back to string format
+          gradients.value[gradientName] = stringVersion;
+        } else {
+          // Can't convert back, use the array format
+          gradients.value[gradientName] = JSON.parse(JSON.stringify(editableGradient.value));
+          // It's no longer in string format
+          stringFormatGradients.value[gradientName] = false;
+        }
+      } else {
+        // It was already in array format
+        gradients.value[gradientName] = JSON.parse(JSON.stringify(editableGradient.value));
+      }
+
+      // Make sure we have a valid gradient object
+      if (!gradients.value[gradientName] && gradientName) {
+        gradients.value[gradientName] = [
+          { position: 0, r: 1, g: 0, b: 0, a: 1 },
+          { position: 1, r: 1, g: 0, b: 0, a: 0 },
+        ];
+      }
+
+      // Update the parsed script with our gradients to ensure they're saved properly
+      // Mark123
+      const parsedScript = project_store.parser.parsed();
+      if (parsedScript) {
+        parsedScript.gradients = { ...gradients.value };
+        //script_store.script = JSON.stringify(parsedScript, null, 2);
+        // TODO: this is duplicated code
+        // parsedScript.gradients = gradients.value;
+        script_store.script = project_store.parser.to_string();
+      }
+
+      // Trigger a re-render of the gradient preview
+      emit('save-changes', gradients.value);
+
+      // Schedule multiple redraws to ensure canvas is updated
+      setTimeout(resizeCanvas, 100);
+      setTimeout(resizeCanvas, 500);
+      setTimeout(resizeCanvas, 1000);
+    }
+
+    function updateGradientName() {
+      const oldName = expandedGradient.value;
+      const newName = expandedGradientNewName.value;
+
+      if (oldName && newName && oldName !== newName) {
+        gradients.value[newName] = gradients.value[oldName];
+        delete gradients.value[oldName];
+        expandedGradient.value = newName;
+
+        // if it was a string format gradient, keep that information
+        if (stringFormatGradients.value[oldName]) {
+          stringFormatGradients.value[newName] = true;
+          delete stringFormatGradients.value[oldName];
+        }
+
+        // update the parsed script with our gradients to ensure they're saved properly
+        const parsedScript = project_store.parser.parsed();
+        if (parsedScript) {
+          parsedScript.gradients = { ...gradients.value };
+          script_store.script = project_store.parser.to_string();
+        }
+
+        emit('save-changes', gradients.value);
+        nextTick(() => {
+          // TODO: check do we need the setTimeouts in these cases?
+          setTimeout(resizeCanvas, 100);
+          setTimeout(resizeCanvas, 500);
+        });
+      }
+    }
+
+    // split gradients into two parts for UI display (before and after expanded gradient)
     const gradients_one = computed(() => {
       let keys = [];
       for (let key of Object.keys(gradients.value)) {
@@ -276,83 +573,9 @@ export default defineComponent({
       return keys;
     });
 
-    function toggleGradientDetails(name: string) {
-      expandedGradient.value = expandedGradient.value === name ? null : name;
-      expandedGradientNewName.value = expandedGradient.value;
-      setTimeout(resizeCanvas, 10);
-      setTimeout(resizeCanvas, 100);
-      setTimeout(resizeCanvas, 1000);
-    }
-
-    function addGradientStop(gradientName: string) {
-      // Add a new stop at the middle position relative to existing stops
-      const stops = gradients.value[gradientName];
-      const positions = stops.map((stop: { position: number }) => stop.position);
-      const minPos = Math.min(...positions);
-      const maxPos = Math.max(...positions);
-      const newPos = (minPos + maxPos) / 2;
-
-      // Default to red with 50% opacity
-      gradients.value[gradientName].push({
-        position: newPos,
-        r: 1,
-        g: 0,
-        b: 0,
-        a: 0.5,
-      });
-
-      // Sort by position
-      sortGradientStops(gradientName);
-      updateGradient(gradientName);
-    }
-
-    function removeGradientStop(gradientName: string, index: number) {
-      // Don't allow removing if there are only 2 stops
-      if (gradients.value[gradientName].length <= 2) {
-        return;
-      }
-
-      gradients.value[gradientName].splice(index, 1);
-      updateGradient(gradientName);
-    }
-
-    function sortGradientStops(gradientName: string) {
-      gradients.value[gradientName].sort((a: { position: number }, b: { position: number }) => a.position - b.position);
-    }
-
-    function updateGradient(gradientName: string) {
-      // Make sure all values are numbers
-      gradients.value[gradientName].forEach(
-        (stop: { position: number; r: number; g: number; b: number; a: number }) => {
-          stop.position = parseFloat(stop.position);
-          stop.r = parseFloat(stop.r);
-          stop.g = parseFloat(stop.g);
-          stop.b = parseFloat(stop.b);
-          stop.a = parseFloat(stop.a);
-        }
-      );
-
-      // Sort by position
-      sortGradientStops(gradientName);
-
-      // Trigger a re-render of the gradient preview
-      emit('save-changes', gradients);
-    }
-
-    function updateGradientName() {
-      const oldName = expandedGradient.value;
-      const newName = expandedGradientNewName.value;
-
-      if (oldName && newName && oldName !== newName) {
-        gradients.value[newName] = gradients.value[oldName];
-        delete gradients.value[oldName];
-        expandedGradient.value = newName;
-        emit('save-changes', gradients);
-      }
-    }
-
     return {
       gradients,
+      editableGradient,
       addGradient,
       expandedGradient,
       expandedGradientNewName,
