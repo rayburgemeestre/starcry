@@ -1070,7 +1070,7 @@ public:
     offset_y_ = y;
   }
 
-  motionblur_buffer &motionblur_buf() {
+  flat_motionblur_buffer &motionblur_buf() {
     return motionblur_buffer_;
   }
 
