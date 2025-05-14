@@ -332,8 +332,10 @@ benchmark:
 profile:  ## run starcry with valgrind's callgrind for profiling
 	#valgrind --tool=callgrind ./build/starcry -c 1 input/broken/wave.js -f 1 --stdout --debug --verbose
 	#valgrind --tool=callgrind ./build/starcry --tui input/spiral2.js -f 1 --single --no-output
-	valgrind --tool=callgrind ./build/starcry input/blank.js --benchmark --no-output
+	#valgrind --tool=callgrind ./build/starcry input/script.js --benchmark --single -f 0
 	# valgrind --tool=callgrind ./build/starcry --no-render --stdout input/test.js
+	echo NOTE: compile with 'make debug-gcc' and not clang.
+	@$(call make-clang, apt install valgrind -y && valgrind --tool=callgrind ./build/starcry input/script.js --benchmark --single -f 0)
 	ls -althrst | tail -n 1
 	echo invoke kcachegrind on this file
 
