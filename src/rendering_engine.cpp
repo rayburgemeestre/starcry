@@ -250,6 +250,9 @@ void rendering_engine::draw_captured_pixels(image &target_bmp,
                                             const data::shape &shape) {
   auto &ref = draw_logic_->motionblur_buf();
   ref.set_layers(shape.indexes.size());
+
+#ifdef NOT_DEFINED
+# This is the non-flat buffer code
   for (const auto &p : ref.buffer()) {
     // These clamps should be avoided, and in draw_logic we should make sure we don't draw outside bounds!
     const auto &y = math::clamp(p.first, 0, (int)height);  // TODO: comment
@@ -263,4 +266,15 @@ void rendering_engine::draw_captured_pixels(image &target_bmp,
       draw_logic_->blend_the_pixel(target_bmp, shape.blending_.type(), x, y, col.a, col);
     }
   }
+#else
+  // Iterate only through active pixels - much faster than scanning the entire buffer
+  for (const auto &[x, y] : ref.active_pixels()) {
+    // Get the color data and blend it
+    const auto &color_dat = ref.get_data(x, y);
+    const auto col = ref.get_color(color_dat);
+
+    // Draw the pixel to the target bitmap
+    draw_logic_->blend_the_pixel(target_bmp, shape.blending_.type(), x, y, col.a, col);
+  }
+#endif
 }

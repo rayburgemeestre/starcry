@@ -22,6 +22,7 @@
 #endif
 #include "util/math.h"
 #include "util/motionblur_buffer.hpp"
+#include "util/flat_motionblur_buffer.hpp"
 #include "util/noise_mappers.h"
 #include "util/random.hpp"
 #include "util/render_math.hpp"
@@ -1141,7 +1142,8 @@ private:
   uint32_t width_;
   uint32_t height_;
   std::map<std::string, std::vector<std::shared_ptr<text_drawer>>> font_;
-  motionblur_buffer motionblur_buffer_;
+  //motionblur_buffer motionblur_buffer_;
+  flat_motionblur_buffer motionblur_buffer_;
   util::random_generator random_;
 };
 
