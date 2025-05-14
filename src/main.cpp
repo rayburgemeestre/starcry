@@ -57,8 +57,6 @@ public:
     po::positional_options_description p;
     p.add("script", 1);
     p.add("output", 1);
-    bool grain = false;
-    bool nograin = false;
     // clang-format off
     desc.add_options()
       ("help", "produce help message")
@@ -99,13 +97,13 @@ public:
       ("width", po::value<int>(&options.generator_opts.custom_width), "custom canvas width")
       ("height", po::value<int>(&options.generator_opts.custom_height), "custom canvas height")
       ("scale", po::value<double>(&options.generator_opts.custom_scale), "custom canvas scale")
-      ("grain", po::value<bool>(&grain), "custom canvas enable grain")
-      ("no-grain", po::value<bool>(&nograin), "custom canvas disable grain")
+      ("grain", "custom canvas enable grain")
+      ("no-grain", "custom canvas disable grain")
       ("granularity", po::value<int>(&options.generator_opts.custom_granularity), "custom canvas granularity")
       ("dev", "enable dev mode (used when running in debug mode in k3s using Tilt)")
     ;
     // clang-format on
-
+    
     std::filesystem::create_directories("output");
     if (!options.output_file.empty() && options.output_file[0] != '/') {
       options.output_file = "output/" + options.output_file;
@@ -124,7 +122,7 @@ public:
 
     if (vm.count("grain")) {
       options.generator_opts.custom_grain = true;
-    } else if (vm.count("nograin")) {
+    } else if (vm.count("no-grain")) {
       options.generator_opts.custom_grain = false;
     }
 
