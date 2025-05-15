@@ -274,7 +274,7 @@ void initializer::init_user_script(spawner& spawner_) {
     while (*begin != '=') begin++;
     begin++;
   }
-  const auto source = SCRIPT_NAME + " = " + std::string(begin, end);
+  const auto source = SCRIPT_NAME + " = script = " + std::string(begin, end);
   context_->run("cache = typeof cache == 'undefined' ? {} : cache;");
   context_->run(SCRIPT_NAME + " = {\"video\": {}};");
   try {
@@ -415,15 +415,14 @@ void initializer::init_video_meta_info(std::optional<double> rand_seed,
           frame_sampler_.set_sample_include(i.double_number(sample, "include"), generator_config_.fps);  // seconds
           frame_sampler_.set_sample_exclude(i.double_number(sample, "exclude"), generator_config_.fps);  // seconds
         }
-        
+
         if (generator_options_.custom_scale) use_scale = generator_options_.custom_scale;
         if (generator_options_.custom_width) generator_state_.canvas_w = generator_options_.custom_width;
         if (generator_options_.custom_height) generator_state_.canvas_h = generator_options_.custom_height;
         if (generator_options_.custom_granularity)
           generator_config_.tolerated_granularity = generator_options_.custom_granularity;
-        if (generator_options_.custom_grain)
-            settings_.grain_for_opacity = *generator_options_.custom_grain;
-            
+        if (generator_options_.custom_grain) settings_.grain_for_opacity = *generator_options_.custom_grain;
+
         rand_gen_.set_seed(generator_state_.seed);
 
         generator_state_.max_frames = duration * generator_config_.fps;
