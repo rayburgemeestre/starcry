@@ -103,7 +103,7 @@ public:
       ("dev", "enable dev mode (used when running in debug mode in k3s using Tilt)")
     ;
     // clang-format on
-    
+
     std::filesystem::create_directories("output");
     if (!options.output_file.empty() && options.output_file[0] != '/') {
       options.output_file = "output/" + options.output_file;

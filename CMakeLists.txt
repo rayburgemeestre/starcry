@@ -111,7 +111,7 @@ if (SANITIZER)
     target_link_libraries(starcry PRIVATE
         -static-libgcc
         -static-libstdc++
-        /usr/lib/llvm-15/lib/clang/15.0.7/lib/linux/libclang_rt.asan-x86_64.a
+        /usr/lib/llvm-19/lib/clang/19/lib/linux/libclang_rt.asan-x86_64.a
     )
 else()
     target_link_libraries(starcry PRIVATE -static-libgcc -static-libstdc++)
