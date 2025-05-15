@@ -9,6 +9,7 @@
 #include "bitmap_wrapper.hpp"
 #include "rendering_engine.h"
 #include "rendering_engine/debug.h"
+#include "util/motionblur_buffer_flat_rev.hpp"
 
 #include <fmt/core.h>
 
@@ -251,30 +252,19 @@ void rendering_engine::draw_captured_pixels(image &target_bmp,
   auto &ref = draw_logic_->motionblur_buf();
   ref.set_layers(shape.indexes.size());
 
-#ifdef NOT_DEFINED
-# This is the non-flat buffer code
-  for (const auto &p : ref.buffer()) {
-    // These clamps should be avoided, and in draw_logic we should make sure we don't draw outside bounds!
-    const auto &y = math::clamp(p.first, 0, (int)height);  // TODO: comment
-    // const auto &y = p.first;
-    for (const auto &q : p.second) {
-      const auto &x = math::clamp(q.first, 0, (int)width);  // TODO: comment
-      // const auto &x = q.first;
-      const auto &color_dat = q.second;
-      const auto col = ref.get_color(color_dat);
-      // TODO: design is suffering a bit, draw_logic_ needs a refactoring
-      draw_logic_->blend_the_pixel(target_bmp, shape.blending_.type(), x, y, col.a, col);
-    }
-  }
-#else
-  // Iterate only through active pixels - much faster than scanning the entire buffer
-  for (const auto &[x, y] : ref.active_pixels()) {
-    // Get the color data and blend it
-    const auto &color_dat = ref.get_data(x, y);
-    const auto col = ref.get_color(color_dat);
+  // "motionblur_buffer" (lowest memory)
+  // ref.draw_callback([this, &target_bmp, &shape](int x, int y, const data::color& col) -> void {
+  //     draw_logic_->blend_the_pixel(target_bmp, shape.blending_.type(), x, y, col.a, col);
+  // });
 
-    // Draw the pixel to the target bitmap
-    draw_logic_->blend_the_pixel(target_bmp, shape.blending_.type(), x, y, col.a, col);
-  }
-#endif
+  // "motionblur_buffer_flat" (implementation uses too much memory)
+  // ref.draw_callback([this, &target_bmp, &shape](int x, int y, const data::color& col) -> void {
+  //  draw_logic_->blend_the_pixel(target_bmp, shape.blending_.type(), x, y, col.a, col);
+  // });
+
+  // "motionblur_buffer_flat_rev" (slightly more memory for faster memory access)
+  ref.draw_callback(
+      [this, &target_bmp, &shape](const motionblur_buffer_flat_rev::pixel_data &data, const data::color &col) -> void {
+        draw_logic_->blend_the_pixel(target_bmp, shape.blending_.type(), data.x, data.y, col.a, col);
+      });
 }

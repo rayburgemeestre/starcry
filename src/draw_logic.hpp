@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <sys/select.h>
 #include <algorithm>  // for stdmath::clamp
 #include <cmath>
 
@@ -22,7 +23,8 @@
 #endif
 #include "util/math.h"
 #include "util/motionblur_buffer.hpp"
-#include "util/flat_motionblur_buffer.hpp"
+#include "util/motionblur_buffer_flat.hpp"
+#include "util/motionblur_buffer_flat_rev.hpp"
 #include "util/noise_mappers.h"
 #include "util/random.hpp"
 #include "util/render_math.hpp"
@@ -1070,7 +1072,7 @@ public:
     offset_y_ = y;
   }
 
-  flat_motionblur_buffer &motionblur_buf() {
+  motionblur_buffer_flat_rev &motionblur_buf() {
     return motionblur_buffer_;
   }
 
@@ -1142,8 +1144,9 @@ private:
   uint32_t width_;
   uint32_t height_;
   std::map<std::string, std::vector<std::shared_ptr<text_drawer>>> font_;
-  //motionblur_buffer motionblur_buffer_;
-  flat_motionblur_buffer motionblur_buffer_;
+  // motionblur_buffer motionblur_buffer_;
+  // motionblur_buffer_flat motionblur_buffer_;
+  motionblur_buffer_flat_rev motionblur_buffer_;
   util::random_generator random_;
 };
 

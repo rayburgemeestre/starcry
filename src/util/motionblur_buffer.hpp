@@ -10,6 +10,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include <vector>
 
 #include "data/color.hpp"
+#include "util/math.h"
 
 class motionblur_buffer {
 private:
@@ -96,5 +97,23 @@ public:
   void clear() {
     buffer_.clear();
     layers_ = 0.;
+  }
+
+  void draw_callback(std::function<void(int x, int y, const data::color &)> callback) {
+    for (const auto &p : buffer()) {
+      // These clamps should be avoided, and in draw_logic we should make sure we don't draw outside bounds!
+      // const auto &y = math::clamp(p.first, 0, (int)height);  // TODO: comment
+      const auto &y = p.first;  // TODO: comment
+      // const auto &y = p.first;
+      for (const auto &q : p.second) {
+        // const auto &x = math::clamp(q.first, 0, (int)width);  // TODO: comment
+        const auto &x = q.first;  // TODO: comment
+        // const auto &x = q.first;
+        const auto &color_dat = q.second;
+        const auto col = get_color(color_dat);
+        // TODO: design is suffering a bit, draw_logic_ needs a refactoring
+        callback(x, y, col);
+      }
+    }
   }
 };
