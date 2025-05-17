@@ -63,7 +63,7 @@ export class StarcryAPI {
       this.ws = new WebSocket(
         protocol +
           '//' +
-          document.location.host.replace(':8080', ':18080').replace(':9000', ':18080') +
+          document.location.host.replace(':8080', ':18080').replace(/:(9\d{3})/g, ':18080') +
           '/' +
           this.endpoint,
         [this.client_data['ID']]
