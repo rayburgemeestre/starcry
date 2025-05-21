@@ -8,7 +8,7 @@
         <q-item-label header>Objects</q-item-label>
         <q-btn flat dense icon="add" @click="addObject" style="margin-top: -10px" />
       </div>
-
+      
       <q-item
         tag="label"
         v-ripple
@@ -123,6 +123,150 @@
       </q-item>
 
       <q-separator spaced />
+      <div class="row items-center">
+        <q-item-label header>Scenes</q-item-label>
+        <q-btn flat dense icon="add" @click="addScene" style="margin-top: -10px" />
+      </div>
+
+      <q-expansion-item
+        v-for="(scene, index) in scenes"
+        :key="index"
+        :label="scene.name"
+        header-class="bg-grey-9"
+        expand-separator
+      >
+        <q-card>
+          <q-card-section>
+            <div class="row q-col-gutter-md">
+              <div class="col-6">
+                <q-input v-model="scene.name" label="Scene name" dense />
+              </div>
+              <div class="col-6">
+                <q-input v-model.number="scene.duration" label="Duration (seconds)" type="number" min="0" step="0.1" dense />
+              </div>
+            </div>
+
+            <q-separator class="q-my-md" />
+
+            <div class="row items-center q-mb-sm">
+              <div class="text-subtitle2">Objects</div>
+              <q-space />
+              <q-btn flat dense size="sm" icon="add" label="Add Object" @click="addObjectToScene(index)" />
+            </div>
+
+            <q-list bordered separator>
+              <q-item v-for="(obj, objIndex) in scene.objects" :key="objIndex">
+                <q-item-section>
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-3">
+                      <q-select
+                        v-model="obj.id"
+                        :options="Object.keys(objects)"
+                        label="Object"
+                        dense
+                        options-dense
+                      />
+                    </div>
+                    <div class="col-3">
+                      <q-input v-model.number="obj.x" label="X" type="number" dense />
+                    </div>
+                    <div class="col-3">
+                      <q-input v-model.number="obj.y" label="Y" type="number" dense />
+                    </div>
+                    <div class="col-3">
+                      <q-input v-model.number="obj.z" label="Z" type="number" dense />
+                    </div>
+                  </div>
+
+                  <q-expansion-item
+                    label="Custom Properties"
+                    dense
+                    header-class="text-grey-8"
+                  >
+                    <q-card>
+                      <q-card-section>
+                        <div class="row items-center q-mb-sm">
+                          <q-space />
+                          <q-btn flat dense size="sm" icon="add" label="Add Property" @click="addPropertyToSceneObject(scene, obj)" />
+                        </div>
+
+                        <div v-if="obj.props && Object.keys(obj.props).length > 0">
+                          <div 
+                            v-for="(propValue, propName) in obj.props" 
+                            :key="propName"
+                            class="row q-col-gutter-sm q-mb-xs"
+                          >
+                            <div class="col-4">{{ propName }}</div>
+                            <div class="col-6">
+                              <q-input 
+                                v-if="typeof propValue === 'number'" 
+                                v-model.number="obj.props[propName]" 
+                                type="number" 
+                                dense 
+                              />
+                              <q-input 
+                                v-else-if="typeof propValue === 'string'" 
+                                v-model="obj.props[propName]" 
+                                dense 
+                              />
+                              <q-checkbox 
+                                v-else-if="typeof propValue === 'boolean'" 
+                                v-model="obj.props[propName]" 
+                                dense 
+                              />
+                              <q-input 
+                                v-else 
+                                v-model="obj.props[propName]" 
+                                dense 
+                                @update:model-value="updateComplexProperty(obj, propName, $event)" 
+                              />
+                            </div>
+                            <div class="col-2">
+                              <q-btn flat dense size="sm" icon="delete" @click="deletePropertyFromSceneObject(obj, propName)" />
+                            </div>
+                          </div>
+                        </div>
+                        <div v-else class="text-grey-6 text-center q-py-sm">
+                          No custom properties
+                        </div>
+                      </q-card-section>
+                    </q-card>
+                  </q-expansion-item>
+                </q-item-section>
+
+                <q-item-section side>
+                  <q-btn flat dense icon="delete" @click="removeObjectFromScene(scene, objIndex)" />
+                </q-item-section>
+              </q-item>
+
+              <q-item v-if="!scene.objects || scene.objects.length === 0">
+                <q-item-section class="text-grey-6 text-center">
+                  No objects in this scene
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-card-section>
+
+          <q-card-actions align="right">
+            <q-btn flat color="negative" label="Delete Scene" @click="removeScene(index)" />
+          </q-card-actions>
+        </q-card>
+      </q-expansion-item>
+
+      <q-separator spaced /> 
+      <!-- TODO: Here should be a component for scenes editing -->
+      <!-- This is what the scenes array looks like: 
+      [
+        {
+          'name': 'scene1',
+          'duration': 3.0,
+          'objects':
+              [{'id': 'obj0', 'x': 5, 'y': 0, 'z': 0, 'props': {}}, {'id': 'obj0', 'x': -5, 'y': 0, 'z': 0, 'props': {}}]
+        },
+        {'name': 'scene2', 'duration': 1.0, 'objects': []},
+        {'name': 'scene3', 'duration': 1.0, 'objects': []},
+      ]
+      -->
 
       <q-item>
         <q-btn color="primary" label="Update" @click="save_changes(null)"></q-btn>
@@ -167,6 +311,90 @@ export default defineComponent({
     let gradients = ref(parsed && 'gradients' in parsed ? parsed['gradients'] : {});
     let objects = ref(parsed && 'objects' in parsed ? parsed['objects'] : {});
     let video = ref(parsed && 'video' in parsed ? parsed['video'] : {});
+    let scenes = ref(parsed && 'scenes' in parsed ? parsed['scenes'] : {});
+
+    // Functions for scene management
+    function addScene() {
+      scenes.value.push({
+        name: `Scene ${scenes.value.length + 1}`,
+        duration: 2.0,
+        objects: []
+      });
+    }
+
+    function removeScene(index: number) {
+      if (confirm('Are you sure you want to delete this scene?')) {
+        scenes.value.splice(index, 1);
+      }
+    }
+
+    function addObjectToScene(sceneIndex: number) {
+      const objectIds = Object.keys(objects.value);
+      if (objectIds.length === 0) {
+        alert('You need to create objects first');
+        return;
+      }
+
+      scenes.value[sceneIndex].objects.push({
+        id: objectIds[0],
+        x: 0,
+        y: 0,
+        z: 0,
+        props: {}
+      });
+    }
+
+    function removeObjectFromScene(scene, objectIndex: number) {
+      scene.objects.splice(objectIndex, 1);
+    }
+
+    function addPropertyToSceneObject(scene, obj) {
+      if (!obj.props) {
+        obj.props = {};
+      }
+
+      // Find properties that exist on the object type but not yet on this instance
+      const objectType = obj.id && objects.value[obj.id] ? objects.value[obj.id].type : null;
+      if (!objectType) {
+        alert('Invalid object reference');
+        return;
+      }
+
+      // Get available properties based on the object's type
+      const objProperties = { ...objects.value[obj.id] };
+      delete objProperties.type; // Remove type from the list
+
+      // Find a property that's not yet set
+      const availableProps = Object.keys(objProperties).filter(prop => 
+        !obj.props.hasOwnProperty(prop) && 
+        prop !== 'init' && 
+        prop !== 'time'
+      );
+
+      if (availableProps.length === 0) {
+        alert('No more properties available for this object');
+        return;
+      }
+
+      // Add the first available property
+      const propToAdd = availableProps[0];
+      obj.props[propToAdd] = objects.value[obj.id][propToAdd];
+    }
+
+    function deletePropertyFromSceneObject(obj, propName: string) {
+      if (obj.props && obj.props.hasOwnProperty(propName)) {
+        delete obj.props[propName];
+      }
+    }
+
+    function updateComplexProperty(obj, propName: string, value: string) {
+      try {
+        obj.props[propName] = JSON.parse(value);
+      } catch (e) {
+        // If it's not valid JSON, keep it as a string
+        obj.props[propName] = value;
+      }
+    };
     let selected = ref('');
 
     const columns = [
@@ -382,6 +610,15 @@ export default defineComponent({
       object_adding_property,
       object_properties,
       object_property,
+      
+      scenes,
+      addScene,
+      removeScene,
+      addObjectToScene,
+      removeObjectFromScene,
+      addPropertyToSceneObject,
+      deletePropertyFromSceneObject,
+      updateComplexProperty,
     };
   },
 });
