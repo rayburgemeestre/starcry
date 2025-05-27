@@ -1,20 +1,22 @@
+import { ParsedScript } from 'src/types/types';
+
 export class JsonWithObjectsParser {
   private json_str: string;
-  private obj: undefined;
+  private obj: ParsedScript | null = null;
   private remainder: string;
-  private functions: any[];
+  private functions: string[];
   private constants: string;
 
   constructor(json_str: string, constants: string) {
     this.json_str = json_str;
     this.json_str = this.json_str.substring(this.json_str.indexOf('{'));
-    this.obj = undefined;
+    this.obj = null as ParsedScript | null;
     this.functions = [];
     this.remainder = '';
     this.constants = constants;
     this._parse();
   }
-  parsed() {
+  parsed(): ParsedScript {
     if (!this.obj) {
       this.obj = {};
     }
@@ -85,17 +87,17 @@ export class JsonWithObjectsParser {
     let previous_char = ' ';
     let previous_char_pos = 0;
     let previous_char2 = ' ';
-    type Flags = {
-      blending_type: boolean;
-      zernike_type: boolean;
-      texture_effect: boolean;
-    };
+    // type Flags = {
+    //   blending_type: boolean;
+    //   zernike_type: boolean;
+    //   texture_effect: boolean;
+    // };
 
-    type FlagsDictionary = {
-      [key: string]: boolean;
-    };
+    // type FlagsDictionary = {
+    //   [key: string]: boolean;
+    // };
 
-    const flags: FlagsDictionary = { blending_type: false, zernike_type: false, texture_effect: false };
+    // const flags: FlagsDictionary = { blending_type: false, zernike_type: false, texture_effect: false };
 
     let stop = false;
     let remainder = '';
@@ -182,27 +184,26 @@ export class JsonWithObjectsParser {
         function_num++;
       }
       if (!in_string) {
-        const handleType = function (key: string, flag: string, first_char: string) {
-          // End of type
-          if (flags[flag] && ',;\r\n'.indexOf(s) !== -1) {
-            trail += '"';
-            flags[flag] = false;
-          }
-          // Start of type
-          if (
-            !in_function &&
-            !flags[flag] &&
-            s === first_char &&
-            this.json_str.substring(i, i + key.length) === key &&
-            previous_char !== '"'
-          ) {
-            flags[flag] = true;
-            trail += '"' + first_char; // stringize it
-            return true; // Indicating that we should "continue" in the calling code.
-          }
-          return false; // Indicating no need to "continue" in the calling code.
-        }.bind(this);
-
+        // const handleType = function (key: string, flag: string, first_char: string) {
+        //   // End of type
+        //   if (flags[flag] && ',;\r\n'.indexOf(s) !== -1) {
+        //     trail += '"';
+        //     flags[flag] = false;
+        //   }
+        //   // Start of type
+        //   if (
+        //     !in_function &&
+        //     !flags[flag] &&
+        //     s === first_char &&
+        //     this.json_str.substring(i, i + key.length) === key &&
+        //     previous_char !== '"'
+        //   ) {
+        //     flags[flag] = true;
+        //     trail += '"' + first_char; // stringize it
+        //     return true; // Indicating that we should "continue" in the calling code.
+        //   }
+        //   return false; // Indicating no need to "continue" in the calling code.
+        // }.bind(this);
         // we will do a different approach
         // if (handleType.call(this, 'blending_type', 'blending_type', 'b')) continue;
         // if (handleType.call(this, 'zernike_type', 'zernike_type', 'z')) continue;
@@ -247,7 +248,7 @@ export class JsonWithObjectsParser {
         '}; (function() { return ' +
         trail +
         '; })()';
-      console.log(eval_str);
+      // console.log(eval_str);
       this.obj = eval(eval_str);
     } catch (e) {
       console.log(trail);

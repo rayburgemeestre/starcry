@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { TreeNode } from 'components/filetree';
+import { TreeNode } from 'src/core/filetree';
 
 export const useFilesStore = defineStore('files', {
   state: () => ({

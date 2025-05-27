@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { JsonWithObjectsParser } from '../components/json_parser';
+import { JsonWithObjectsParser } from 'src/core/json_parser';
 
 export const useProjectStore = defineStore('script', {
   state: () => ({

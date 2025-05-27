@@ -149,29 +149,8 @@
 import { defineComponent, ref, watch, onMounted, computed, nextTick } from 'vue';
 import { useScriptStore } from 'stores/script';
 import { useProjectStore } from 'stores/project';
-import { JsonWithObjectsParser } from 'components/json_parser';
-
-// Define interfaces for our data structures
-interface GradientStop {
-  position: number;
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
-
-interface GradientsMap {
-  [key: string]: string | GradientStop[];
-}
-
-interface StringFormatMap {
-  [key: string]: boolean;
-}
-
-interface ParsedScript {
-  gradients?: GradientsMap;
-  [key: string]: never;
-}
+import { JsonWithObjectsParser } from 'src/core/json_parser';
+import { GradientsMap, GradientStop, StringFormatMap, ParsedScript } from 'src/types/types';
 
 export default defineComponent({
   name: 'GradientsComponent',
@@ -183,7 +162,7 @@ export default defineComponent({
     const project_store = useProjectStore();
     const parsed = project_store.parser?.parsed() as ParsedScript | null;
 
-    const rawGradients = parsed && parsed.gradients ? parsed.gradients : ({} as GradientsMap);
+    const rawGradients = parsed?.gradients ? parsed.gradients : ({} as GradientsMap);
     const gradients = ref<GradientsMap>({ ...rawGradients });
     const stringFormatGradients = ref<StringFormatMap>({});
     const expandedGradient = ref<string | null>(null);

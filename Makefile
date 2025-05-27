@@ -183,7 +183,7 @@ build-image:  ## build the starcry build image using podman
 	$(docker_exe) build --no-cache -t docker.io/rayburgemeestre/build-starcry-ubuntu:24.04 -f Dockerfile .
 	#$(docker_exe) build -t docker.io/rayburgemeestre/build-starcry-ubuntu:24.04 -f Dockerfile .
 
-runtime_deps:  ## install run-time dependencies
+runtime-deps:  ## install run-time dependencies
 	./docs/install_runtime_deps.sh
 
 build-web-deps:

@@ -1,12 +1,12 @@
-import { StarcryAPI } from 'components/api';
-import { JsonWithObjectsParser } from 'components/json_parser';
-import { create_tree, sort_tree } from 'components/filetree';
+import { StarcryAPI } from 'src/core/api';
+import { JsonWithObjectsParser } from 'src/core/json_parser';
+import { create_tree, sort_tree } from 'src/core/filetree';
 import { useScriptStore } from 'stores/script';
 import { useFilesStore } from 'stores/files';
 import { useViewpointStore } from 'stores/viewpoint';
 import { useProjectStore } from 'stores/project';
 import { watch } from 'vue';
-import { hash } from 'components/hash';
+import { hash } from 'src/core/hash';
 
 let timeout_script_updates: NodeJS.Timeout | null = null;
 

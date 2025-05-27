@@ -106,14 +106,14 @@ import { defineComponent, ref, watch } from 'vue';
 import TimelineComponent from 'components/TimelineComponent.vue';
 import { useScriptStore } from 'stores/script';
 import ViewpointComponent from 'components/ViewpointComponent.vue';
-import { append_script_to_body } from 'components/utils';
+import { append_script_to_body } from 'src/core/utils';
 import { useViewpointStore } from 'stores/viewpoint';
 import { useObjectsStore } from 'stores/objects';
 import { usePinch } from '@vueuse/gesture';
 import { useGlobalStore } from 'stores/global';
-import { rectangle, circle, quadtree, point } from 'components/quadtree';
-import { original_x, original_y, position } from 'components/position';
-import { draw_utils } from 'components/draw_utils';
+import { rectangle, circle, quadtree, point } from 'src/core/quadtree';
+import { position } from 'src/core/position';
+import { draw_utils } from 'src/core/draw_utils';
 import MonacoEditor from 'components/MonacoEditor.vue';
 import Timeout = NodeJS.Timeout;
 
@@ -150,7 +150,7 @@ export default defineComponent({
     let boundary = new rectangle(-10000, -10000, 10000 * 2, 10000 * 2);
     let quadtree1 = new quadtree(boundary, 1);
     let lines = new Set();
-    let new_line = [];
+    let new_line = [] as any[];
 
     // Composable usage
     let obj = {

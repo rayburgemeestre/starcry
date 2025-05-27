@@ -1,4 +1,4 @@
-import { StarcryAPI } from 'components/api';
+import { StarcryAPI } from 'src/core/api';
 import { useObjectsStore } from 'stores/objects';
 
 export function create_object_endpoint() {

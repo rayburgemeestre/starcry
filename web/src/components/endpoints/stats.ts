@@ -1,4 +1,4 @@
-import { StarcryAPI } from 'components/api';
+import { StarcryAPI } from 'src/core/api';
 import { useStatsStore } from 'stores/stats';
 import { useScriptStore } from 'stores/script';
 import { useBitmapStore } from 'stores/bitmap';

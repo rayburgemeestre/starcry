@@ -1,4 +1,4 @@
-import { StarcryAPI } from 'components/api';
+import { StarcryAPI } from 'src/core/api';
 import { useViewpointStore } from 'stores/viewpoint';
 import { useScriptStore } from 'stores/script';
 import { watch } from 'vue';

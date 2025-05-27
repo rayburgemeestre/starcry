@@ -168,13 +168,11 @@ export default defineComponent({
       }
     };
 
-    let currentEvtElement = false;
+    let currentEvtElement: HTMLElement | null = null;
 
     function onRowClick(evt: Event, row: [string, any], _index: number) {
       if (row[0] === 'init' || row[0] === 'time') {
-        if (currentEvtElement) {
-          (currentEvtElement as HTMLElement).classList.remove('bg-amber-5');
-        }
+        currentEvtElement?.classList.remove('bg-amber-5');
         if (scriptStore.current_function !== row[1]) {
           scriptStore.set_snippet(projectStore.parser?.fun(row[1]) || '', true);
           scriptStore.current_function = row[1];
@@ -200,9 +198,7 @@ export default defineComponent({
 
     function clearFunSelect() {
       scriptStore.set_snippet('', true);
-      if (currentEvtElement) {
-        (currentEvtElement as HTMLElement).classList.remove('bg-amber-5');
-      }
+      currentEvtElement?.classList.remove('bg-amber-5');
       currentEvtElement = null;
       scriptStore.current_function = '';
     }
@@ -214,9 +210,18 @@ export default defineComponent({
       originalValue.value = value;
       let par = el.parentNode as HTMLElement;
 
-      nextTick(() => {
-        par.querySelector('input').focus();
-      });
+      // next tick doesn't work..
+      // await nextTick();
+      function try_focus() {
+        if (!par.querySelector('input')) {
+          console.log('scheduling retry');
+          setTimeout(try_focus, 10);
+          return false;
+        }
+        par.querySelector('input')?.focus();
+        return true;
+      }
+      try_focus();
     };
 
     const onCellChange = (row: [string, any]) => {

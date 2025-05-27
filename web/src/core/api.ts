@@ -1,4 +1,4 @@
-import { load_client_data, save_client_data } from 'components/clientstorage';
+import { ClientStorage, load_client_data, save_client_data } from 'src/core/clientstorage';
 import { useGlobalStore } from 'stores/global';
 
 export interface StarcryAPI {
@@ -8,9 +8,9 @@ export interface StarcryAPI {
   on_message: any;
   on_connected: any;
   on_disconnected: any;
-  ws: WebSocket | boolean;
-  retry: boolean;
-  client_data: string;
+  ws: WebSocket | null;
+  retry: NodeJS.Timeout | null;
+  client_data: ClientStorage;
 }
 
 let update_connection_status_timeout: NodeJS.Timeout | null = null;
@@ -43,8 +43,8 @@ export class StarcryAPI {
     this.on_connected = on_connected || function () {};
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     this.on_disconnected = on_disconnected || function () {};
-    this.ws = false;
-    this.retry = false;
+    this.ws = null;
+    this.retry = null;
 
     save_client_data(load_client_data());
 
@@ -66,18 +66,18 @@ export class StarcryAPI {
           document.location.host.replace(':8080', ':18080').replace(/:(9\d{3})/g, ':18080') +
           '/' +
           this.endpoint,
-        [this.client_data['ID']]
+        [this.client_data.ID]
       );
     } else {
-      this.ws = new WebSocket(protocol + '//' + document.location.host + '/' + this.endpoint, [this.client_data['ID']]);
+      this.ws = new WebSocket(protocol + '//' + document.location.host + '/' + this.endpoint, [this.client_data.ID]);
     }
-    this.ws.onopen = function () {
-      clearTimeout(this.retry);
+    this.ws.onopen = function (this: StarcryAPI) {
+      if (this.retry) clearTimeout(this.retry);
       this.on_status_change('connected');
       useGlobalStore().connected.add(this.endpoint);
       useGlobalStore().disconnected.delete(this.endpoint);
 
-      if (!useGlobalStore().disconnected.length) {
+      if (!useGlobalStore().disconnected.size) {
         if (update_connection_status_timeout) {
           clearTimeout(update_connection_status_timeout);
         }
@@ -91,10 +91,10 @@ export class StarcryAPI {
         useGlobalStore().show_connection_status = true;
       }
 
-      this.send('LINK ' + this.client_data['ID']);
+      this.send('LINK ' + this.client_data.ID);
       this.on_connected();
     }.bind(this);
-    this.ws.onclose = function () {
+    this.ws.onclose = function (this: StarcryAPI) {
       this.on_status_change('disconnected');
       this.on_disconnected();
       useGlobalStore().connected.delete(this.endpoint);
@@ -105,11 +105,11 @@ export class StarcryAPI {
       useGlobalStore().show_connection_status = true;
       this.retry = setTimeout(this.connect.bind(this), 100);
     }.bind(this);
-    this.ws.onmessage = function (message) {
+    this.ws.onmessage = function (this: StarcryAPI, message: MessageEvent) {
       switch (this.type) {
         case StarcryAPI.binary_type:
           message.data.arrayBuffer().then(
-            function (buffer) {
+            function (this: StarcryAPI, buffer: ArrayBuffer) {
               try {
                 this.on_message(buffer);
               } catch (error) {
@@ -126,12 +126,12 @@ export class StarcryAPI {
           break;
       }
     }.bind(this);
-    this.ws.onerror = function (error) {
+    this.ws.onerror = function (this: StarcryAPI, error: Event) {
       this.on_status_change('ERROR: ' + error);
     }.bind(this);
   }
 
   send(msg: string) {
-    this.ws.send(msg);
+    this.ws?.send(msg);
   }
 }

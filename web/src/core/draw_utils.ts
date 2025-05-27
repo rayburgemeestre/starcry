@@ -4,7 +4,7 @@
  file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-import { original_x, original_y, position } from 'components/position';
+import { original_x, original_y, position } from 'src/core/position';
 
 export class draw_utils {
   center_x: number;

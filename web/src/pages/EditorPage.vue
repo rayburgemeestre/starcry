@@ -6,7 +6,7 @@
       <q-separator spaced />
       <div class="row items-center">
         <q-item-label header>Objects</q-item-label>
-        <q-btn flat dense icon="add" @click="addObject" style="margin-top: -10px" />
+        <q-btn flat dense icon="add" @click="addObject(null)" style="margin-top: -10px" />
       </div>
 
       <object-component
@@ -86,7 +86,12 @@
               </div>
             </div>
 
-            <q-separator class="q-my-md" />
+            <q-separator spaced />
+
+            <div class="row items-center">
+              <q-item-label header>Objects</q-item-label>
+              <q-btn flat dense icon="add" @click="addObject(scene)" style="margin-top: -10px" />
+            </div>
 
             <object-component
               :objects="scene.objects"
@@ -131,6 +136,7 @@ import GradientsComponent from 'components/GradientsComponent.vue';
 import ObjectComponent from 'components/ObjectComponent.vue';
 import { useScriptStore } from 'stores/script';
 import { useProjectStore } from 'stores/project';
+import { ObjectDef, Scene } from 'src/types/types';
 
 const format_cell_value = (value: any): string => {
   return typeof value === 'object' ? JSON.stringify(value) : value;
@@ -160,15 +166,9 @@ export default defineComponent({
 
     let parsed = project_store.parser?.parsed();
     let gradients = ref<Record<string, any>>(parsed && 'gradients' in parsed ? parsed['gradients'] : {});
-    let objects = ref<Record<string, Record<string, any>>>(parsed && 'objects' in parsed ? parsed['objects'] : {});
+    let objects = ref<Record<string, ObjectDef[]>>(parsed && 'objects' in parsed ? parsed['objects'] : {});
     let video = ref<Record<string, any>>(parsed && 'video' in parsed ? parsed['video'] : {});
-    let scenes = ref<
-      Array<{
-        name: string;
-        duration: number;
-        objects: Array<{ id: string; x: number; y: number; z: number; props: Record<string, any> }>;
-      }>
-    >(parsed && 'scenes' in parsed ? parsed['scenes'] : []);
+    let scenes = ref<Array<Scene>>(parsed && 'scenes' in parsed ? parsed['scenes'] : []);
 
     // Functions for scene management
     function addScene() {
@@ -222,9 +222,21 @@ export default defineComponent({
       script_store.set_result(script, true);
     };
 
-    function addObject() {
-      console.log('Add object clicked');
-      // Add your object logic here
+    function addObject(scene: Scene | null) {
+      const new_obj: ObjectDef = {
+        id: 'object',
+        x: 0,
+        y: 0,
+        z: 0,
+        props: {},
+      };
+      if (scene) {
+        console.log(scene);
+        scene.objects.push(new_obj);
+      } else {
+        console.log('no context');
+        objects.value[new_obj['id']] = new_obj;
+      }
     }
 
     function addVideoProperty() {
