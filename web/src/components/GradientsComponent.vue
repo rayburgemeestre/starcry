@@ -146,7 +146,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, onMounted, computed, nextTick } from 'vue';
+import { defineComponent, ref, watch, onMounted, computed } from 'vue';
 import { useScriptStore } from 'stores/script';
 import { useProjectStore } from 'stores/project';
 import { JsonWithObjectsParser } from 'src/core/json_parser';
@@ -270,12 +270,21 @@ export default defineComponent({
       return null;
     }
 
+    function scheduleResizeCanvas(): void {
+      // nextTick causes infinite loops
+      // nextTick(() => {
+      //   resizeCanvas();
+      // });
+      // need to find a better method at some point
+      setTimeout(resizeCanvas, 100);
+      setTimeout(resizeCanvas, 500);
+      setTimeout(resizeCanvas, 1000);
+    }
+    
     function resizeCanvas(): void {
       let module_already_loaded = !!window.Module;
       if (!module_already_loaded || !window.Module?.get_gradient_colors) {
-        nextTick(() => {
-          resizeCanvas();
-        });
+        scheduleResizeCanvas();
         return;
       }
 
@@ -402,9 +411,7 @@ export default defineComponent({
 
       emit('save-changes', gradients.value);
 
-      nextTick(() => {
-        resizeCanvas();
-      });
+      scheduleResizeCanvas();
     }
 
     function toggleGradientDetails(name: string): void {
@@ -424,9 +431,7 @@ export default defineComponent({
         }
       }
 
-      nextTick(() => {
-        resizeCanvas();
-      });
+      scheduleResizeCanvas();
     }
 
     function addGradientStop(gradientName: string): void {
@@ -516,9 +521,7 @@ export default defineComponent({
       emit('save-changes', gradients.value);
 
       // Schedule multiple redraws to ensure canvas is updated
-      nextTick(() => {
-        resizeCanvas();
-      });
+      scheduleResizeCanvas();
     }
 
     function updateGradientName(): void {
@@ -546,9 +549,7 @@ export default defineComponent({
         }
 
         emit('save-changes', gradients.value);
-        nextTick(() => {
-          resizeCanvas();
-        });
+        scheduleResizeCanvas();
       }
     }
 
