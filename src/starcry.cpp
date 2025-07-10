@@ -513,6 +513,9 @@ std::shared_ptr<render_msg> starcry::job_to_frame(size_t i, std::shared_ptr<job_
 
 // MARK1 handle the render msg, create into video or whatever
 void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
+  // debug pixel
+  // job_msg->pixels[0] = job_msg->original_job_message->job->chunk;
+
   const auto start = benchmark_ ? benchmark_->measure("handle_frame") : std::chrono::high_resolution_clock::now();
   scope_exit se([this, start]() {
     if (benchmark_) benchmark_->store("handle_frame", start);
@@ -586,11 +589,12 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
 
     add_frame_to_streamer();
 
-    std::swap(job_msg->pixels, pixels);
     if (options().interactive) {
       // do not swap, we're sending chunks to the browser
+      pixels = job_msg->pixels;
       pixels_raw = job_msg->pixels_raw;
     } else {
+      std::swap(job_msg->pixels, pixels);
       std::swap(job_msg->pixels_raw, pixels_raw);
     }
 
@@ -665,10 +669,10 @@ void starcry::handle_frame(std::shared_ptr<render_msg> job_msg) {
             chunk->unsuspend();
             pixels.insert(std::end(pixels), std::begin(chunk->pixels), std::end(chunk->pixels));
             pixels_raw.insert(std::end(pixels_raw), std::begin(chunk->pixels_raw), std::end(chunk->pixels_raw));
-            chunk->pixels.clear();
-            chunk->pixels.shrink_to_fit();
-            // don't mutilate the chunks in interactive mode, we're sending them to the browser
+            // don't cleanup the chunks in interactive mode, we're sending them to the browser
             if (!options().interactive) {
+              chunk->pixels.clear();
+              chunk->pixels.shrink_to_fit();
               chunk->pixels_raw.clear();
               chunk->pixels_raw.shrink_to_fit();
             }

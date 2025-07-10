@@ -48,6 +48,9 @@ image rendering_engine::render(
     return target_bmp;
   }
 
+  // Force no auto-chunking
+  // { _exec(target_bmp, width, height, 0, 0); return target_bmp; }
+
   // auto chunking into rectangular chunks
   target_bmp.resize(static_cast<int>(width), static_cast<int>(height));
   auto rectangles = create_rectangles(width, height, params.scales.size());

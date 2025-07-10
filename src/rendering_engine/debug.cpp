@@ -49,16 +49,28 @@ void draw_debug(image &target_bmp,
       return shape;
     };
 
+    double offset_y_counter = 0;
+    const auto offset_y = [&]() {
+      offset_y_counter += 20;
+      return offset_y_counter;
+    };
+
+    dl->render_text(target_bmp, ct(offset_y(), fmt::format("!chunk: {}", params.chunk_num)), 1., params.settings, true);
     dl->render_text(target_bmp,
-                    ct(0, fmt::format("canvas: ({}, {})", params.canvas_w, params.canvas_h)),
+                    ct(offset_y(), fmt::format("canvas: ({}, {})", params.canvas_w, params.canvas_h)),
                     1.,
                     params.settings,
                     true);
-    dl->render_text(target_bmp, ct(20, fmt::format("size: ({}, {})", width, height)), 1., params.settings, true);
-    dl->render_text(target_bmp, ct(60, fmt::format("offset: ({}, {})", offset_x, offset_y)), 1., params.settings, true);
     dl->render_text(
-        target_bmp, ct(80, fmt::format("view: ({}, {})", params.view_x, params.view_y)), 1., params.settings, true);
-    dl->render_text(target_bmp, ct(100, fmt::format("scale: {}", params.top_scale)), 1., params.settings, true);
-    dl->render_text(target_bmp, ct(120, fmt::format("scale ratio: {}", scale_ratio)), 1., params.settings, true);
+        target_bmp, ct(offset_y(), fmt::format("size: ({}, {})", width, height)), 1., params.settings, true);
+    dl->render_text(
+        target_bmp, ct(offset_y(), fmt::format("offset: ({}, {})", offset_x, offset_y())), 1., params.settings, true);
+    dl->render_text(target_bmp,
+                    ct(offset_y(), fmt::format("view: ({}, {})", params.view_x, params.view_y)),
+                    1.,
+                    params.settings,
+                    true);
+    dl->render_text(target_bmp, ct(offset_y(), fmt::format("scale: {}", params.top_scale)), 1., params.settings, true);
+    dl->render_text(target_bmp, ct(offset_y(), fmt::format("scale ratio: {}", scale_ratio)), 1., params.settings, true);
   });
 }

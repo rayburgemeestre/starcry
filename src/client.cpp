@@ -342,8 +342,9 @@ void set_texture(std::string data) {
   }
   last_num_chunks = num_chunks;
 
-  // printf("texture_w: %d, texture_h: %d, chunk: %d, num_chunks: %d\n", texture_w, texture_h, chunk, num_chunks);
-  // printf("data size: %d\n", (int)data.size());
+  printf("texture_w: %d, texture_h: %d, chunk: %d, num_chunks: %d\n", texture_w, texture_h, chunk, num_chunks);
+  printf("data size: %d\n", (int)data.size());
+  printf("debug pixel: %d\n", (int)data[0]);
 
   // chunk texture
   if (textures.find(chunk) != textures.end()) {

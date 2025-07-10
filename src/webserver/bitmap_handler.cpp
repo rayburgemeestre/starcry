@@ -12,6 +12,8 @@
 #include "nlohmann/json.hpp"
 #include "util/logger.h"
 
+#include <cmath>
+
 using json = nlohmann::json;
 
 BitmapHandler::BitmapHandler(starcry* sc) : sc(sc) {}
