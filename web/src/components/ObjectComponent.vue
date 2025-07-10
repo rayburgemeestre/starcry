@@ -157,13 +157,21 @@ export default defineComponent({
     };
 
     const updateCellValue = (newValue: string, row: [string, any]) => {
+      // console.log('updating', typeof newValue, typeof row[1]);
       try {
         if (typeof row[1] === 'object' || newValue.trim().startsWith('{') || newValue.trim().startsWith('[')) {
           row[1] = JSON.parse(newValue);
         } else {
-          row[1] = newValue;
+          if (typeof row[1] === 'number') {
+            row[1] = Number(newValue);
+          } else if (typeof row[1] === 'boolean') {
+            row[1] = newValue === 'true';
+          } else {
+            row[1] = newValue;
+          }
         }
       } catch (e) {
+        console.log(e);
         row[1] = newValue;
       }
     };
@@ -253,7 +261,6 @@ export default defineComponent({
     function addObjectProperty2() {
       if (selected.value && objectProperty.value) {
         const updatedObjects = { ...props.objects };
-
         const defaultValue =
           scriptStore.object_spec &&
           objectProperty.value in scriptStore.object_spec &&

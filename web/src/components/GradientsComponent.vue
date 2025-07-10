@@ -280,7 +280,7 @@ export default defineComponent({
       setTimeout(resizeCanvas, 500);
       setTimeout(resizeCanvas, 1000);
     }
-    
+
     function resizeCanvas(): void {
       let module_already_loaded = !!window.Module;
       if (!module_already_loaded || !window.Module?.get_gradient_colors) {

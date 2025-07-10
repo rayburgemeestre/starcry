@@ -69,13 +69,122 @@ inline specification_fields create_video_spec(v8_interact& i) {
   return spec;
 }
 
+// Object type property mapping structure for documentation
+// This shows which properties are available for each object type
+namespace object_property_mapping {
+// Common properties available to all object types:
+// - unique_id, random_hash, level
+// - x, y, z, angle, rotate, scale, recursive_scale
+// - opacity, hue, seed, blending_type
+// - gradient, gradients, texture, texture_3d, texture_offset_x/y
+// - texture_effect, zernike_type
+// - props (custom properties container)
+
+// Circle-specific:
+// - radius, radiussize
+// - mass, vel_x, vel_y, velocity (physics)
+// - collision_group, gravity_group, unique_group
+
+// Ellipse-specific:
+// - longest_diameter, shortest_diameter (or aliases: a, b)
+// - radiussize
+// - mass, vel_x, vel_y, velocity (physics)
+// - collision_group, gravity_group, unique_group
+
+// Line-specific:
+// - x2, y2, z2 (end coordinates)
+// - radiussize (represents line width)
+// - unique_group
+// Note: Lines do NOT have mass, velocity, collision_group, or gravity_group
+
+// Text-specific:
+// - text, text_size, text_align, text_fixed
+// - mass, vel_x, vel_y, velocity (physics)
+// Note: Text does NOT have collision_group, gravity_group, or unique_group
+
+// Script-specific:
+// - Has most common properties but NO gradients array
+// - No physics properties
+}  // namespace object_property_mapping
+
 inline specification_fields create_object_spec(v8_interact& i) {
   specification_fields spec;
   auto isolate = i.get_isolate();
 
-  // TODO
-  spec["placeholder"] = {"int", v8::Number::New(isolate, 1000), "Place"};
-  spec["placeholder2"] = {"int", v8::Number::New(isolate, 1002), "Holder"};
+  // Common properties for all objects
+  spec["unique_id"] = {"int", v8::Number::New(isolate, 0), "Unique identifier for the object"};
+  spec["random_hash"] = {
+      "string", v8::String::NewFromUtf8(isolate, "").ToLocalChecked(), "Random hash for object identification"};
+  spec["level"] = {"int", v8::Number::New(isolate, 0), "Object hierarchy level"};
+
+  // Transform properties (common to all)
+  spec["x"] = {"float", v8::Number::New(isolate, 0.0), "X position coordinate"};
+  spec["y"] = {"float", v8::Number::New(isolate, 0.0), "Y position coordinate"};
+  spec["z"] = {"float", v8::Number::New(isolate, 0.0), "Z depth coordinate"};
+  spec["angle"] = {"float", v8::Number::New(isolate, 0.0), "Object angle in degrees"};
+  spec["rotate"] = {"float", v8::Number::New(isolate, 0.0), "Rotation in degrees"};
+  spec["scale"] = {"float", v8::Number::New(isolate, 1.0), "Object scale factor"};
+  spec["recursive_scale"] = {"float", v8::Number::New(isolate, 1.0), "Recursive scaling for child objects"};
+
+  // Physics properties (common to circle, ellipse, text)
+  spec["mass"] = {"float", v8::Number::New(isolate, 1.0), "Object mass for physics calculations"};
+  spec["vel_x"] = {"float", v8::Number::New(isolate, 0.0), "Velocity X component"};
+  spec["vel_y"] = {"float", v8::Number::New(isolate, 0.0), "Velocity Y component"};
+  spec["velocity"] = {"float", v8::Number::New(isolate, 0.0), "Overall velocity magnitude"};
+
+  // Visual properties (common to all)
+  spec["opacity"] = {"float", v8::Number::New(isolate, 1.0), "Object opacity (0-1)"};
+  spec["hue"] = {"float", v8::Number::New(isolate, 0.0), "Hue adjustment (0-360)"};
+  spec["seed"] = {"int", v8::Number::New(isolate, 0), "Random seed for procedural effects"};
+  // TODO: fix blending_type
+  spec["blending_type"] = {"int", v8::Number::New(isolate, 0), "Blending mode (0=normal, 1=lighten, 2=darken, etc.)"};
+
+  // Gradient and texture properties (common to all)
+  spec["gradient"] = {"string", v8::String::NewFromUtf8(isolate, "").ToLocalChecked(), "Gradient identifier"};
+  spec["texture"] = {"string", v8::String::NewFromUtf8(isolate, "").ToLocalChecked(), "Texture identifier"};
+  spec["texture_3d"] = {"int", v8::Number::New(isolate, 0), "3D texture type"};
+  spec["texture_offset_x"] = {"float", v8::Number::New(isolate, 0.0), "Texture X offset"};
+  spec["texture_offset_y"] = {"float", v8::Number::New(isolate, 0.0), "Texture Y offset"};
+  // TODO: fix texture_effect and zernike_type
+  spec["texture_effect"] = {"int", v8::Number::New(isolate, 0), "Texture effect (0=opacity, 1=color)"};
+  spec["zernike_type"] = {"int", v8::Number::New(isolate, 0), "Zernike polynomial type (0=version1, 1=version2)"};
+
+  // Group properties (common to circle, ellipse)
+  spec["collision_group"] = {
+      "string", v8::String::NewFromUtf8(isolate, "").ToLocalChecked(), "Collision detection group"};
+  spec["gravity_group"] = {
+      "string", v8::String::NewFromUtf8(isolate, "").ToLocalChecked(), "Gravity interaction group"};
+  spec["unique_group"] = {
+      "string", v8::String::NewFromUtf8(isolate, "").ToLocalChecked(), "Unique grouping identifier"};
+
+  // Circle-specific properties
+  spec["radius"] = {"float", v8::Number::New(isolate, 50.0), "Circle radius"};
+  spec["radiussize"] = {"float", v8::Number::New(isolate, 1.0), "Radius size"};
+
+  // Ellipse-specific properties
+  spec["longest_diameter"] = {"float", v8::Number::New(isolate, 100.0), "Ellipse longest diameter (a)"};
+  spec["shortest_diameter"] = {"float", v8::Number::New(isolate, 50.0), "Ellipse shortest diameter (b)"};
+  spec["a"] = {"float", v8::Number::New(isolate, 100.0), "Ellipse semi-major axis (alias for longest_diameter)"};
+  spec["b"] = {"float", v8::Number::New(isolate, 50.0), "Ellipse semi-minor axis (alias for shortest_diameter)"};
+
+  // Line-specific properties
+  spec["x2"] = {"float", v8::Number::New(isolate, 100.0), "Line end X coordinate"};
+  spec["y2"] = {"float", v8::Number::New(isolate, 100.0), "Line end Y coordinate"};
+  spec["z2"] = {"float", v8::Number::New(isolate, 0.0), "Line end Z coordinate"};
+  // Note: for lines, radiussize represents line width
+
+  // Text-specific properties
+  spec["text"] = {"string", v8::String::NewFromUtf8(isolate, "").ToLocalChecked(), "Text content to display"};
+  spec["text_size"] = {"float", v8::Number::New(isolate, 16.0), "Font size in pixels"};
+  spec["text_align"] = {
+      "string", v8::String::NewFromUtf8(isolate, "left").ToLocalChecked(), "Text alignment (left, center, right)"};
+  spec["text_fixed"] = {"bool", v8::Boolean::New(isolate, false), "Whether text has fixed position"};
+
+  // Dynamic properties container
+  spec["props"] = {"object", v8::Object::New(isolate), "Custom properties container"};
+
+  // Gradients array
+  spec["gradients"] = {"array", v8::Array::New(isolate, 0), "Array of gradient stops"};
 
   return spec;
 }
