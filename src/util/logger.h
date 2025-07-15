@@ -59,6 +59,23 @@ public:
     return logger(l._holder->_os, l._holder->_ss);
   }
 
+  static std::string level_to_string(LogLevel level) {
+    switch (level) {
+      case DEBUG:
+        return " DEBUG ";
+      case INFO:
+        return "  INFO ";
+      case WARNING:
+        return "  WARN ";
+      case ERROR:
+        return " ERROR ";
+      case FATAL:
+        return " FATAL ";
+      default:
+        return "";
+    }
+  }
+
   template <class T>
   friend logger operator<<(const logger &l, const T &t) {
     system_clock::time_point tp = system_clock::now();
@@ -72,25 +89,7 @@ public:
     std::stringstream ss;
     if (l._holder->_level != _NONE) {
       ss << std::put_time(timeinfo, "%Y-%m-%d %H:%M:%S.") << milliseconds_str;
-      switch (l._holder->_level) {
-        case DEBUG:
-          ss << " DEBUG ";
-          break;
-        case INFO:
-          ss << "  INFO ";
-          break;
-        case WARNING:
-          ss << "  WARN ";
-          break;
-        case ERROR:
-          ss << " ERROR ";
-          break;
-        case FATAL:
-          ss << " FATAL ";
-          break;
-        default:
-          break;
-      }
+      ss << level_to_string(l._holder->_level);
     }
     ss << t;
     const auto line = ss.str();
