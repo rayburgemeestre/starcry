@@ -15,7 +15,7 @@ struct ScriptHandler : seasocks::WebSocket::Handler, public starcry_handler {
   ScriptHandler(starcry *sc);
 
   void set_script(const std::string &script);
-  void log_line(const std::string &line);
+  void log_line(std::shared_ptr<seasocks::Server> server, const std::string &line);
 
   void onConnect(seasocks::WebSocket *con) override;
   void onDisconnect(seasocks::WebSocket *con) override;

@@ -20,15 +20,15 @@ void ScriptHandler::set_script(const std::string& script) {
   script_ = script;
 }
 
-void ScriptHandler::log_line(const std::string& line) {
-  for (const auto& con : script_handler->_cons) {
-    if (server) {
-      server->execute([=]() {
+void ScriptHandler::log_line(std::shared_ptr<seasocks::Server> server, const std::string& line) {
+  if (server) {
+    server->execute([=, this]() {
+      for (const auto& con : _cons) {
         std::stringstream ss;
-        ss << "9" << log_line;
+        ss << "9" << line;
         con->send(ss.str());
-      });
-    }
+      }
+    });
   }
 }
 
