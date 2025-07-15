@@ -83,6 +83,8 @@ export default defineComponent({
           result.push([i, 'current']);
         } else if (this.tick == i) {
           result.push([i, 'selected']);
+        } else if (!current_scene) {
+          result.push([i, 'else ' + colors[color_idx]]);
         } else {
           result.push([i, colors[color_idx]]);
         }
@@ -147,5 +149,9 @@ span.info {
 .myslider div:hover {
   background-color: yellow;
   opacity: 1;
+}
+.myslider div.else {
+  opacity: 0;
+  display: none;
 }
 </style>
