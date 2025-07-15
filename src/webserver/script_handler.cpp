@@ -20,6 +20,18 @@ void ScriptHandler::set_script(const std::string& script) {
   script_ = script;
 }
 
+void ScriptHandler::log_line(const std::string& line) {
+  for (const auto& con : script_handler->_cons) {
+    if (server) {
+      server->execute([=]() {
+        std::stringstream ss;
+        ss << "9" << log_line;
+        con->send(ss.str());
+      });
+    }
+  }
+}
+
 void ScriptHandler::onConnect(seasocks::WebSocket* con) {
   _cons.insert(con);
   std::ostringstream ss;
@@ -112,6 +124,7 @@ void ScriptHandler::onData(seasocks::WebSocket* con, const char* data) {
     ss << "8" << object_spec;
     con->send(ss.str());
   }
+  // 9 = reserved for log line
 }
 
 void ScriptHandler::callback(seasocks::WebSocket* recipient, std::string s) {
