@@ -69,6 +69,8 @@ export function create_script_endpoint() {
       } else if (buffer[0] === '8') {
         script_store.object_spec = JSON.parse(buffer.slice(1));
         script_store.request_object_spec_received++;
+      } else if (buffer[0] === '9') {
+        console.log('[sc] ' + buffer.slice(1));
       }
     },
     (_) => {
