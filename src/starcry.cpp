@@ -185,6 +185,10 @@ void starcry::add_image_command(std::shared_ptr<data::frame_request> req) {
     if (webserv) {
       webserv->send_stats(system->get_stats());
       webserv->send_metrics(metrics_->to_json());
+      if (metrics_)
+        metrics_->display([&](int level, const std::string& line) {
+          webserv->log_line(line);
+        });
     }
   });
 }
