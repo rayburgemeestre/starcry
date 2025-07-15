@@ -76,7 +76,7 @@ void webserver::set_script(const std::string &script) {
 }
 
 void webserver::log_line(const std::string &log_line) {
-  script_handler->log_line(log_line);
+  script_handler->log_line(server, log_line);
 }
 
 void webserver::run() {
