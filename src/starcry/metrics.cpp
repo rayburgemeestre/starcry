@@ -408,10 +408,10 @@ void metrics::complete_render_job(int thread_number, int job_number, int chunk, 
   }
 }
 
-void metrics::display(std::function<void(const std::string &)> f1,
-                      std::function<void(const std::string &)> f2,
-                      std::function<void(int, const std::string &)> f3,
-                      std::function<void(const std::string &)> f4) {
+void metrics::display(std::function<void(const std::string &)> meta_view_print,
+                      std::function<void(const std::string &)> stdout_view_print,
+                      std::function<void(int, const std::string &)> ffmpeg_view_print,
+                      std::function<void(const std::string &)> memory_view_print) {
   const auto flush = [&](auto &fun, std::stringstream &ss) {
     std::string item;
     while (std::getline(ss, item, '\n')) {
@@ -428,7 +428,7 @@ void metrics::display(std::function<void(const std::string &)> f1,
   {
     std::stringstream ss;
     ss << "Threads: " << threads_.size() << " Jobs: " << jobs_.size() << " Completed Frames: " << completed_frames;
-    f1(ss.str());
+    meta_view_print(ss.str());
   }
   for (const auto &thread : threads_) {
     std::stringstream ss;
@@ -439,7 +439,7 @@ void metrics::display(std::function<void(const std::string &)> f1,
       ss << ": Job: " << thread.second.job_number << " Chunk: " << thread.second.chunk << " Seconds Busy: ";
       ss << time_diff(thread.second.idle_end, std::chrono::high_resolution_clock::now());
     }
-    f1(ss.str());
+    meta_view_print(ss.str());
   }
 
   // TODO: this code will temporarily be duplicated in the JSON version
@@ -480,7 +480,7 @@ void metrics::display(std::function<void(const std::string &)> f1,
     if (queued == job.chunks.size()) {
       s = job_state::queued;
       if (max_queued_items-- == 0) {
-        f2("...");
+        stdout_view_print("...");
         break;
       }
     }
@@ -524,9 +524,9 @@ void metrics::display(std::function<void(const std::string &)> f1,
         for (const auto &chunk : job.chunks) {
           ss << "" << chunk.state;
         }
-        flush(f2, ss);
+        flush(stdout_view_print, ss);
       } else if (mode == modes::frame_mode) {
-        flush(f2, ss);
+        flush(stdout_view_print, ss);
         for (const auto &chunk : job.chunks) {
           ss << " Chunk: " << chunk.chunk << " of " << chunk.num_chunks << " " << str(chunk.state) << " ";
           switch (chunk.state) {
@@ -548,12 +548,12 @@ void metrics::display(std::function<void(const std::string &)> f1,
             ss << obj.state;
             if (!max_num--) break;
           }
-          flush(f2, ss);
+          flush(stdout_view_print, ss);
         }
-        flush(f2, ss);
+        flush(stdout_view_print, ss);
       }
     } else {
-      flush(f2, ss);
+      flush(stdout_view_print, ss);
     }
   }
   if (program && !program->exited) {
@@ -563,10 +563,18 @@ void metrics::display(std::function<void(const std::string &)> f1,
   for (const auto &[level, str] : _output) {
     if (str.find("frame=") != std::string::npos) continue;
     if (str.find("Memory usage:") != std::string::npos) continue;
-    f3(level, str);
+    ffmpeg_view_print(level, str);
   }
 
-  f4(memory_usage_summary_);
+  memory_view_print(memory_usage_summary_);
+  _output.clear();
+}
+
+void metrics::display(std::function<void(int, const std::string &)> web_view_print) {
+  if (!initialized) return;
+  for (const auto &[level, str] : _output) {
+    web_view_print(level, str);
+  }
   _output.clear();
 }
 

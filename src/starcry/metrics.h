@@ -152,10 +152,11 @@ public:
   void complete_render_job(int thread_number, int job_number, int chunk, job_state state = job_state::rendered);
   void complete_job(int number);
   void skip_job(int number);
-  void display(std::function<void(const std::string&)> f1,
-               std::function<void(const std::string&)> f2,
-               std::function<void(int, const std::string&)> f3,
-               std::function<void(const std::string&)> f4);
+  void display(std::function<void(const std::string&)> meta_view_print,
+               std::function<void(const std::string&)> stdout_view_print,
+               std::function<void(int, const std::string&)> ffmpeg_view_print,
+               std::function<void(const std::string&)> memory_view_print);
+  void display(std::function<void(int, const std::string&)> web_view_print);
   void clear();
 
   void set_frame_mode();
