@@ -12,6 +12,8 @@
 #include <filesystem>
 
 #include "nlohmann/json.hpp"
+#include "webserver/script_handler.h"
+
 using json = nlohmann::json;
 
 std::shared_ptr<seasocks::Response> DataHandler::handle(const seasocks::CrackedUri & /*uri*/,
@@ -71,6 +73,10 @@ webserver::webserver(starcry *sc)
 
 void webserver::set_script(const std::string &script) {
   script_handler->set_script(script);
+}
+
+void webserver::log_line(const std::string &log_line) {
+  script_handler->log_line(log_line);
 }
 
 void webserver::run() {

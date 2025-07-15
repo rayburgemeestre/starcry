@@ -45,6 +45,7 @@ public:
   void run();
   void stop();
   void set_script(const std::string &script);
+  void log_line(const std::string &log_line);
 
   template <typename T>
   void execute_bitmap(T fun, std::shared_ptr<render_msg> job_msg) {
