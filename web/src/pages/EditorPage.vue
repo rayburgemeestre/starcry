@@ -13,7 +13,7 @@
         :objects="objects"
         :initialSelected="selected"
         @update:objects="objects = $event"
-        @object-selected="selected = $event"
+        @object-selected="update_selected($event)"
         @save-changes="save_changes"
       />
 
@@ -136,6 +136,7 @@ import GradientsComponent from 'components/GradientsComponent.vue';
 import ObjectComponent from 'components/ObjectComponent.vue';
 import { useScriptStore } from 'stores/script';
 import { useProjectStore } from 'stores/project';
+import { useObjectsStore } from 'stores/objects';
 import { ObjectDef, Scene } from 'src/types/types';
 
 const format_cell_value = (value: any): string => {
@@ -163,6 +164,7 @@ export default defineComponent({
   setup() {
     let script_store = useScriptStore();
     let project_store = useProjectStore();
+    let object_store = useObjectsStore();
 
     let parsed = project_store.parser?.parsed();
     let gradients = ref<Record<string, any>>(parsed && 'gradients' in parsed ? parsed['gradients'] : {});
@@ -202,6 +204,18 @@ export default defineComponent({
       },
     ];
 
+    const update_selected = (index: number) => {
+      // selected = $event;
+      console.log('RBU: update_selected');
+      selected.value = index.toString();
+      console.log('selected.value: ', selected.value);
+      // updating selected object
+      object_store.set_selected(selected.value, objects.value[selected.value]);
+      console.log('selected.value:', selected.value);
+      console.log('object_store.selected: ', objects.value[selected.value]);
+      console.log('objects:', objects.value);
+    };
+
     const save_changes = (_gradients?: any) => {
       if (_gradients) {
         gradients.value = _gradients.value;
@@ -220,6 +234,8 @@ export default defineComponent({
       script_store.set_value(script, true);
       // for debugger
       script_store.set_result(script, true);
+      // updating selected object
+      object_store.set_selected(objects[selected.value]);
     };
 
     function addObject(scene: Scene | null) {
@@ -283,6 +299,7 @@ export default defineComponent({
       video,
       columns,
       selected,
+      update_selected,
       save_changes,
       format_cell_value,
       update_cell_value,

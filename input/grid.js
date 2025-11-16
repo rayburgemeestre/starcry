@@ -1,28 +1,16 @@
-_ = {
+script = {
   'gradients': {
     'mix': [
-      {'position': 0.0, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
+      {'position': 0, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
       {'position': 0.1, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
       {'position': 0.11, 'r': 1, 'g': 0, 'b': 0, 'a': 0.5},
       {'position': 0.9, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
-      {'position': 1.0, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
+      {'position': 1, 'r': 1, 'g': 0, 'b': 0, 'a': 0}
     ],
-    'red': [
-      {'position': 0.0, 'r': 1, 'g': 0, 'b': 0, 'a': 1},
-      {'position': 1.0, 'r': 1, 'g': 0, 'b': 0, 'a': 0},
-    ],
-    'green': [
-      {'position': 0.0, 'r': 0, 'g': 1, 'b': 0, 'a': 1},
-      {'position': 1.0, 'r': 0, 'g': 1, 'b': 0, 'a': 0},
-    ],
-    'blue': [
-      {'position': 0.0, 'r': 0, 'g': 0, 'b': 1, 'a': 1},
-      {'position': 1.0, 'r': 0, 'g': 0, 'b': 1, 'a': 0},
-    ],
-    'white': [
-      {'position': 0.0, 'r': 1, 'g': 1, 'b': 1, 'a': 1},
-      {'position': 1.0, 'r': 0, 'g': 1, 'b': 0, 'a': 0},
-    ],
+    'red': [{'position': 0, 'r': 1, 'g': 0, 'b': 0, 'a': 1}, {'position': 1, 'r': 1, 'g': 0, 'b': 0, 'a': 0}],
+    'green': [{'position': 0, 'r': 0, 'g': 1, 'b': 0, 'a': 1}, {'position': 1, 'r': 0, 'g': 1, 'b': 0, 'a': 0}],
+    'blue': [{'position': 0, 'r': 0, 'g': 0, 'b': 1, 'a': 1}, {'position': 1, 'r': 0, 'g': 0, 'b': 1, 'a': 0}],
+    'white': [{'position': 0, 'r': 1, 'g': 1, 'b': 1, 'a': 1}, {'position': 1, 'r': 0, 'g': 1, 'b': 0, 'a': 0}]
   },
   'objects': {
     'mother': {
@@ -33,6 +21,9 @@ _ = {
       'props': {},
       'init': function() {
         function key(obj) {
+          // test
+          return [Math.floor(obj[0]), Math.floor(obj[1]), Math.floor(obj[2]), Math.floor(obj[3])].join('_');
+          //
           if (Math.floor(obj[0]) < Math.floor(obj[2]) || Math.floor(obj[1]) < Math.floor(obj[3])) {
             return [Math.floor(obj[0]), Math.floor(obj[1]), Math.floor(obj[2]), Math.floor(obj[3])].join('_');
           } else {
@@ -74,7 +65,7 @@ _ = {
           }
           if (!line_exists(key([current[0] + -100, current[1] + 0, current[0], current[1]]))) {
             this.spawn({
-              'id': 'test_line2',
+              'id': 'test_line',
               'x': current[0] + -100.,
               'y': current[1] + 0,
               'x2': current[0],
@@ -86,8 +77,8 @@ _ = {
           }
           if (!line_exists(key([current[0] + 0, current[1] + 100, current[0], current[1]]))) {
             this.spawn({
-              // 'id': 'test_line3',
-              'id': 'test_line2',
+              // "id": "test_line3",
+              'id': 'test_line',
               'x': current[0] + 0.,
               'y': current[1] + 100,
               'x2': current[0],
@@ -99,8 +90,8 @@ _ = {
           }
           if (!line_exists(key([current[0] + 0, current[1] + -100, current[0], current[1]]))) {
             this.spawn({
-              //'id': 'test_line4',
-              'id': 'test_line2',
+              //"id": "test_line4",
+              'id': 'test_line',
               'x': current[0] + 0.,
               'y': current[1] + -100,
               'x2': current[0],
@@ -116,7 +107,7 @@ _ = {
         // script.video.scale = 1.0 + t * 5;
         if (this.props.scale) {
           // this.scale = 1.0 + t * 1;
-          // doesn't work?? this.scale += e * 100.;
+          // doesn"t work?? this.scale += e * 100.;
         }
         this.angle = 360. * t;  // elapsed * 10.;
       }
@@ -128,15 +119,15 @@ _ = {
       'y': 0,
       'x2': 0,
       'y2': 0,
-      'radius': 0.,
-      'radiussize': 5.0,
-      'opacity': 0.1,
+      'radius': 0,
+      'radiussize': 5,
+      'opacity': 1.0,
       'blending_type': blending_type.normal,
       'angle': 0,
       'props': {},
-      'scale': 1.0,
+      'scale': 1,
       'init': function() {
-        let s = 0;
+        let s = 10;
 
         this.spawn({
           'id': 'test_line2',
@@ -145,8 +136,10 @@ _ = {
           'x2': -s,
           'y2': 0,
           'angle': 0,
-          'props': {'grad': 'red', 'wave_strength': rand() * 2.}
+          'hue': 120,
+          'props': {'grad': 'white'}
         });
+        return;
 
         this.spawn({
           'id': 'test_line2',
@@ -181,7 +174,7 @@ _ = {
       'time': function(time, elapsed) {
         // if (this.level == 0)
         //        this.angle = 360. * time; // elapsed * 10.;
-      },
+      }
     },
     'test_line2': {
       'type': 'line',
@@ -190,15 +183,15 @@ _ = {
       'y': 0,
       'x2': 0,
       'y2': 0,
-      'radius': 0.,
-      'radiussize': 10.0,
-      'opacity': 1.,
+      'radius': 0,
+      'radiussize': 10,
+      'opacity': 1,
       'blending_type': blending_type.add,
       'angle': 0,
       'props': {},
-      'scale': 1.0,
+      'scale': 1,
       'init': function() {
-        // this.gradient = this.props.grad;
+        this.gradient = this.props.grad;
         this.props.x = this.x;
         this.props.y = this.y;
         this.props.angle = this.angle;
@@ -210,49 +203,22 @@ _ = {
         // this.y =  this.props.y + triangular_wave(current_frame, 1., 1.) * this.props.wave_strength
         // this.angle = this.props.angle + triangular_wave(current_frame, 1., 1.) * this.props.wave_strength
         //        this.angle += elapsed * 10.;
-      },
-    },
+      }
+    }
   },
   'video': {
     'fps': 25,
     'width': 1920,
     'height': 1920,
-    'scale': 1.,
+    'scale': 1,
     'granularity': 1,
     'grain_for_opacity': true,
     'motion_blur': true,
-    // 'min_intermediates': 10.,
-    'max_intermediates': 10.,
-    'update_positions': true,
+    'max_intermediates': 10,
+    'update_positions': true
   },
-  'preview': {
-    'width': 1920 / 5.,
-    'height': 1920 / 5.,
-    'max_intermediates': 1.,
-  },
-  'scenes': [{
-    'name': 'scene1',
-    'duration': 5,
-    'objects': [
-      //{ 'id': 'test_line', 'x': 0., 'y': 0, 'x2': 0., 'y2': 0, 'props': {} },
-      {
-        'id': 'mother',
-        'x': 0.,
-        'y': 0,
-        'props': {
-          'scale': false,
-        }
-      },
-      /*{
-        'id': 'mother',
-        'x': 0.,
-        'y': 0,
-        'angle': 45 / 2.,
-        'props': {
-          'scale': true,
-        }
-      },
-       */
-    ],
-  }]
+  'preview': {'width': 384, 'height': 384, 'max_intermediates': 1},
+  'scenes':
+      [{'name': 'scene1', 'duration': 5, 'objects': [{'id': 'mother', 'x': 0, 'y': 0, 'props': {'scale': false}}]}],
+  'textures': {}
 };

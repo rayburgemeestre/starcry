@@ -108,9 +108,12 @@ void initializer::reset_context() {
     return rand_fun(rand_gen_);
   });
   context_->add_fun("attr", [&](v8::Local<v8::String> str) -> v8::Local<v8::Value> {
+    logger(DEBUG) << "getting attribute - " << v8_str(v8::Isolate::GetCurrent(), str) << std::endl;
     return global_attrs_.get(v8_str(v8::Isolate::GetCurrent(), str));
   });
   context_->add_fun("set_attr", [&](v8::Local<v8::String> key, v8::Local<v8::String> value) -> v8::Local<v8::Value> {
+    logger(DEBUG) << "setting attribute - " << v8_str(v8::Isolate::GetCurrent(), key) << " / "
+                  << v8_str(v8::Isolate::GetCurrent(), value) << std::endl;
     global_attrs_.set(v8_str(v8::Isolate::GetCurrent(), key), v8_str(v8::Isolate::GetCurrent(), value));
     return v8::Boolean::New(v8::Isolate::GetCurrent(), true);
   });

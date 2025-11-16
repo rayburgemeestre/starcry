@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { ref } from 'vue';
 
 export type ObjectType = {
   unique_id: number;
@@ -17,6 +18,9 @@ export type ObjectType = {
 export const useObjectsStore = defineStore('objects', {
   state: () => ({
     objects: [] as ObjectType[],
+    // mainly focused object by user
+    object_id: '',
+    object: {} as ObjectType,
     // selections explicitly made by user (e.g., by clicking on objects)
     user_selected: [] as number[],
     // selections to show info by user
@@ -29,6 +33,8 @@ export const useObjectsStore = defineStore('objects', {
     lookup: {} as Record<number, number>,
     has_children: {} as Record<number, boolean>,
     children: {} as Record<number, number[]>,
+
+    new_object_selected_by_user: ref(0),
   }),
   getters: {},
   actions: {
@@ -179,6 +185,12 @@ export const useObjectsStore = defineStore('objects', {
     },
     reset_gui() {
       this.gui_implied_selected = [];
+    },
+    set_selected(object_id: string, object: ObjectType) {
+      console.log('RBU --- set_selected:', object);
+      this.object_id = object_id;
+      this.object = object;
+      this.new_object_selected_by_user++;
     },
   },
 });

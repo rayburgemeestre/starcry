@@ -41,11 +41,12 @@ export function create_script_endpoint() {
         viewpoint_store.scale = script_store.video['scale'] || 1;
         let total_duration = 0;
         script_store.frames_per_scene = [];
+        const fps = script_store.video['fps'] || 25;
         for (const scene of project_store.parser.parsed()['scenes']) {
           if (scene.duration) {
             total_duration += scene.duration;
           }
-          script_store.frames_per_scene.push(scene.duration * script_store.video['fps']);
+          script_store.frames_per_scene.push(scene.duration * fps);
         }
         if (!total_duration) total_duration = script_store.video['duration'];
         script_store.max_frames = Math.floor(total_duration * script_store.video['fps']);

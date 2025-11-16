@@ -48,7 +48,14 @@
     </q-drawer>
 
     <q-drawer show-if-above v-model="rightDrawerOpen" side="right" bordered>
-      <viewpoint-component />
+      <q-tabs v-model="rightTab" inline-label mobile-arrows class="bg-grey-9 text-white shadow-2">
+        <q-tab name="view" icon="visibility" label="Viewpoint"> </q-tab>
+        <q-tab name="object" icon="list" label="Object state" />
+      </q-tabs>
+      <viewpoint-component v-if="rightTab === 'view'" />
+      <div v-if="rightTab === 'object'" class="q-pa-md">
+        <object-state-component :selected-object-id="objects_store.object_id" />
+      </div>
     </q-drawer>
 
     <q-page-container>
@@ -89,6 +96,16 @@
           target="result"
         />
       </div>
+      <q-option-group
+        v-model="mainpanelContent"
+        inline
+        dense
+        style="position: absolute; margin-left: 20px; top: 110px; z-index: 2000"
+        :options="[
+          { label: 'Canvas', value: 'canvas' },
+          { label: 'Console', value: 'console' },
+        ]"
+      ></q-option-group>
     </q-page-container>
 
     <q-footer elevated class="bg-grey-8 text-white">
@@ -102,10 +119,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch } from 'vue';
+import { defineComponent, ref, watch, computed } from 'vue';
 import TimelineComponent from 'components/TimelineComponent.vue';
 import { useScriptStore } from 'stores/script';
 import ViewpointComponent from 'components/ViewpointComponent.vue';
+import ObjectStateComponent from 'components/ObjectStateComponent.vue';
 import { append_script_to_body } from 'src/core/utils';
 import { useViewpointStore } from 'stores/viewpoint';
 import { useObjectsStore } from 'stores/objects';
@@ -116,6 +134,7 @@ import { position } from 'src/core/position';
 import { draw_utils } from 'src/core/draw_utils';
 import MonacoEditor from 'components/MonacoEditor.vue';
 import Timeout = NodeJS.Timeout;
+import { mainModule } from 'process';
 
 const canvas_elem = ref();
 let debug_text = ref('');
@@ -132,6 +151,7 @@ export default defineComponent({
     TimelineComponent,
     ViewpointComponent,
     MonacoEditor,
+    ObjectStateComponent,
   },
 
   setup() {
@@ -141,6 +161,7 @@ export default defineComponent({
     let global_store = useGlobalStore();
     let script_store = useScriptStore();
     let viewpoint_store = useViewpointStore();
+    let objects_store = useObjectsStore();
 
     let initialDrawerWidth: number;
     let previous_w: number;
@@ -151,6 +172,30 @@ export default defineComponent({
     let quadtree1 = new quadtree(boundary, 1);
     let lines = new Set();
     let new_line = [] as any[];
+    let object = ref(objects_store.object);
+    let rightTab = ref('view');
+
+    // Computed property to get the selected object ID
+    // TODO: this shit is ugly and doesn't even work
+    const selectedObjectId = computed(() => {
+      // Get the currently selected object from the objects store
+      const selectedObject = objects_store.object;
+      if (selectedObject && typeof selectedObject === 'object') {
+        // Check for id property (set when spawned)
+        if ('id' in selectedObject) {
+          return selectedObject.id;
+        }
+        // Fallback: check for object key in script's objects
+        if (script_store.script && script_store.script.objects) {
+          for (const [key, obj] of Object.entries(script_store.script.objects)) {
+            if (obj === selectedObject) {
+              return key;
+            }
+          }
+        }
+      }
+      return '';
+    });
 
     // Composable usage
     let obj = {
@@ -160,11 +205,14 @@ export default defineComponent({
       leftDrawerOpen,
       rightDrawerOpen,
       drawer: ref(false),
+      rightTab: rightTab,
       drawerWidth,
 
       // table
       filter: ref(''),
       script_store,
+
+      mainpanelContent: ref('canvas'),
 
       lines,
       new_line,
@@ -243,7 +291,7 @@ export default defineComponent({
 
         let texture_w = Module.get_texture_w();
         let texture_h = Module.get_texture_h();
-        ctx.fillText('canvas: ' + canvas_w + ' x ' + canvas_h + ', texture: ' + texture_w + ' x ' + texture_h, 20, 20);
+        ctx.fillText('canvas: ' + canvas_w + ' x ' + canvas_h + ', texture: ' + texture_w + ' x ' + texture_h, 200, 28);
         script_store.texture_w = texture_w;
         script_store.texture_h = texture_h;
         // console.log('Updated texture dimensions: ' + texture_w + 'x' + texture_h);
@@ -258,7 +306,6 @@ export default defineComponent({
         function get_distance(x: number, y: number, x2: number, y2: number) {
           return Math.sqrt(squared_dist(x, x2) + squared_dist(y, y2));
         }
-        let objects_store = useObjectsStore();
         if (objects_store.objects === null) {
           return;
         }
@@ -419,6 +466,9 @@ export default defineComponent({
       },
 
       global_store,
+      objects_store,
+      rightTab,
+      selectedObjectId,
     };
     obj.toggleLeftDrawer = function () {
       leftDrawerOpen.value = !leftDrawerOpen.value;
@@ -511,6 +561,14 @@ export default defineComponent({
       () => script_store.render_completed_by_server,
       (n) => {
         obj.render_objects(false);
+      }
+    );
+
+    watch(
+      () => objects_store.new_object_selected_by_user,
+      (n) => {
+        // console.log("New object selected by user:", n);
+        rightTab.value = 'object';
       }
     );
 

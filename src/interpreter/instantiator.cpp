@@ -331,6 +331,7 @@ instantiator::instantiate_object_from_scene(
       }
 
       auto obj = *object_definitions_.get(object_id);
+      logger(DEBUG) << "calling init for object with id " << object_id << std::endl;
       i.call_fun(obj,                 // object definition
                  bridge->instance(),  // bridged object is "this"
                  "init");
