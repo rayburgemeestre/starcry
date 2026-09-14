@@ -243,6 +243,37 @@ emits a `job` object instead. The UI rounds it unconditionally, so a busy thread
 as optional makes `tsc` point straight at it. Needs a fallback, or to show the busy-state
 info instead.
 
+### F9 — `ObjectComponent` receives two different shapes, neither matching its prop type
+The prop is declared `objects: PropType<Record<string, ObjectData>>`, i.e. a map of
+object-name to a single object's properties. `EditorPage` passes two different things:
+
+* line 13: `objects`, declared `ref<Record<string, ObjectDef[]>>` - a map to **arrays**
+* line 97: `scene.objects`, declared `ObjectDef[]` - a plain **array**
+
+`for (let k in props.objects)` happens to iterate array indices, so it "works", but the
+declared contract is wrong at both call sites and the component silently means something
+different in each. Worth settling before relying on the types. Not fixed.
+
+### F10 — `ObjectComponent.onCellChange`: the "copy" does not isolate
+```ts
+const updatedObjects = { ...props.objects };
+updatedObjects[selected.value][prop] = value;
+emit('update:objects', updatedObjects);
+```
+The spread is **shallow**, so `updatedObjects[selected.value]` is the very same nested
+object the prop points at: the assignment mutates the parent's data directly and the
+emit hands back an object the parent already has. `updateCellValue` likewise assigns
+straight into `row[1]`. It works today because the parent assigns the emitted value back,
+but nothing here is actually immutable. Not fixed.
+
+### F11 — `.vue` files are never typechecked
+`vue-tsc` is not a dependency, so `tsc --noEmit` covers `.ts` only and the SFCs - which
+is where most of the UI lives - are checked by nothing. `quasar build` uses esbuild, which
+strips types without checking them, and the eslint config has no type-aware rules. A
+one-off `npx vue-tsc` attempt failed on a TypeScript version mismatch (the project pins
+`typescript ^4.5.4`). Adding a compatible `vue-tsc` and a `typecheck` npm script would
+have caught F7 and F8 class bugs automatically.
+
 ---
 
 ## Suggested review order

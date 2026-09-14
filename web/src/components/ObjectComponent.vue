@@ -76,11 +76,15 @@
 
 <script lang="ts">
 import { defineComponent, ref, watch, computed, PropType } from 'vue';
+import { JsonValue } from 'src/types/types';
 import { useScriptStore } from 'stores/script';
 import { useProjectStore } from 'stores/project';
 
+// Values come from json_parser, which turns the script into plain JSON: functions are
+// replaced by "FUNCTION <n>" placeholder strings and resolved through parser.fun(), so
+// everything reaching this component really is a JSON value.
 interface ObjectData {
-  [key: string]: any;
+  [key: string]: JsonValue;
   type: string;
 }
 
@@ -103,9 +107,9 @@ export default defineComponent({
 
     const selected = ref(props.initialSelected);
     const objectNames = ref<Record<string, string>>({});
-    const rows = ref<Record<string, Array<[string, any]>>>({});
+    const rows = ref<Record<string, Array<[string, JsonValue]>>>({});
     const editingCell = ref<string | null>(null);
-    const originalValue = ref<any>(null);
+    const originalValue = ref<JsonValue>(null);
     const objectAddingProperty = ref(false);
     const objectProperty = ref<string | null>(null);
 
@@ -152,11 +156,11 @@ export default defineComponent({
       { deep: true }
     );
 
-    const formatCellValue = (value: any): string => {
-      return typeof value === 'object' ? JSON.stringify(value) : value;
+    const formatCellValue = (value: JsonValue): string => {
+      return typeof value === 'object' ? JSON.stringify(value) : String(value);
     };
 
-    const updateCellValue = (newValue: string, row: [string, any]) => {
+    const updateCellValue = (newValue: string, row: [string, JsonValue]) => {
       // console.log('updating', typeof newValue, typeof row[1]);
       try {
         if (typeof row[1] === 'object' || newValue.trim().startsWith('{') || newValue.trim().startsWith('[')) {
@@ -178,12 +182,14 @@ export default defineComponent({
 
     let currentEvtElement: HTMLElement | null = null;
 
-    function onRowClick(evt: Event, row: [string, any], _index: number) {
+    function onRowClick(evt: Event, row: [string, JsonValue], _index: number) {
       if (row[0] === 'init' || row[0] === 'time') {
+        // init/time hold a "FUNCTION <n>" placeholder that parser.fun() resolves
+        const fun_ref = typeof row[1] === 'string' ? row[1] : '';
         currentEvtElement?.classList.remove('bg-amber-5');
-        if (scriptStore.current_function !== row[1]) {
-          scriptStore.set_snippet(projectStore.parser?.fun(row[1]) || '', true);
-          scriptStore.current_function = row[1];
+        if (scriptStore.current_function !== fun_ref) {
+          scriptStore.set_snippet(projectStore.parser?.fun(fun_ref) || '', true);
+          scriptStore.current_function = fun_ref;
           if (evt.target) {
             const parentNode = (evt.target as HTMLElement).parentNode as HTMLElement;
             if (parentNode) {
@@ -211,7 +217,7 @@ export default defineComponent({
       scriptStore.current_function = '';
     }
 
-    const startEditing = (el: HTMLElement, row: [string, any]) => {
+    const startEditing = (el: HTMLElement, row: [string, JsonValue]) => {
       let prop = row[0];
       let value = row[1];
       editingCell.value = prop;
@@ -234,7 +240,7 @@ export default defineComponent({
       try_focus();
     };
 
-    const onCellChange = (row: [string, any]) => {
+    const onCellChange = (row: [string, JsonValue]) => {
       let prop = row[0];
       let value = row[1];
 
