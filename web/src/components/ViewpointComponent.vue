@@ -90,29 +90,30 @@ const columns = [
   },
 ];
 
-let viewpoint_store_raw = useViewpointStore();
-let viewpoint_store = storeToRefs(useViewpointStore());
-let script_store = useScriptStore();
-let script_store_refs = storeToRefs(useScriptStore());
-let bitmap_store = useBitmapStore();
-let stats_store = useStatsStore();
-
-let rows = ref([]);
-for (let v in viewpoint_store) {
-  // we're already creating checkboxes for booleans manually
-  if (typeof viewpoint_store[v].value !== 'boolean') rows.value.push([v, viewpoint_store[v]]);
-}
-// rows.value.push(['texture_w', script_store_refs.texture_w]);
-// rows.value.push(['texture_h', script_store_refs.texture_h]);
-
-let timer: NodeJS.Timeout | null = null;
-
-viewpoint_store.previous_hash.value = serialize_viewpoint();
-
 export default defineComponent({
   name: 'ViewpointComponent',
   props: {},
   setup() {
+    // These have to live inside setup(): at module scope they would be created once for
+    // the whole module rather than per component instance, and useXStore() would run at
+    // import time, before the active pinia instance necessarily exists.
+    let viewpoint_store_raw = useViewpointStore();
+    let viewpoint_store = storeToRefs(useViewpointStore());
+    let script_store = useScriptStore();
+    let script_store_refs = storeToRefs(useScriptStore());
+    let bitmap_store = useBitmapStore();
+    let stats_store = useStatsStore();
+
+    let rows = ref([]);
+    for (let v in viewpoint_store) {
+      // we're already creating checkboxes for booleans manually
+      if (typeof viewpoint_store[v].value !== 'boolean') rows.value.push([v, viewpoint_store[v]]);
+    }
+    rows.value.push(['texture_w', script_store_refs.texture_w]);
+    rows.value.push(['texture_h', script_store_refs.texture_h]);
+
+    viewpoint_store.previous_hash.value = serialize_viewpoint();
+
     let scheduled_update = function () {
       let str = serialize_viewpoint();
       viewpoint_store.current_message.value = str;

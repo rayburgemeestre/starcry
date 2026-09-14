@@ -221,6 +221,22 @@ make integration-test     # image-diff regression suite + test/report.html
   `scene_settings`).
 * **The build image pins tool versions** (clang-19, clang-format-19, node 18).
   Do not bump versions in `Dockerfile`/`Makefile` casually.
+* **This checkout lives on an sshfs mount** (`findmnt --target .` shows
+  `fuse.sshfs`). That changes how deleted-but-open files behave: FUSE renames them
+  to `.fuse_hidden*` instead of unlinking, and the tombstone keeps the parent
+  directory non-empty. The practical failure is `npm ci` dying with
+  `ENOTEMPTY: directory not empty, rmdir '.../node_modules/esbuild-linux-64/bin'`
+  **and leaving `web/node_modules` half-deleted**, which breaks `make run-web` and
+  `make build-web` until you reinstall.
+  * The cause is almost always a `quasar dev` left running and holding its esbuild
+    binary open. Reap it first: `pkill -f 'quasar dev'`, then `cd web && npm ci`.
+    The `.fuse_hidden*` file disappears the moment the process exits.
+  * `timeout N make run-web` does **not** help: it kills `make`, not the grandchild
+    dev server, which happily outlives the shell. If you start a dev server to check
+    something, kill it explicitly when you are done — check with
+    `ps -eo pid,etime,cmd | grep -E 'quasar|vite|esbuild'`.
+  * A dev server that picks port 9001 instead of 9000 is the tell that a previous
+    one is still alive.
 * `sc.log` in the repo root can be enormous (tens of MB+). Don't `cat` it; use
   `tail`/`grep`.
 
