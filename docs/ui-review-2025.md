@@ -240,8 +240,11 @@ problems listed above.
 
 1. `MainLayout.vue` (689) — biggest file, mixes three concerns
 2. `GradientsComponent.vue` (619) — biggest single-feature component, hand-rolled parsing
-3. `ObjectBrowser2.vue` + `ObjectComponent.vue` + `ObjectBrowser.vue` (1,062 combined)
-   — resolve the v1/v2 duplication first, since it may delete 322 lines outright
+3. `ObjectBrowser2.vue` + `ObjectBrowser.vue` (733 combined) — resolve the v1/v2
+   duplication, which deletes 322 lines outright. Investigated in
+   [objectbrowser-v2-migration.md](objectbrowser-v2-migration.md).
+   (`ObjectComponent.vue` was listed here by mistake: it belongs to `EditorPage`, not to
+   the object browsers, and is a separate item.)
 4. `ObjectStateComponent.vue` (377) — newest, least exercised
 5. `EditorPage.vue` (318) + `MonacoEditor.vue` (220) — JSON round-tripping
 6. The `core/` and `stores/` layer — smaller, but everything above depends on it
