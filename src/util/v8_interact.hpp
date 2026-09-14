@@ -9,6 +9,8 @@
 
 #include <iostream>
 #include <optional>
+#include <stdexcept>
+#include <string>
 #include <utility>
 
 extern v8::Local<v8::Context> context;
@@ -288,6 +290,32 @@ public:
   void set_fun(v8::Local<v8::Object> object, const std::string& field, v8::Local<v8::Function> fun) {
     handle_error(object->Set(get_context(), v8_str(get_context(), field), fun));
   }
+  /**
+   * A javascript function that throws - or that blows the stack, which is easy to do since
+   * scripts can spawn recursively - makes Call() return an empty MaybeLocal. Calling
+   * ToLocalChecked() on that aborts the entire process with an unhelpable
+   * "Fatal error in v8::ToLocalChecked / Empty MaybeLocal". Surface it as a std::runtime_error
+   * instead. v8pp catches std::exception at the callback boundary, so this is safe even when
+   * we were invoked from javascript ourselves (e.g. via this.spawn()).
+   */
+  [[noreturn]] void throw_js_exception(v8::TryCatch& try_catch, const std::string& field) {
+    static const std::string prefix = "javascript error in ";
+    std::string msg = "exception could not be stringified, the javascript stack is most likely exhausted";
+    v8::Local<v8::String> exception_str;
+    // note: deliberately ToLocal() and not ToLocalChecked(), turning the exception into a
+    // string can fail as well - after a stack overflow there is very little room to work with.
+    if (!try_catch.Exception().IsEmpty() && try_catch.Exception()->ToString(get_context()).ToLocal(&exception_str)) {
+      msg = v8_str(get_isolate(), exception_str);
+    }
+    // recursive spawns nest this handler once per level, and v8pp turns each of our
+    // std::runtime_errors back into a javascript exception on the way out. Report the innermost
+    // error rather than prefixing it again for every level on the way up.
+    if (msg.find(prefix) != std::string::npos) {
+      throw std::runtime_error(msg);
+    }
+    throw std::runtime_error(prefix + field + "(): " + msg);
+  }
+
   template <class... Args>
   void call_fun(v8::Persistent<v8::Object>& object,
                 v8::Persistent<v8::Object>& self,
@@ -321,7 +349,10 @@ public:
 #endif
     size_t index = 0;
     (void(argz[index++] = v8pp::to_v8(get_isolate(), args)), ...);
-    fun->Call(get_isolate()->GetCurrentContext(), self.Get(get_isolate()), sizeof...(Args), argz).ToLocalChecked();
+    v8::TryCatch try_catch(get_isolate());
+    if (fun->Call(get_isolate()->GetCurrentContext(), self.Get(get_isolate()), sizeof...(Args), argz).IsEmpty()) {
+      throw_js_exception(try_catch, field);
+    }
   }
 
   template <class... Args>
@@ -357,7 +388,10 @@ public:
 #endif
     size_t index = 0;
     (void(argz[index++] = v8pp::to_v8(get_isolate(), args)), ...);
-    fun->Call(get_isolate()->GetCurrentContext(), self.Get(get_isolate()), sizeof...(Args), argz).ToLocalChecked();
+    v8::TryCatch try_catch(get_isolate());
+    if (fun->Call(get_isolate()->GetCurrentContext(), self.Get(get_isolate()), sizeof...(Args), argz).IsEmpty()) {
+      throw_js_exception(try_catch, field);
+    }
   }
   template <class... Args>
   void call_fun(const v8::Local<v8::Object> object, const std::string& field, Args... args) {
@@ -397,7 +431,10 @@ public:
 #endif
     size_t index = 0;
     (void(argz[index++] = v8pp::to_v8(get_isolate(), args)), ...);
-    fun->Call(get_isolate()->GetCurrentContext(), self, sizeof...(Args), argz).ToLocalChecked();
+    v8::TryCatch try_catch(get_isolate());
+    if (fun->Call(get_isolate()->GetCurrentContext(), self, sizeof...(Args), argz).IsEmpty()) {
+      throw_js_exception(try_catch, field);
+    }
   }
 
   v8::Local<v8::Function> get_fun(const std::string& field) {

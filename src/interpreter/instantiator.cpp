@@ -315,35 +315,7 @@ instantiator::instantiate_object_from_scene(
       }
     }
 
-    if (i.has_field(instance, "emit")) {
-      auto attrs = i.v8_obj(instance, "emit");
-      auto obj_fields = i.prop_names(attrs);
-      logger(INFO) << "Emit fields found: " << obj_fields->Length() << std::endl;
-      for (size_t k = 0; k < obj_fields->Length(); k++) {
-        //  auto field_name = i.get_index(obj_fields, k);
-        auto field_name_str = i.str(obj_fields, k);
-        // auto field_value = i.get(attrs, field_name);
-        // TODO: store into some map and nice data structure the emitter for the object ID
-        logger(INFO) << "Field name: " << field_name_str << std::endl;
-      }
-    } else {
-      // logger(INFO) << "No 'emit' field found in instance" << std::endl;
-    }
-    if (i.has_field(instance, "absorb")) {
-      auto attrs = i.v8_obj(instance, "absorb");
-      auto obj_fields = i.prop_names(attrs);
-      logger(INFO) << "Absorb fields found: " << obj_fields->Length() << std::endl;
-      for (size_t k = 0; k < obj_fields->Length(); k++) {
-        auto field_name = i.get_index(obj_fields, k);
-        auto field_name_str = i.str(obj_fields, k);
-        auto field_value = i.get(attrs, field_name).As<v8::Object>();
-        auto field_props_str = i.str(field_value, "input");
-        // TODO: store into some map and nice data structure the emitter for the object ID
-        logger(INFO) << "Field name X: " << field_name_str << " - " << field_props_str << std::endl;
-      }
-    } else {
-      // logger(INFO) << "No 'absorb' field found in instance" << std::endl;
-    }
+    parse_emit_absorb(i, instance);
 
     // the handle function returns a ref, which is all fine, but recursively init
     // may actually invalidate this ref with other inserts.
@@ -514,6 +486,44 @@ instantiator::instantiate_object_from_scene(
 void instantiator::reset_seeds() {
   rand_.set_seed(0);
   counter = 0;
+}
+
+/**
+ * Keep this out of instantiate_object_from_scene(): that function's frame stays alive for the
+ * whole recursive descent (it calls init(), which can spawn more objects, which instantiates
+ * again, ...). Locals held there cost stack at every nesting level, and scripts like
+ * input/perlin3.js recurse 30 deep. Parsing in its own frame keeps that cost transient.
+ */
+void instantiator::parse_emit_absorb(v8_interact& i, v8::Local<v8::Object>& instance) {
+  if (i.has_field(instance, "emit")) {
+    auto attrs = i.v8_obj(instance, "emit");
+    auto obj_fields = i.prop_names(attrs);
+    logger(INFO) << "Emit fields found: " << obj_fields->Length() << std::endl;
+    for (size_t k = 0; k < obj_fields->Length(); k++) {
+      //  auto field_name = i.get_index(obj_fields, k);
+      auto field_name_str = i.str(obj_fields, k);
+      // auto field_value = i.get(attrs, field_name);
+      // TODO: store into some map and nice data structure the emitter for the object ID
+      logger(INFO) << "Field name: " << field_name_str << std::endl;
+    }
+  } else {
+    // logger(INFO) << "No 'emit' field found in instance" << std::endl;
+  }
+  if (i.has_field(instance, "absorb")) {
+    auto attrs = i.v8_obj(instance, "absorb");
+    auto obj_fields = i.prop_names(attrs);
+    logger(INFO) << "Absorb fields found: " << obj_fields->Length() << std::endl;
+    for (size_t k = 0; k < obj_fields->Length(); k++) {
+      auto field_name = i.get_index(obj_fields, k);
+      auto field_name_str = i.str(obj_fields, k);
+      auto field_value = i.get(attrs, field_name).As<v8::Object>();
+      auto field_props_str = i.str(field_value, "input");
+      // TODO: store into some map and nice data structure the emitter for the object ID
+      logger(INFO) << "Field name X: " << field_name_str << " - " << field_props_str << std::endl;
+    }
+  } else {
+    // logger(INFO) << "No 'absorb' field found in instance" << std::endl;
+  }
 }
 
 void instantiator::_instantiate_object(v8_interact& i,

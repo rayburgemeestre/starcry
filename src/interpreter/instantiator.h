@@ -58,6 +58,8 @@ public:
                                              int debug_level = 0);
 
 private:
+  void parse_emit_absorb(v8_interact& i, v8::Local<v8::Object>& instance);
+
   void _instantiate_object(v8_interact& i,
                            std::optional<v8::Local<v8::Object>> scene_obj,
                            v8::Local<v8::Object> object_prototype,
