@@ -133,6 +133,18 @@ make test                 # Catch2 unit tests
 make integration-test     # image-diff regression suite + test/report.html
 ```
 
+For changes under `web/`, also run:
+
+```bash
+cd web && npm run lint && npm run typecheck    # eslint + vue-tsc
+```
+
+`npm run typecheck` is the only thing that checks `.vue` files at all — `quasar build`
+uses esbuild, which strips types without checking them. It currently reports ~240
+pre-existing errors, so **compare against the baseline** rather than expecting zero: run
+it before and after your change and make sure your number is not higher. See F11 in
+`docs/ui-review-2025.md` for the per-file baseline.
+
 * **Activate the virtualenv first.** `make integration-test` finishes with
   `python3 test/report.py` (Makefile, the line right after the test run), and that
   step runs on the **host**, outside the build container. It needs Pillow and numpy,

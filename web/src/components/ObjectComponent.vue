@@ -75,7 +75,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, computed, PropType } from 'vue';
+import { defineComponent, ref, shallowRef, watch, computed, PropType } from 'vue';
 import { JsonValue } from 'src/types/types';
 import { useScriptStore } from 'stores/script';
 import { useProjectStore } from 'stores/project';
@@ -109,7 +109,9 @@ export default defineComponent({
     const objectNames = ref<Record<string, string>>({});
     const rows = ref<Record<string, Array<[string, JsonValue]>>>({});
     const editingCell = ref<string | null>(null);
-    const originalValue = ref<JsonValue>(null);
+    // shallowRef: JsonValue is recursive, and ref<>'s deep UnwrapRef on it makes TS bail
+    // out with TS2589. Nothing mutates this value in place anyway, it is replaced wholesale.
+    const originalValue = shallowRef<JsonValue>(null);
     const objectAddingProperty = ref(false);
     const objectProperty = ref<string | null>(null);
 

@@ -266,13 +266,42 @@ emit hands back an object the parent already has. `updateCellValue` likewise ass
 straight into `row[1]`. It works today because the parent assigns the emitted value back,
 but nothing here is actually immutable. Not fixed.
 
-### F11 — `.vue` files are never typechecked
-`vue-tsc` is not a dependency, so `tsc --noEmit` covers `.ts` only and the SFCs - which
-is where most of the UI lives - are checked by nothing. `quasar build` uses esbuild, which
-strips types without checking them, and the eslint config has no type-aware rules. A
-one-off `npx vue-tsc` attempt failed on a TypeScript version mismatch (the project pins
-`typescript ^4.5.4`). Adding a compatible `vue-tsc` and a `typecheck` npm script would
-have caught F7 and F8 class bugs automatically.
+### F11 — RESOLVED — `.vue` files were never typechecked
+`vue-tsc` is now a devDependency (pinned `^1.2.0`, the last line that works with the
+`typescript 4.9.4` this project resolves) and `npm run typecheck` runs it.
+
+That immediately proved its worth: `tsc` alone reported 15 errors, all in `.ts` files.
+With `.vue` included the real number is **240**, i.e. 94% of the type errors in this UI
+were in files nothing was checking. It also caught a mistake I had just made by hand -
+`ref<JsonValue>` in `ObjectComponent` tripped `TS2589` because `JsonValue` is recursive
+and `ref`'s deep `UnwrapRef` cannot cope; `shallowRef` fixes it and is the honest choice
+anyway, since the value is replaced wholesale rather than mutated.
+
+**Do not treat 240 as a to-do list.** Many are one root cause repeated: quasar's
+`QTable` column type is stricter than the `columns` arrays this codebase writes
+(`align: string` instead of the `'left' | 'right' | 'center'` union), and untyped
+`field: (row) => ...` accessors. Fixing the column helper once would clear a large
+fraction of them.
+
+Baseline at the time of writing, for tracking whether changes make it better or worse:
+
+| file | errors |
+|---|---|
+| `src/layouts/MainLayout.vue` | 77 |
+| `src/components/ObjectBrowser.vue` | 27 |
+| `src/components/MonacoEditor.vue` | 26 |
+| `src/components/ObjectStateComponent.vue` | 24 |
+| `src/components/ViewpointComponent.vue` | 19 |
+| `src/pages/EditorPage.vue` | 11 |
+| `src/pages/DebugPage.vue` | 10 |
+| `src/components/endpoints/script.ts` | 8 |
+| `src/components/ObjectComponent.vue` | 7 |
+| `src/components/GradientsComponent.vue` | 6 |
+| `src/components/endpoints/stats.ts` | 5 |
+| `src/components/TimelineComponent.vue` | 3 |
+| `src/components/endpoints/bitmap.ts` | 2 |
+| `src/components/IsolatedObject.vue` | 1 |
+| `src/pages/FilesPage.vue` | 1 |
 
 ---
 
