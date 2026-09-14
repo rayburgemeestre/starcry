@@ -127,106 +127,67 @@ The interactive layer drawn over the rendered frame.
 
 ## Measured quality signals
 
-Run on the current tree, so these are facts rather than impressions.
+Re-measured after the cleanup pass; these are facts rather than impressions.
 
-* **ESLint: 1,738 problems — but 1,674 of them are in `public/client.js`**, the
-  generated emscripten glue, which `.eslintignore` does not exclude. The
-  hand-written source accounts for only ~64 problems across 15 files. Worth adding
-  `/public/client.js` to `.eslintignore` so the signal is visible at all.
-* Of the remaining problems, the notable rules are `no-unused-vars` (111 total,
-  mostly in the generated file) and `no-explicit-any` (29).
-* Type-safety escape hatches in `src/`: 17 × `: any`, 1 × `as any`, 18 ×
-  `eslint-disable`, 0 × `@ts-ignore`. Low, but `types/types.ts` at 34 lines suggests
-  much of the websocket payload shape is simply untyped rather than escaped.
-* No test infrastructure at all: `package.json` has
-  `"test": "echo \"No test specified\" && exit 0"`.
+```
+eslint     : 16 warnings, 0 errors, exits 0   (was 1738 problems / 21 errors)
+typecheck  : 240 errors                        (was: .vue files checked by nothing)
+build      : succeeds
+tests      : none - package.json still has "test": "echo No test specified"
+```
 
-So the hand-written code is not lint-dirty. Expect the real problems to be
-architectural — oversized components, duplicated concerns, dead code left behind
-after rewrites — rather than the kind of thing a linter catches.
+The remaining eslint warnings are all `no-explicit-any`, concentrated in
+`EditorPage.vue` (5), `ObjectStateComponent.vue` (2) and `ObjectBrowser2.vue` (2).
+
+`npm run typecheck` (vue-tsc) is the only thing that checks `.vue` files at all -
+`quasar build` uses esbuild, which strips types without checking them. **The 240 is a
+baseline to compare against, not a to-do list:** a large share is one root cause
+repeated, quasar's `QTable` column type being stricter than the `columns` arrays written
+here (`align: string` rather than the `'left' | 'right' | 'center'` union, plus untyped
+`field: (row) => ...` accessors). Fixing the column definition once would clear a big
+fraction of it.
+
+| file | errors |
+|---|---|
+| `src/layouts/MainLayout.vue` | 77 |
+| `src/components/ObjectBrowser.vue` | 27 |
+| `src/components/MonacoEditor.vue` | 26 |
+| `src/components/ObjectStateComponent.vue` | 24 |
+| `src/components/ViewpointComponent.vue` | 19 |
+| `src/pages/EditorPage.vue` | 11 |
+| `src/pages/DebugPage.vue` | 10 |
+| `src/components/endpoints/script.ts` | 8 |
+| `src/components/ObjectComponent.vue` | 7 |
+| `src/components/GradientsComponent.vue` | 6 |
+| `src/components/endpoints/stats.ts` | 5 |
+| `src/components/TimelineComponent.vue` | 3 |
+| `src/components/endpoints/bitmap.ts` | 2 |
+| `src/components/IsolatedObject.vue` | 1 |
+| `src/pages/FilesPage.vue` | 1 |
+
+So the hand-written code is not lint-dirty. The real problems are architectural —
+oversized components, duplicated concerns, dead code left behind after rewrites — rather
+than the kind of thing a linter catches.
 
 ---
 
-## Concrete findings already on the table
+## Open findings
 
-Found while triaging ESLint output; recorded here because the cleanup that silenced
-the warnings would otherwise erase the trail. Each one still needs a decision.
+Open items only. Resolved findings have been removed — they live in the git history
+(`git log --grep=' F[0-9]'` and the commits around them), which is why the numbering has
+gaps. Numbers are kept stable so existing commit messages still refer to the right thing.
 
-### F1 — RESOLVED (`ee3c52c`) — `ViewpointComponent.vue`: module-scope state and an import-time side effect
-Lines 93-110 sit **outside** `setup()`:
-
-```ts
-let viewpoint_store_raw = useViewpointStore();          // line 93, module scope
-let viewpoint_store = storeToRefs(useViewpointStore());
-let rows = ref([]);
-let timer: NodeJS.Timeout | null = null;
-viewpoint_store.previous_hash.value = serialize_viewpoint();   // side effect at import
-export default defineComponent({ setup() { ...            // line 111
+### F4 — `GradientsComponent.vue:273`: `resizeCanvas` cannot be scheduled properly
+```js
+// nextTick causes infinite loops
+setTimeout(resizeCanvas, 100);
+setTimeout(resizeCanvas, 500);
+setTimeout(resizeCanvas, 1000);
 ```
-
-Two problems: that state is shared across every instance of the component instead of
-being per-instance, and `useViewpointStore()` runs at module load, which depends on the
-active Pinia instance already existing. Should almost certainly move into `setup()`.
-
-### F2 — RESOLVED (`ee3c52c`) — `ViewpointComponent.vue:108`: `timer` shadowed and dead
-Originally written up as "declared, never wired" - that was wrong. `timer` *is* read at
-lines 145-160 as the viewpoint debounce, but `setup()` declares its own `timer` further
-down (next to `timer2`) which shadows the module-level one for that whole scope. The
-watches were therefore never touching the outer one. Dropped; no behaviour change.
-
-### F3 — RESOLVED (`ee3c52c`) — `ViewpointComponent.vue:96`: disabled texture rows
-`script_store_refs` is unused only because the two lines that used it are commented out:
-
-```ts
-// rows.value.push(['texture_w', script_store_refs.texture_w]);
-// rows.value.push(['texture_h', script_store_refs.texture_h]);
-```
-
-Why were `texture_w` / `texture_h` removed from the viewpoint panel? Restore or delete.
-
-### F4 — RESOLVED — `ObjectComponent.vue`: abandoned `setTimeout` -> `nextTick` migration
-**Every `nextTick` in the UI is commented out** - all three of them. Commit `e43f143`
-("fix dumb setTimeout's with nextTick()") does not describe what is in the tree; the
-migration was attempted and abandoned in *both* components, so there is no working
-example to copy.
-
-They are two different problems:
-
-* `GradientsComponent.vue:274` - "nextTick causes infinite loops" means `resizeCanvas()`
-  mutates reactive state, so running it in a tick queues another tick. The bug is in
-  `resizeCanvas`, not in `nextTick`. Still worked around with three unconditional
-  `setTimeout(resizeCanvas, 100/500/1000)` calls. **Not yet addressed.**
-* `ObjectComponent.vue:222` - needs to focus an `<input>` that quasar's table creates
-  lazily, so a single `nextTick` genuinely is not enough. The retry loop was the right
-  idea but unbounded: if the input never appeared (edit cancelled, row re-rendered) it
-  spun at 100 Hz forever, logging on every pass.
-
-Resolution: keep polling, but bound it to 50 attempts (~500 ms) and drop the
-`console.log`. `startEditing` also lost its `async`, which existed only for the
-commented-out `await`.
-
-### F5 — RESOLVED — `MainLayout.vue`: selection state that "doesn't even work"
-Three attempts at one problem, only the last wired up. The shipped solution is in the
-template: `<object-state-component :selected-object-id="objects_store.object_id" />`,
-backed by `set_selected(object_id, object)` in the store. That works. The other two were
-dead:
-
-* `let object = ref(objects_store.object)` - a textbook reactivity bug. `ref(store.prop)`
-  **snapshots** the value at setup time and never tracks the store, so it held the
-  initial `{}` forever. Reactive alternatives: `computed(() => store.object)` or
-  `storeToRefs(store).object`. Worth grepping for this pattern elsewhere.
-* `selectedObjectId` - a computed deriving the id from the object itself, with a fallback
-  scanning `script_store.script.objects` for an identity match. That cannot work if the
-  store holds a copy rather than the same reference, which is what the author's
-  `// TODO: this shit is ugly and doesn't even work` was about. Still returned from
-  `setup()`, so evaluated but never rendered.
-
-Both removed, along with the now-unused `computed` import.
-
-### F6 — RESOLVED (`2144ae2`) — `MainLayout.vue:137`: a Node builtin imported into browser code
-`import { mainModule } from 'process';` - unused, and `process` is a Node module that has
-no business in a browser bundle. Almost certainly an accidental IDE auto-import. Removed
-in the lint cleanup, noted here in case it hints at a misconfigured editor.
+"Infinite loops" means `resizeCanvas()` mutates reactive state, so running it inside a
+tick queues another tick. The bug is in `resizeCanvas`, not in the scheduling — the three
+unconditional timeouts are a guess-and-hope workaround. The sibling case in
+`ObjectComponent` was resolved separately (a bounded poll); this half is untouched.
 
 ### F7 — `stores/stats.ts`: `rows` and `rows_piper` are typed as `ObjectType[]`
 Both hold **table rows** — `[thread.name, seconds_idle, state]` and
@@ -266,48 +227,16 @@ emit hands back an object the parent already has. `updateCellValue` likewise ass
 straight into `row[1]`. It works today because the parent assigns the emitted value back,
 but nothing here is actually immutable. Not fixed.
 
-### F11 — RESOLVED — `.vue` files were never typechecked
-`vue-tsc` is now a devDependency (pinned `^1.2.0`, the last line that works with the
-`typescript 4.9.4` this project resolves) and `npm run typecheck` runs it.
-
-That immediately proved its worth: `tsc` alone reported 15 errors, all in `.ts` files.
-With `.vue` included the real number is **240**, i.e. 94% of the type errors in this UI
-were in files nothing was checking. It also caught a mistake I had just made by hand -
-`ref<JsonValue>` in `ObjectComponent` tripped `TS2589` because `JsonValue` is recursive
-and `ref`'s deep `UnwrapRef` cannot cope; `shallowRef` fixes it and is the honest choice
-anyway, since the value is replaced wholesale rather than mutated.
-
-**Do not treat 240 as a to-do list.** Many are one root cause repeated: quasar's
-`QTable` column type is stricter than the `columns` arrays this codebase writes
-(`align: string` instead of the `'left' | 'right' | 'center'` union), and untyped
-`field: (row) => ...` accessors. Fixing the column helper once would clear a large
-fraction of them.
-
-Baseline at the time of writing, for tracking whether changes make it better or worse:
-
-| file | errors |
-|---|---|
-| `src/layouts/MainLayout.vue` | 77 |
-| `src/components/ObjectBrowser.vue` | 27 |
-| `src/components/MonacoEditor.vue` | 26 |
-| `src/components/ObjectStateComponent.vue` | 24 |
-| `src/components/ViewpointComponent.vue` | 19 |
-| `src/pages/EditorPage.vue` | 11 |
-| `src/pages/DebugPage.vue` | 10 |
-| `src/components/endpoints/script.ts` | 8 |
-| `src/components/ObjectComponent.vue` | 7 |
-| `src/components/GradientsComponent.vue` | 6 |
-| `src/components/endpoints/stats.ts` | 5 |
-| `src/components/TimelineComponent.vue` | 3 |
-| `src/components/endpoints/bitmap.ts` | 2 |
-| `src/components/IsolatedObject.vue` | 1 |
-| `src/pages/FilesPage.vue` | 1 |
 
 ---
 
 ## Suggested review order
 
-Highest risk first, so stopping early still covers the worst of it:
+Highest risk first, so stopping early still covers the worst of it. Partially covered
+already: `core/api.ts` (callbacks typed, payload shapes derived from the C++ emitters),
+`ViewpointComponent.vue` (state moved into `setup()`), `ObjectComponent.vue` (cell values
+typed, focus retry bounded) — none of them reviewed end to end, only the specific
+problems listed above.
 
 1. `MainLayout.vue` (689) — biggest file, mixes three concerns
 2. `GradientsComponent.vue` (619) — biggest single-feature component, hand-rolled parsing
