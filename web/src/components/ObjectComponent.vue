@@ -211,23 +211,25 @@ export default defineComponent({
       scriptStore.current_function = '';
     }
 
-    const startEditing = async (el: HTMLElement, row: [string, any]) => {
+    const startEditing = (el: HTMLElement, row: [string, any]) => {
       let prop = row[0];
       let value = row[1];
       editingCell.value = prop;
       originalValue.value = value;
       let par = el.parentNode as HTMLElement;
 
-      // next tick doesn't work..
-      // await nextTick();
+      // nextTick() is not enough here: quasar creates the edit input on its own schedule,
+      // so it can still be absent a tick later. Poll for it, but give up instead of
+      // spinning forever when the cell never appears (edit cancelled, row re-rendered).
+      let attempts_left = 50; // 50 * 10ms = half a second
       function try_focus() {
-        if (!par.querySelector('input')) {
-          console.log('scheduling retry');
-          setTimeout(try_focus, 10);
-          return false;
+        const input = par.querySelector('input');
+        if (input) {
+          input.focus();
+          return true;
         }
-        par.querySelector('input')?.focus();
-        return true;
+        if (--attempts_left > 0) setTimeout(try_focus, 10);
+        return false;
       }
       try_focus();
     };

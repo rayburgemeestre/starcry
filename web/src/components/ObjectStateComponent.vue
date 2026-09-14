@@ -182,10 +182,7 @@ export default defineComponent({
 
     // Get current object from store
     const currentObject = computed(() => {
-      console.log('XXX: selectedObjectId', props.selectedObjectId);
-      console.log('XXX: objectsStore.object', objectsStore.object);
       if (!props.selectedObjectId || !objectsStore.object) return null;
-      console.log('XXX OK');
       return objectsStore.object;
     });
 

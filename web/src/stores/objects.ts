@@ -187,7 +187,6 @@ export const useObjectsStore = defineStore('objects', {
       this.gui_implied_selected = [];
     },
     set_selected(object_id: string, object: ObjectType) {
-      console.log('RBU --- set_selected:', object);
       this.object_id = object_id;
       this.object = object;
       this.new_object_selected_by_user++;

@@ -119,7 +119,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, computed } from 'vue';
+import { defineComponent, ref, watch } from 'vue';
 import TimelineComponent from 'components/TimelineComponent.vue';
 import { useScriptStore } from 'stores/script';
 import ViewpointComponent from 'components/ViewpointComponent.vue';
@@ -171,30 +171,7 @@ export default defineComponent({
     let quadtree1 = new quadtree(boundary, 1);
     let lines = new Set();
     let new_line = [] as any[];
-    let object = ref(objects_store.object);
     let rightTab = ref('view');
-
-    // Computed property to get the selected object ID
-    // TODO: this shit is ugly and doesn't even work
-    const selectedObjectId = computed(() => {
-      // Get the currently selected object from the objects store
-      const selectedObject = objects_store.object;
-      if (selectedObject && typeof selectedObject === 'object') {
-        // Check for id property (set when spawned)
-        if ('id' in selectedObject) {
-          return selectedObject.id;
-        }
-        // Fallback: check for object key in script's objects
-        if (script_store.script && script_store.script.objects) {
-          for (const [key, obj] of Object.entries(script_store.script.objects)) {
-            if (obj === selectedObject) {
-              return key;
-            }
-          }
-        }
-      }
-      return '';
-    });
 
     // Composable usage
     let obj = {
@@ -467,7 +444,6 @@ export default defineComponent({
       global_store,
       objects_store,
       rightTab,
-      selectedObjectId,
     };
     obj.toggleLeftDrawer = function () {
       leftDrawerOpen.value = !leftDrawerOpen.value;

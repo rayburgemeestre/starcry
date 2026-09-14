@@ -152,7 +152,7 @@ after rewrites — rather than the kind of thing a linter catches.
 Found while triaging ESLint output; recorded here because the cleanup that silenced
 the warnings would otherwise erase the trail. Each one still needs a decision.
 
-### F1 — `ViewpointComponent.vue`: module-scope state and an import-time side effect
+### F1 — RESOLVED (`ee3c52c`) — `ViewpointComponent.vue`: module-scope state and an import-time side effect
 Lines 93-110 sit **outside** `setup()`:
 
 ```ts
@@ -168,11 +168,13 @@ Two problems: that state is shared across every instance of the component instea
 being per-instance, and `useViewpointStore()` runs at module load, which depends on the
 active Pinia instance already existing. Should almost certainly move into `setup()`.
 
-### F2 — `ViewpointComponent.vue:108`: `timer` declared, never wired
-`let timer: NodeJS.Timeout | null = null;` is never assigned again. Someone intended a
-debounce or poll and did not finish it. Decide: wire it up, or drop it.
+### F2 — RESOLVED (`ee3c52c`) — `ViewpointComponent.vue:108`: `timer` shadowed and dead
+Originally written up as "declared, never wired" - that was wrong. `timer` *is* read at
+lines 145-160 as the viewpoint debounce, but `setup()` declares its own `timer` further
+down (next to `timer2`) which shadows the module-level one for that whole scope. The
+watches were therefore never touching the outer one. Dropped; no behaviour change.
 
-### F3 — `ViewpointComponent.vue:96`: disabled texture rows
+### F3 — RESOLVED (`ee3c52c`) — `ViewpointComponent.vue:96`: disabled texture rows
 `script_store_refs` is unused only because the two lines that used it are commented out:
 
 ```ts
@@ -182,19 +184,46 @@ debounce or poll and did not finish it. Decide: wire it up, or drop it.
 
 Why were `texture_w` / `texture_h` removed from the viewpoint panel? Restore or delete.
 
-### F4 — `ObjectComponent.vue`: abandoned `setTimeout` -> `nextTick` migration
-Commit `e43f143` ("fix dumb setTimeout's with nextTick()") did this for
-`GradientsComponent` (2 uses). In `ObjectComponent` it was started and reverted:
-`nextTick` imported at line 78, `// await nextTick();` commented out at line 222, and
-`setTimeout(try_focus, 10)` still in place at line 226. Either finish it or remove the
-remnants.
+### F4 — RESOLVED — `ObjectComponent.vue`: abandoned `setTimeout` -> `nextTick` migration
+**Every `nextTick` in the UI is commented out** - all three of them. Commit `e43f143`
+("fix dumb setTimeout's with nextTick()") does not describe what is in the tree; the
+migration was attempted and abandoned in *both* components, so there is no working
+example to copy.
 
-### F5 — `MainLayout.vue:175` + `:179`: selection state that "doesn't even work"
-`let object = ref(objects_store.object);` is assigned and never read, directly above the
-author's own `// TODO: this shit is ugly and doesn't even work` on `selectedObjectId`.
-Object selection in the canvas overlay needs a proper look.
+They are two different problems:
 
-### F6 — `MainLayout.vue:137`: a Node builtin imported into browser code
+* `GradientsComponent.vue:274` - "nextTick causes infinite loops" means `resizeCanvas()`
+  mutates reactive state, so running it in a tick queues another tick. The bug is in
+  `resizeCanvas`, not in `nextTick`. Still worked around with three unconditional
+  `setTimeout(resizeCanvas, 100/500/1000)` calls. **Not yet addressed.**
+* `ObjectComponent.vue:222` - needs to focus an `<input>` that quasar's table creates
+  lazily, so a single `nextTick` genuinely is not enough. The retry loop was the right
+  idea but unbounded: if the input never appeared (edit cancelled, row re-rendered) it
+  spun at 100 Hz forever, logging on every pass.
+
+Resolution: keep polling, but bound it to 50 attempts (~500 ms) and drop the
+`console.log`. `startEditing` also lost its `async`, which existed only for the
+commented-out `await`.
+
+### F5 — RESOLVED — `MainLayout.vue`: selection state that "doesn't even work"
+Three attempts at one problem, only the last wired up. The shipped solution is in the
+template: `<object-state-component :selected-object-id="objects_store.object_id" />`,
+backed by `set_selected(object_id, object)` in the store. That works. The other two were
+dead:
+
+* `let object = ref(objects_store.object)` - a textbook reactivity bug. `ref(store.prop)`
+  **snapshots** the value at setup time and never tracks the store, so it held the
+  initial `{}` forever. Reactive alternatives: `computed(() => store.object)` or
+  `storeToRefs(store).object`. Worth grepping for this pattern elsewhere.
+* `selectedObjectId` - a computed deriving the id from the object itself, with a fallback
+  scanning `script_store.script.objects` for an identity match. That cannot work if the
+  store holds a copy rather than the same reference, which is what the author's
+  `// TODO: this shit is ugly and doesn't even work` was about. Still returned from
+  `setup()`, so evaluated but never rendered.
+
+Both removed, along with the now-unused `computed` import.
+
+### F6 — RESOLVED (`2144ae2`) — `MainLayout.vue:137`: a Node builtin imported into browser code
 `import { mainModule } from 'process';` - unused, and `process` is a Node module that has
 no business in a browser bundle. Almost certainly an accidental IDE auto-import. Removed
 in the lint cleanup, noted here in case it hints at a misconfigured editor.
