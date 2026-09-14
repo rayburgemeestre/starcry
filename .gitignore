@@ -39,3 +39,6 @@ web/webroot/client.wasm
 web/webroot/main.css
 web/webroot/main.js*
 web/webroot/stream/*
+# agent trash bin (see AGENTS.md) - keep the README, ignore the rest
+Trash/*
+!Trash/README.md

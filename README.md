@@ -41,7 +41,10 @@ Ubuntu 22.04.
 
 ## Architecture
 
-The architecture is only partially documented <a href="docs/tech_doc.md">here</a>.
+See <a href="DESIGN.md">DESIGN.md</a> for a full codebase summary and architecture
+diagram. Additional (partly older) notes live in <a href="docs/tech_doc.md">docs/tech_doc.md</a>.
+
+Contributing with an AI agent? Start at <a href="AGENTS.md">AGENTS.md</a>.
 
 ## Components
 
