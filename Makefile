@@ -196,7 +196,6 @@ runtime-deps:  ## install run-time dependencies
 build-web-deps:
 	pushd web && sudo apt install nodejs npm -y
 	pushd web && npm ci
-	pushd web && sudo npm i -g @quasar/cli
 
 deps: ## install dependencies required for running and building starcry
 	./docs/install_deps.sh
@@ -258,7 +257,7 @@ build-web:  ## build web static files
 	@$(call make-clang, pushd web && ./node_modules/.bin/quasar build)  # doesn't require build-web-deps
 
 run-web:  ## run web in development hot-swappable mode
-	pushd web && quasar dev
+	pushd web && ./node_modules/.bin/quasar dev
 
 attach:
 	docker exec -it starcry /bin/bash
