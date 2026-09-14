@@ -16,7 +16,7 @@ export function create_script_endpoint() {
   const files_store = useFilesStore();
   const viewpoint_store = useViewpointStore();
 
-  const self = new StarcryAPI(
+  const self = new StarcryAPI<string>(
     'script',
     StarcryAPI.text_type,
     (msg: string) => {
@@ -74,7 +74,7 @@ export function create_script_endpoint() {
         console.log('[sc] ' + buffer.slice(1));
       }
     },
-    (_) => {
+    () => {
       self.send('list');
     }
   );

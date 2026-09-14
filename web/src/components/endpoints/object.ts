@@ -1,10 +1,11 @@
 import { StarcryAPI } from 'src/core/api';
 import { useObjectsStore } from 'stores/objects';
+import { ObjectType } from 'stores/objects';
 
 export function create_object_endpoint() {
   const objects_store = useObjectsStore();
 
-  const self = new StarcryAPI(
+  const self = new StarcryAPI<{ shapes: ObjectType[] }>(
     'objects',
     StarcryAPI.json_type,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -21,10 +22,10 @@ export function create_object_endpoint() {
     },
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    (_) => {},
+    () => {},
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    (_) => {}
+    () => {}
   );
   return self;
 }

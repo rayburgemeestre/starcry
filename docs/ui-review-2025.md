@@ -228,6 +228,21 @@ Both removed, along with the now-unused `computed` import.
 no business in a browser bundle. Almost certainly an accidental IDE auto-import. Removed
 in the lint cleanup, noted here in case it hints at a misconfigured editor.
 
+### F7 — `stores/stats.ts`: `rows` and `rows_piper` are typed as `ObjectType[]`
+Both hold **table rows** — `[thread.name, seconds_idle, state]` and
+`[component.name, component.counter]` — not scene objects. `ObjectType` looks
+copy-pasted from `stores/objects.ts`. Surfaced by typing the /stats payload; `tsc`
+now reports the mismatch at `endpoints/stats.ts` lines 23, 61 and 64. Related:
+`render_value` is declared `string` but assigned `last_job.render_time || last_job.number`,
+both numbers. Not fixed - changing these types will cascade into whatever renders them.
+
+### F8 — `endpoints/stats.ts:23`: `Math.round(thread.seconds_idle)` can be `NaN`
+`metrics.cpp` only sets `seconds_idle` when the thread is **idle**; for a busy thread it
+emits a `job` object instead. The UI rounds it unconditionally, so a busy thread yields
+`Math.round(undefined)` = `NaN` in the stats table. Typing `MetricsThread.seconds_idle`
+as optional makes `tsc` point straight at it. Needs a fallback, or to show the busy-state
+info instead.
+
 ---
 
 ## Suggested review order

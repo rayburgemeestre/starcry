@@ -8,7 +8,7 @@ export function create_bitmap_endpoint() {
   const script_store = useScriptStore();
   const bitmap_store = useBitmapStore();
 
-  const self = new StarcryAPI(
+  const self = new StarcryAPI<ArrayBuffer>(
     'bitmap',
     StarcryAPI.binary_type,
     (_msg) => {
@@ -25,11 +25,11 @@ export function create_bitmap_endpoint() {
       // allow other listeners to update the canvas2 labels
       script_store.render_completed_by_server++;
     },
-    (_) => {
+    () => {
       // this.log('DEBUG', 'bitmap', 'websocket connected', '');
       // this.$data.connected_bitmap = true;
     },
-    (_) => {
+    () => {
       // this.log('DEBUG', 'bitmap', 'websocket disconnected', '');
       // this.$data.connected_bitmap = false;
     }

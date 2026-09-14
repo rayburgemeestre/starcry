@@ -2,6 +2,7 @@ import { StarcryAPI } from 'src/core/api';
 import { useViewpointStore } from 'stores/viewpoint';
 import { useScriptStore } from 'stores/script';
 import { watch } from 'vue';
+import { ViewpointMessage } from 'src/types/types';
 
 export function serialize_viewpoint() {
   const viewpoint_store = useViewpointStore();
@@ -27,7 +28,7 @@ export function create_viewpoint_endpoint() {
   const viewpoint_store = useViewpointStore();
   const script_store = useScriptStore();
 
-  const self = new StarcryAPI(
+  const self = new StarcryAPI<ViewpointMessage>(
     'viewpoint',
     StarcryAPI.json_type,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -52,7 +53,7 @@ export function create_viewpoint_endpoint() {
       }
       viewpoint_store.previous_hash = serialize_viewpoint();
     },
-    (_) => {
+    () => {
       if (viewpoint_store.first_load)
         self.send(
           JSON.stringify({

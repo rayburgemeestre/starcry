@@ -2,18 +2,19 @@ import { StarcryAPI } from 'src/core/api';
 import { useStatsStore } from 'stores/stats';
 import { useScriptStore } from 'stores/script';
 import { useBitmapStore } from 'stores/bitmap';
+import { StatsMessage } from 'src/types/types';
 
 export function create_stats_endpoint() {
   const stats_store = useStatsStore();
   const script_store = useScriptStore();
 
-  const self = new StarcryAPI(
+  const self = new StarcryAPI<StatsMessage>(
     'stats',
     StarcryAPI.json_type,
-    (_msg: string) => {
+    (_msg) => {
       // status.value = msg;
     },
-    (buffer: string) => {
+    (buffer) => {
       // msgs.value[buffer.type] = buffer;
       if (buffer.type === 'metrics') {
         stats_store.rows = [];
@@ -67,7 +68,7 @@ export function create_stats_endpoint() {
       }
     },
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    (_) => {}
+    () => {}
   );
   return self;
 }

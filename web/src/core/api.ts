@@ -1,13 +1,23 @@
 import { ClientStorage, load_client_data, save_client_data } from 'src/core/clientstorage';
 import { useGlobalStore } from 'stores/global';
+import { JsonObject } from 'src/types/types';
 
-export interface StarcryAPI {
+export type StatusCallback = (status: string) => void;
+export type ConnectionCallback = () => void;
+export type MessageCallback<TMessage> = (data: TMessage) => void;
+
+/**
+ * The payload shape depends on the endpoint, not on this class: `binary_type` yields an
+ * ArrayBuffer, `text_type` a string, `json_type` whatever the handler sent. Callers say
+ * which they expect via the type argument, e.g. `new StarcryAPI<ArrayBuffer>(...)`.
+ */
+export interface StarcryAPI<TMessage = JsonObject> {
   endpoint: string;
   type: number;
-  on_status_change: any;
-  on_message: any;
-  on_connected: any;
-  on_disconnected: any;
+  on_status_change: StatusCallback;
+  on_message: MessageCallback<TMessage>;
+  on_connected: ConnectionCallback;
+  on_disconnected: ConnectionCallback;
   ws: WebSocket | null;
   retry: NodeJS.Timeout | null;
   client_data: ClientStorage;
@@ -16,7 +26,7 @@ export interface StarcryAPI {
 let update_connection_status_timeout: NodeJS.Timeout | null = null;
 
 // TODO: further port everything to typescript, and do it in a better way
-export class StarcryAPI {
+export class StarcryAPI<TMessage = JsonObject> {
   static get binary_type() {
     return 1;
   }
@@ -30,15 +40,19 @@ export class StarcryAPI {
   constructor(
     endpoint: string,
     type: number,
-    on_status_change?: any,
-    on_message?: any,
-    on_connected?: any,
-    on_disconnected?: any
+    on_status_change?: StatusCallback,
+    on_message?: MessageCallback<TMessage>,
+    on_connected?: ConnectionCallback,
+    on_disconnected?: ConnectionCallback
   ) {
     this.endpoint = endpoint;
     this.type = type;
-    this.on_status_change = on_status_change;
-    this.on_message = on_message;
+    // connect() calls on_status_change() straight away and onmessage calls on_message(),
+    // so both need a default rather than being left undefined.
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    this.on_status_change = on_status_change || function () {};
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    this.on_message = on_message || function () {};
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     this.on_connected = on_connected || function () {};
     // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -71,7 +85,7 @@ export class StarcryAPI {
     } else {
       this.ws = new WebSocket(protocol + '//' + document.location.host + '/' + this.endpoint, [this.client_data.ID]);
     }
-    this.ws.onopen = function (this: StarcryAPI) {
+    this.ws.onopen = function (this: StarcryAPI<TMessage>) {
       if (this.retry) clearTimeout(this.retry);
       this.on_status_change('connected');
       useGlobalStore().connected.add(this.endpoint);
@@ -94,7 +108,7 @@ export class StarcryAPI {
       this.send('LINK ' + this.client_data.ID);
       this.on_connected();
     }.bind(this);
-    this.ws.onclose = function (this: StarcryAPI) {
+    this.ws.onclose = function (this: StarcryAPI<TMessage>) {
       this.on_status_change('disconnected');
       this.on_disconnected();
       useGlobalStore().connected.delete(this.endpoint);
@@ -105,13 +119,13 @@ export class StarcryAPI {
       useGlobalStore().show_connection_status = true;
       this.retry = setTimeout(this.connect.bind(this), 100);
     }.bind(this);
-    this.ws.onmessage = function (this: StarcryAPI, message: MessageEvent) {
+    this.ws.onmessage = function (this: StarcryAPI<TMessage>, message: MessageEvent) {
       switch (this.type) {
         case StarcryAPI.binary_type:
           message.data.arrayBuffer().then(
-            function (this: StarcryAPI, buffer: ArrayBuffer) {
+            function (this: StarcryAPI<TMessage>, buffer: ArrayBuffer) {
               try {
-                this.on_message(buffer);
+                this.on_message(buffer as unknown as TMessage);
               } catch (error) {
                 console.error('Error calling on_message:', error);
               }
@@ -119,14 +133,14 @@ export class StarcryAPI {
           );
           break;
         case StarcryAPI.json_type:
-          this.on_message(JSON.parse(message.data));
+          this.on_message(JSON.parse(message.data) as TMessage);
           break;
         case StarcryAPI.text_type:
-          this.on_message(message.data);
+          this.on_message(message.data as unknown as TMessage);
           break;
       }
     }.bind(this);
-    this.ws.onerror = function (this: StarcryAPI, error: Event) {
+    this.ws.onerror = function (this: StarcryAPI<TMessage>, error: Event) {
       this.on_status_change('ERROR: ' + error);
     }.bind(this);
   }
