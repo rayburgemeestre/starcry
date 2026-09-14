@@ -54,7 +54,7 @@ Licence: MPL 2.0. Every source file carries the MPL header.
 | `test/` | Catch2 unit tests + image-diff integration tests + `report.py` HTML report. |
 | `web/` | Quasar (Vue 3 + Pinia + TypeScript) SPA, Monaco editor, WASM client host. |
 | `docs/` | `tech_doc.md`, Doxygen/Sphinx config, helper scripts, Dockerfile for the runtime image. |
-| `kube/`, `Tiltfile` | k3s deployment + Tilt live-reload dev loop. |
+| `kube/` | k3s deployment manifests (`make kube`). |
 | `cmake/` | `FindV8`, include/link helper modules, clang-format integration. |
 
 ---
@@ -435,7 +435,6 @@ present); the `Makefile` transparently runs locally if already inside the contai
 | `make run-web` | `quasar dev` hot reload |
 | `make format` | clang-format-19 (C++ **and** `input/*.js`) + prettier for `web/` |
 | `make dockerize` / `make push` / `make kube` | runtime image → Docker Hub → k3s |
-| `make up` / `make down` | Tilt dev loop against k3s |
 
 CMake targets: `starcry` (main binary), `sc_client` (desktop SDL2 build of the WASM
 client), `unit_tests`, `integration_tests`. C++23, `-DV8_COMPRESS_POINTERS

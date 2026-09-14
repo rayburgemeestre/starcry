@@ -100,7 +100,6 @@ public:
       ("grain", "custom canvas enable grain")
       ("no-grain", "custom canvas disable grain")
       ("granularity", po::value<int>(&options.generator_opts.custom_granularity), "custom canvas granularity")
-      ("dev", "enable dev mode (used when running in debug mode in k3s using Tilt)")
     ;
     // clang-format on
 
@@ -189,32 +188,8 @@ public:
       sc->features().caching = true;
     }
 
-    const auto run_with_dev = [&](const auto fun) {
-      if (vm.count("dev")) {
-        bool stop = false;
-        std::thread dev([&stop]() {
-          // loop that checks if /workdir/build/starcry.stop exists
-          while (!stop) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            if (std::filesystem::exists("/workdir/build/starcry.stop")) {
-              std::cerr << "starcry.stop file detected, exiting.." << std::endl;
-              std::exit(0);
-            }
-          }
-        });
-        fun();
-        sc->run_client(options.host);
-        stop = true;
-        dev.join();
-      } else {
-        fun();
-      }
-    };
-
     if (vm.count("client")) {
-      run_with_dev([&sc, this]() {
-        sc->run_client(options.host);
-      });
+      sc->run_client(options.host);
     } else {
       sc->setup_server(options.host);
 
@@ -250,9 +225,7 @@ public:
         }
       }
 
-      run_with_dev([&sc]() {
-        sc->run();
-      });
+      sc->run();
     }
   }
 
