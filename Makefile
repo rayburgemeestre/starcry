@@ -77,10 +77,13 @@ test:  ## execute starcry unit tests using docker (with clang)
 
 .PHONY: integration-test
 integration-test:  ## execute starcry unit tests using docker (with clang)
+	@if [ -f test/report.html ]; then mv -f test/report.html test/report-old.html; fi
 	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold CXX=$$(which c++) cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B build && \
 	                    cmake --build build --target integration_tests -j $$(nproc) && \
-	                    ./build/integration_tests -s -d yes --rng-seed 0)
-	python3 test/report.py
+	                    ./build/integration_tests -s -d yes --rng-seed 0); \
+	  status=$$?; \
+	  python3 test/report.py; \
+	  exit $$status
 
 .PHONY: integration-test-gcc
 integration-test-gcc:  ## execute starcry unit tests using docker (with gcc)

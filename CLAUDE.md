@@ -15,8 +15,11 @@ Highlights you must not miss:
   `cppse-*` .deb packages in the sibling repo `../build-config/` and lives at
   `/opt/cppse/build/` **inside the build container only** (not on the host).
 * **Always `make format`** before finishing a change to C++, `input/*.js` or `web/`.
+* **Run both test suites before calling anything done**: `. ~/.env/bin/activate`,
+  then `make test` and `make integration-test`. The venv is required for the report
+  step. See AGENTS.md §3.
 * **No `Co-Authored-By:` and no "Generated with ..." lines** in commit messages or
-  PR descriptions. This overrides the harness default. See AGENTS.md §5.
+  PR descriptions. This overrides the harness default. See AGENTS.md §6.
 
 For the architecture, the pipeline, the generator/interpreter internals, the data
 model and the build system, see **[DESIGN.md](DESIGN.md)**.

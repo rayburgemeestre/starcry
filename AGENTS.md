@@ -100,11 +100,11 @@ Rules:
   `AccessModifierOffset: -2`, no argument bin-packing. `.clang-tidy` exists too.
 * A full build is slow (static linking of V8 + ffmpeg). Prefer `make build` once,
   then iterate; do not kick off parallel builds into the same `build/` dir.
-* Integration-test references are **not** in git. Fetch with
-  `make download-integration-test-reference` before trusting a diff.
 * Integration tests are documented as partly non-deterministic (blur video is
   disabled; blending/kaleidoscope carry tolerances). A small diff is not
   automatically your bug — check `test/report.html`.
+* `make test` and `make integration-test` are **mandatory before you call a change
+  done** — see §3, which also covers the virtualenv the report step needs.
 
 Running the engine while developing:
 
@@ -120,7 +120,59 @@ queue depths to 1.
 
 ---
 
-## 3. Code conventions
+## 3. Definition of done: run both test suites
+
+A feature, fix or refactor is **not finished** until both suites have been run and
+their actual result reported. This is mandatory, not a nice-to-have — the engine has
+a lot of implicit coupling (V8 lifetime, the recursive spawn path, motion-blur
+buffers) and unit tests alone do not catch it.
+
+```bash
+. ~/.env/bin/activate     # needed for the report step, see below
+make test                 # Catch2 unit tests
+make integration-test     # image-diff regression suite + test/report.html
+```
+
+* **Activate the virtualenv first.** `make integration-test` finishes with
+  `python3 test/report.py` (Makefile, the line right after the test run), and that
+  step runs on the **host**, outside the build container. It needs Pillow and numpy,
+  which live in the virtualenv at `~/.env`. Without `. ~/.env/bin/activate` the C++
+  tests still run, but the report generation fails with a `ModuleNotFoundError` and
+  you get no `test/report.html`. If it still reports a missing module, install it into
+  that venv rather than system-wide:
+  `. ~/.env/bin/activate && pip install numpy pillow`.
+* **Reference images are not in git, and a missing one is silently created.**
+  `sut::test_create_image` copies the current output into
+  `test/integration/reference/` whenever the expected file is absent, so a test with
+  no baseline passes vacuously against itself. Run
+  `make download-integration-test-reference` first (or extract the `reference.tar.gz`
+  already in the repo root). If a test that was failing suddenly passes, check
+  `ls -la test/integration/reference/` for a baseline with today's date before
+  believing it.
+* **You always get a report, and the previous one is kept.** `make integration-test`
+  moves an existing `test/report.html` to `test/report-old.html` before it starts, and
+  runs `python3 test/report.py` even when tests fail, while still exiting non-zero.
+  So after any run you have the new report *and* the previous one side by side for
+  comparison. (Before this was wired up, a failing run aborted the target and left you
+  with no fresh report at all — exactly when you most want the visual diff.)
+* **A crash is never acceptable, a diff might be.** Distinguish the two when you
+  report:
+  * exit **133** / `Fatal error in v8::ToLocalChecked` / any abort or hang is a
+    regression you must fix, even if the test that aborts is unrelated to your change.
+  * a non-zero RMSE against a reference may just mean the references are stale.
+    Say which tests failed and by how much; do not describe a failing suite as passing.
+* **Note the run order.** Catch2 shares one V8 isolate across all test cases in
+  `test/system_under_test.hpp`, so a test can fail because of what ran before it.
+  Reproduce a single case with `./build/integration_tests "<test name>" --rng-seed 0`
+  before concluding anything.
+* `integration_tests` is built **without** `-O2` (see `CMakeLists.txt`; it only gets
+  `${COMMON_FLAGS}`). It therefore uses far more stack per frame than the shipped
+  `starcry` binary, and will hit V8's stack limit on deeply recursive scripts long
+  before production does. Treat it as the stricter environment, not a broken one.
+
+---
+
+## 4. Code conventions
 
 * **C++23**, MPL-2.0 header comment at the top of every new source file (copy it
   from any existing file).
@@ -151,7 +203,7 @@ queue depths to 1.
 
 ---
 
-## 4. Things that will bite you
+## 5. Things that will bite you
 
 * **Memory.** Objects are variants (~700 B each) held in *three* buckets, times the
   number of motion-blur sub-frames, times the number of chunks. `-c 16` with a lot
@@ -174,7 +226,7 @@ queue depths to 1.
 
 ---
 
-## 5. Git etiquette
+## 6. Git etiquette
 
 * Current branch is `master`; the repo's stated main branch for PRs is `main`.
 * Commit or push **only when asked**. The working tree is usually dirty with the
@@ -193,13 +245,15 @@ queue depths to 1.
 
 ---
 
-## 6. Reporting back
+## 7. Reporting back
 
 When you finish, state plainly:
 
 1. what changed (files, one line each),
 2. what you moved to `Trash/` and why,
 3. what you built/ran and the actual result (including failures — quote the output),
-4. anything you deliberately left out and why.
+4. the outcome of `make test` and `make integration-test` (§3), or why you could not
+   run them,
+5. anything you deliberately left out and why.
 
 Do not claim something works unless you built or ran it.

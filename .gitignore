@@ -28,6 +28,7 @@ reference.tar.gz*
 sc.log
 test/integration/*
 test/report.html
+test/report-old.html
 web/node_modules
 web/public/client.js
 web/public/client.wasm
