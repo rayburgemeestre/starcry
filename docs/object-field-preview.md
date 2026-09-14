@@ -111,8 +111,44 @@ That covers the interesting cases and keeps the chain short.
 
 C++26 reflection (P2996) would remove this entirely: a compile-time walk over
 `data::shape`'s members generating the name→setter mapping, which would also subsume the
-`@add_field@` problem and possibly the `shapes_to_json` serializer. Toolchain feasibility
-is tracked separately.
+`@add_field@` problem and possibly the `shapes_to_json` serializer.
+
+### Toolchain feasibility (checked 2026-09-14)
+
+**Not available on the current toolchain, and not on clang at all.**
+
+| | |
+|---|---|
+| build image today | Ubuntu 24.04, `clang++-19` only, `g++-13` only |
+| `clang-19 -std=c++26` | accepted, but `__cpp_reflection` undefined and `<meta>` not found |
+| clang mainline | `clang.llvm.org/cxx_status.html` lists **Reflection P2996R13: No**, as well as P3394R4 / P3293R3 / P3491R3 / P3096R12 / P3598R0. True for every version apt.llvm.org publishes (up to 23) |
+| **GCC 16** | **implements P2996R13 behind `-freflection`**, `__cpp_impl_reflection >= 202506L`. Also P3394R4, P3293R3, P3096R12, P3560R2, P3795R2 and expansion statements P1306R5 |
+| GCC 16 release | 16.1 on 2026-04-30, 16.2 on 2026-08-07 — current stable |
+| packaging | `g++-16` is **not** in noble (max 14) or questing (max 15), and not in the ubuntu-toolchain-r PPA. It **is** in **Ubuntu 26.04 "resolute"** |
+
+So the upgrade path is: rebase the build image on Ubuntu 26.04, use `g++-16`, compile with
+`-std=c++26 -freflection`.
+
+**What that costs, beyond the base image bump:**
+
+* **Switch the primary compiler from clang to gcc.** `make build` currently runs
+  `switch-to-latest-clang`; reflection is gcc-only, so gcc would have to become the default
+  (`make build-gcc` already exists, so the path is there).
+* **Rebuild all 12 prebuilt static libraries** from `../build-config` for 26.04: `v8`,
+  `ffmpeg`, `x264`, `seasocks`, `fmt`, `openexr`, `tvision`, `inotify-cpp`,
+  `redis-plus-plus`, `hiredis`, `vivid`, `fastpfor`. `build-config` is already
+  parameterised (`UBUNTU_VERSION` / `CODENAME`, currently 2504/plucky) with a
+  `Dockerfile-ubuntu<ver>` per release, so this is an established pattern rather than new
+  work — but `v8_monolith` is the one with real risk.
+* **Move the project from C++23 to C++26**, which will surface its own warnings and
+  incompatibilities, notably around the V8 headers.
+
+**Recommendation: do not block this feature on it.** The field mapping here needs a
+~9-entry whitelist; reflection would be a sledgehammer for that specific problem. The
+genuine payoff is elsewhere — `shapes_to_json` hand-writes 52 fields, `@add_field@` spans
+10 files, and `object_bridge` duplicates getters/setters per shape type. If the toolchain
+upgrade happens, prototype reflection against the serializer first, since that is where it
+would actually earn its keep.
 
 ---
 
