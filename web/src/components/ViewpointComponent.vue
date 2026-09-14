@@ -141,7 +141,7 @@ export default defineComponent({
       if (v === 'view_x' || v === 'view_y' || v === 'viewpoint_send_needed') continue;
       watch(
         () => viewpoint_store[v].value,
-        (n) => {
+        (_n) => {
           if (timer !== null) {
             clearTimeout(timer);
             timer = null;
@@ -152,7 +152,7 @@ export default defineComponent({
     }
     watch(
       () => viewpoint_store_raw.viewpoint_updated_by_client,
-      (n) => {
+      (_n) => {
         if (timer !== null) {
           clearTimeout(timer);
           timer = null;
@@ -212,7 +212,7 @@ export default defineComponent({
     // obj.render_current_frame()
     let timer: NodeJS.Timer | null = null;
     let timer2: NodeJS.Timer | null = null;
-    let callback1 = (n) => {
+    let callback1 = (_n) => {
       if (!script_store.auto_render) return;
       // make sure that we sync the updated viewpoint..
       if (timer2 !== null) {
@@ -223,7 +223,7 @@ export default defineComponent({
       //timer = setTimeout(obj.render_current_frame, 100);
       timer2 = setTimeout(obj.render_current_frame, 500);
     };
-    let callback2 = (n) => {
+    let callback2 = (_n) => {
       if (!script_store.auto_render) return;
       let canvas_different: boolean =
         script_store.texture_w !== viewpoint_store_raw.canvas_w ||

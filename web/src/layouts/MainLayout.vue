@@ -134,7 +134,6 @@ import { position } from 'src/core/position';
 import { draw_utils } from 'src/core/draw_utils';
 import MonacoEditor from 'components/MonacoEditor.vue';
 import Timeout = NodeJS.Timeout;
-import { mainModule } from 'process';
 
 const canvas_elem = ref();
 let debug_text = ref('');
@@ -222,11 +221,11 @@ export default defineComponent({
         viewpoint_store.view_y = Module.get_mouse_y();
         this.render_objects(false, true, false, false, e.shiftKey);
       },
-      on_touchmove: function (e) {
+      on_touchmove: function (_e) {
         viewpoint_store.view_x = Module.get_mouse_x();
         viewpoint_store.view_y = Module.get_mouse_y();
       },
-      on_touchstart: function (e) {
+      on_touchstart: function (_e) {
         // if (startXY === null) return; // wait till we release the hold
         // startXY = [window.Module.get_mouse_x(), window.Module.get_mouse_y()];
         // if (holdTimer !== null) {
@@ -248,7 +247,7 @@ export default defineComponent({
         //
         // }, 1000);
       },
-      on_touchend: function (e) {
+      on_touchend: function (_e) {
         // debug_text.value = "done";
         // // release the hold
         // startXY = [];
@@ -543,7 +542,7 @@ export default defineComponent({
       }
     }.bind(obj);
 
-    obj.pinchHandler = ({ offset: [d, a], pinching }) => {
+    obj.pinchHandler = ({ offset: [d, _a], pinching: _pinching }) => {
       const zoom = d / 10000;
       // debug_text.value = 1 + zoom;
       viewpoint_store.scale = Math.min(Math.max(0, 1 + zoom), 100);
@@ -559,14 +558,14 @@ export default defineComponent({
 
     watch(
       () => script_store.render_completed_by_server,
-      (n) => {
+      (_n) => {
         obj.render_objects(false);
       }
     );
 
     watch(
       () => objects_store.new_object_selected_by_user,
-      (n) => {
+      (_n) => {
         // console.log("New object selected by user:", n);
         rightTab.value = 'object';
       }

@@ -9,7 +9,7 @@ export function create_object_endpoint() {
     StarcryAPI.json_type,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    (msg) => {},
+    (_msg) => {},
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     (json) => {
       // temporary switched to binary, as the plan was to deserialize binary in wasm

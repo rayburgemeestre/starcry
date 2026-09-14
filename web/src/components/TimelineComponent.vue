@@ -52,7 +52,7 @@ export default defineComponent({
       mouse_over: function (e) {
         hover_val = e.target.getAttribute('index');
       },
-      mouse_out: function (e) {
+      mouse_out: function (_e) {
         hover_val = -1;
       },
     };

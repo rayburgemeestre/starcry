@@ -75,7 +75,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, nextTick, ref, watch, computed, PropType } from 'vue';
+import { defineComponent, ref, watch, computed, PropType } from 'vue';
 import { useScriptStore } from 'stores/script';
 import { useProjectStore } from 'stores/project';
 

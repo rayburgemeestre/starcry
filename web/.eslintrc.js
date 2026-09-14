@@ -82,6 +82,11 @@ module.exports = {
     // does not work with type definitions
     'no-unused-vars': 'off',
 
+    // A callback often has to accept an argument it does not care about. Prefixing it
+    // with an underscore says "deliberately ignored" and keeps the rule useful for the
+    // cases that actually matter: variables and imports that nothing uses.
+    '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+
     // allow debugger during development only
     'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off',
   },

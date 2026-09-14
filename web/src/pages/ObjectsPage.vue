@@ -7,7 +7,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent } from 'vue';
 import ObjectBrowser from 'components/ObjectBrowser.vue';
 import ObjectBrowser2 from 'components/ObjectBrowser2.vue';
 

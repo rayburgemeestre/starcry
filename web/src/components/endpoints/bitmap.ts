@@ -11,7 +11,7 @@ export function create_bitmap_endpoint() {
   const self = new StarcryAPI(
     'bitmap',
     StarcryAPI.binary_type,
-    (msg) => {
+    (_msg) => {
       // this.$data.websock_status = msg;
     },
     (buffer) => {

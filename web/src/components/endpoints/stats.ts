@@ -10,7 +10,7 @@ export function create_stats_endpoint() {
   const self = new StarcryAPI(
     'stats',
     StarcryAPI.json_type,
-    (msg: string) => {
+    (_msg: string) => {
       // status.value = msg;
     },
     (buffer: string) => {

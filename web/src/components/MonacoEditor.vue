@@ -101,7 +101,7 @@ export default defineComponent({
       theme: 'vs-dark',
     });
 
-    editor.onDidChangeModelContent((event: any) => {
+    editor.onDidChangeModelContent((_event: any) => {
       const value = editor?.getValue();
       // This makes this component pretty completely hardcoded.
       // Need to figure out at some point how to get it working the right way

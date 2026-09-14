@@ -147,6 +147,60 @@ after rewrites — rather than the kind of thing a linter catches.
 
 ---
 
+## Concrete findings already on the table
+
+Found while triaging ESLint output; recorded here because the cleanup that silenced
+the warnings would otherwise erase the trail. Each one still needs a decision.
+
+### F1 — `ViewpointComponent.vue`: module-scope state and an import-time side effect
+Lines 93-110 sit **outside** `setup()`:
+
+```ts
+let viewpoint_store_raw = useViewpointStore();          // line 93, module scope
+let viewpoint_store = storeToRefs(useViewpointStore());
+let rows = ref([]);
+let timer: NodeJS.Timeout | null = null;
+viewpoint_store.previous_hash.value = serialize_viewpoint();   // side effect at import
+export default defineComponent({ setup() { ...            // line 111
+```
+
+Two problems: that state is shared across every instance of the component instead of
+being per-instance, and `useViewpointStore()` runs at module load, which depends on the
+active Pinia instance already existing. Should almost certainly move into `setup()`.
+
+### F2 — `ViewpointComponent.vue:108`: `timer` declared, never wired
+`let timer: NodeJS.Timeout | null = null;` is never assigned again. Someone intended a
+debounce or poll and did not finish it. Decide: wire it up, or drop it.
+
+### F3 — `ViewpointComponent.vue:96`: disabled texture rows
+`script_store_refs` is unused only because the two lines that used it are commented out:
+
+```ts
+// rows.value.push(['texture_w', script_store_refs.texture_w]);
+// rows.value.push(['texture_h', script_store_refs.texture_h]);
+```
+
+Why were `texture_w` / `texture_h` removed from the viewpoint panel? Restore or delete.
+
+### F4 — `ObjectComponent.vue`: abandoned `setTimeout` -> `nextTick` migration
+Commit `e43f143` ("fix dumb setTimeout's with nextTick()") did this for
+`GradientsComponent` (2 uses). In `ObjectComponent` it was started and reverted:
+`nextTick` imported at line 78, `// await nextTick();` commented out at line 222, and
+`setTimeout(try_focus, 10)` still in place at line 226. Either finish it or remove the
+remnants.
+
+### F5 — `MainLayout.vue:175` + `:179`: selection state that "doesn't even work"
+`let object = ref(objects_store.object);` is assigned and never read, directly above the
+author's own `// TODO: this shit is ugly and doesn't even work` on `selectedObjectId`.
+Object selection in the canvas overlay needs a proper look.
+
+### F6 — `MainLayout.vue:137`: a Node builtin imported into browser code
+`import { mainModule } from 'process';` - unused, and `process` is a Node module that has
+no business in a browser bundle. Almost certainly an accidental IDE auto-import. Removed
+in the lint cleanup, noted here in case it hints at a misconfigured editor.
+
+---
+
 ## Suggested review order
 
 Highest risk first, so stopping early still covers the worst of it:

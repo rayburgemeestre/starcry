@@ -31,7 +31,7 @@ export function create_viewpoint_endpoint() {
     'viewpoint',
     StarcryAPI.json_type,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    (msg) => {},
+    (_msg) => {},
     (buffer) => {
       viewpoint_store.scale = buffer['scale'];
       // this.$data.view_x = buffer["offset_x"] / buffer["scale"];
@@ -65,7 +65,7 @@ export function create_viewpoint_endpoint() {
 
   watch(
     () => viewpoint_store.viewpoint_send_needed,
-    (n) => {
+    (_n) => {
       if (!viewpoint_store.current_message) return;
       try {
         self.send(viewpoint_store.current_message);
