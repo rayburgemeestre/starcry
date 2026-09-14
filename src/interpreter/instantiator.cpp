@@ -14,6 +14,8 @@
 #include "positioner.h"
 #include "scenes.h"
 #include "util/generator_context.h"
+#include "util/logger.h"
+#include "util/v8_interact.hpp"
 
 // #define DEBUG2
 namespace interpreter {
@@ -311,6 +313,36 @@ instantiator::instantiate_object_from_scene(
           }
         }
       }
+    }
+
+    if (i.has_field(instance, "emit")) {
+      auto attrs = i.v8_obj(instance, "emit");
+      auto obj_fields = i.prop_names(attrs);
+      logger(INFO) << "Emit fields found: " << obj_fields->Length() << std::endl;
+      for (size_t k = 0; k < obj_fields->Length(); k++) {
+        //  auto field_name = i.get_index(obj_fields, k);
+        auto field_name_str = i.str(obj_fields, k);
+        // auto field_value = i.get(attrs, field_name);
+        // TODO: store into some map and nice data structure the emitter for the object ID
+        logger(INFO) << "Field name: " << field_name_str << std::endl;
+      }
+    } else {
+      // logger(INFO) << "No 'emit' field found in instance" << std::endl;
+    }
+    if (i.has_field(instance, "absorb")) {
+      auto attrs = i.v8_obj(instance, "absorb");
+      auto obj_fields = i.prop_names(attrs);
+      logger(INFO) << "Absorb fields found: " << obj_fields->Length() << std::endl;
+      for (size_t k = 0; k < obj_fields->Length(); k++) {
+        auto field_name = i.get_index(obj_fields, k);
+        auto field_name_str = i.str(obj_fields, k);
+        auto field_value = i.get(attrs, field_name).As<v8::Object>();
+        auto field_props_str = i.str(field_value, "input");
+        // TODO: store into some map and nice data structure the emitter for the object ID
+        logger(INFO) << "Field name X: " << field_name_str << " - " << field_props_str << std::endl;
+      }
+    } else {
+      // logger(INFO) << "No 'absorb' field found in instance" << std::endl;
     }
 
     // the handle function returns a ref, which is all fine, but recursively init

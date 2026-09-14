@@ -462,7 +462,7 @@ public:
     handle_error(dest->SetPrototype(get_isolate()->GetCurrentContext(), source));
   }
 
-  void recursively_fix(v8::Local<v8::Object>& dest_object, v8::Local<v8::Object>& source_object) {
+  void deepcopy_gradients(v8::Local<v8::Object>& dest_object, v8::Local<v8::Object>& source_object) {
     // TODO: why is this needed (make deep copy of the gradients)
     auto isolate = get_isolate();
     set_field(dest_object, "gradients", v8::Array::New(isolate));
@@ -481,7 +481,7 @@ public:
     }
   }
 
-  void recursively_fix(v8::Persistent<v8::Object>& dest_object, v8::Persistent<v8::Object>& source_object) {
+  void deepcopy_gradients(v8::Persistent<v8::Object>& dest_object, v8::Persistent<v8::Object>& source_object) {
     // noop
   }
 
@@ -519,7 +519,7 @@ public:
         set_field(dest_object, field_name, field_value);
       }
     }
-    recursively_fix(dest_object, source_object);
+    if (first_level) deepcopy_gradients(dest_object, source_object);
   }
 
   void empty_and_resize(v8::Local<v8::Array>& obj, size_t len) {

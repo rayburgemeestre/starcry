@@ -333,7 +333,7 @@ export default defineComponent({
             let radius = 0;
 
             if (obj.type === 'circle') {
-              radius = obj.radius * scale;
+              radius = ( obj.radius + obj.radius_size ) * scale;
             }
             if (obj.type === 'line') {
               object_pos2 = pos(obj.x2, obj.y2);
@@ -372,7 +372,7 @@ export default defineComponent({
                 }
               }
               if (hover) {
-                color = 'purple';
+                color = 'red';
                 if (obj.type == 'circle') {
                   du.draw_circle(object_pos, radius, 'yellow', '');
                   if (preview_object_add) {
@@ -394,7 +394,7 @@ export default defineComponent({
             }
             if (color != '') {
               ctx.fillStyle = color;
-              ctx.fillText('' + obj.unique_id, object_mid.x(), object_mid.y());
+              ctx.fillText('' + obj.unique_id + " [" + obj.type + " <> " + obj.id + "]", object_mid.x(), object_mid.y());
             }
           }
         }

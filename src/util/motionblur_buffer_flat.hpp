@@ -54,7 +54,7 @@ public:
   // resize the buffer to accommodate new dimensions
   void resize(size_t width, size_t height) {
     if (width > capacity_width_ || height > capacity_height_) {
-      logger(DEBUG) << "resizing buffer to " << width << "x" << height << std::endl;
+      // logger(DEBUG) << "resizing buffer to " << width << "x" << height << std::endl;
       // add some padding to reduce frequency of reallocations
       size_t new_capacity_width = width * 2.0;
       size_t new_capacity_height = height * 2.0;

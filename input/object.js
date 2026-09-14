@@ -94,7 +94,7 @@ script = {
           range_end: 0.5,  // Weaker proximity effect
         },
         gravity: {
-          type: 'mass',
+          type: 'mass', // TODO: do we need a mass type here?
           max: 300,  // Affects objects within 300 pixels
           range_start: 0.0,
           range_end: 1.0,
