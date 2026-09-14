@@ -134,12 +134,21 @@ So the upgrade path is: rebase the build image on Ubuntu 26.04, use `g++-16`, co
 * **Switch the primary compiler from clang to gcc.** `make build` currently runs
   `switch-to-latest-clang`; reflection is gcc-only, so gcc would have to become the default
   (`make build-gcc` already exists, so the path is there).
-* **Rebuild all 12 prebuilt static libraries** from `../build-config` for 26.04: `v8`,
-  `ffmpeg`, `x264`, `seasocks`, `fmt`, `openexr`, `tvision`, `inotify-cpp`,
-  `redis-plus-plus`, `hiredis`, `vivid`, `fastpfor`. `build-config` is already
-  parameterised (`UBUNTU_VERSION` / `CODENAME`, currently 2504/plucky) with a
-  `Dockerfile-ubuntu<ver>` per release, so this is an established pattern rather than new
-  work — but `v8_monolith` is the one with real risk.
+* **The dependencies do *not* need rebuilding for the compiler switch.** Verified
+  empirically: a clean `g++-13` configure/build in a separate build dir links all twelve
+  clang-built static libraries — `libv8_monolith.a` included — and the resulting binary
+  runs and renders **pixel-identical** output to the clang build (RMSE 0). That works
+  because both compilers follow the Itanium C++ ABI and the project already forces
+  `-stdlib=libstdc++` for clang (`CMakeLists.txt:58,60`), so the two share one C++ runtime.
+  The dep `.a` files also carry no LTO, so they are not compiler-locked.
+* **What the 26.04 bump does force is a *packaging* problem, not an ABI one.**
+  `docs/install_deps.sh:13` points apt at `https://cppse.nl/repo/ $(lsb_release -cs) main`
+  — the repo is keyed by codename, so a resolute-based image would find no `cppse-*`
+  packages until `build-config` publishes for it. Two ways around that without a full
+  rebuild: `COPY --from=<current image> /opt/cppse /opt/cppse` into the new image, or
+  install the existing `.deb`s directly. Given the ABI result above, either is likely to
+  just work; rebuilding via `build-config` (already parameterised by
+  `UBUNTU_VERSION`/`CODENAME`) is the clean-but-slow alternative.
 * **Move the project from C++23 to C++26**, which will surface its own warnings and
   incompatibilities, notably around the V8 headers.
 
