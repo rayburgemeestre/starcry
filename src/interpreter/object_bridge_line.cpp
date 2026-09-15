@@ -194,19 +194,7 @@ object_bridge<data_staging::line>::object_bridge(interpreter::object_definitions
   v8pp::class_<object_bridge> object_bridge_class(v8::Isolate::GetCurrent());
   // @add_field@
   object_bridge_class  // .template ctor<int>()
-      .property("level", &object_bridge::get_level)
-      .property("unique_id", &object_bridge::get_unique_id, &object_bridge::set_unique_id)
-      .property("random_hash", &object_bridge::get_random_hash, &object_bridge::set_random_hash)
-      .property("angle", &object_bridge::get_angle, &object_bridge::set_angle)
-      .property("rotate", &object_bridge::get_rotate, &object_bridge::set_rotate)
       .property("hue", &object_bridge::get_hue, &object_bridge::set_hue)
-      .property("opacity", &object_bridge::get_opacity, &object_bridge::set_opacity)
-      .property("mass", &object_bridge::get_mass, &object_bridge::set_mass)
-      .property("scale", &object_bridge::get_scale, &object_bridge::set_scale)
-      .property("recursive_scale", &object_bridge::get_recursive_scale, &object_bridge::set_recursive_scale)
-      .property("x", &object_bridge::get_x, &object_bridge::set_x)
-      .property("y", &object_bridge::get_y, &object_bridge::set_y)
-      .property("z", &object_bridge::get_z, &object_bridge::set_z)
       .property("x2", &object_bridge::get_x2, &object_bridge::set_x2)
       .property("y2", &object_bridge::get_y2, &object_bridge::set_y2)
       .property("z2", &object_bridge::get_z2, &object_bridge::set_z2)
@@ -215,18 +203,13 @@ object_bridge<data_staging::line>::object_bridge(interpreter::object_definitions
       .function("set_attr", &object_bridge::set_attr)
       .function("spawn", &object_bridge::spawn)
       .function("spawn_parent", &object_bridge::spawn_parent)
-      .property("texture", &object_bridge::get_texture, &object_bridge::set_texture)
-      .property("texture_3d", &object_bridge::get_texture_3d, &object_bridge::set_texture_3d)
-      .property("texture_offset_x", &object_bridge::get_texture_offset_x, &object_bridge::set_texture_offset_x)
-      .property("texture_offset_y", &object_bridge::get_texture_offset_y, &object_bridge::set_texture_offset_y)
-      .property("texture_effect", &object_bridge::get_texture_effect, &object_bridge::set_texture_effect)
-      .property("zernike_type", &object_bridge::get_zernike_type, &object_bridge::set_zernike_type)
       .function("destroy", &object_bridge::destroy)
       .property("props", &object_bridge::get_properties_local_ref)
       .property("gradient", &object_bridge::get_gradient, &object_bridge::set_gradient)
       .property("gradients", &object_bridge::get_gradients_local_ref)
       .property("seed", &object_bridge::get_seed, &object_bridge::set_seed)
       .property("unique_group", &object_bridge::get_unique_group, &object_bridge::set_unique_group);
+  register_common_object_properties(object_bridge_class);
   instance_ = std::make_shared<v8::Persistent<v8::Object>>();
   (*instance_)
       .Reset(v8::Isolate::GetCurrent(), object_bridge_class.reference_external(v8::Isolate::GetCurrent(), this));

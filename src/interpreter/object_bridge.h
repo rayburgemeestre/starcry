@@ -133,3 +133,32 @@ public:
 
   v8::Persistent<v8::Object>& instance();
 };
+
+// The properties every shape type exposes, registered once instead of repeated verbatim
+// in all five object_bridge_*.cpp files. Type-specific properties (circle's radius,
+// ellipse's a/b, line's x2/y2/z2, text's text*) stay in their own file. Adding a field
+// shared by every type is a change here alone; before, it was the same 5 edits the
+// @add_field@ markers exist to remind you about.
+template <typename T>
+void register_common_object_properties(v8pp::class_<object_bridge<T>>& c) {
+  using bridge = object_bridge<T>;
+  c  //
+      .property("level", &bridge::get_level)
+      .property("unique_id", &bridge::get_unique_id, &bridge::set_unique_id)
+      .property("random_hash", &bridge::get_random_hash, &bridge::set_random_hash)
+      .property("angle", &bridge::get_angle, &bridge::set_angle)
+      .property("rotate", &bridge::get_rotate, &bridge::set_rotate)
+      .property("opacity", &bridge::get_opacity, &bridge::set_opacity)
+      .property("mass", &bridge::get_mass, &bridge::set_mass)
+      .property("scale", &bridge::get_scale, &bridge::set_scale)
+      .property("recursive_scale", &bridge::get_recursive_scale, &bridge::set_recursive_scale)
+      .property("x", &bridge::get_x, &bridge::set_x)
+      .property("y", &bridge::get_y, &bridge::set_y)
+      .property("z", &bridge::get_z, &bridge::set_z)
+      .property("texture", &bridge::get_texture, &bridge::set_texture)
+      .property("texture_3d", &bridge::get_texture_3d, &bridge::set_texture_3d)
+      .property("texture_offset_x", &bridge::get_texture_offset_x, &bridge::set_texture_offset_x)
+      .property("texture_offset_y", &bridge::get_texture_offset_y, &bridge::set_texture_offset_y)
+      .property("texture_effect", &bridge::get_texture_effect, &bridge::set_texture_effect)
+      .property("zernike_type", &bridge::get_zernike_type, &bridge::set_zernike_type);
+}
