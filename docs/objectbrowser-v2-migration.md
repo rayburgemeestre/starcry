@@ -164,6 +164,9 @@ panel presents editable `q-input`s that silently discard every change. Either wi
 the script (the way `EditorPage`/`ObjectComponent` write back) or make the fields
 read-only until it is wired.
 
+Writing back needs a name -> setter mapping on the C++ side, which is the same thing
+`docs/object-field-preview.md` needs. See §9 before hand-writing one.
+
 ### 5.2 The `rows` computed mutates store state
 ```js
 for (let obj of objects_store.objects) {
@@ -177,8 +180,15 @@ Should build new row objects instead of decorating the originals.
 ### 5.3 Columns derive from `objects[0]` only
 If the array is empty there are no columns at all; if the first shape lacks a field that
 later ones have, that column never appears. Shape types differ (a `line` has `x2`/`y2`, a
-`text` has `text`/`text_font`), so this is a live issue, not theoretical. Prefer a
-declared column set, or a union of keys across all rows.
+`text` has `text`/`text_font`), so this is a live issue, not theoretical.
+
+Three options, cheapest first:
+
+1. **Union of keys across all rows** — a few lines, fixes it today, no C++ involved.
+2. **A declared column set in TypeScript** — explicit, but becomes a third place to
+   update when a field is added (after `shapes_to_json` and the `@add_field@` markers).
+3. **Generate the schema from `data::shape` by reflection** — see §9. Removes the
+   duplication rather than moving it, but carries a real prerequisite chain.
 
 ### 5.4 Leftovers
 `console.log` in `onIsolateClick`, `onExpandClick` and `onRowClick`; `onRowClick` itself is
@@ -243,3 +253,62 @@ canvas overlay changes.
    editor), or become read-only? It is currently neither.
 4. **Info panel multiplicity** — V1 could show several objects' property tables at once,
    V2 shows one. Does that matter to you in practice?
+
+
+---
+
+## 9. Does C++26 reflection give us a clean solution? (added 2026-09-15)
+
+Short answer: **for two of the items here, yes. For the migration itself, no** — the only
+hard blocker (§3.1 highlight) and most of §3–§6 are Vue work that no C++ feature touches.
+
+### What reflection would actually replace
+
+The field plumbing is hand-maintained in three places, and they drift:
+
+| place | today |
+|---|---|
+| `data::shapes_to_json` (`src/data/shape.hpp`) | ~50 fields written out by hand |
+| `@add_field@` markers | 12 sites across the tree |
+| `object_bridge<T>` | getters/setters duplicated per shape type |
+
+A compile-time walk over `data::shape`'s members generates all three, and with it a
+**single authoritative field schema**. That directly gives:
+
+* **§5.3** — a complete, declared column set covering every shape type, instead of
+  sniffing `objects[0]`. No third place to update.
+* **§5.1** — the name -> setter dispatch that `IsolatedObject` needs to write edits back,
+  which is also exactly what `docs/object-field-preview.md` wants for its preview button.
+
+So reflection is the clean answer to *the data plumbing*, and the two problems share one
+solution. It is not an answer to highlight, multi-isolation, expand-all, the two expand
+models, or the dead-store cleanup.
+
+### The prerequisite chain, and where it actually stands
+
+| prerequisite | status |
+|---|---|
+| A toolchain that implements P2996 | **done.** The build image is Ubuntu 26.04 and ships `g++-16`; `-std=c++26 -freflection` gives `__cpp_impl_reflection = 202506` |
+| V8 headers survive `-std=c++26` | **verified 2026-09-15.** `v8.h` + `libplatform.h` + `<meta>` + a `template for` expansion compile together in one TU under `g++-16 -std=c++26 -freflection` |
+| Switch the primary compiler clang-19 -> g++-16 | **not done.** `make build` runs `switch-to-latest-clang` (`Makefile:39`); reflection is gcc-only and clang has it at no version. `make build-gcc` exists, so the path is there, but the image's unversioned `g++` is **15** — reflection needs `g++-16` named explicitly |
+| Move C++23 -> C++26 | **not done.** `CMakeLists.txt` sets `cxx_std_23` on all four targets |
+| The rest of the codebase compiles as gcc/C++26 | **untested.** Only the V8 header surface has been checked |
+| Dependencies rebuilt | **not needed.** Verified earlier: a gcc build links all twelve clang-built `.a`s including `libv8_monolith.a` and renders pixel-identically (RMSE 0) |
+
+The two unchecked rows are the real cost, and the last one is the open risk: today's test
+covers the V8 headers, not 200-odd translation units of starcry under a different compiler
+*and* a newer standard at once.
+
+### Recommendation
+
+**Do not couple this to the V1 retirement.** The migration's blocker is a highlight button;
+gating it behind a compiler and standard migration would be backwards.
+
+Suggested split:
+
+* Fix §5.3 now with the union-of-keys approach (option 1) — minutes, unblocks V2.
+* Make `IsolatedObject` read-only for now (§5.1), rather than hand-writing a setter map
+  that reflection would delete later.
+* Treat reflection as its own piece of work, and prototype it against `shapes_to_json`
+  first — the single largest hand-written block, and the one with no UI risk. If that
+  lands, `IsolatedObject` editing and the object-field preview both become small.

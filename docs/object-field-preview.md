@@ -135,6 +135,7 @@ i.e. exactly the mechanism that would replace the `@add_field@` markers.
 |---|---|
 | build image today | Ubuntu 26.04, `clang++-19`, `g++-15` (default `g++`) and `g++-16` |
 | **`g++-16 -std=c++26 -freflection`** | **works**, `__cpp_impl_reflection = 202506` |
+| **V8 headers under `-std=c++26`** | **verified 2026-09-15.** `v8.h` + `libplatform.h` + `<meta>` + a `template for` expansion compile together in one TU |
 | `clang-19 -std=c++26` | accepted, but `__cpp_reflection` undefined and `<meta>` not found |
 | clang mainline | `clang.llvm.org/cxx_status.html` lists **Reflection P2996R13: No**, as well as P3394R4 / P3293R3 / P3491R3 / P3096R12 / P3598R0. True for every version apt.llvm.org publishes (up to 23) |
 
@@ -145,7 +146,8 @@ i.e. exactly the mechanism that would replace the `@add_field@` markers.
   (`make build-gcc` already exists, so the path is there). Note the image's unversioned
   `g++` is **15**, not 16 — reflection needs `g++-16` named explicitly.
 * **Move the project from C++23 to C++26**, which will surface its own warnings and
-  incompatibilities. Whether the V8 headers survive `-std=c++26` is the main open question.
+  incompatibilities. The V8 headers are no longer the open question — they compile. What is
+  untested is the other ~200 translation units under gcc *and* a newer standard at once.
 * **The dependencies do *not* need rebuilding for the compiler switch.** Verified
   empirically: a clean `g++-13` configure/build in a separate build dir links all twelve
   clang-built static libraries — `libv8_monolith.a` included — and the resulting binary
