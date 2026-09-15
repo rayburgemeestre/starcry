@@ -97,7 +97,23 @@ file(GLOB_RECURSE starcry_SOURCES
 list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/client.cpp")
 
 add_executable(starcry ${starcry_SOURCES})
-target_compile_features(starcry PRIVATE cxx_std_23)
+# C++ standard, shared by every target. Raise to cxx_std_26 to build with C++26
+# reflection (P2996); that requires gcc 16 or newer, clang implements it at no version.
+# See docs/move_to_reflection.md.
+set(STARCRY_CXX_STD cxx_std_23 CACHE STRING "C++ standard feature level for all targets")
+
+if(STARCRY_CXX_STD STREQUAL cxx_std_26)
+  if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    message(FATAL_ERROR "cxx_std_26 needs gcc: reflection is not implemented by ${CMAKE_CXX_COMPILER_ID}")
+  endif()
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16)
+    message(FATAL_ERROR "cxx_std_26 needs gcc >= 16 for -freflection, found ${CMAKE_CXX_COMPILER_VERSION}")
+  endif()
+  add_compile_options(-freflection)
+  message(STATUS "C++26 reflection enabled (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+endif()
+
+target_compile_features(starcry PRIVATE ${STARCRY_CXX_STD})
 target_compile_options(starcry PRIVATE
     ${COMMON_FLAGS}
     ${BUILD_TYPE_FLAGS}
@@ -132,7 +148,7 @@ file(GLOB_RECURSE sc_client_SOURCES
 )
 
 add_executable(sc_client ${sc_client_SOURCES})
-target_compile_features(sc_client PRIVATE cxx_std_23)
+target_compile_features(sc_client PRIVATE ${STARCRY_CXX_STD})
 target_compile_definitions(sc_client PUBLIC SC_CLIENT)
 target_compile_options(sc_client PRIVATE -isystem "${CMAKE_CURRENT_SOURCE_DIR}/libs/v8pp")
 target_link_libraries(sc_client PRIVATE
@@ -144,7 +160,7 @@ configure_links(sc_client)
 
 add_executable(unit_tests test/test_unit.cpp)
 set_target_properties(unit_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-target_compile_features(unit_tests PRIVATE cxx_std_23)
+target_compile_features(unit_tests PRIVATE ${STARCRY_CXX_STD})
 target_compile_options(unit_tests PRIVATE -isystem "${CMAKE_CURRENT_SOURCE_DIR}/libs/v8pp")
 target_link_libraries(unit_tests PRIVATE
     /opt/cppse/build/v8/lib/libv8_monolith.a
@@ -160,7 +176,7 @@ list(REMOVE_ITEM integration_tests_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main
 add_executable(integration_tests ${integration_tests_SOURCES})
 set_target_properties(integration_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 target_compile_options(integration_tests PRIVATE ${COMMON_FLAGS} -isystem "${CMAKE_CURRENT_SOURCE_DIR}/libs/v8pp")
-target_compile_features(integration_tests PRIVATE cxx_std_23)
+target_compile_features(integration_tests PRIVATE ${STARCRY_CXX_STD})
 target_link_libraries(integration_tests PRIVATE
     Catch2::Catch2WithMain
     -static-libgcc

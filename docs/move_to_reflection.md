@@ -94,10 +94,46 @@ and add `-freflection` only for the gcc/C++26 configuration.
 
 * `make build` and `make build-gcc` both succeed, run back-to-back, twice each.
 * `make test` and `make integration-test` pass under **both** compilers.
-* Renders match between them — earlier measurement had gcc vs clang at RMSE 0, so any
-  drift here is a regression introduced by the standard bump, not by the compiler.
-* This is also where "the rest of the codebase under gcc/C++26" gets answered. Expect
-  warnings-as-errors fallout; `cmake/warnings.cmake:99` already has a `GNU` branch.
+* Renders match between them.
+
+### 1.5 Outcome (executed 2026-09-15)
+
+| criterion | result |
+|---|---|
+| alternating clang -> gcc -> clang -> gcc | **pass**, four consecutive builds, no cache thrash |
+| `make test` (clang) | **pass**, 33 assertions |
+| `make test-gcc` (added) | **pass**, 33 assertions |
+| `make integration-test` (clang) | **pass**, 24 assertions / 13 cases |
+| `make integration-test-gcc` | **fail** — see below |
+| gcc builds the codebase at C++23 | **yes**, `g++-16` produces a working 68 MB binary |
+
+**gcc and clang do not render identically.** `unittest_005_script_frame1` differs by
+RMSE 0.0206 and `unittest_009_web_frame10` by 0.0103. This corrects an assumption in the
+original draft of this plan: the earlier "RMSE 0" measurement was **g++-13 on 24.04**, and
+it does not hold for g++-16.
+
+Not FMA contraction — `-ffp-contract=off` moved the number (0.0206 -> 0.0240) rather than
+removing it.
+
+The `std::optional<bool>` abort seen in the full gcc run is downstream of this, not a
+separate bug: running "Test web image" alone does not abort, it merely fails on RMSE. The
+abort is the shared-V8-isolate run-order coupling that AGENTS.md §3 warns about, reached
+because an earlier assertion failed and changed what ran next.
+
+**What this means for the plan.** `fuzziness_allowed = 0` (`test_integration.cpp:12`) makes
+every threshold bit-exact, so a ~2% difference is fatal and the reference images are
+implicitly *clang* references. The project therefore has to pick a reference compiler:
+
+* **Keep clang as reference.** gcc stays a buildable path used for reflection work.
+  Phase 2 is unaffected — it is unit-tested, and `make test-gcc` passes. Phase 3 needs its
+  acceptance testing done under clang.
+* **Move the reference to gcc.** Required if gcc eventually becomes the primary compiler,
+  but then clang fails the suite instead, and the references need regenerating.
+* **Give the suite a tolerance.** Raising `fuzziness_allowed` above ~0.03 makes both
+  compilers pass. It is the only option that lets both work at once, at the cost of the
+  bit-exactness the suite currently enforces.
+
+This is a decision to make before phase 3, not before phase 2.
 
 ---
 

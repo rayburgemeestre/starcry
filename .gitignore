@@ -8,6 +8,7 @@
 CMakeFiles
 boost_1_61_0
 build
+build-gcc
 cmake-build-debug
 cmake-build-release
 codebrowser/**
