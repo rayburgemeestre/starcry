@@ -18,6 +18,10 @@ TEST_CASE("Reflection is not available in this build") {
 #else
 
 #include <map>
+#include <sstream>
+#include <utility>
+
+#include "cereal/archives/json.hpp"
 #include <string>
 #include <string_view>
 
@@ -190,6 +194,44 @@ TEST_CASE("Reflection serializer emits exactly the documented key set") {
   REQUIRE(keys_a == keys_b);
   // every key corresponds to a member, and every member produces a key
   REQUIRE(keys_b.size() == data::reflect::field_count<data::shape>());
+}
+
+TEST_CASE("Reflection cereal serializer matches the hand-written one") {
+  // cereal is live: starcry.cpp archives a data::job, which holds
+  // std::vector<std::vector<data::shape>>, so shape::serialize really runs. Assert the
+  // reflected walk produces a byte-identical archive to the hand-written ar(...) list.
+  const auto archive_both = [](data::shape s) {
+    std::ostringstream manual_os, reflect_os;
+    {
+      cereal::JSONOutputArchive ar(manual_os);
+      s.serialize_manual(ar);
+    }
+    {
+      cereal::JSONOutputArchive ar(reflect_os);
+      s.serialize_reflect(ar);
+    }
+    return std::pair{manual_os.str(), reflect_os.str()};
+  };
+
+  SECTION("default-constructed") {
+    auto [manual, reflected] = archive_both(data::shape{});
+    INFO("manual:\n" << manual << "\nreflected:\n" << reflected);
+    REQUIRE(manual == reflected);
+  }
+
+  SECTION("populated") {
+    data::shape s;
+    s.x = 3.5;
+    s.y = -1.25;
+    s.radius = 11;
+    s.text = "cereal";
+    s.level = 2;
+    s.motion_blur = false;
+    s.type = data::shape_type::ellipse;
+    auto [manual, reflected] = archive_both(s);
+    INFO("manual:\n" << manual << "\nreflected:\n" << reflected);
+    REQUIRE(manual == reflected);
+  }
 }
 
 #endif  // STARCRY_HAS_REFLECTION

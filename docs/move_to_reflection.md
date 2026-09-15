@@ -9,21 +9,15 @@ is my reading of where 2 leads; correct it if you meant something else.
 
 ## Why bother
 
-Not for elegance. `data::shape` is **out of room**:
+**Correction (2026-09-15).** Earlier drafts of this document claimed `data::shape` was out
+of room — 52 members against `zpp::bits::members<52>`, with a 53rd field failing to
+compile. That is **wrong**, and was taken from the `// TODO: afaik need C++26 to have more
+than 52` comment without testing it. Adding a 53rd member with `members<52>` still in place
+compiles fine and the tests pass: nothing serializes `data::shape` through zpp_bits, so the
+typedef is never checked. **cereal** does the serializing, via `serialize()`.
 
-```cpp
-struct shape {
-  // TODO: afaik need C++26 to have more than 52
-  using serialize2 = zpp::bits::members<52>;
-```
-
-`src/data/shape.hpp:51-54`. The struct has **52 members against a cap of 52**. Adding a
-53rd field does not compile. zpp_bits reflects aggregates through structured bindings,
-which have to be written out one per member, hence the hard ceiling. C++26 reflection
-walks members without structured bindings and has no such limit — so this is the feature
-that unblocks the data model, not a refactor for its own sake.
-
-Everything else follows from the same mechanism:
+The real motivation is duplication, not a ceiling. `data::shape` carried **two**
+hand-maintained 52-member lists that had to be kept in step with the struct by hand:
 
 | hand-maintained today | size |
 |---|---|

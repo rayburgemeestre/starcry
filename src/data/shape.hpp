@@ -51,8 +51,15 @@ inline std::string shape_type_to_string(shape_type type) {
 }
 
 struct shape {
-  // TODO: afaik need C++26 to have more than 52
-  // Note-to-self: maybe we can refactor this shape class.
+  // NOTE: member order here matches the ar(...) list in serialize_manual below, and must
+  // keep matching it. cereal writes unnamed values positionally, so serialize_reflect --
+  // which visits members in declaration order -- only produces an identical archive while
+  // the two agree. test/reflection_test.cpp asserts that.
+  // NOTE: this is not a live constraint. zpp_bits looks for a serialize2 typedef to learn
+  // the member count, but nothing serializes data::shape through zpp_bits -- cereal does
+  // it, via serialize() below. Verified by adding a 53rd member with members<52> still in
+  // place: it compiles and the tests pass. Left declared, and deliberately not bumped,
+  // because correcting it to 53 would imply it is checked.
   using serialize2 = zpp::bits::members<52>;
 
   // @add_field@
@@ -74,8 +81,8 @@ struct shape {
   double longest_diameter = 0;
   double shortest_diameter = 0;
   double rotate = 0;  // ellipse specific rotation
-  double radius_size = 0;
   double text_size = 10;
+  double radius_size = 0;
   std::string text;
   std::string align;
   bool text_fixed = false;
@@ -102,8 +109,8 @@ struct shape {
   // annotate
   std::string id;
   std::string label;
-  std::string random_hash;
   int level = 0;
+  std::string random_hash;
   bool motion_blur = true;
   int warp_width = 0;
   int warp_height = 0;
@@ -113,9 +120,11 @@ struct shape {
   double dist = 0.;
   int steps = 0.;
 
+  // Hand-written member list for cereal. Kept compiled even when reflection is available
+  // so test/reflection_test.cpp can assert the two produce identical archives; retire it
+  // together with shape_to_json_manual once clang is no longer supported.
   template <class Archive>
-  void serialize(Archive& ar) {
-    // @add_field@
+  void serialize_manual(Archive& ar) {
     ar(time,
        x,
        y,
@@ -168,6 +177,24 @@ struct shape {
        warp_y,
        dist,
        steps);
+  }
+
+#if STARCRY_HAS_REFLECTION
+  // Reflection equivalent: cereal assigns positional names to unnamed values, so visiting
+  // the members in declaration order produces the same archive as the ar(...) call above.
+  template <class Archive>
+  void serialize_reflect(Archive& ar) {
+    data::reflect::for_each_field(*this, [&ar](std::string_view, auto& value) { ar(value); });
+  }
+#endif
+
+  template <class Archive>
+  void serialize(Archive& ar) {
+#if STARCRY_HAS_REFLECTION
+    serialize_reflect(ar);
+#else
+    serialize_manual(ar);
+#endif
   }
 };
 
