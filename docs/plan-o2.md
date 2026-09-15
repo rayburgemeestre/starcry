@@ -150,32 +150,67 @@ The same frame renders differently depending on what preceded it, so **no refere
 satisfy both line 18 and line 23**. Regenerating would defeat the check. Confirmed
 deterministic: two unchanged runs gave byte-identical RMSEs (0.0459287, 0.00893947).
 
-The reason is `scene_settings::update()`:
+### Correction: it is not the `update()` underflow
 
-```cpp
-if (scene_durations[current_scene_next] < (t - offset_next)) {
-  if (scene_durations.size() - 1 > current_scene_next) {
-    offset_next += scene_durations[current_scene_next];
+An earlier draft of this document claimed the old rendering "depends on both bugs
+together", the second being the `scene_durations.size() - 1` underflow to `SIZE_MAX` in
+`scene_settings::update()`. That is wrong, at least for one-scene scripts. Even with the
+underflow making the inner test pass, the outer guard is
+`scene_durations[current_scene_next] < (t - offset_next)`, i.e. `1.0 < t`, and `t` is
+clamped to `[0,1]` upstream. It never fires, so `offset_next` stays 0 either way.
+
+Logging every *distinct* divisor across a full run (at `-O2`, so the read completes)
+shows what is really going on:
+
+```
+value=1                    size=0   <- out of bounds, stale
+value=0.5                  size=0   <- out of bounds, stale
+value=1                    size=1   <- valid
+value=0.40000000000000002  size=3   <- valid
+value=0.47619047619047616  size=3   <- valid
 ```
 
-With `size() == 0`, `size() - 1` underflows to `SIZE_MAX`, so the inner test is always
-true and `offset_next` advances. Restoring the durations makes `size() == 1`, the test
-becomes `0 > 0`, and it stops advancing. The old rendering depends on **both** bugs
-together, so fixing only the first changes scene timing.
+`scene_durations` is **not** permanently empty. The engine alternates between windows
+where it is correctly populated (`size=1` for a one-scene script, `size=3` for
+`input/test.js`) and windows where it has been emptied, during which
+`scene_durations[0]` returns a duration left over from a **previously loaded script** —
+`1` from a one-scene script, `0.5` from two-scene `input/script.js`.
+
+So the divisor in
+
+```cpp
+const auto scene_time = std::clamp((t - offset_next) / next_scene_duration, 0., 1.);
+```
+
+is sometimes the current script's duration and sometimes the previous script's. That is
+why no constant reproduces it, and why restoring the durations changes rendering: it
+replaces the previous script's leftover value with the current script's real one.
+
+This also explains the idempotence failure. Rendering frame 10, then 11, then 10 again
+leaves different residue in that slot the second time around, so the second render of
+frame 10 divides by something different.
 
 ## What a real fix has to do
 
-Any correct fix has to decide what `offset_next` advancement should be when a script has
-a single scene, and then accept that the reference images change. That is a scene-timing
-semantics decision, not a mechanical repair. It should also keep `refresh_scenesettings()`
-honest about clearing transient state, so renders stay idempotent — which is what
-`test_integration.cpp:23` exists to check.
+The question is not "what value should replace the out-of-bounds read", it is **why
+`get_time()` runs at all while `scene_durations` is empty**. During those windows the
+engine is timing the current script against the previous script's scene duration.
 
-Suggested order for a follow-up:
+Two sub-questions to answer first:
 
-1. Decide the intended semantics of `scene_settings::update()` for one-scene scripts.
-2. Fix the `size() - 1` underflow and the empty-vector read together.
-3. Re-run and expect several references to change; inspect each diff in
-   `test/report.html` before regenerating.
-4. Keep line 23 passing without regenerating its reference — it is the idempotence
-   guard.
+1. Which call path reaches `get_time()` before/while the durations are empty? The
+   emptying is `refresh_scenesettings()` (see above); the repopulation is
+   `initialize_all()`. `generator.cpp` runs them in that order — populate, then wipe —
+   so every frame generated after `scenes_.initialize()` and before the next
+   `initialize_all()` is in the window.
+2. Is `get_time()` meaningful in that window at all? If not, the fix is ordering or
+   guarding the caller, not inventing a duration. If it is, the durations must survive
+   the refresh, and the reference images legitimately change.
+
+Whatever is chosen, keep `test_integration.cpp:23` passing **without** regenerating its
+reference. It renders frame 10, then 11, then 10 again and requires the two frame-10
+renders to match; it is the guard against exactly this kind of state leaking between
+renders, and it is the check that caught the first attempted fix.
+
+Expect several references to change once the timing is correct. Inspect each diff in
+`test/report.html` before regenerating, per AGENTS.md §3.
