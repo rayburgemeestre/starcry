@@ -128,4 +128,68 @@ TEST_CASE("Reflection walks the real data::shape") {
   REQUIRE(has("opacity"));
 }
 
+TEST_CASE("Reflection serializer matches the hand-written shape_to_json") {
+  // The acceptance test for replacing shape_to_json: identical JSON, not merely similar.
+  // nlohmann::json orders keys, so insertion order does not mask a difference.
+  const auto check = [](const data::shape& s, const char* what) {
+    nlohmann::json a, b;
+    data::shape_to_json_manual(s, a);
+    data::shape_to_json_reflect(s, b);
+    INFO(what << "\nhand-written: " << a.dump() << "\nreflected:    " << b.dump());
+    REQUIRE(a.dump() == b.dump());
+  };
+
+  SECTION("default-constructed shape") {
+    check(data::shape{}, "default");
+  }
+
+  SECTION("populated plain fields") {
+    data::shape s;
+    s.x = 1.25;
+    s.y = -2.5;
+    s.radius = 9;
+    s.opacity = 0.5;
+    s.hue = 0.125;
+    s.text = "hello";
+    s.align = "center";
+    s.text_fixed = true;
+    s.unique_id = 42;
+    s.label = "a label";
+    s.level = 3;
+    s.steps = 7;
+    check(s, "plain fields");
+  }
+
+  SECTION("enum-backed fields") {
+    data::shape s;
+    s.type = data::shape_type::circle;
+    check(s, "shape_type circle");
+  }
+
+  SECTION("nested gradients and textures") {
+    data::shape s;
+    data::gradient g;
+    g.colors.emplace_back(0.0, data::color{1, 0, 0, 1});
+    g.colors.emplace_back(1.0, data::color{0, 0, 1, 0.5});
+    s.gradients_.emplace_back(0.75, g);
+    s.textures.emplace_back(0.25, data::texture{});
+    check(s, "gradients + textures");
+  }
+}
+
+TEST_CASE("Reflection serializer emits exactly the documented key set") {
+  nlohmann::json a, b;
+  data::shape s;
+  data::shape_to_json_manual(s, a);
+  data::shape_to_json_reflect(s, b);
+
+  std::vector<std::string> keys_a, keys_b;
+  for (auto it = a.begin(); it != a.end(); ++it) keys_a.push_back(it.key());
+  for (auto it = b.begin(); it != b.end(); ++it) keys_b.push_back(it.key());
+
+  REQUIRE(keys_a == keys_b);
+  // every key corresponds to a member, and every member produces a key
+  REQUIRE(keys_b.size() == data::reflect::field_count<data::shape>());
+}
+
 #endif  // STARCRY_HAS_REFLECTION

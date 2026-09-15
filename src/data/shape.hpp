@@ -25,6 +25,8 @@
 #include "data/texture_effect.hpp"
 #include "data/zernike_type.hpp"
 
+#include "data/shape_reflect.hpp"
+
 namespace data {
 
 enum class shape_type {
@@ -183,7 +185,105 @@ inline bool shapes_to_binary(const std::vector<shape>& input, std::string& strin
   return true;
 }
 
-inline bool shape_to_json(const shape& input, nlohmann::json& j) {
+#if STARCRY_HAS_REFLECTION
+
+namespace reflect_detail {
+
+// Generic case: anything nlohmann::json can take directly. Covers the 44 double / int /
+// bool / std::string / int64_t members plus std::map<int, size_t> indexes.
+template <typename T>
+inline void emit(nlohmann::json& j, std::string_view name, const T& value) {
+  j[std::string(name)] = value;
+}
+
+// The eight members that are not plain. Non-template overloads win over the template
+// above by exact match, so adding a new special case is a matter of adding an overload.
+inline void emit(nlohmann::json& j, std::string_view name, const shape_type& value) {
+  j[std::string(name)] = data::shape_type_to_string(value);
+}
+inline void emit(nlohmann::json& j, std::string_view name, const texture_3d& value) {
+  j[std::string(name)] = data::texture_3d::to_str(value.type());
+}
+inline void emit(nlohmann::json& j, std::string_view name, const zernike_type& value) {
+  j[std::string(name)] = data::zernike_type::to_str(value.type());
+}
+inline void emit(nlohmann::json& j, std::string_view name, const texture_effect& value) {
+  j[std::string(name)] = data::texture_effect::to_str(value.type());
+}
+inline void emit(nlohmann::json& j, std::string_view name, const blending_type& value) {
+  j[std::string(name)] = data::blending_type::to_str(value.type());
+}
+
+inline void emit(nlohmann::json& j, std::string_view name, const std::vector<std::pair<double, gradient>>& value) {
+  auto& arr = j[std::string(name)] = nlohmann::json::array();
+  for (const auto& [index, grad] : value) {
+    nlohmann::json gradient_json;
+    gradient_json["index"] = index;
+    nlohmann::json grad_json;
+    grad_json["colors"] = nlohmann::json::array();
+    for (const auto& [color_index, color] : grad.colors) {
+      nlohmann::json color_json;
+      color_json["index"] = color_index;
+      color_json["r"] = color.r;
+      color_json["g"] = color.g;
+      color_json["b"] = color.b;
+      color_json["a"] = color.a;
+      grad_json["colors"].push_back(color_json);
+    }
+    gradient_json["gradient"] = grad_json;
+    arr.push_back(gradient_json);
+  }
+}
+
+inline void emit(nlohmann::json& j, std::string_view name, const std::vector<std::pair<double, texture>>& value) {
+  auto& arr = j[std::string(name)] = nlohmann::json::array();
+  for (const auto& [index, tex] : value) {
+    nlohmann::json texture_json;
+    texture_json["index"] = index;
+    texture_json["type"] = tex.type;
+    texture_json["effect"] = tex.effect;
+    texture_json["size"] = tex.size;
+    texture_json["octaves"] = tex.octaves;
+    texture_json["persistence"] = tex.persistence;
+    texture_json["percentage"] = tex.percentage;
+    texture_json["scale"] = tex.scale;
+    texture_json["fromX"] = tex.fromX;
+    texture_json["begin"] = tex.begin;
+    texture_json["end"] = tex.end;
+    texture_json["toX"] = tex.toX;
+    texture_json["strength"] = tex.strength;
+    texture_json["speed"] = tex.speed;
+    texture_json["m"] = tex.m;
+    texture_json["n"] = tex.n;
+    texture_json["rho"] = tex.rho;
+    texture_json["theta"] = tex.theta;
+    arr.push_back(texture_json);
+  }
+}
+
+}  // namespace reflect_detail
+
+// Reflection-based equivalent of shape_to_json above.
+//
+// The hand-written version lists all 52 members explicitly, which has to be kept in step
+// with the struct by hand. This walks them instead, so adding a field to data::shape
+// serializes it automatically. Verified byte-identical to shape_to_json in
+// test/reflection_test.cpp.
+inline bool shape_to_json_reflect(const shape& input, nlohmann::json& j) {
+  data::reflect::for_each_field(input, [&j](std::string_view name, const auto& value) {
+    reflect_detail::emit(j, name, value);
+  });
+  return true;
+}
+
+#endif  // STARCRY_HAS_REFLECTION
+
+// The by-hand serializer: one line per member, kept in step with the struct manually.
+//
+// Still compiled even when reflection is available, so test/reflection_test.cpp can assert
+// the two produce identical JSON. Retire it (and the dispatch below) once clang, which
+// implements reflection at no version, is no longer supported.
+inline bool shape_to_json_manual(const shape& input, nlohmann::json& j) {
   j["time"] = input.time;
   j["x"] = input.x;
   j["y"] = input.y;
@@ -284,6 +384,14 @@ inline bool shape_to_json(const shape& input, nlohmann::json& j) {
   j["dist"] = input.dist;
   j["steps"] = input.steps;
   return true;
+}
+
+inline bool shape_to_json(const shape& input, nlohmann::json& j) {
+#if STARCRY_HAS_REFLECTION
+  return shape_to_json_reflect(input, j);
+#else
+  return shape_to_json_manual(input, j);
+#endif
 }
 
 inline bool shapes_to_json(const std::vector<shape>& input, std::string& string_out) {
