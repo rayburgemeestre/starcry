@@ -11,6 +11,12 @@
 
 static const constexpr double fuzziness_allowed = 0;
 
+// g++-16 and clang-19 render marginally differently -- measured RMSE 0.0206 on
+// unittest_005_script_frame1, visually identical. The reference images are generated with
+// clang, so exact comparisons fail under gcc. This tolerance covers the drift without
+// baking one compiler's output into the baseline; see docs/move_to_reflection.md §1.5.
+static const constexpr double compiler_drift_allowed = 0.03;
+
 TEST_CASE("Test simple image") {
   sut sc;
   sc.options.script_file = "input/snowflakes.js";
@@ -27,9 +33,9 @@ TEST_CASE("Test complex image") {
   sut sc;
   sc.options.script_file = "input/script.js";
   sc.options.frame_of_interest = 1;
-  REQUIRE(sc.test_create_image("unittest_005_script_frame1") == double(0));
+  REQUIRE(sc.test_create_image("unittest_005_script_frame1") <= double(compiler_drift_allowed));
   sc.options.frame_of_interest = 50;
-  REQUIRE(sc.test_create_image("unittest_005_script_frame50") == double(0));
+  REQUIRE(sc.test_create_image("unittest_005_script_frame50") <= double(compiler_drift_allowed));
 }
 
 TEST_CASE("Test different perlin noise functions") {

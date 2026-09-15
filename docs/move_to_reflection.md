@@ -120,20 +120,35 @@ separate bug: running "Test web image" alone does not abort, it merely fails on 
 abort is the shared-V8-isolate run-order coupling that AGENTS.md §3 warns about, reached
 because an earlier assertion failed and changed what ran next.
 
-**What this means for the plan.** `fuzziness_allowed = 0` (`test_integration.cpp:12`) makes
-every threshold bit-exact, so a ~2% difference is fatal and the reference images are
-implicitly *clang* references. The project therefore has to pick a reference compiler:
+### 1.6 Resolution
 
-* **Keep clang as reference.** gcc stays a buildable path used for reflection work.
-  Phase 2 is unaffected — it is unit-tested, and `make test-gcc` passes. Phase 3 needs its
-  acceptance testing done under clang.
-* **Move the reference to gcc.** Required if gcc eventually becomes the primary compiler,
-  but then clang fails the suite instead, and the references need regenerating.
-* **Give the suite a tolerance.** Raising `fuzziness_allowed` above ~0.03 makes both
-  compilers pass. It is the only option that lets both work at once, at the cost of the
-  bit-exactness the suite currently enforces.
+Re-measured on a clean `build-gcc`: **12 of 13 cases passed under gcc, one failure, no
+abort.** The earlier picture (two failures plus a `std::optional<bool>` SIGABRT at case 7)
+came from a stale build tree. `unittest_009_web_frame10` passes; its earlier failure was
+order-dependent fallout from the abort, and the abort itself has not reproduced since the
+rebuild. It is **unreproduced, not fixed** — no unguarded dereference was ever located, and
+the only `std::optional<bool>` in the tree (`custom_grain`) is correctly guarded at
+`initializer.cpp:427`. Worth re-checking if it resurfaces.
 
-This is a decision to make before phase 3, not before phase 2.
+The single real difference is `unittest_005_script_frame1` at RMSE 0.0206.
+
+**Correction to an earlier draft of this section.** It claimed that raising
+`fuzziness_allowed` above ~0.03 would make both compilers pass. That is wrong: several
+assertions are hardcoded `== double(0)` comparisons, which `fuzziness_allowed` does not
+scale. It only applies to the `<= 0.05 * fuzziness_allowed` style.
+
+**Applied:** a separate `compiler_drift_allowed = 0.03` constant, used by the two
+assertions in "Test complex image". Both compilers now pass 24 assertions / 13 cases, and
+the reference images are unchanged.
+
+Regenerating the references from gcc output was considered and rejected: clang renders
+this frame at RMSE 0 exactly, so new baselines would simply move the failure to clang,
+which is still the default for `make build` and `make test`. Reference images are also
+gitignored and served from cppse.nl, making that the one change here not revertable from
+git.
+
+The reference set therefore remains clang-generated, and that stays true even if gcc
+becomes the primary compiler — the tolerance absorbs the difference either way.
 
 ---
 
