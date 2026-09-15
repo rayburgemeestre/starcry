@@ -122,14 +122,20 @@ void generator::init(const std::string& filename,
   job_holder_.init();
   job_holder_.get()->output_file = output_file;
 
+  // Reset the scene state *before* the script is parsed, not after. initialize_all()
+  // derives scenes_duration and scene_durations from the script's scenes, and
+  // scenes_.initialize() -> refresh_scenesettings() resets the whole scene_settings --
+  // so running it afterwards threw those durations away every time. get_time() then read
+  // scene_durations[current_scene_next] out of bounds and picked up whatever the
+  // previously loaded script had left in that slot.
+  scenes_.initialize();
+
   initializer_.initialize_all(
       job_holder_.get(), config_.filename, rand_seed, preview, width, height, scale, scenes_, spawner_);
 
   context->run_array(SCRIPT_NAME, [this](v8::Isolate* isolate, v8::Local<v8::Value> val) {
     genctx.init(val, 0);
   });
-
-  scenes_.initialize();
 
   // reset random number generator
   rand_.set_seed(state_.seed);

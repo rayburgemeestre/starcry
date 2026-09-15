@@ -1,7 +1,22 @@
 # Plan: build `integration_tests` with `-O2` (fallback option)
 
-**Status:** not applied. This is the pragmatic escape hatch if the root-cause fix
-(see "Why this is a fallback" below) turns out to be too invasive. Written 2026-09-15.
+**Status: NOT NEEDED — the root cause was fixed instead (2026-09-15).**
+
+`scenes_.initialize()` ran seven lines *after* `initialize_all()` in `generator.cpp`,
+so the scene durations were computed from the script and then immediately discarded.
+Moving that one statement before `initialize_all()` fixes it. `refresh_scenesettings()`
+also clears `scenesettings_objs`, so the same reorder fixes the per-object case too --
+both bugs below, one statement.
+
+Result on 26.04 at `-O0`: `make test` and `make integration-test` both pass, with the
+hardened assertion active. Since libstdc++ 16 aborts on the first out-of-bounds read and
+the suite runs to completion, all 1,247,582 bad reads are gone.
+
+One reference image changed (`unittest_005_script_frame50`) and was regenerated after
+visually confirming the renders are indistinguishable.
+
+The rest of this document is kept as the record of the investigation, and of the `-O2`
+option should it ever be wanted for another reason.
 
 ## Context
 
@@ -248,3 +263,28 @@ Suggested order:
    values. Inspect each diff in `test/report.html` before regenerating.
 4. Keep `test_integration.cpp:23` passing **without** regenerating its reference. It is
    the idempotence guard and it is what caught attempt two.
+
+
+---
+
+# Postscript: the reference images are toolchain-specific
+
+With the fix in place, `unittest_005_script_frame50` renders *slightly* differently on
+24.04 and 26.04 (different md5, RMSE ~0.006). Two independent reasons:
+
+* the two compilers produce marginally different floating point for this frame now that
+  scene timing is computed from real durations rather than a leftover value, and
+* ImageMagick 6 and 7 disagree on RMSE for the same pair of images:
+
+```
+IM 6.9.12 (24.04): 445.498 (0.00679787)
+IM 7.1.2  (26.04): 385.813 (0.00588713)
+```
+
+`test_integration.cpp:12` sets `fuzziness_allowed = 0`, so every threshold collapses to
+"bit-exact" and a reference generated on one image cannot pass on the other. The
+reference now published is the **26.04** one, matching the current build image.
+
+If 24.04 needs to keep passing, the cleanest fix is to give this assertion a tolerance
+like the others in the file already have (`<= 0.01`, `<= 0.02`, `<= 0.05`); 0.0068 is
+well inside those. That is a test-policy choice, not a rendering bug.
