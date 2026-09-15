@@ -22,3 +22,9 @@
 ./linetest2
 ./cmake-build-debug
 ./build
+# A core dump in the repo root is unreadable by the build user and aborts the
+# context walk with "error checking context: no permission to read from ...".
+**/core
+./Trash
+# the ./node_modules line above does not cover the real one
+./web/node_modules

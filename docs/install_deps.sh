@@ -14,7 +14,10 @@ echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/public.pgp] https://cppse.nl/r
 sudo apt update
 
 sudo apt-get install -y cppse-ffmpeg cppse-v8 cppse-allegro5 cppse-allegro5sdl cppse-fastpfor cppse-boost cppse-sfml cppse-seasocks cppse-pngpp cppse-fmt cppse-openexr cppse-imagemagick cppse-tvision cppse-inotify-cpp cppse-redis-plus-plus cppse-vivid
-sudo apt-get install -y coz-profiler
+# coz-profiler was dropped from the archive in 26.04 (noble had 0.2.2-2build2).
+# Nothing in the project references coz, it is an optional profiling tool, so its
+# absence must not fail the image build.
+sudo apt-get install -y coz-profiler || true
 sudo apt-get install -y ccache
 
 # removed for ubuntu 22.04: python-dev
@@ -49,12 +52,15 @@ sudo apt-get install -y libncurses-dev
 sudo apt install -y libxtst6
 
 # integration test dependencies
-sudo apt install -y imagemagick-6.q16 || sudo apt install imagemagick-7.q16
+sudo apt install -y imagemagick-6.q16 || sudo apt install -y imagemagick-7.q16
 
 sudo apt install -y ninja-build
 
 #ubuntu 22.04
 sudo apt install -y libbz2-dev
 
-# report.py integration tests
-python3 -m pip install Pillow numpy
+# report.py integration tests. Use the distro packages rather than pip: neither base
+# image ships pip, and 26.04 is PEP 668 externally-managed, so pip would additionally
+# need --break-system-packages. python3-pil/python3-numpy satisfy report.py's
+# `from PIL import Image, ImageDraw` and `import numpy as np` directly.
+sudo apt-get install -y python3-pil python3-numpy

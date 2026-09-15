@@ -59,7 +59,7 @@ task — leave that alone.
 | Link lines | `cmake/StarcryLinking.cmake` |
 
 **`/opt/cppse/build/` does not exist on the host.** It only exists *inside* the
-build container (`docker.io/rayburgemeestre/build-starcry-ubuntu:24.04`). So:
+build container (`docker.io/rayburgemeestre/build-starcry-ubuntu:26.04`). So:
 
 * To read a third-party header, either look in `../build-config/<pkg>/` (recipe +
   the `.deb` itself, which you can `dpkg -x` into a scratch dir) or run a shell in

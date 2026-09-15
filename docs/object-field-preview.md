@@ -113,27 +113,39 @@ C++26 reflection (P2996) would remove this entirely: a compile-time walk over
 `data::shape`'s members generating the name→setter mapping, which would also subsume the
 `@add_field@` problem and possibly the `shapes_to_json` serializer.
 
-### Toolchain feasibility (checked 2026-09-14)
+### Toolchain feasibility (re-checked 2026-09-15)
 
-**Not available on the current toolchain, and not on clang at all.**
+**Now available.** The build image was rebased on Ubuntu 26.04, whose `g++-16` implements
+P2996R13. Verified by compiling and running a member walk over a 3-field struct inside
+`rayburgemeestre/build-ubuntu:26.04`:
+
+```
+$ g++-16 -std=c++26 -freflection refl.cpp -o refl && ./refl
+__cpp_impl_reflection=202506  members=3
+  x
+  y
+  radius
+```
+
+That used `nonstatic_data_members_of(^^shape, access_context::current())`, `template for`
+(P1306R5 expansion statements), `std::define_static_array` (P3491R3) and `identifier_of` —
+i.e. exactly the mechanism that would replace the `@add_field@` markers.
 
 | | |
 |---|---|
-| build image today | Ubuntu 24.04, `clang++-19` only, `g++-13` only |
+| build image today | Ubuntu 26.04, `clang++-19`, `g++-15` (default `g++`) and `g++-16` |
+| **`g++-16 -std=c++26 -freflection`** | **works**, `__cpp_impl_reflection = 202506` |
 | `clang-19 -std=c++26` | accepted, but `__cpp_reflection` undefined and `<meta>` not found |
 | clang mainline | `clang.llvm.org/cxx_status.html` lists **Reflection P2996R13: No**, as well as P3394R4 / P3293R3 / P3491R3 / P3096R12 / P3598R0. True for every version apt.llvm.org publishes (up to 23) |
-| **GCC 16** | **implements P2996R13 behind `-freflection`**, `__cpp_impl_reflection >= 202506L`. Also P3394R4, P3293R3, P3096R12, P3560R2, P3795R2 and expansion statements P1306R5 |
-| GCC 16 release | 16.1 on 2026-04-30, 16.2 on 2026-08-07 — current stable |
-| packaging | `g++-16` is **not** in noble (max 14) or questing (max 15), and not in the ubuntu-toolchain-r PPA. It **is** in **Ubuntu 26.04 "resolute"** |
 
-So the upgrade path is: rebase the build image on Ubuntu 26.04, use `g++-16`, compile with
-`-std=c++26 -freflection`.
+**What it still costs:**
 
-**What that costs, beyond the base image bump:**
-
-* **Switch the primary compiler from clang to gcc.** `make build` currently runs
+* **Switch the primary compiler from clang to gcc.** `make build` runs
   `switch-to-latest-clang`; reflection is gcc-only, so gcc would have to become the default
-  (`make build-gcc` already exists, so the path is there).
+  (`make build-gcc` already exists, so the path is there). Note the image's unversioned
+  `g++` is **15**, not 16 — reflection needs `g++-16` named explicitly.
+* **Move the project from C++23 to C++26**, which will surface its own warnings and
+  incompatibilities. Whether the V8 headers survive `-std=c++26` is the main open question.
 * **The dependencies do *not* need rebuilding for the compiler switch.** Verified
   empirically: a clean `g++-13` configure/build in a separate build dir links all twelve
   clang-built static libraries — `libv8_monolith.a` included — and the resulting binary
@@ -141,23 +153,16 @@ So the upgrade path is: rebase the build image on Ubuntu 26.04, use `g++-16`, co
   because both compilers follow the Itanium C++ ABI and the project already forces
   `-stdlib=libstdc++` for clang (`CMakeLists.txt:58,60`), so the two share one C++ runtime.
   The dep `.a` files also carry no LTO, so they are not compiler-locked.
-* **What the 26.04 bump does force is a *packaging* problem, not an ABI one.**
-  `docs/install_deps.sh:13` points apt at `https://cppse.nl/repo/ $(lsb_release -cs) main`
-  — the repo is keyed by codename, so a resolute-based image would find no `cppse-*`
-  packages until `build-config` publishes for it. Two ways around that without a full
-  rebuild: `COPY --from=<current image> /opt/cppse /opt/cppse` into the new image, or
-  install the existing `.deb`s directly. Given the ABI result above, either is likely to
-  just work; rebuilding via `build-config` (already parameterised by
-  `UBUNTU_VERSION`/`CODENAME`) is the clean-but-slow alternative.
-* **Move the project from C++23 to C++26**, which will surface its own warnings and
-  incompatibilities, notably around the V8 headers.
+* **The packaging problem is resolved.** `docs/install_deps.sh:13` points apt at
+  `https://cppse.nl/repo/ $(lsb_release -cs) main`, which on 26.04 resolves to `resolute`;
+  `build-config` now builds and publishes all 17 `cppse-*` packages for that codename.
 
 **Recommendation: do not block this feature on it.** The field mapping here needs a
 ~9-entry whitelist; reflection would be a sledgehammer for that specific problem. The
 genuine payoff is elsewhere — `shapes_to_json` hand-writes 52 fields, `@add_field@` spans
-10 files, and `object_bridge` duplicates getters/setters per shape type. If the toolchain
-upgrade happens, prototype reflection against the serializer first, since that is where it
-would actually earn its keep.
+10 files, and `object_bridge` duplicates getters/setters per shape type. Now that the
+toolchain supports it, prototype reflection against the serializer first, since that is
+where it would actually earn its keep.
 
 ---
 

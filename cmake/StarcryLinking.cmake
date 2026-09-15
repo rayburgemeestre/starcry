@@ -46,10 +46,18 @@ function(configure_links target)
 
   # v8
   target_link_libraries(${target} PRIVATE /opt/cppse/build/v8/lib/libv8_monolith.a)
-  #target_link_libraries(${target} PRIVATE /usr/lib/gcc/x86_64-linux-gnu/7/libstdc++fs.a) # ubuntu 18.04
-  #target_link_libraries(${target} PRIVATE /usr/lib/gcc/x86_64-linux-gnu/9/libstdc++fs.a)  # ubuntu 20.04
-  #target_link_libraries(${target} PRIVATE /usr/lib/gcc/x86_64-linux-gnu/11/libstdc++fs.a)  # ubuntu 22.04
-  target_link_libraries(${target} PRIVATE /usr/lib/gcc/x86_64-linux-gnu/13/libstdc++fs.a)  # ubuntu 24.04
+  # The gcc version in this path changes with every Ubuntu release (7 on 18.04, 9 on
+  # 20.04, 11 on 22.04, 13 on 24.04, 15/16 on 26.04). Hardcoding it meant one edit per
+  # release and a tree that only built on that one release, so pick the newest that is
+  # actually installed instead.
+  file(GLOB _stdcxxfs_candidates /usr/lib/gcc/x86_64-linux-gnu/*/libstdc++fs.a)
+  if(NOT _stdcxxfs_candidates)
+    message(FATAL_ERROR "no libstdc++fs.a found under /usr/lib/gcc/x86_64-linux-gnu/*/")
+  endif()
+  list(SORT _stdcxxfs_candidates COMPARE NATURAL ORDER DESCENDING)
+  list(GET _stdcxxfs_candidates 0 _stdcxxfs)
+  message(STATUS "Using ${_stdcxxfs}")
+  target_link_libraries(${target} PRIVATE ${_stdcxxfs})
 
   # generic
   target_link_libraries(${target} PRIVATE /usr/lib/x86_64-linux-gnu/libssl.a)

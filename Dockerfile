@@ -1,4 +1,4 @@
-FROM docker.io/rayburgemeestre/build-ubuntu:24.04 AS build1
+FROM docker.io/rayburgemeestre/build-ubuntu:26.04 AS build1
 
 MAINTAINER Ray Burgemeestre
 
@@ -48,7 +48,10 @@ RUN apt install -y openjdk-21-jre
 #    apt install brave-browser-beta
 
 # Integration tests dependencies
-RUN apt install -y imagemagick-6.q16 ffmpeg
+# 26.04 dropped imagemagick-6.q16; IM7 installs alternatives for the legacy
+# `compare`/`convert` names that test/report.py and the report generator call.
+RUN apt install -y ffmpeg && \
+    (apt install -y imagemagick-6.q16 || apt install -y imagemagick-7.q16)
 
 # xeyes (for troubleshooting X11)
 RUN apt install -y x11-apps

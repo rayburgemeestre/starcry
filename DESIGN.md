@@ -418,7 +418,7 @@ binary is relatively portable.
 ## 12. Build & run
 
 All builds go through the container image
-`docker.io/rayburgemeestre/build-starcry-ubuntu:24.04` (podman is preferred when
+`docker.io/rayburgemeestre/build-starcry-ubuntu:26.04` (podman is preferred when
 present); the `Makefile` transparently runs locally if already inside the container.
 
 | Command | Result |
