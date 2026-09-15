@@ -189,6 +189,42 @@ The last one is the demonstration worth having: it proves the ceiling is gone.
 `make test` passes under gcc/C++26 with the new cases, and still passes under clang with
 them compiled out.
 
+### 2.5 Outcome (executed 2026-09-15)
+
+| configuration | cases | assertions |
+|---|---|---|
+| clang / C++23 | 12 | 34 |
+| gcc / C++23 | 12 | 34 |
+| **gcc / C++26** | **18** | **57** |
+
+All three pass. The difference is the point: 11 pre-existing cases plus one "not
+available" marker under C++23, versus 11 plus the 7 reflection cases under C++26. Had the
+guard been miswired, C++26 would also have reported 12 and everything would have "passed"
+while testing nothing.
+
+cmake confirms the configuration with `-- C++26 reflection enabled (GNU 16.0.1)`.
+
+**The whole codebase compiles under gcc/C++26**, not just the unit tests:
+`make build-gcc cxx_std=cxx_std_26` links a working 68 MB `starcry`. That closes the
+"~200 translation units under gcc *and* a newer standard at once" risk listed above — it
+was the last unknown before phase 3, and it is clear.
+
+Delivered:
+
+* `src/data/shape_reflect.hpp` — `field_count<T>()`, `field_names<T>()`,
+  `for_each_field(T&&, F&&)`, behind `STARCRY_HAS_REFLECTION`.
+* `test/reflection_test.cpp` — 7 cases, including a 60-member struct that walks fine
+  (the ceiling demonstration) and a walk over the real `data::shape`.
+* `cxx_std` passthrough: `make build-gcc cxx_std=cxx_std_26`, defaulting to `cxx_std_23`.
+
+Two API details worth knowing before phase 3:
+
+* `obj.[:m:]` yields a real lvalue reference, so **one walk serves both reads and
+  writes**. The setter dispatch phase 3 needs for `object_bridge` does not require a
+  second mechanism.
+* `field_names<T>()` is `consteval` and returns `std::array<std::string_view, N>`, so name
+  checks are `STATIC_REQUIRE`-able rather than runtime assertions.
+
 ---
 
 ## Phase 3 — migrate the consumers (inferred)

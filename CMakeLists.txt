@@ -158,7 +158,7 @@ target_link_libraries(sc_client PRIVATE
 )
 configure_links(sc_client)
 
-add_executable(unit_tests test/test_unit.cpp)
+add_executable(unit_tests test/test_unit.cpp test/reflection_test.cpp)
 set_target_properties(unit_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 target_compile_features(unit_tests PRIVATE ${STARCRY_CXX_STD})
 target_compile_options(unit_tests PRIVATE -isystem "${CMAKE_CURRENT_SOURCE_DIR}/libs/v8pp")
