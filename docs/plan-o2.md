@@ -190,27 +190,61 @@ This also explains the idempotence failure. Rendering frame 10, then 11, then 10
 leaves different residue in that slot the second time around, so the second render of
 frame 10 divides by something different.
 
+## Who actually calls get_time with empty durations (measured 2026-09-15)
+
+Tagging all four call sites and tallying one full `-O2` run:
+
+| Caller | `size=EMPTY` | `size=ok` |
+|---|---|---|
+| `positioner.cpp:110` (per-object) | **1,243,642** | 346,058 |
+| `scenes.cpp:113` `prepare_scene` (global) | 3,916 | **0** |
+| `instantiator.cpp:744` `parent_offset` (global) | 24 | **0** |
+| `scenes.cpp:125` `sub_object` (per-object) | 0 | 6,360 |
+
+78% of all `get_time` calls read out of bounds. This is the majority path, not an edge
+case. It is **two independent bugs**:
+
+### Bug 1 - the global scenesettings is never populated at use time
+
+3,940 reads, **zero** of them with valid durations. `initialize_all()` computes the
+durations and `scenes::initialize()` -> `refresh_scenesettings()` wipes them immediately
+afterwards (`generator.cpp`, populate-then-wipe). The computed value has never once been
+used.
+
+### Bug 2 - per-object settings are default-constructed and never filled
+
+`positioner.cpp:49` indexes `scenes_.scenesettings_objs[id]`. `std::map::operator[]`
+default-constructs on miss, and only *script-type* objects ever get `set_durations()`
+called (`instantiator.cpp:677`). So every ordinary object mints an empty entry and reads
+past the end of it.
+
 ## What a real fix has to do
 
-The question is not "what value should replace the out-of-bounds read", it is **why
-`get_time()` runs at all while `scene_durations` is empty**. During those windows the
-engine is timing the current script against the previous script's scene duration.
+Fix bug 1 first: bug 2 cannot be fixed independently, because the natural fallback for an
+object that declares no scenes of its own is to follow the *script's* scenes -- and those
+live in the global `scenesettings`, which is currently always empty.
 
-Two sub-questions to answer first:
+Two attempts that do **not** work, both measured:
 
-1. Which call path reaches `get_time()` before/while the durations are empty? The
-   emptying is `refresh_scenesettings()` (see above); the repopulation is
-   `initialize_all()`. `generator.cpp` runs them in that order — populate, then wipe —
-   so every frame generated after `scenes_.initialize()` and before the next
-   `initialize_all()` is in the window.
-2. Is `get_time()` meaningful in that window at all? If not, the fix is ordering or
-   guarding the caller, not inventing a duration. If it is, the durations must survive
-   the refresh, and the reference images legitimately change.
+* **Default `scene_durations` to `{1.0}`** (an object with no scenes spans the whole
+  parent timeline). Removes the abort and keeps the idempotence check at
+  `test_integration.cpp:23` passing, but shifts 4 tests -- `script.js` (2 scenes),
+  `perlin.js` (2), `test.js` (3), and the video. All multi-scene: `{1.0}` is only right
+  when the script has exactly one scene. RMSEs 0.00588713, 0.0143857, 0.04458,
+  0.0000587724.
+* **Preserve the durations across `refresh_scenesettings()`.** Removes the abort but
+  breaks `test_integration.cpp:23`: frame 10 rendered after frame 11 no longer matches
+  frame 10 rendered first, so no reference can satisfy both assertions.
 
-Whatever is chosen, keep `test_integration.cpp:23` passing **without** regenerating its
-reference. It renders frame 10, then 11, then 10 again and requires the two frame-10
-renders to match; it is the guard against exactly this kind of state leaking between
-renders, and it is the check that caught the first attempted fix.
+Suggested order:
 
-Expect several references to change once the timing is correct. Inspect each diff in
-`test/report.html` before regenerating, per AGENTS.md §3.
+1. Make the global durations survive to use time -- reorder `generator.cpp` so the wipe
+   precedes the populate, or stop `refresh_scenesettings()` from discarding
+   script-derived configuration. Verify with the caller tally above that
+   `prepare_scene` starts reporting `size=ok`.
+2. Give per-object settings a real fallback: an object with no scenes of its own should
+   follow the global scene durations, not a hardcoded `{1.0}`.
+3. Expect references to change, since the current ones encode leftover cross-script
+   values. Inspect each diff in `test/report.html` before regenerating.
+4. Keep `test_integration.cpp:23` passing **without** regenerating its reference. It is
+   the idempotence guard and it is what caught attempt two.
