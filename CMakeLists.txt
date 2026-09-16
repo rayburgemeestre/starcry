@@ -96,11 +96,11 @@ file(GLOB_RECURSE starcry_SOURCES
 )
 list(REMOVE_ITEM starcry_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/client.cpp")
 
-add_executable(starcry ${starcry_SOURCES})
-# C++ standard, shared by every target. Raise to cxx_std_26 to build with C++26
-# reflection (P2996); that requires gcc 16 or newer, clang implements it at no version.
+# C++ standard, shared by every target. cxx_std_26 enables C++26 reflection (P2996),
+# which the codebase now requires: data::shape's json and cereal serializers are generated
+# by walking its members. Needs gcc 16 or newer; clang implements reflection at no version.
 # See docs/move_to_reflection.md.
-set(STARCRY_CXX_STD cxx_std_23 CACHE STRING "C++ standard feature level for all targets")
+set(STARCRY_CXX_STD cxx_std_26 CACHE STRING "C++ standard feature level for all targets")
 
 if(STARCRY_CXX_STD STREQUAL cxx_std_26)
   if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -113,6 +113,7 @@ if(STARCRY_CXX_STD STREQUAL cxx_std_26)
   message(STATUS "C++26 reflection enabled (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 endif()
 
+add_executable(starcry ${starcry_SOURCES})
 target_compile_features(starcry PRIVATE ${STARCRY_CXX_STD})
 target_compile_options(starcry PRIVATE
     ${COMMON_FLAGS}

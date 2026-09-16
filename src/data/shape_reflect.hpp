@@ -7,22 +7,19 @@
 
 // Compile-time member iteration via C++26 reflection (P2996).
 //
-// Reflection is gcc-only and needs gcc >= 16 with -freflection; clang implements it at no
-// version. The project still builds with clang-19 by default, so this header is guarded
-// and every consumer has to handle STARCRY_HAS_REFLECTION being 0. Build the reflecting
-// configuration with:
-//
-//     make build-gcc cxx_std=cxx_std_26
+// Reflection is gcc-only and needs gcc >= 16 with -freflection. clang implements it at no
+// version, so clang can no longer build starcry -- see docs/move_to_reflection.md for what
+// to reinstate if that changes. Failing here with a clear message beats several hundred
+// lines of template errors from <meta>.
 //
 // See docs/move_to_reflection.md.
 
-#if defined(__cpp_impl_reflection) && __cpp_impl_reflection >= 202506
-#define STARCRY_HAS_REFLECTION 1
-#else
-#define STARCRY_HAS_REFLECTION 0
+#if !defined(__cpp_impl_reflection) || __cpp_impl_reflection < 202506
+#error "starcry requires C++26 reflection (P2996): build with g++-16 -std=c++26 -freflection. \
+clang implements it at no version; see docs/move_to_reflection.md."
 #endif
 
-#if STARCRY_HAS_REFLECTION
+#define STARCRY_HAS_REFLECTION 1
 
 #include <array>
 #include <cstddef>
@@ -70,4 +67,3 @@ constexpr void for_each_field(T&& obj, F&& f) {
 
 }  // namespace data::reflect
 
-#endif  // STARCRY_HAS_REFLECTION

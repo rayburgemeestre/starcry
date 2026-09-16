@@ -16,11 +16,10 @@ docker_exe:=$(shell if [ $$(which podman) ]; then echo "podman --log-level=debug
 base_image = docker.io/rayburgemeestre/build-ubuntu:26.04
 starcry_image = docker.io/rayburgemeestre/build-starcry-ubuntu:26.04
 
-# One build directory per compiler. cmake caches the compiler in CMakeCache.txt, so
-# sharing a directory between `make build` and `make build-gcc` means every switch either
-# fails or silently reuses the wrong configuration.
-clang_build_dir ?= build
-gcc_build_dir ?= build-gcc
+# Single build directory: clang support was dropped when the codebase moved to C++26
+# reflection, which gcc alone implements. The clang_build_dir/gcc_build_dir split existed
+# to stop cmake's cached compiler from being reused across a switch.
+build_dir ?= build
 
 # C++26 reflection (P2996) is gcc-only, and needs 16 specifically: the image's unversioned
 # g++ is 15, which does not implement it. Set gcc_cxx=g++-15 to build without reflection.
@@ -28,7 +27,7 @@ gcc_cxx ?= g++-16
 
 # C++ standard feature level passed through to cmake. cxx_std_26 additionally enables
 # -freflection and requires gcc >= 16; cmake fails configuration otherwise.
-cxx_std ?= cxx_std_23
+cxx_std ?= cxx_std_26
 cmake_std = -DSTARCRY_CXX_STD=$(cxx_std)
 #docker_params = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo "--storage-opt ignore_chown_errors=true"; else echo ""; fi')
 docker_params = $$(/bin/sh -c 'if [ $$(which podman) ]]; then echo ""; else echo ""; fi')
@@ -51,8 +50,11 @@ docker_run = $(docker_exe_tmp) $(docker_params) run -i $(docker_tty) --rm \
 inside_docker_container = [[ "$$container" == "podman" ]] # || [[ -f /.dockerenv ]]  # broken
 run_in_container = ($(docker_run) -c "if $(ccache_enabled); then $(ccache_env) $1; else $1; fi")
 run_locally = (if $(ccache_enabled); then $(ccache_env) $1; else $1; fi)
-run_in_container_clang = ($(docker_run) -c "sudo switch-to-latest-clang; if $(ccache_enabled); then $(ccache_env) $1; else $1; fi")
-run_locally_clang = (if $(ccache_enabled); then sudo switch-to-latest-clang; $(ccache_env) $1; else sudo switch-to-latest-clang; $1; fi)
+# Formerly switched /usr/bin/c++ to clang via update-alternatives. clang cannot build
+# starcry since the move to C++26 reflection, so these now defer to the gcc path; the
+# names are kept so the existing call sites keep resolving.
+run_in_container_clang = $(run_in_container)
+run_locally_clang = $(run_locally)
 make = if ! $(inside_docker_container); then $(run_in_container); \
 	   else $(run_locally); fi
 make-clang = if ! $(inside_docker_container); then $(run_in_container_clang); \
@@ -68,70 +70,70 @@ build:  ## build starcry binary using docker (with clang)
 
 .PHONY: build-impl
 build-impl:
-	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(clang_build_dir) && \
-	cmake --build $(clang_build_dir) --target starcry -j $$(nproc) && \
-	strip --strip-debug $(clang_build_dir)/starcry
+	CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(gcc_cxx) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(build_dir) && \
+	cmake --build $(build_dir) --target starcry -j $$(nproc) && \
+	strip --strip-debug $(build_dir)/starcry
 
 .PHONY: build-fastmath
 build-fastmath:  ## build starcry binary using docker (with clang)
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(clang_build_dir) && \
-	                    cmake --build $(clang_build_dir) --target starcry-fastmath -j $$(nproc) && \
-	                    strip --strip-debug $(clang_build_dir)/starcry-fastmath)
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(gcc_cxx) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(build_dir) && \
+	                    cmake --build $(build_dir) --target starcry-fastmath -j $$(nproc) && \
+	                    strip --strip-debug $(build_dir)/starcry-fastmath)
 
 .PHONY: all-binaries
 all-binaries:  ## build all binaries in cmake
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(clang_build_dir) && \
-	                    cmake --build $(clang_build_dir))
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(gcc_cxx) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(build_dir) && \
+	                    cmake --build $(build_dir))
 
 .PHONY: build-gcc
 build-gcc:  ## build starcry binary using docker (with gcc)
-	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(gcc_cxx) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(gcc_build_dir) && \
-	              cmake --build $(gcc_build_dir) --target starcry -j $$(nproc) && \
-	              strip --strip-debug $(gcc_build_dir)/starcry)
+	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(gcc_cxx) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(build_dir) && \
+	              cmake --build $(build_dir) --target starcry -j $$(nproc) && \
+	              strip --strip-debug $(build_dir)/starcry)
 
 .PHONY: test
 test:  ## execute starcry unit tests using docker (with clang)
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(clang_build_dir) && \
-	                    cmake --build $(clang_build_dir) --target unit_tests && \
-	                    ./$(clang_build_dir)/unit_tests -s -d yes)
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(gcc_cxx) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(build_dir) && \
+	                    cmake --build $(build_dir) --target unit_tests && \
+	                    ./$(build_dir)/unit_tests -s -d yes)
 
 .PHONY: test-gcc
 test-gcc:  ## execute starcry unit tests using docker (with gcc)
-	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(gcc_cxx) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(gcc_build_dir) && \
-	              cmake --build $(gcc_build_dir) --target unit_tests && \
-	              ./$(gcc_build_dir)/unit_tests -s -d yes)
+	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(gcc_cxx) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(build_dir) && \
+	              cmake --build $(build_dir) --target unit_tests && \
+	              ./$(build_dir)/unit_tests -s -d yes)
 
 .PHONY: integration-test
 integration-test:  ## execute starcry unit tests using docker (with clang)
 	@if [ -f test/report.html ]; then mv -f test/report.html test/report-old.html; fi
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold CXX=$$(which c++) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(clang_build_dir) && \
-	                    cmake --build $(clang_build_dir) --target integration_tests -j $$(nproc) && \
-	                    ./$(clang_build_dir)/integration_tests -s -d yes --rng-seed 0); \
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold CXX=$(gcc_cxx) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(build_dir) && \
+	                    cmake --build $(build_dir) --target integration_tests -j $$(nproc) && \
+	                    ./$(build_dir)/integration_tests -s -d yes --rng-seed 0); \
 	  status=$$?; \
 	  python3 test/report.py; \
 	  exit $$status
 
 .PHONY: integration-test-gcc
 integration-test-gcc:  ## execute starcry unit tests using docker (with gcc)
-	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold CXX=$(gcc_cxx) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(gcc_build_dir) && \
-	              cmake --build $(gcc_build_dir) --target integration_tests -j $$(nproc) && \
-	              ./$(gcc_build_dir)/integration_tests -s -d yes --rng-seed 0)
+	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold CXX=$(gcc_cxx) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(build_dir) && \
+	              cmake --build $(build_dir) --target integration_tests -j $$(nproc) && \
+	              ./$(build_dir)/integration_tests -s -d yes --rng-seed 0)
 
 .PHONY: integration-test-gcc-debug
 integration-test-gcc-debug:  ## execute starcry unit tests using docker (with gcc + debug)
-	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold CXX=$(gcc_cxx) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on -B $(gcc_build_dir) && \
-	              cmake --build $(gcc_build_dir) --target integration_tests -j $$(nproc) && \
-	              gdb --args ./$(gcc_build_dir)/integration_tests -s -d yes --rng-seed 0)
+	@$(call make, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold CXX=$(gcc_cxx) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on -B $(build_dir) && \
+	              cmake --build $(build_dir) --target integration_tests -j $$(nproc) && \
+	              gdb --args ./$(build_dir)/integration_tests -s -d yes --rng-seed 0)
 
 .PHONY: integration-test-sanitizer
 integration-test-sanitizer:
 	@$(call make-clang, ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
-	                    CMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold CXX=$$(which c++) \
-	                        cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on -B $(clang_build_dir) && \
+	                    CMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold CXX=$(gcc_cxx) \
+	                        cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on -B $(build_dir) && \
 	                    ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
-	                        cmake --build $(clang_build_dir) --target integration_tests -j $$(nproc) && \
+	                        cmake --build $(build_dir) --target integration_tests -j $$(nproc) && \
 	                    ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
-	                        ./$(clang_build_dir)/integration_tests -s -d yes --rng-seed 0)
+	                        ./$(build_dir)/integration_tests -s -d yes --rng-seed 0)
 
 client:  ## build webassembly javascript file using docker
 	# Note, requires you to do 'make build' first for v8pp config.hpp
@@ -143,7 +145,7 @@ client:  ## build webassembly javascript file using docker
 	                    -I./libs/json/single_include/ \
 	                    -I./libs/zpp_bits/ \
 	                    -I/opt/cppse/build/v8/include/v8 -I/opt/cppse/build/v8/include/ \
-	                    -I./libs/v8pp/ -I./$(clang_build_dir)/libs/v8pp/ \
+	                    -I./libs/v8pp/ -I./$(build_dir)/libs/v8pp/ \
 	                    -I/opt/cppse/build/vivid/include/ /opt/cppse/build/vivid/lib/libvivid-em.a \
 	                    -I/opt/cppse/build/fmt/include /opt/cppse/build/fmt/lib/libfmt-em.a \
 	                    -D_M_X64 \
@@ -154,8 +156,8 @@ client:  ## build webassembly javascript file using docker
 	@$(call make-clang, sed -i.orig 's/"mouseup"/"no_mouseup"/g' web/public/client.js)
 
 client-desktop:  ## build webassembly client for desktop for testing purposes
-	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(clang_build_dir) && \
-	                    cmake --build $(clang_build_dir) --target sc_client)
+	@$(call make-clang, CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(gcc_cxx) cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -B $(build_dir) && \
+	                    cmake --build $(build_dir) --target sc_client)
 
 client-debug:  ## build webassembly javascript file using docker with debug
 	@$(call make-clang, /emsdk/upstream/emscripten/em++ --std=c++20 -s WASM=1 -s USE_SDL=2 -O0 -g --bind \
@@ -166,7 +168,7 @@ client-debug:  ## build webassembly javascript file using docker with debug
 	                    -I./libs/json/single_include/ \
 	                    -I./libs/zpp_bits/ \
 	                    -I/opt/cppse/build/v8/include/v8 -I/opt/cppse/build/v8/include/ \
-	                    -I./libs/v8pp/ -I./$(clang_build_dir)/libs/v8pp/ \
+	                    -I./libs/v8pp/ -I./$(build_dir)/libs/v8pp/ \
 	                    -I/opt/cppse/build/vivid/include/ /opt/cppse/build/vivid/lib/libvivid-em.a \
 	                    -I/opt/cppse/build/fmt/include /opt/cppse/build/fmt/lib/libfmt-em.a \
 	                    -D_M_X64 \
@@ -178,26 +180,26 @@ client-debug:  ## build webassembly javascript file using docker with debug
 
 debug:  ## build starcry binary using docker with debug
 	make debug-clean
-	@$(call make-clang, mkdir -p $(clang_build_dir) && pushd $(clang_build_dir) && CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$$(which c++) \
+	@$(call make-clang, mkdir -p $(build_dir) && pushd $(build_dir) && CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(gcc_cxx) \
 	                    cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on .. && \
 	                    make VERBOSE=1 -j $$(nproc) starcry && \
-	                    ln -fs $$PWD/$(clang_build_dir)/compile_commands.json $$PWD/compile_commands.json)
+	                    ln -fs $$PWD/$(build_dir)/compile_commands.json $$PWD/compile_commands.json)
 
 debug-gcc:  ## build starcry binary using docker with debug
 	make debug-clean
-	@$(call make, mkdir -p $(gcc_build_dir) && pushd $(gcc_build_dir) && CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(gcc_cxx) \
+	@$(call make, mkdir -p $(build_dir) && pushd $(build_dir) && CMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold CXX=$(gcc_cxx) \
 	              cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on .. && \
 	              make VERBOSE=1 -j $$(nproc) starcry && \
-	              ln -fs $$PWD/$(gcc_build_dir)/compile_commands.json $$PWD/compile_commands.json)
+	              ln -fs $$PWD/$(build_dir)/compile_commands.json $$PWD/compile_commands.json)
 
 debug-sanitizer:  ## build starcry binary using docker with debug + address sanitizer
 	make debug-clean
-	@$(call make-clang, mkdir -p $(clang_build_dir) && pushd $(clang_build_dir) && ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-19/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
-	                                   CXX=$$(which c++) cmake -DSANITIZER=1 -DDEBUG=on .. \
+	@$(call make-clang, mkdir -p $(build_dir) && pushd $(build_dir) && ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-19/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
+	                                   CXX=$(gcc_cxx) cmake -DSANITIZER=1 -DDEBUG=on .. \
 	                                                     cmake $(cmake_std) -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DDEBUG=on .. && \
 	                                   ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-12/bin/llvm-symbolizer ASAN_OPTIONS=symbolize=1 \
 	                                   make VERBOSE=1 -j $$(nproc) starcry && \
-	                                   ln -fs $$PWD/$(clang_build_dir)/compile_commands.json $$PWD/compile_commands.json)
+	                                   ln -fs $$PWD/$(build_dir)/compile_commands.json $$PWD/compile_commands.json)
 
 debug-clean:
 	rm -rf /var/crash/_home_trigen_projects_starcry_build_starcry.1144.crash
@@ -205,7 +207,7 @@ debug-clean:
 
 format:  ## format source code (build at least once first)
 	@$(call make-clang, find ./input -name '*.js' -type f | xargs -I{} -n 1 -P 8 clang-format-19 -i {} && \
-	                    cmake --build $(clang_build_dir) --target clangformat && \
+	                    cmake --build $(build_dir) --target clangformat && \
 						pushd web && npm run format && popd)
 
 pull:  ## pull the starcry docker build image
@@ -256,8 +258,8 @@ dockerize:  ## dockerize starcry executable in stripped down docker image
 	                    cp -prv $$PWD/web/dist/spa out/workdir/web/webroot && \
 	                    (cp -prv $$PWD/output/report.html out/workdir/web/webroot/report.html || true) && \
 	                    cp -prv $$PWD/input out/workdir/input && \
-	                    strip --strip-debug $$PWD/$(clang_build_dir)/starcry && \
-						cp -prv $$PWD/$(clang_build_dir)/starcry ./out/ && \
+	                    strip --strip-debug $$PWD/$(build_dir)/starcry && \
+						cp -prv $$PWD/$(build_dir)/starcry ./out/ && \
 						cp -prv $$PWD/docs/Dockerfile ./out/ && \
 						cp -prv $$PWD/docs/starcry-dev-wrapper.sh ./out/workdir/ && \
 						cp -prv $$PWD/docs/fonts/monaco.ttf ./out/workdir/ && \
@@ -331,7 +333,7 @@ clion:
 	mkdir -p /tmp/ccache-root
 	$(docker_exe) stop starcry_clion || true
 	$(docker_exe) rm starcry_clion || true
-	$(docker_exe) run --rm --name starcry_clion $(docker_device_card0) --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix $(starcry_image) -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/clion ${HOME} /root/projects/starcry"
+	$(docker_exe) run --rm --name starcry_clion $(docker_device_card0) --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix $(starcry_image) -c "${HOME}/system/superprofile/dot-files/.bin/clion ${HOME} /root/projects/starcry"
 
 clion-gcc:
 	xhost +
@@ -340,7 +342,7 @@ clion-gcc:
 	mkdir -p /tmp/ccache-root
 	$(docker_exe) stop starcry_clion || true
 	$(docker_exe) rm starcry_clion || true
-	$(docker_exe) run --rm --name starcry_clion $(docker_device_card0) --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix $(starcry_image) -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/clion ${HOME}"
+	$(docker_exe) run --rm --name starcry_clion $(docker_device_card0) --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix $(starcry_image) -c "${HOME}/system/superprofile/dot-files/.bin/clion ${HOME}"
 
 ide_shell:
 	xhost +
@@ -348,36 +350,36 @@ ide_shell:
 	mkdir -p /tmp/ccache-root
 	$(docker_exe) stop starcry_clion || true
 	$(docker_exe) rm starcry_clion || true
-	$(docker_exe) run --rm --name starcry_clion --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix $(starcry_image) -c "switch-to-latest-clang; bash"
+	$(docker_exe) run --rm --name starcry_clion --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix $(starcry_image) -c "bash"
 
 webstorm:
 	xhost +
 	mkdir -p /tmp/ccache-root
 	$(docker_exe) stop starcry_webstorm || true
 	$(docker_exe) rm starcry_webstorm || true
-	$(docker_exe) run --rm --name starcry_webstorm --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix $(starcry_image) -c "switch-to-latest-clang; ${HOME}/system/superprofile/dot-files/.bin/webstorm ${HOME}"
+	$(docker_exe) run --rm --name starcry_webstorm --network host -i --privileged -t -v /tmp/ccache-root:/root/.ccache -v $$PWD:/projects/starcry -v $$HOME:$$HOME -v $$HOME:/root -w /projects/starcry -e DISPLAY=$$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix $(starcry_image) -c "${HOME}/system/superprofile/dot-files/.bin/webstorm ${HOME}"
 
 
 benchmark:
 	bash docs/benchmark.sh input/blank.js
 
 profile:  ## run starcry with valgrind's callgrind for profiling
-	#valgrind --tool=callgrind ./$(clang_build_dir)/starcry -c 1 input/broken/wave.js -f 1 --stdout --debug --verbose
-	#valgrind --tool=callgrind ./$(clang_build_dir)/starcry --tui input/spiral2.js -f 1 --single --no-output
-	#valgrind --tool=callgrind ./$(clang_build_dir)/starcry input/script.js --benchmark --single -f 0
-	# valgrind --tool=callgrind ./$(clang_build_dir)/starcry --no-render --stdout input/test.js
+	#valgrind --tool=callgrind ./$(build_dir)/starcry -c 1 input/broken/wave.js -f 1 --stdout --debug --verbose
+	#valgrind --tool=callgrind ./$(build_dir)/starcry --tui input/spiral2.js -f 1 --single --no-output
+	#valgrind --tool=callgrind ./$(build_dir)/starcry input/script.js --benchmark --single -f 0
+	# valgrind --tool=callgrind ./$(build_dir)/starcry --no-render --stdout input/test.js
 	echo NOTE: compile with 'make debug-gcc' and not clang.
-	@$(call make-clang, apt install valgrind -y && valgrind --tool=callgrind ./$(clang_build_dir)/starcry input/script.js --benchmark --single -f 0)
+	@$(call make-clang, apt install valgrind -y && valgrind --tool=callgrind ./$(build_dir)/starcry input/script.js --benchmark --single -f 0)
 	ls -althrst | tail -n 1
 	echo invoke kcachegrind on this file
 
 valgrind:
-	#valgrind --leak-check=full ./$(clang_build_dir)/starcry input/motion.js  --no-output
-	valgrind --leak-check=full ./$(clang_build_dir)/starcry
+	#valgrind --leak-check=full ./$(build_dir)/starcry input/motion.js  --no-output
+	valgrind --leak-check=full ./$(build_dir)/starcry
 
 profile-memory:
-	#valgrind --tool=massif --massif-out-file=massif.out.starcry ./$(clang_build_dir)/starcry input/sampling.js --gui
-	valgrind --tool=massif --time-unit=B --detailed-freq=1 --max-snapshots=50  --massif-out-file=massif.out.starcry ./$(clang_build_dir)/starcry input/motion.js --no-output
+	#valgrind --tool=massif --massif-out-file=massif.out.starcry ./$(build_dir)/starcry input/sampling.js --gui
+	valgrind --tool=massif --time-unit=B --detailed-freq=1 --max-snapshots=50  --massif-out-file=massif.out.starcry ./$(build_dir)/starcry input/motion.js --no-output
 	massif-visualizer massif.out.starcry
 
 download-integration-test-reference:
@@ -390,7 +392,7 @@ upload-integration-test-reference:
 debug-last:
 	rm -rf dbg
 	apport-unpack /var/crash/_home_trigen_projects_starcry_build_starcry.1144.crash dbg
-	gdb ./$(clang_build_dir)/starcry dbg/CoreDump
+	gdb ./$(build_dir)/starcry dbg/CoreDump
 
 .PHONY: docs
 docs:  ## build starcry docs
@@ -400,15 +402,15 @@ docs:  ## build starcry docs
 
 a:
 	make debug
-	./$(clang_build_dir)/starcry input/linetest2.js # -f 1
+	./$(build_dir)/starcry input/linetest2.js # -f 1
 
 b:
 	make build
-	./$(clang_build_dir)/starcry input/greenlines.js --raw
+	./$(build_dir)/starcry input/greenlines.js --raw
 
 c:
 	make debug
-	gdb --args ./$(clang_build_dir)/starcry --no-gui input/script.js
+	gdb --args ./$(build_dir)/starcry --no-gui input/script.js
 
 log:
 	tail -f sc.log | ~/projects/metalogmon/metalogmon ~/projects/metalogmon/scripts/starcry.js

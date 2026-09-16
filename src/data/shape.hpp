@@ -51,10 +51,10 @@ inline std::string shape_type_to_string(shape_type type) {
 }
 
 struct shape {
-  // NOTE: member order here matches the ar(...) list in serialize_manual below, and must
-  // keep matching it. cereal writes unnamed values positionally, so serialize_reflect --
-  // which visits members in declaration order -- only produces an identical archive while
-  // the two agree. test/reflection_test.cpp asserts that.
+  // NOTE: member order is the cereal wire format. serialize() below walks the members in
+  // declaration order and cereal writes unnamed values positionally, so reordering these
+  // changes what previously-archived data deserializes into. The goldens in
+  // test/reflection_test.cpp will catch it.
   // NOTE: this is not a live constraint. zpp_bits looks for a serialize2 typedef to learn
   // the member count, but nothing serializes data::shape through zpp_bits -- cereal does
   // it, via serialize() below. Verified by adding a 53rd member with members<52> still in
@@ -62,7 +62,6 @@ struct shape {
   // because correcting it to 53 would imply it is checked.
   using serialize2 = zpp::bits::members<52>;
 
-  // @add_field@
   double time = 0;
   double x = 0;
   double y = 0;
@@ -120,81 +119,12 @@ struct shape {
   double dist = 0.;
   int steps = 0.;
 
-  // Hand-written member list for cereal. Kept compiled even when reflection is available
-  // so test/reflection_test.cpp can assert the two produce identical archives; retire it
-  // together with shape_to_json_manual once clang is no longer supported.
-  template <class Archive>
-  void serialize_manual(Archive& ar) {
-    ar(time,
-       x,
-       y,
-       z,
-       x2,
-       y2,
-       z2,
-       velocity,
-       vel_x,
-       vel_y,
-       type,
-       r,
-       g,
-       b,
-       radius,
-       longest_diameter,
-       shortest_diameter,
-       rotate,
-       text_size,
-       radius_size,
-       text,
-       align,
-       text_fixed,
-       text_font,
-       gradients_,
-       textures,
-       texture_3d_,
-       zernike_type_,
-       texture_effect_,
-       texture_offset_x,
-       texture_offset_y,
-       gradient_id_str,
-       texture_id_str,
-       blending_,
-       indexes,
-       seed,
-       scale,
-       recursive_scale,
-       opacity,
-       hue,
-       unique_id,
-       id,
-       label,
-       level,
-       random_hash,
-       motion_blur,
-       warp_width,
-       warp_height,
-       warp_x,
-       warp_y,
-       dist,
-       steps);
-  }
-
-#if STARCRY_HAS_REFLECTION
-  // Reflection equivalent: cereal assigns positional names to unnamed values, so visiting
-  // the members in declaration order produces the same archive as the ar(...) call above.
-  template <class Archive>
-  void serialize_reflect(Archive& ar) {
-    data::reflect::for_each_field(*this, [&ar](std::string_view, auto& value) { ar(value); });
-  }
-#endif
-
+  // Serialized by walking the members. Order matters: cereal writes unnamed values
+  // positionally, so the declaration order above is the wire format. Reordering members
+  // changes what previously-archived data deserializes into.
   template <class Archive>
   void serialize(Archive& ar) {
-#if STARCRY_HAS_REFLECTION
-    serialize_reflect(ar);
-#else
-    serialize_manual(ar);
-#endif
+    data::reflect::for_each_field(*this, [&ar](std::string_view, auto& value) { ar(value); });
   }
 };
 
@@ -211,8 +141,6 @@ inline bool shapes_to_binary(const std::vector<shape>& input, std::string& strin
   std::cout << "into this much binary: " << string_out.size() << std::endl;
   return true;
 }
-
-#if STARCRY_HAS_REFLECTION
 
 namespace reflect_detail {
 
@@ -303,122 +231,8 @@ inline bool shape_to_json_reflect(const shape& input, nlohmann::json& j) {
   return true;
 }
 
-#endif  // STARCRY_HAS_REFLECTION
-
-// The by-hand serializer: one line per member, kept in step with the struct manually.
-//
-// Still compiled even when reflection is available, so test/reflection_test.cpp can assert
-// the two produce identical JSON. Retire it (and the dispatch below) once clang, which
-// implements reflection at no version, is no longer supported.
-inline bool shape_to_json_manual(const shape& input, nlohmann::json& j) {
-  j["time"] = input.time;
-  j["x"] = input.x;
-  j["y"] = input.y;
-  j["z"] = input.z;
-  j["x2"] = input.x2;
-  j["y2"] = input.y2;
-  j["z2"] = input.z2;
-  j["velocity"] = input.velocity;
-  j["vel_x"] = input.vel_x;
-  j["vel_y"] = input.vel_y;
-  j["type"] = data::shape_type_to_string(input.type);
-  j["r"] = input.r;
-  j["g"] = input.g;
-  j["b"] = input.b;
-  j["radius"] = input.radius;
-  j["longest_diameter"] = input.longest_diameter;
-  j["shortest_diameter"] = input.shortest_diameter;
-  j["rotate"] = input.rotate;
-  j["text_size"] = input.text_size;
-  j["radius_size"] = input.radius_size;
-  j["text"] = input.text;
-  j["align"] = input.align;
-  j["text_fixed"] = input.text_fixed;
-  j["text_font"] = input.text_font;
-
-  // This doesn't work
-  // j["gradients_"] = input.gradients_;
-  j["gradients_"] = nlohmann::json::array();
-  for (const auto& [index, gradient] : input.gradients_) {
-    nlohmann::json gradient_json;
-    gradient_json["index"] = index;
-
-    nlohmann::json grad_json;
-    grad_json["colors"] = nlohmann::json::array();
-    for (const auto& [index, color] : gradient.colors) {
-      nlohmann::json color_json;
-      color_json["index"] = index;
-      color_json["r"] = color.r;
-      color_json["g"] = color.g;
-      color_json["b"] = color.b;
-      color_json["a"] = color.a;
-      grad_json["colors"].push_back(color_json);
-    }
-    gradient_json["gradient"] = grad_json;
-    j["gradients_"].push_back(gradient_json);
-  }
-
-  // This doesn't work
-  // j["textures"] = input.textures;
-  j["textures"] = nlohmann::json::array();
-  for (const auto& [index, texture] : input.textures) {
-    nlohmann::json texture_json;
-    texture_json["index"] = index;
-    texture_json["type"] = texture.type;
-    texture_json["effect"] = texture.effect;
-    texture_json["size"] = texture.size;
-    texture_json["octaves"] = texture.octaves;
-    texture_json["persistence"] = texture.persistence;
-    texture_json["percentage"] = texture.percentage;
-    texture_json["scale"] = texture.scale;
-    texture_json["fromX"] = texture.fromX;
-    texture_json["begin"] = texture.begin;
-    texture_json["end"] = texture.end;
-    texture_json["toX"] = texture.toX;
-    texture_json["strength"] = texture.strength;
-    texture_json["speed"] = texture.speed;
-    texture_json["m"] = texture.m;
-    texture_json["n"] = texture.n;
-    texture_json["rho"] = texture.rho;
-    texture_json["theta"] = texture.theta;
-    j["textures"].push_back(texture_json);
-  }
-
-  j["texture_3d_"] = data::texture_3d::to_str(input.texture_3d_.type());
-  j["zernike_type_"] = data::zernike_type::to_str(input.zernike_type_.type());
-  j["texture_effect_"] = data::texture_effect::to_str(input.texture_effect_.type());
-  j["texture_offset_x"] = input.texture_offset_x;
-  j["texture_offset_y"] = input.texture_offset_y;
-  j["gradient_id_str"] = input.gradient_id_str;
-  j["texture_id_str"] = input.texture_id_str;
-  j["blending_"] = data::blending_type::to_str(input.blending_.type());
-  j["indexes"] = input.indexes;
-  j["seed"] = input.seed;
-  j["scale"] = input.scale;
-  j["recursive_scale"] = input.recursive_scale;
-  j["opacity"] = input.opacity;
-  j["hue"] = input.hue;
-  j["unique_id"] = input.unique_id;
-  j["id"] = input.id;
-  j["label"] = input.label;
-  j["level"] = input.level;
-  j["random_hash"] = input.random_hash;
-  j["motion_blur"] = input.motion_blur;
-  j["warp_width"] = input.warp_width;
-  j["warp_height"] = input.warp_height;
-  j["warp_x"] = input.warp_x;
-  j["warp_y"] = input.warp_y;
-  j["dist"] = input.dist;
-  j["steps"] = input.steps;
-  return true;
-}
-
 inline bool shape_to_json(const shape& input, nlohmann::json& j) {
-#if STARCRY_HAS_REFLECTION
   return shape_to_json_reflect(input, j);
-#else
-  return shape_to_json_manual(input, j);
-#endif
 }
 
 inline bool shapes_to_json(const std::vector<shape>& input, std::string& string_out) {
