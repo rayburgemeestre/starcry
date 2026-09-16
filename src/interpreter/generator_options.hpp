@@ -6,7 +6,10 @@
 
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <optional>
+#include <string>
 
 struct generator_options {
   bool debug = false;

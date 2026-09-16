@@ -92,7 +92,9 @@ class generator {
   util::random_generator& rand_;
   std::vector<int64_t> selected_ids_;  // TODO: not found???
 
-  const generator_options& generator_opts;
+  // By value: see the note in interpreter/initializer.h. The generator outliving the
+  // starcry that owns the options left this dangling.
+  const generator_options generator_opts;
   fps_progress fps_progress_;
   std::shared_ptr<Benchmark> benchmark_ = nullptr;
   limited_executor le_mem_usg_output;

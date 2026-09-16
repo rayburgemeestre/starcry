@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include "interpreter/generator_options.hpp"
 #include <memory>
 #include <optional>
 #include <unordered_map>
@@ -14,7 +15,6 @@
 // And restore this.
 // class v8_wrapper;
 
-struct generator_options;
 struct generator_state;
 struct generator_config;
 
@@ -112,7 +112,14 @@ private:
   bridges& bridges_;
   frame_sampler& frame_sampler_;
   object_definitions& object_definitions_;
-  /* was const */ generator_options& generator_options_;
+  // Held by value, not by reference. The referent lives in a starcry instance, and the
+  // generator runs on its own thread; a starcry destroyed while that thread is still
+  // running left this dangling. It surfaced as an intermittent
+  // std::optional<bool>::operator*() assertion on custom_grain -- the if (opt) guard and
+  // the *opt that follows both test _M_is_engaged(), so a guard that passes and a
+  // dereference that aborts means the memory changed in between. Read-only here (7 uses,
+  // all reads), so copying costs nothing.
+  generator_options generator_options_;
   generator_state& generator_state_;
   generator_config& generator_config_;
   project_specifications& project_specifications_;
